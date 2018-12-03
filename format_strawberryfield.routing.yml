@@ -1,0 +1,48 @@
+# All Routes for the Metadata Display Content Entity that will store Twig templates
+entity.metadatadisplay_entity.canonical:
+  path: '/metadatadisplay/{metadatadisplay_entity}'
+  defaults:
+    _entity_view: 'metadatadisplay_entity'
+    _title: 'Metadata Display Content'
+  requirements:
+    _entity_access: 'metadatadisplay_entity.view'
+
+entity.metadatadisplay_entity.collection:
+  path: '/metadatadisplay/list'
+  defaults:
+    _entity_list: 'metadatadisplay_entity'
+    _title: 'Metadata Display List'
+  requirements:
+    _permission: 'administer contact entity'
+
+format_strawberryfield.metadatadisplay_add:
+  path: '/metadatadisplay/add'
+  defaults:
+    _entity_form: metadatadisplay_entity.add
+    _title: 'Add Metadata Display'
+  requirements:
+    _entity_create_access: 'metadatadisplay_entity'
+
+entity.metadatadisplay_entity.edit_form:
+  path: '/metadatadisplay/{metadatadisplay_entity}/edit'
+  defaults:
+    _entity_form: metadatadisplay_entity.edit
+    _title: 'Edit Metadata Display'
+  requirements:
+    _entity_access: 'metadatadisplay_entity.edit'
+
+entity.metadatadisplay_entity.delete_form:
+  path: '/metadatadisplay/{metadatadisplay_entity}/delete'
+  defaults:
+    _entity_form: metadatadisplay_entity.delete
+    _title: 'Delete Metadata Display'
+  requirements:
+    _entity_access: 'metadatadisplay_entity.delete'
+
+format_strawberryfield.metadatadisplay_settings:
+  path: 'admin/structure/metadatadisplay_entity_settings'
+  defaults:
+    _form: '\Drupal\format_strawberryfield\Form\MetadataDisplaySettingsForm'
+    _title: 'Metadata Display Settings'
+  requirements:
+    _permission: 'administer metadatadisplay entity'

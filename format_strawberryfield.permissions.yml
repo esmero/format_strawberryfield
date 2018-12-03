@@ -1,0 +1,12 @@
+# Permissions for Metadata Display Content Entities
+view metadatadisplay entity:
+  title: 'View Metadata Display Template entity'
+add metadatadisplay entity:
+  title: 'Add Metadata Display Template entity'
+edit metadatadisplay entity:
+  title: 'Edit Metadata Display Template entity'
+delete metadatadisplay entity:
+  title: 'Delete Metadata Display Template entity'
+administer metadatadisplay entity:
+  title: 'Administer Metadata Display Template entity'
+  restrict access: TRUE

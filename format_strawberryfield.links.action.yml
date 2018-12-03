@@ -1,0 +1,7 @@
+# Menu Action items for the Metadata Display Content Entities
+format_strawberryfield.metadatadisplay_add:
+  route_name: format_strawberryfield.metadatadisplay_add
+  title: 'Add Metadata Display'
+  appears_on:
+    - entity.metadatadisplay_entity.canonical
+    - entity.metadatadisplay_entity.collection

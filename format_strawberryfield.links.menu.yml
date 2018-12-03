@@ -1,0 +1,12 @@
+# Menu Link items for the Metadata Display Content Entities
+entity.metadatadisplay_entity.collection:
+  title: 'Metadata Displays'
+  route_name: entity.metadatadisplay_entity.collection
+  description: 'List Metadata Display'
+  parent: system.admin_content
+  weight: 10
+format_strawberryfield.admin.structure.settings:
+  title: Metadata display Settings
+  description: 'Configure Metadata Display entity'
+  route_name:  format_strawberryfield.metadatadisplay_settings
+  parent: system.admin_structure

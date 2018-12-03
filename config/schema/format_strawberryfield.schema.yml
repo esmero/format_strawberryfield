@@ -1,0 +1,17 @@
+field.formatter.settings.strawberry_media_formatter:
+  type: mapping
+  label: 'FORMATTER Config for strawberry_media_formatter'
+  mapping:
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    iiif_base_url:
+      type: string
+      label: 'IIIF media Server URI.'
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'

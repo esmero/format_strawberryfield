@@ -1,0 +1,13 @@
+name: Strawberry Metadata and Media Field Formatters
+description: Provides Various Strawberries field formatters because plain JSON is boring.
+package: Archipelago
+type: module
+core: 8.x
+php: 7.1
+dependencies:
+  - 'drupal:field'
+  - 'drupal:system (>= 8.6)'
+  - 'drupal:user'
+  - 'strawberryfield'
+  - 'webform_strawberryfield'
+  - 'webform'

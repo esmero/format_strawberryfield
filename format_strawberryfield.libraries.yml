@@ -1,0 +1,18 @@
+iiif_openseadragon:
+  remote: http://openseadragon.github.io
+  version: 2.4
+  license:
+      name: NewBSD
+      url: http://openseadragon.github.io/license/
+      gpl-compatible: false
+  header: true
+  js:
+    https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
+iiif_openseadragon_strawberry:
+  version: VERSION
+  js:
+    js/iiif-openseadragon_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings

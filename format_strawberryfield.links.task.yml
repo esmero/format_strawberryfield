@@ -1,0 +1,28 @@
+# Menu Action items for the Metadata Display Content Entities
+# Define the 'local' links for the module
+
+metadatadisplay.settings_tab:
+  route_name: format_strawberryfield.metadatadisplay_settings
+  title: Settings
+  base_route: format_strawberryfield.metadatadisplay_settings
+
+metadatadisplay.view:
+  route_name: entity.metadatadisplay_entity.canonical
+  base_route: entity.metadatadisplay_entity.canonical
+  title: View
+
+metadatadisplay.page_edit:
+  route_name: entity.metadatadisplay_entity.edit_form
+  base_route: entity.metadatadisplay_entity.canonical
+  title: Edit
+
+metadatadisplay.delete_confirm:
+  route_name:  entity.metadatadisplay_entity.delete_form
+  base_route:  entity.metadatadisplay_entity.canonical
+  title: Delete
+  weight: 10
+
+metadatadisplay.admin:
+  title: Metadata Display
+  route_name: entity.metadatadisplay_entity.collection
+  base_route: system.admin_content
