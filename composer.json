@@ -14,8 +14,8 @@
     "require": {
         "ml/json-ld": "^1.0",
         "mtdowling/jmespath.php":"^2.4",
-        "strawberryfield/strawberryfield":">=1.0",
-        "strawberryfield/webform_strawberryfield":">=1.0",
+        "strawberryfield/strawberryfield":"dev-master",
+        "strawberryfield/webform_strawberryfield":"dev-master",
         "drupal/webform": "^5.0",
         "drupal/webform_views": "^5.0"
     }
