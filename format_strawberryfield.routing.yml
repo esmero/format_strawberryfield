@@ -13,7 +13,7 @@ entity.metadatadisplay_entity.collection:
     _entity_list: 'metadatadisplay_entity'
     _title: 'Metadata Display List'
   requirements:
-    _permission: 'administer contact entity'
+    _permission: 'administer metadatadisplay entity'
 
 format_strawberryfield.metadatadisplay_add:
   path: '/metadatadisplay/add'
