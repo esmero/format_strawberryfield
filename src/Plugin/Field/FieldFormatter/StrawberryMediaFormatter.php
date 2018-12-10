@@ -41,7 +41,7 @@ class StrawberryMediaFormatter extends FormatterBase {
       'iiif_base_url' => 'http://localhost:8183/iiif/2/',
       'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
       'iiif_group' => TRUE,
-      'json_key_source' => 'Media',
+      'json_key_source' => 'as:image',
       'max_width' => 720,
       'max_height' => 480,
 
@@ -72,7 +72,7 @@ class StrawberryMediaFormatter extends FormatterBase {
         '#default_value' => $this->getSetting('iiif_group'),
       ],
       'json_key_source' => [
-        '#type' => 'string',
+        '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
       ],
@@ -190,15 +190,18 @@ class StrawberryMediaFormatter extends FormatterBase {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
-            if (isset($mediaitem['fid'])) {
+            if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
               $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['fid']
+                $mediaitem['dr:fid']
               );
 
               //@TODO if no media key to file loading was possible
               // means we have a broken/missing media reference
               // we should inform to logs and continue
+              if (!$file) {
+                continue;
+              }
               if ($this->checkAccess($file)) {
                 $iiifidentifier = urlencode(
                   file_uri_target($file->getFileUri())
@@ -206,9 +209,8 @@ class StrawberryMediaFormatter extends FormatterBase {
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
                   continue;
                 }
-                // ImageTookKit use the $file->getFileUri(), we don't want that yet
+                // ImageToolKit use the $file->getFileUri(), we don't want that yet
                 // @see https://github.com/esmero/format_strawberry/issues/1
-
 
 
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
@@ -232,18 +234,6 @@ class StrawberryMediaFormatter extends FormatterBase {
                     'width' => $max_width,
                     'height' => $max_height,
                   ],
-                  /* @TODO Manual caching is having strange implications making every formatter appear the same
-                   * in a solr search output. research deeper on how to have full control.
-                   * ,
-                  '#cache' => [
-                  'keys' => [
-                  $items->getEntity()->getEntityTypeId(),
-                  $items->getEntity()->bundle(),
-                  $this->viewMode,
-                  ],
-                  'tags' => $cache_tags,
-                  'contexts' => $cache_contexts,
-                  ],*/
                 ];
                 if (isset($item->_attributes)) {
                   $elements[$delta] += ['#attributes' => []];

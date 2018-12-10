@@ -40,7 +40,7 @@ class StrawberryImageFormatter extends FormatterBase {
     return [
       'iiif_base_url' => 'http://localhost:8183/iiif/2/',
       'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
-      'json_key_source' => 'Media',
+      'json_key_source' => 'as:image',
       'max_width' => 180,
       'max_height' => 0,
       'image_type' => 'jpg',
@@ -68,7 +68,7 @@ class StrawberryImageFormatter extends FormatterBase {
         '#required' => TRUE,
       ],
       'json_key_source' => [
-        '#type' => 'string',
+        '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
       ],
@@ -171,7 +171,7 @@ class StrawberryImageFormatter extends FormatterBase {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       /* Expected structure of an Media item inside JSON
-      "Media": {
+      "as:image": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
          "fid": 32, // Drupal's FID
          "for": "add_some_master_images", // The webform element key that generated this one
@@ -186,13 +186,15 @@ class StrawberryImageFormatter extends FormatterBase {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
-            if (isset($mediaitem['fid'])) {
+            if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
               // @TODO we can refactor a lot here and move it to base methods
               $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['fid']
+                $mediaitem['dr:fid']
               );
-
+              if (!$file) {
+                continue;
+              }
               //@TODO if no media key to file loading was possible
               // means we have a broken/missing media reference
               // we should inform to logs and continue
