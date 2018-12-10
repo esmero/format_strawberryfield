@@ -18,7 +18,7 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Provides the comments overview administration form.
+ * Provides the Metadata Display overview administration form.
  *
  * @internal
  */
@@ -136,102 +136,55 @@ class MetadataDisplayAdminOverview extends FormBase {
     ];
 
     // Load the comments that need to be displayed.
-    $status = ($type == 'approval') ? CommentInterface::NOT_PUBLISHED : CommentInterface::PUBLISHED;
-    $header = [
-      'subject' => [
-        'data' => $this->t('Subject'),
-        'specifier' => 'subject',
-      ],
-      'author' => [
-        'data' => $this->t('Author'),
-        'specifier' => 'name',
-        'class' => [RESPONSIVE_PRIORITY_MEDIUM],
-      ],
-      'posted_in' => [
-        'data' => $this->t('Posted in'),
-        'class' => [RESPONSIVE_PRIORITY_LOW],
-      ],
-      'changed' => [
-        'data' => $this->t('Updated'),
-        'specifier' => 'changed',
-        'sort' => 'desc',
-        'class' => [RESPONSIVE_PRIORITY_LOW],
-      ],
-      'operations' => $this->t('Operations'),
-    ];
-    $cids = $this->commentStorage->getQuery()
-      ->condition('status', $status)
+    $header['id'] = $this->t('Metadata Display ID');
+    $header['name'] = $this->t('Name');
+    $header['last update'] = $this->t('Last update');
+    $header['operations'] = $this->t('Operations');
+
+    $cids = $this->entityTypeManager->getStorage('metadatadisplay_entity')->getQuery()
       ->tableSort($header)
       ->pager(50)
       ->execute();
 
-    /** @var $comments \Drupal\comment\CommentInterface[] */
-    $comments = $this->commentStorage->loadMultiple($cids);
+    /** @var $metadatadisplays \Drupal\comment\CommentInterface[] */
+    $metadatadisplays = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadMultiple($cids);
 
     // Build a table listing the appropriate comments.
     $options = [];
-    $destination = $this->getDestinationArray();
 
-    $commented_entity_ids = [];
-    $commented_entities = [];
 
-    foreach ($comments as $comment) {
-      $commented_entity_ids[$comment->getCommentedEntityTypeId()][] = $comment->getCommentedEntityId();
-    }
-
-    foreach ($commented_entity_ids as $entity_type => $ids) {
-      $commented_entities[$entity_type] = $this->entityTypeManager
-        ->getStorage($entity_type)
-        ->loadMultiple($ids);
-    }
-
-    foreach ($comments as $comment) {
+    foreach ($metadatadisplays as $metadatadisplay) {
       /** @var $commented_entity \Drupal\Core\Entity\EntityInterface */
-      $commented_entity = $commented_entities[$comment->getCommentedEntityTypeId()][$comment->getCommentedEntityId()];
-      $comment_permalink = $comment->permalink();
-      if ($comment->hasField('comment_body') && ($body = $comment->get('comment_body')->value)) {
-        $attributes = $comment_permalink->getOption('attributes') ?: [];
-        $attributes += ['title' => Unicode::truncate($body, 128)];
-        $comment_permalink->setOption('attributes', $attributes);
-      }
-      $options[$comment->id()] = [
-        'title' => ['data' => ['#title' => $comment->getSubject() ?: $comment->id()]],
-        'subject' => [
+
+      $options[$metadatadisplay->id()] = [
+        'title' => ['data' => ['#title' => $metadatadisplay->id()]],
+        'name' => [
           'data' => [
             '#type' => 'link',
-            '#title' => $comment->getSubject(),
-            '#url' => $comment_permalink,
+            '#title' => $metadatadisplay->name->value,
+            '#url' => $metadatadisplay->toUrl('edit-form'),
           ],
         ],
-        'author' => [
+        'last update' => [
           'data' => [
             '#theme' => 'username',
-            '#account' => $comment->getOwner(),
+            '#account' => \Drupal::service('date.formatter')->format($metadatadisplay->changed->value, 'custom', 'd/m/Y'),
           ],
         ],
-        'posted_in' => [
-          'data' => [
-            '#type' => 'link',
-            '#title' => $commented_entity->label(),
-            '#access' => $commented_entity->access('view'),
-            '#url' => $commented_entity->urlInfo(),
-          ],
-        ],
-        'changed' => $this->dateFormatter->format($comment->getChangedTimeAcrossTranslations(), 'short'),
+
       ];
-      $comment_uri_options = $comment->urlInfo()->getOptions() + ['query' => $destination];
       $links = [];
       $links['edit'] = [
         'title' => $this->t('Edit'),
-        'url' => $comment->urlInfo('edit-form', $comment_uri_options),
+        'url' => $metadatadisplay->toUrl('edit-form'),
       ];
-      if ($this->moduleHandler->moduleExists('content_translation') && $this->moduleHandler->invoke('content_translation', 'translate_access', [$comment])->isAllowed()) {
+      if ($this->moduleHandler->moduleExists('content_translation') && $this->moduleHandler->invoke('content_translation', 'translate_access', [$metadatadisplay])->isAllowed()) {
         $links['translate'] = [
           'title' => $this->t('Translate'),
-          'url' => $comment->urlInfo('drupal:content-translation-overview', $comment_uri_options),
+          'url' => $metadatadisplay->urlInfo('drupal:content-translation-overview'),
         ];
       }
-      $options[$comment->id()]['operations']['data'] = [
+      $options[$metadatadisplay->id()]['operations']['data'] = [
         '#type' => 'operations',
         '#links' => $links,
       ];
@@ -241,7 +194,7 @@ class MetadataDisplayAdminOverview extends FormBase {
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $options,
-      '#empty' => $this->t('No comments available.'),
+      '#empty' => $this->t('No metadata display templates available.'),
     ];
 
     $form['pager'] = ['#type' => 'pager'];
@@ -249,50 +202,5 @@ class MetadataDisplayAdminOverview extends FormBase {
     return $form;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function validateForm(array &$form, FormStateInterface $form_state) {
-    $form_state->setValue('comments', array_diff($form_state->getValue('comments'), [0]));
-    // We can't execute any 'Update options' if no comments were selected.
-    if (count($form_state->getValue('comments')) == 0) {
-      $form_state->setErrorByName('', $this->t('Select one or more comments to perform the update on.'));
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-    $operation = $form_state->getValue('operation');
-    $cids = $form_state->getValue('comments');
-    /** @var \Drupal\comment\CommentInterface[] $comments */
-    $comments = $this->commentStorage->loadMultiple($cids);
-    if ($operation != 'delete') {
-      foreach ($comments as $comment) {
-        if ($operation == 'unpublish') {
-          $comment->setUnpublished();
-        }
-        elseif ($operation == 'publish') {
-          $comment->setPublished();
-        }
-        $comment->save();
-      }
-      $this->messenger()->addStatus($this->t('The update has been performed.'));
-      $form_state->setRedirect('comment.admin');
-    }
-    else {
-      $info = [];
-      /** @var \Drupal\comment\CommentInterface $comment */
-      foreach ($comments as $comment) {
-        $langcode = $comment->language()->getId();
-        $info[$comment->id()][$langcode] = $langcode;
-      }
-      $this->tempStoreFactory
-        ->get('entity_delete_multiple_confirm')
-        ->set($this->currentUser()->id() . ':comment', $info);
-      $form_state->setRedirect('entity.comment.delete_multiple_form');
-    }
-  }
 
 }
