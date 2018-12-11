@@ -190,6 +190,8 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
       }
 
       $jsondata = json_decode($item->value, true);
+      // Probably good idea to strip our own keys here
+      // @TODO remove private access to keys
 
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
@@ -224,9 +226,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
           '#type' => 'inline_template',
           '#template' => $twigtemplate,
           '#context' => [
-            'data' => [
-              'date' => '2018-02-02',
-            ],
+            'data' => $jsondata,
           ],
         ];
 
