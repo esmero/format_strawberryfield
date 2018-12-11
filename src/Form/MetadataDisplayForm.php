@@ -41,7 +41,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     } else {
       $this->messenger()->addMessage($this->t('The Metadata Display %entity has been added.', ['%entity' => $entity->toLink()->toString()]));
     }
-
+    \Drupal::service('plugin.manager.field.formatter')->clearCachedDefinitions();
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $status;
   }

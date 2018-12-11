@@ -43,7 +43,6 @@ class TwigTemplateConstraintValidator extends ConstraintValidator implements Con
 
     $twig = $this->twig;
     $message = $constraint->message;
-    dump($value->value);
     try {
       $twig->parse($twig->tokenize($value->value));
     } catch (Twig_Error_Syntax $e) {

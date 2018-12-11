@@ -211,10 +211,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         $twigtemplate = $metadatadisplayentity->get('twig')->getValue();
         $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value']: "{{ field.label }}";
 
-      
-        //$twigtemplate = html_entity_decode($twigtemplate);
-
-        $environment = $this->twig;
         //  $markup = $environment->renderInline($element['#template'], $element['#context']);
         // @TODO So we can generate two type of outputs here,
         // A) HTML visible (like smart metadata displays)
@@ -277,12 +273,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     $templates = array('formatter' => $twigtemplate);
     $twigenv = new Twig_Environment(new Twig_Loader_Array($templates), array('strict_variables' => true));
     $output = '';
-
-    $context = [
-      'data' => [
-        'date' => '2018-07-07'
-      ]
-    ];
 
     try {
       $output = $twigenv->render($templates['formatter'], $context);
