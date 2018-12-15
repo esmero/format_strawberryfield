@@ -1,6 +1,5 @@
 <?php
 namespace Drupal\format_strawberryfield\Form;
-use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Language\Language;
 use Drupal\Core\Form\FormStateInterface;
@@ -42,6 +41,11 @@ class MetadataDisplayForm extends ContentEntityForm {
       $this->messenger()->addMessage($this->t('The Metadata Display %entity has been added.', ['%entity' => $entity->toLink()->toString()]));
     }
     \Drupal::service('plugin.manager.field.formatter')->clearCachedDefinitions();
+
+    /** @var \Drupal\Core\Template\TwigEnvironment $environment */
+    $environment = \Drupal::service('twig');
+    $environment->invalidate();
+
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $status;
   }

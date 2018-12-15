@@ -7,8 +7,7 @@
  */
 
 namespace Drupal\format_strawberryfield\Form;
-use Drupal\format_strawberryfield\MetadataDisplayInterface;
-use Drupal\Component\Utility\Unicode;
+
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
@@ -181,7 +180,7 @@ class MetadataDisplayAdminOverview extends FormBase {
       if ($this->moduleHandler->moduleExists('content_translation') && $this->moduleHandler->invoke('content_translation', 'translate_access', [$metadatadisplay])->isAllowed()) {
         $links['translate'] = [
           'title' => $this->t('Translate'),
-          'url' => $metadatadisplay->urlInfo('drupal:content-translation-overview'),
+          'url' => $metadatadisplay->toUrl('drupal:content-translation-overview'),
         ];
       }
       $options[$metadatadisplay->id()]['operations']['data'] = [
@@ -200,6 +199,10 @@ class MetadataDisplayAdminOverview extends FormBase {
     $form['pager'] = ['#type' => 'pager'];
 
     return $form;
+  }
+
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // TODO: Implement submitForm() method.
   }
 
 
