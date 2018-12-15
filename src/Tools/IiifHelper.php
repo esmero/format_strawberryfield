@@ -8,9 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Tools;
 
-use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use GuzzleHttp\Exception\ClientException;
 
 class IiifHelper {
 
@@ -84,5 +82,6 @@ class IiifHelper {
     if (isset($this->remoteInfoJson['sizes'])) {
       return $this->remoteInfoJson['sizes'];
     }
+    return [];
   }
 }

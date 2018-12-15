@@ -2,9 +2,6 @@
 namespace Drupal\format_strawberryfield\Form;
 
 use Drupal\Core\Entity\ContentEntityConfirmFormBase;
-use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
-use Drupal\Core\Entity\ContentEntityForm;
-use Drupal\Core\Language\Language;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 
@@ -42,6 +39,9 @@ class MetadataDisplayDeleteForm extends ContentEntityConfirmFormBase {
         ]
       )
     );
+    /** @var \Drupal\Core\Template\TwigEnvironment $environment */
+    $environment = \Drupal::service('twig');
+    $environment->invalidate();
 
     $form_state->setRedirectUrl($this->getCancelUrl());
   }
