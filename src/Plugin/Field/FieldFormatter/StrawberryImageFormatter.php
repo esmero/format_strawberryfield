@@ -44,6 +44,7 @@ class StrawberryImageFormatter extends FormatterBase {
       'max_width' => 180,
       'max_height' => 0,
       'image_type' => 'jpg',
+      'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
 
@@ -71,6 +72,15 @@ class StrawberryImageFormatter extends FormatterBase {
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
+      ],
+      'number_images' => [
+        '#type' => 'number',
+        '#title' => $this->t('Number of images'),
+        '#default_value' => $this->getSetting('number_images'),
+        '#size' => 2,
+        '#maxlength' => 2,
+
+        '#min' => 0,
       ],
       'max_width' => [
         '#type' => 'number',
@@ -114,6 +124,11 @@ class StrawberryImageFormatter extends FormatterBase {
         '%json_key_source' => $this->getSetting('json_key_source'),
       ]);
     }
+    if ($this->getSetting('number_images')) {
+      $summary[] = $this->t('Number of images: "%number"', [
+        '%number' => $this->getSetting('number_images'),
+      ]);
+    }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
       $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
         '%max_width' => $this->getSetting('max_width'),
@@ -142,7 +157,7 @@ class StrawberryImageFormatter extends FormatterBase {
     $elements = [];
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
-
+    $number_images =  $this->getSetting('number_images');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
@@ -185,6 +200,9 @@ class StrawberryImageFormatter extends FormatterBase {
       if (isset($jsondata[$key])) {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
+          if ($i > $number_images) {
+            break;
+          }
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
             if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
@@ -287,15 +305,19 @@ class StrawberryImageFormatter extends FormatterBase {
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
                 $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-                // ['group'][$uniqueid] = true; means all media coming from this field will be loaded inside the same viewer
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['group'][$uniqueid] = true;
+
+
 
               }
               else {
                 // @TODO Deal with no access here
                 // Should we put a thumb? Just hide?
                 // @TODO we can bring a plugin here and there that deals with
-                // Access request, etc, etc.
+                $elements[$delta]['media'.$i] = [
+                  '#markup' => '<i class="fas fa-times-circle"></i>',
+                  '#prefix' => '<span>',
+                  '#suffix' => '</span>',
+                ];
               }
             } elseif (isset($mediaitem['url'])) {
               $elements[$delta]['media'.$i] = [
