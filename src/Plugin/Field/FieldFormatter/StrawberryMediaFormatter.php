@@ -14,8 +14,6 @@ use Drupal\webform_strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Cache\Cache;
-use Drupal\format_strawberryfield\Tools\IiifHelper;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -151,6 +149,8 @@ class StrawberryMediaFormatter extends FormatterBase {
     $elements = [];
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
+    $grouped = $this->getSetting('iiif_group');
+
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
@@ -175,7 +175,7 @@ class StrawberryMediaFormatter extends FormatterBase {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       /* Expected structure of an Media item inside JSON
-      "Media": {
+      "as:images": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
          "fid": 32, // Drupal's FID
          "for": "add_some_master_images", // The webform element key that generated this one
@@ -219,11 +219,11 @@ class StrawberryMediaFormatter extends FormatterBase {
                 // @TODO move the IIIF server baser URL to a global config and an local fieldformatter override.
                 $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
 
-                $uniqueid =
-                  'iiif-'.$items->getName(
-                  ).'-'.$nodeuuid.'-'.$delta.'-media'.$i;
-                $cache_contexts = ['url.site', 'url.path', 'url.query_args','user.permissions'];
-                $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
+
+                $groupid = 'iiif-'.$items->getName(
+                  ).'-'.$nodeuuid.'-'.$delta.'-media';
+                $uniqueid =  $groupid.$i;
+
                 $elements[$delta]['media'.$i] = [
                   '#type' => 'container',
                   '#default_value' => $uniqueid,
@@ -231,6 +231,7 @@ class StrawberryMediaFormatter extends FormatterBase {
                     'id' => $uniqueid,
                     'class' => ['strawberry-media-item','field-iiif','container'],
                     'data-iiif-infojson' => $iiifserver,
+                    'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'width' => $max_width,
                     'height' => $max_height,
                   ],
@@ -254,8 +255,8 @@ class StrawberryMediaFormatter extends FormatterBase {
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
                 $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-                // ['group'][$uniqueid] = true; means all media coming from this field will be loaded inside the same viewer
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['group'][$uniqueid] = true;
+
+
 
               }
             } elseif (isset($mediaitem['url'])) {
