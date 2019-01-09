@@ -282,8 +282,6 @@ class StrawberryMediaFormatter extends FormatterBase {
   public function view(FieldItemListInterface $items, $langcode = NULL) {
 
     $elements = parent::view($items, $langcode);
-    dump($elements);
-
     return $elements;
   }
 
