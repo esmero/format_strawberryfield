@@ -79,7 +79,6 @@ class StrawberryImageFormatter extends FormatterBase {
         '#default_value' => $this->getSetting('number_images'),
         '#size' => 2,
         '#maxlength' => 2,
-
         '#min' => 0,
       ],
       'max_width' => [
