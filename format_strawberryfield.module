@@ -7,8 +7,7 @@
 /**
  * Implements hook_page_attachments().
  *
- * Adds the quickedit library to the page for any user who has the 'access
- * in-place editing' permission.
+ * Adds the iiif_openseadragon js library.
  */
 function format_strawberryfield_page_attachments(array &$page) {
     /*if (!\Drupal::currentUser()->hasPermission('access search')) {
@@ -31,17 +30,17 @@ function format_strawberryfield_page_attachments(array &$page) {
  * Implements hook_theme().
  */
 function format_strawberryfield_theme() {
-  return array(
-    'remote_iiif_style' => array(
-      'variables' => array(
+  return [
+    'remote_iiif_style' => [
+      'variables' => [
         'style_name' => NULL,
         'path' => NULL,
         'width' => NULL,
         'height' => NULL,
         'alt' => '',
         'title' => NULL,
-        'attributes' => array(),
-      ),
-    ),
-  );
+        'attributes' => [],
+      ],
+    ],
+  ];
 }
