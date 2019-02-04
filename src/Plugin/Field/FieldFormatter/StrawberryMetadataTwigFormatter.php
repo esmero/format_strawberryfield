@@ -11,7 +11,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\field\Entity\FieldConfig;
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
@@ -79,7 +79,30 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * @param array $third_party_settings
    *   Any third party settings.
    */
-  public function __construct($plugin_id, $plugin_definition, FieldConfig $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment) {
+  /**
+   * StrawberryMetadataTwigFormatter constructor.
+   *
+   * @param string $plugin_id
+   *   The plugin_id for the formatter.
+   * @param $plugin_definition
+   *   The plugin implementation definition.
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   *   The definition of the field to which the formatter is associated.
+   * @param array $settings
+   * @param string $label
+   *   The formatter settings.
+   * @param $view_mode
+   *   The view mode.
+   * @param array
+   *   Any third party settings.
+   * @param \Drupal\Core\Session\AccountInterface $current_user
+   *   The current User
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The Entity Type manager
+   * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
+   *   The Loaded twig Environment
+   */
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
