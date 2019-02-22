@@ -292,7 +292,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDescription(t('The time that the Metadata Display was last edited.'));
 
     $fields['link'] = BaseFieldDefinition::create('uri')
-      ->setLabel(t('Metadata Defintion Source Link'))
+      ->setLabel(t('Metadata Definition Source Link'))
       ->setDescription(t('A link an Ontology, Schema or any other Metadata Definition'))
       ->setDisplayOptions('view', [
         'region' => 'hidden',
