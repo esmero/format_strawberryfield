@@ -244,6 +244,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
           '#template' => $twigtemplate,
           '#context' => [
             'data' => $jsondata,
+            'node' => $items->getEntity(),
           ],
         ];
 
