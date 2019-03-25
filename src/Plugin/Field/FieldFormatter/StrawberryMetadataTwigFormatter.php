@@ -138,6 +138,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
       'metadatadisplayentity_id' => 'Media',
+      'metadatadisplayentity_uselabel' => FALSE,
     ];
   }
 
@@ -171,6 +172,12 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         '#required' => TRUE,
         '#default_value' => $entity,
       ],
+      'metadatadisplayentity_uselabel' => [
+        '#type' => 'checkbox',
+        '#title' => t('Use also the Metadata Display Name as label?'),
+        '#description' => t('If enabled we will also generate a collapsible container around the display for you.'),
+        '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
+      ]
     ];
   }
 
@@ -179,7 +186,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    */
   public function settingsSummary() {
     $summary = [];
-    $summary[] = $this->t('Prettyfies your Strawberry Field data using a Twig template.');
+    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something elese.');
     return $summary;
   }
 
@@ -191,11 +198,11 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     $elements = [];
     $label = $this->getSetting('label');
     $specs = $this->getSetting('specs');
+    $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_id = $this->getSetting('metadatadisplayentity_id');
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
-
 
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -227,7 +234,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
 
-
       try {
         $twigtemplate = $metadatadisplayentity->get('twig')->getValue();
         $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value']: "{{ field.label }}";
@@ -239,7 +245,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         // C) Embeded (but hidden JSON-LD, etc)
         // So we need to make sure People can "tag" that need.
 
-        $elements[$delta] = [
+        $templaterenderelement = [
           '#type' => 'inline_template',
           '#template' => $twigtemplate,
           '#context' => [
@@ -248,6 +254,17 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
           ],
         ];
 
+        if ($usemetadatalabel){
+          $elements[$delta]['container'] = [
+            '#type' => 'details',
+            '#title' => $metadatadisplayentity->toLink()->getText(),
+            '#open' => TRUE, // Controls the HTML5 'open' attribute. Defaults to FALSE.
+            'content' => $templaterenderelement,
+          ];
+        }
+        else {
+          $elements[$delta]['content'] = $templaterenderelement;
+        }
 
       } catch (\Exception $e) {
         // Render each element as markup.
@@ -256,8 +273,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
             json_decode($item->value, TRUE),
             JSON_PRETTY_PRINT
           ),
-          '#prefix' => '<pre>',
-          '#suffix' => '</pre>',
+
         ];
 
       }
@@ -303,28 +319,22 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
 
 
   /**
-   * Stub for now. Alternative to inline_template theme used in ::viewElements.
+   * Use to process a Template directly.
    *
    * @param string $twigtemplate
    * @param array $context
+   * @param boolean $removeHTML
    *
-   * @return string
-   * @throws \Twig_Error_Loader
-   * @throws \Twig_Error_Syntax
+   * @return \Drupal\Core\Render\Markup
    */
-  protected function twig_process(string $twigtemplate, array $context = []) {
-    $templates = array('formatter' => $twigtemplate);
-    $twigenv = new Twig_Environment(new Twig_Loader_Array($templates), array('strict_variables' => true));
-    $output = '';
-    try {
-      $output = $twigenv->render($templates['formatter'], $context);
-    } catch (Twig_Error_Runtime $e) {
-      //@ TODO make this more sensible, maybe the current NODE id should be passed also
-      // or be a protected property?
-      $message= $this->t('We could not render the template.');
-      \Drupal::logger('format_strawberryfield')->warning($message);
+  protected function twig_process(string $twigtemplate, array $context = [], $removeHTML = FALSE ) {
+    $build = [
+      '#type' => 'inline_template',
+      '#template' => $twigtemplate,
+      '#context' => $context,
+    ];
 
-    }
-    return $output;
+    return \Drupal::service('renderer')->renderPlain($build);
   }
+
 }

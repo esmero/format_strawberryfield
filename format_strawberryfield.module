@@ -18,29 +18,10 @@ function format_strawberryfield_page_attachments(array &$page) {
     }*/
 
     // Remove IIIF on admin routes, why make peoples life more complicated
-    if (\Drupal::service('router.admin_context')->isAdminRoute()) {
+    /* if (\Drupal::service('router.admin_context')->isAdminRoute()) {
         return;
-    }
+    }*/
     $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
-    $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
-}
+    $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
 
-
-/**
- * Implements hook_theme().
- */
-function format_strawberryfield_theme() {
-  return [
-    'remote_iiif_style' => [
-      'variables' => [
-        'style_name' => NULL,
-        'path' => NULL,
-        'width' => NULL,
-        'height' => NULL,
-        'alt' => '',
-        'title' => NULL,
-        'attributes' => [],
-      ],
-    ],
-  ];
 }
