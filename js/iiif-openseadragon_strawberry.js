@@ -10,7 +10,8 @@
 
             $('.strawberry-media-item[data-iiif-infojson]').once('attache_osd')
                 .each(function (index, value) {
-
+                    var default_width =  $(this).attr("width")>0 ? $(this).attr("width"): 320;
+                    var default_height = $(this).attr("height")>0 ? $(this).attr("height"): Math.round((default_width/4)*3);
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     var group = $(this).data("iiif-group");
@@ -19,14 +20,10 @@
                         groupsinfojsons[group]= [infojson];
                         // We only need a single css id per group
                         groupsid[group] = element_id;
-                        if ($(this).attr("height")>0)
-                        {
-                            $(this).height($(this).attr("height"));
-                        }
-                        if ($(this).attr("width")>0)
-                        {
-                            $(this).width($(this).attr("width"));
-                        }
+
+                        $(this).height(default_height);
+                        $(this).width(default_width);
+
 
                     }
                     else {
@@ -40,10 +37,12 @@
                 });
 
             console.log(groupsinfojsons);
+            console.log(groupsid);
             $.each(groupsid, function (group, element_id)  {
                 var tiles = groupsinfojsons[group];
                 var sequence = false;
                 if (tiles.length > 1) {sequence = true}
+                console.log(element_id);
                 viewers[element_id] = OpenSeadragon({
                     showRotationControl: true,
                     gestureSettingsTouch: {

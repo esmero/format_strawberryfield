@@ -1,0 +1,52 @@
+/*
+ * Custom overrides for BookReader IIIF formattter.
+ */
+
+/* Hide print and embed functionality */
+.BRtoolbar .embed, .print {
+    display: none;
+}
+
+.BookReader {
+    overflow: hidden;
+    margin: 20px;
+    background-color: rgba(245,245,245,0.5) !important;
+}
+
+.BRtoolbar,.BRnav {
+    background-color: rgb(195,195,195) !important;
+}
+
+.BRsearchInput {
+  color: rgb(45, 45, 45) !important;
+}
+
+.BRtoolbarbuttons .BRpill {
+    border: 1px solid #b8b8b8;
+    padding: 0.3em 0.4em 0.3em 0.5em !important;
+    height: 30px;
+    border-radius: 2px !important;
+    vertical-align: middle;
+    font-size: 1em !important;
+    cursor: pointer;
+    background-color: rgb(245, 245, 245) !important;
+    color: rgb(95, 95, 95) !important;
+}
+
+.BRbooksearch.desktop {
+    box-sizing: border-box;
+    padding: 0.3em 0.4em 0.3em 0.5em;
+    max-width: 100%;
+    border: 1px solid #b8b8b8;
+    -webkit-border-radius: 7px !important;
+    -moz-border-radius: 7px !important;
+    border-radius: 7px !important;
+    -webkit-box-shadow: 0 0 5px rgba(109,207,246,.5);
+    -moz-box-shadow: 0 0 5px rgba(109,207,246,.5);
+    box-shadow: 0 0 5px rgba(109,207,246,.5);
+    font-size: 1em;
+    -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
+    transition: border linear 0.2s, box-shadow linear 0.2s;
+    background-color: rgb(245,245,245) !important;
+    color: rgb(45,45,45) !important;
+}

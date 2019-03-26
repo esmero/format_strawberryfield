@@ -186,6 +186,10 @@ class StrawberryMediaFormatter extends FormatterBase {
          }
       }*/
       $i = 0;
+
+      // We need to load main Library on each page for views to see it.
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
+
       if (isset($jsondata[$key])) {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
@@ -216,7 +220,7 @@ class StrawberryMediaFormatter extends FormatterBase {
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
                 $filecachetags = $file->getCacheTags();
 
-                // @TODO move the IIIF server baser URL to a global config and an local fieldformatter override.
+                // @TODO move the IIIF server baser URL to a global config and add local fieldformatter override.
                 $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
 
 
@@ -255,9 +259,6 @@ class StrawberryMediaFormatter extends FormatterBase {
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
                 $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-
-
-
               }
             } elseif (isset($mediaitem['url'])) {
               $elements[$delta]['media'.$i] = [
