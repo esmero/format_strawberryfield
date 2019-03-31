@@ -2,9 +2,9 @@ iiif_openseadragon:
   remote: http://openseadragon.github.io
   version: 2.4
   license:
-      name: NewBSD
-      url: http://openseadragon.github.io/license/
-      gpl-compatible: false
+    name: NewBSD
+    url: http://openseadragon.github.io/license/
+    gpl-compatible: false
   header: true
   js:
     https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
@@ -20,14 +20,14 @@ iiif_iabookreader:
   remote: https://openlibrary.org/dev/docs/bookreader
   version: 4.2
   license:
-      name: GNU Affero General Public License v3.0
-      url: https://github.com/internetarchive/bookreader/blob/4.2.0/LICENSE
-      gpl-compatible: true
+    name: GNU Affero General Public License v3.0
+    url: https://github.com/internetarchive/bookreader/blob/4.2.0/LICENSE
+    gpl-compatible: true
   header: true
   css:
     component:
-          css/iabookreader.css: {}
-          https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/BookReader.css: { external: true}
+      css/iabookreader.css: {}
+      https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/BookReader.css: { external: true}
   js:
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
     https://cdn.jsdelivr.net/npm/jquery.dragscrollable@1.0.0/dragscrollable.min.js: { external: true, minified: true, preprocess: false}
@@ -42,12 +42,12 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
-      - core/jquery
-      - core/jquery.ui
-      - core/jquery.ui.slider
-      - core/jquery.ui.effects.core
-      - core/drupal
-      - core/drupalSettings
+    - core/jquery
+    - core/jquery.ui
+    - core/jquery.ui.slider
+    - core/jquery.ui.effects.core
+    - core/drupal
+    - core/drupalSettings
 iiif_iabookreader_strawberry:
   version: 1.0
   js:
@@ -55,11 +55,27 @@ iiif_iabookreader_strawberry:
     js/plugin.iiif-iabookreader_strawberry.js: {minified: false, weight: -8}
     js/iiif-iabookreader_collapse.js: {minified: false}
   dependencies:
-      - core/jquery
-      - core/jquery.ui
-      - core/drupal
-      - core/drupal.form
-      - core/drupalSettings
-      - core/drupal.debounce
-      - format_strawberryfield/iiif_iabookreader
+    - core/jquery
+    - core/jquery.ui
+    - core/drupal
+    - core/drupal.form
+    - core/drupalSettings
+    - core/drupal.debounce
+    - format_strawberryfield/iiif_iabookreader
+pannellum:
+  version: 2.4.1
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/pannellum@2.4.1/build/pannellum.css: { external: true}
+  js:
+    https://cdn.jsdelivr.net/npm/pannellum@2.4.1/build/pannellum.min.js: { external: true, minified: true, preprocess: false}
 
+iiif_pannellum_strawberry:
+  version: 1.0
+  js:
+    js/iiif-pannellum_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/pannellum
