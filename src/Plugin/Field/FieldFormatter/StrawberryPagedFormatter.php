@@ -462,8 +462,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
 
       */
 
-      $i = 0;
-
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
 
 
