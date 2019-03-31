@@ -186,7 +186,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    */
   public function settingsSummary() {
     $summary = [];
-    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something elese.');
+    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something else.');
     return $summary;
   }
 
