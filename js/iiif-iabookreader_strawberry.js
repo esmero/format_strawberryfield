@@ -28,8 +28,8 @@
                                                     perL = data[j].periods.length; */
 
 
-                        $(this).height(800);
-                        $(this).width(800);
+                        $(this).height(drupalSettings.format_strawberryfield.iabookreader[element_id]['height']);
+                        $(this).width(drupalSettings.format_strawberryfield.iabookreader[element_id]['width']);
                         // Defines our basic options for IIIF.
                         var options = {
                             ui: 'full', // embed, full (responsive)
