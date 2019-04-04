@@ -670,6 +670,8 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifest'] = json_decode(
           $manifest
         );
+        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max($max_width, 400);
+        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 320);
       }
     }
     return $element;
