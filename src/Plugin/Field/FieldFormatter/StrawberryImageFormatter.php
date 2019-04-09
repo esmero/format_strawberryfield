@@ -282,30 +282,26 @@ class StrawberryImageFormatter extends FormatterBase {
                     '#width' => $max_width,
                     '#height' => $max_height,
                   ];
+                  if (isset($item->_attributes)) {
+                    $elements[$delta] += ['#attributes' => []];
+                    $elements[$delta]['#attributes'] += $item->_attributes;
+                    // Unset field item attributes since they have been included in the
+                    // formatter output and should not be rendered in the field template.
+                    unset($item->_attributes);
+                  }
+                  // @TODO deal with a lot of Media single strawberryfield
+                  // Idea would be to allow a setting that says, A) all same viewer(aggregate)
+                  // B) individual viewers for each?
+                  // C) only first one?
+                  // We will assign a group based on the UUID of the node containing this
+                  // to idenfity all the divs that we will create. And only first one will be the container in case of many?
+                  // so a jquery selector that uses that group as filter for a search.
+                  // Drupal JS settings get accumulated. So in a single search results site we will have for each
+                  // Formatter one passed. Reason we use 'innode' array using our $uniqueid
+                  // @TODO probably better to use uuid() or the node id() instead of $uniqueid
+                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
+                  $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 }
-
-
-                if (isset($item->_attributes)) {
-                  $elements[$delta] += ['#attributes' => []];
-                  $elements[$delta]['#attributes'] += $item->_attributes;
-                  // Unset field item attributes since they have been included in the
-                  // formatter output and should not be rendered in the field template.
-                  unset($item->_attributes);
-                }
-                // @TODO deal with a lot of Media single strawberryfield
-                // Idea would be to allow a setting that says, A) all same viewer(aggregate)
-                // B) individual viewers for each?
-                // C) only first one?
-                // We will assign a group based on the UUID of the node containing this
-                // to idenfity all the divs that we will create. And only first one will be the container in case of many?
-                // so a jquery selector that uses that group as filter for a search.
-                // Drupal JS settings get accumulated. So in a single search results site we will have for each
-                // Formatter one passed. Reason we use 'innode' array using our $uniqueid
-                // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-
-
 
               }
               else {
