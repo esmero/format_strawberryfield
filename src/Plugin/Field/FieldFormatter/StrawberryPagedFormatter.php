@@ -169,6 +169,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       'mediasource' => 'json_key',
       'json_key_source' => 'as:image',
       'metadatadisplayentity_source' => NULL,
+      'manifesturl_source' => 'iiifmanifest',
       'max_width' => 720,
       'max_height' => 480,
 
@@ -232,8 +233,8 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         ],
       ],
       'manifesturl_source' => [
-        '#type' => 'url',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
+        '#type' => 'textfield',
+        '#title' => t('JSON Key from where to fetch a full IIIF manifest URL'),
         '#default_value' => $this->getSetting('manifesturl_source'),
         '#states' => [
           'visible' => [
@@ -497,6 +498,23 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     }
   }
 
+  /**
+   * Sort passed pages based on a sequence key integer
+   *
+   * @param array $jsondata
+   */
+  protected function orderPages(array &$jsondata, $mainkey = 'as:image', $orderkey ='sequence') {
+    if (!isset($jsondata[$mainkey])){
+      return;
+    }
+    uasort($jsondata[$mainkey],function($a, $b) use ($orderkey) {
+      if ((array_key_exists($orderkey, $a)) && (array_key_exists($orderkey, $b))) {
+        return (int) $a[$orderkey] <=> (int) $b[$orderkey];
+      } else {
+        return 0;
+      }
+    });
+  }
 
   public function processElementsforImages(
     $delta = 0,
@@ -619,11 +637,21 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
+
+
+
     if ($this->getSetting('metadatadisplayentity_source')) {
       $entity = $this->entityTypeManager->getStorage(
         'metadatadisplay_entity'
       )->load($this->getSetting('metadatadisplayentity_source'));
       if ($entity) {
+
+        // Quickly sort the pages. We assume user will use the as:image key
+        // Since the actual generation happens via a twig template.
+        $mainkey = 'as:image';
+        $ordersubkey = 'sequence';
+        $this->orderPages($jsondata, $mainkey, $ordersubkey);
+
         $context = [
           'data' => $jsondata,
           'node' => $item->getEntity(),

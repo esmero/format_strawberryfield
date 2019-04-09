@@ -295,44 +295,43 @@ class StrawberryPannellumFormatter extends FormatterBase {
                       ['@label' => $items->getEntity()->label()]
                     )
                   ];
-                }
-                // Lets add hotspots
-                $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
-                $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
-                // Hotspots are a list of objects in the form of
-                /*{
-                  "yaw": "-14.626185026728738",
-                   "text": "Sheryl's team at the Theater",
-                  "type": "info",
-                  "pitch": "-4.409886580572494"
-                 }, */
-                // @TODO enable multiple scenes and more hotspot options
+                  // Lets add hotspots
+                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
+                  $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
+                  // Hotspots are a list of objects in the form of
+                  /*{
+                    "yaw": "-14.626185026728738",
+                     "text": "Sheryl's team at the Theater",
+                    "type": "info",
+                    "pitch": "-4.409886580572494"
+                   }, */
+                  // @TODO enable multiple scenes and more hotspot options
 
-                if (isset($jsondata[$hotspots])) {
-                  $hotspotsjs = [];
-                  $i=0;
-                  foreach ($jsondata[$hotspots] as $hotspotitems) {
-                    $i++;
-                    $hotspotdefaults = [
-                      'id' => $i,
-                      'pitch' => 0,
-                      'yaw' => 0,
-                      'type' => 'info',
-                      'text' => '',
-                    ];
-                    $hotspotsjs[] = $hotspotitems + $hotspotdefaults;
+                  if (isset($jsondata[$hotspots])) {
+                    $hotspotsjs = [];
+                    $i=0;
+                    foreach ($jsondata[$hotspots] as $hotspotitems) {
+                      $i++;
+                      $hotspotdefaults = [
+                        'id' => $i,
+                        'pitch' => 0,
+                        'yaw' => 0,
+                        'type' => 'info',
+                        'text' => '',
+                      ];
+                      $hotspotsjs[] = $hotspotitems + $hotspotdefaults;
+                    }
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['hotspots'] = $hotspotsjs;
                   }
-                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['hotspots'] = $hotspotsjs;
-                }
 
-                if (isset($item->_attributes)) {
-                  $elements[$delta] += ['#attributes' => []];
-                  $elements[$delta]['#attributes'] += $item->_attributes;
-                  // Unset field item attributes since they have been included in the
-                  // formatter output and should not be rendered in the field template.
-                  unset($item->_attributes);
+                  if (isset($item->_attributes)) {
+                    $elements[$delta] += ['#attributes' => []];
+                    $elements[$delta]['#attributes'] += $item->_attributes;
+                    // Unset field item attributes since they have been included in the
+                    // formatter output and should not be rendered in the field template.
+                    unset($item->_attributes);
+                  }
                 }
-
               }
               else {
                 // @TODO Deal with no access here
