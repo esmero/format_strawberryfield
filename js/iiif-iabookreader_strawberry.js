@@ -34,7 +34,7 @@
                         var options = {
                             ui: 'full', // embed, full (responsive)
                             el: '#' + element_id,
-                            iiifmanifesturl: 'https://iiif.archivelab.org/iiif/platowithenglish04platuoft/manifest.json',
+                            iiifmanifesturl: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifesturl'],
                             iiifmanifest: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifest'],
                             iiifdefaultsequence: null, //If null given will use the first sequence found.
                             maxWidth: 800,
