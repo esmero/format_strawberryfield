@@ -233,7 +233,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         ],
       ],
       'manifesturl_source' => [
-        '#type' => 'url',
+        '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch a full IIIF manifest URL'),
         '#default_value' => $this->getSetting('manifesturl_source'),
         '#states' => [
