@@ -424,12 +424,12 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       $manifest = '';
       switch ($pagestrategy) {
 	case 'json_key':
-		break;
+	  break;
         case 'manifesturl':
-		$elements[$delta] = $this->processElementforManifestURL($delta, $jsondata, $item);
-		break;
+	  $elements[$delta] = $this->processElementforManifestURL($delta, $jsondata, $item);
+	  break;
         case 'metadatadisplayentity':
-          	$elements[$delta] = $this->processElementforMetadatadisplays($delta, $jsondata, $item);
+          $elements[$delta] = $this->processElementforMetadatadisplays($delta, $jsondata, $item);
       }
 
 
@@ -718,45 +718,45 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('manifesturl_source')) {
-	$manifest_url_key = $this->getSetting('manifesturl_source');
-      	if ($jsondata[$manifest_url_key]) {  
-	    $manifest_url = $jsondata[$manifest_url_key];
-            if (UrlHelper::isValid($manifest_url, TRUE)) {
-        	$groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-        	$htmlid = $groupid;
-        	$element['media'] = [
-          		'#type' => 'container',
-          		'#default_value' => $htmlid,
-          		'#attributes' => [
-            			'id' => $htmlid,
-            			'class' => [
-              				'strawberry-iabook-item',
-              				'BookReader',
-              				'field-iiif',
-              				'container',
-            			],
-            			'data-iiif-infojson' => '',
-            			'width' => $max_width,
-            			'height' => $max_height,
-          		],
-        	];
-        	if (isset($item->_attributes)) {
-          		$element += ['#attributes' => []];
-          		$element['#attributes'] += $item->_attributes;
-          		// Unset field item attributes since they have been included in the
-          		// formatter output and should not be rendered in the field template.
-          		unset($item->_attributes);
-        	}
-        	$element['media']['#attributes']['data-iiif-infojson'] = '';
-        	$element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
-        	$element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
-        	$element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max($max_width, 400);
-        	$element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 320);
-           }
+      $manifest_url_key = $this->getSetting('manifesturl_source');
+      if ($jsondata[$manifest_url_key]) {  
+        $manifest_url = $jsondata[$manifest_url_key];
+        if (UrlHelper::isValid($manifest_url, TRUE)) {
+          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+          $htmlid = $groupid;
+          $element['media'] = [
+            '#type' => 'container',
+            '#default_value' => $htmlid,
+            '#attributes' => [
+              'id' => $htmlid,
+              'class' => [
+                'strawberry-iabook-item',
+                'BookReader',
+                'field-iiif',
+                'container',
+              ],
+              'data-iiif-infojson' => '',
+              'width' => $max_width,
+              'height' => $max_height,
+            ],
+          ];
+          if (isset($item->_attributes)) {
+            $element += ['#attributes' => []];
+            $element['#attributes'] += $item->_attributes;
+            // Unset field item attributes since they have been included in the
+            // formatter output and should not be rendered in the field template.
+            unset($item->_attributes);
+          }
+          $element['media']['#attributes']['data-iiif-infojson'] = '';
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max($max_width, 400);
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 320);
+          }
       	}
+      }
+      return $element;
     }
-    return $element;
-  }
 
   /**
    * Use to process a Template directly.
