@@ -234,7 +234,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       ],
       'manifesturl_source' => [
         '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch a full IIIF manifest URL'),
+        '#title' => t('JSON Key from where to fetch an absolute full IIIF manifest URL'),
         '#default_value' => $this->getSetting('manifesturl_source'),
         '#states' => [
           'visible' => [
@@ -423,16 +423,13 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       // A rendered Manifest
       $manifest = '';
       switch ($pagestrategy) {
-        case 'json_key':
-
-          break;
+	case 'json_key':
+	  break;
         case 'manifesturl':
-
-          break;
+	  $elements[$delta] = $this->processElementforManifestURL($delta, $jsondata, $item);
+	  break;
         case 'metadatadisplayentity':
-
           $elements[$delta] = $this->processElementforMetadatadisplays($delta, $jsondata, $item);
-
       }
 
 
@@ -464,10 +461,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       */
 
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
-
-
     }
-
     return $elements;
   }
 
@@ -665,7 +659,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         );
 
         $manifest = $manifestrenderelement->jsonSerialize();
-
         $groupid = 'iiif-' . $item->getName(
           ) . '-' . $nodeuuid . '-' . $delta . '-media';
         $htmlid = $groupid;
@@ -702,8 +695,68 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 320);
       }
     }
+
     return $element;
   }
+
+  /**
+   * Generates render element for a manifest URL.
+   *
+   * @param int $delta
+   * @param array $jsondata
+   * @param \Drupal\Core\Field\FieldItemInterface $item
+   *
+   * @return array
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  public function processElementforManifestURL($delta = 0, array $jsondata, FieldItemInterface $item) {
+    $element = [];
+    $entity = NULL;
+    $nodeuuid = $item->getEntity()->uuid();
+    $max_width = $this->getSetting('max_width');
+    $max_height = $this->getSetting('max_height');
+
+    if ($this->getSetting('manifesturl_source')) {
+      $manifest_url_key = $this->getSetting('manifesturl_source');
+      if ($jsondata[$manifest_url_key]) {  
+        $manifest_url = $jsondata[$manifest_url_key];
+        if (UrlHelper::isValid($manifest_url, TRUE)) {
+          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+          $htmlid = $groupid;
+          $element['media'] = [
+            '#type' => 'container',
+            '#default_value' => $htmlid,
+            '#attributes' => [
+              'id' => $htmlid,
+              'class' => [
+                'strawberry-iabook-item',
+                'BookReader',
+                'field-iiif',
+                'container',
+              ],
+              'data-iiif-infojson' => '',
+              'width' => $max_width,
+              'height' => $max_height,
+            ],
+          ];
+          if (isset($item->_attributes)) {
+            $element += ['#attributes' => []];
+            $element['#attributes'] += $item->_attributes;
+            // Unset field item attributes since they have been included in the
+            // formatter output and should not be rendered in the field template.
+            unset($item->_attributes);
+          }
+          $element['media']['#attributes']['data-iiif-infojson'] = '';
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max($max_width, 400);
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 320);
+          }
+      	}
+      }
+      return $element;
+    }
 
   /**
    * Use to process a Template directly.
