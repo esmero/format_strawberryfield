@@ -172,7 +172,7 @@ class StrawberryMediaFormatter extends FormatterBase {
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        return $elements[$delta] = ['#markup' => $this->t('Sorry, we had issues processing this metadata')];
       }
       /* Expected structure of an Media item inside JSON
       "as:images": {
@@ -271,7 +271,9 @@ class StrawberryMediaFormatter extends FormatterBase {
           }
         }
       }
-
+      else {
+         $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
+      }
     }
 
     return $elements;
