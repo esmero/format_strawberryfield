@@ -258,7 +258,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
           $elements[$delta]['container'] = [
             '#type' => 'details',
             '#title' => $metadatadisplayentity->toLink()->getText(),
-            '#open' => TRUE, // Controls the HTML5 'open' attribute. Defaults to FALSE.
+            '#open' => FALSE, // Controls the HTML5 'open' attribute. Defaults to FALSE.
             'content' => $templaterenderelement,
           ];
         }

@@ -70,7 +70,7 @@ use Drupal\user\UserInterface;
  *
  * @ContentEntityType(
  *   id = "metadatadisplay_entity",
- *   label = @Translation("Contact entity"),
+ *   label = @Translation("Metadata Processor Entity"),
  *   handlers = {
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "list_builder" = "Drupal\format_strawberryfield\Entity\Controller\MetadataDisplayListBuilder",
