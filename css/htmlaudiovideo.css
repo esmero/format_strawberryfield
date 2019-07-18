@@ -5,6 +5,12 @@ video.audio-av {
     border: 1px solid #aaa;
     object-fit: initial;
 }
+
 ::cue {
     font-size: 12px;
+}
+
+video.video-av {
+    border: 1px solid #aaa;
+    object-fit: initial;
 }
