@@ -10,7 +10,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\webform_strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;

@@ -1,0 +1,35 @@
+<?php
+use Drupal\Core\Field\BaseFieldDefinition;
+
+/**
+* Add 'mime type' field to 'metadata display' entities.
+*/
+function format_strawberryfield_update_8001() {
+// Add mimetype field definition to \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity
+//@see https://www.drupal.org/node/2554097
+$storage_definition = BaseFieldDefinition::create('list_string')
+  ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
+  ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
+  ->setSettings(array(
+    'default_value' => 'text/html',
+    'max_length' => 64,
+    'cardinality' => 1,
+    'allowed_values' => [
+      'text/html' => 'HTML',
+      'application/json' => 'JSON',
+      'application/ld+json' => 'JSON-LD',
+      'application/xml' => 'XML',
+      'text/text' => 'TEXT',
+      'text/turtle' => 'RDF/TURTLE'
+    ],
+  ))
+  ->setRequired(TRUE)
+  ->setDisplayOptions('view', [
+    'region' => 'hidden',
+  ])
+  ->setDisplayConfigurable('view', TRUE)
+  ->setDisplayConfigurable('form', TRUE)
+  ->addConstraint('NotBlank');
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('mimetype', 'metadatadisplay_entity', 'format_strawberryfield', $storage_definition);
+}

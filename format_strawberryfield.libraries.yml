@@ -79,3 +79,8 @@ iiif_pannellum_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
+av_strawberry:
+  version: 1.0
+  css:
+    component:
+      css/htmlaudiovideo.css: {}

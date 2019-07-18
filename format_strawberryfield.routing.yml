@@ -46,3 +46,18 @@ format_strawberryfield.metadatadisplay_settings:
     _title: 'Metadata Display Settings'
   requirements:
     _permission: 'administer metadatadisplay entity'
+
+format_strawberryfield.iiifav:
+  path: '/do/{node}/iiif/{uuid}/FULL/100/{format}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifAVController::servefile'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+  requirements:
+    node: \d+
+    uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    format: .+
+    _entity_access: 'node.view'
