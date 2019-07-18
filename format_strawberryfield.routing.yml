@@ -48,7 +48,7 @@ format_strawberryfield.metadatadisplay_settings:
     _permission: 'administer metadatadisplay entity'
 # Direct File access for SBF managed files.
 format_strawberryfield.iiifav:
-  path: '/do/{node}/iiif/{uuid}/FULL/100/{format}'
+  path: '/do/{node}/iiif/{uuid}/full/full/0/{format}'
   methods: [GET]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\IiifAVController::servefile'
