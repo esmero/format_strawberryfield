@@ -10,3 +10,10 @@ format_strawberryfield.admin.structure.settings:
   description: 'Configure Metadata Display entity'
   route_name:  format_strawberryfield.metadatadisplay_settings
   parent: system.admin_structure
+#Adds to Archipelago a global IIIF admin settings
+format_strawberryfield.iiif_admin_settings_form:
+  title: 'IIIF Configuration Form'
+  route_name: format_strawberryfield.iiif_admin_settings_form
+  description: 'Configure IIIF Server'
+  parent: strawberryfield.group.admin
+  weight: 99
