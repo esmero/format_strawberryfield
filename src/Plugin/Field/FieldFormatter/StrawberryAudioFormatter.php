@@ -19,7 +19,7 @@ use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Url;
 
 /**
- * Simplistic Strawberry Field formatter.
+ * Simplistic Audio Strawberry Field formatter.
  *
  * @FieldFormatter(
  *   id = "strawberry_audio_formatter",
@@ -43,7 +43,7 @@ class StrawberryAudioFormatter extends FormatterBase {
       'max_width' => 180,
       'max_height' => 50,
       'audio_type' => 'mp3',
-      'number_audios' => 1,
+      'number_media' => 1,
     ];
   }
 
@@ -57,10 +57,10 @@ class StrawberryAudioFormatter extends FormatterBase {
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
       ],
-      'number_audios' => [
+      'number_media' => [
         '#type' => 'number',
         '#title' => $this->t('Number of Audio files'),
-        '#default_value' => $this->getSetting('number_audios'),
+        '#default_value' => $this->getSetting('number_media'),
         '#size' => 2,
         '#maxlength' => 2,
         '#min' => 0,
@@ -98,9 +98,9 @@ class StrawberryAudioFormatter extends FormatterBase {
         '%json_key_source' => $this->getSetting('json_key_source'),
       ]);
     }
-    if ($this->getSetting('number_audios')) {
+    if ($this->getSetting('number_media')) {
       $summary[] = $this->t('Number of Audios: "%number"', [
-        '%number' => $this->getSetting('number_audios'),
+        '%number' => $this->getSetting('number_media'),
       ]);
     }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
@@ -131,8 +131,7 @@ class StrawberryAudioFormatter extends FormatterBase {
     $elements = [];
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
-    $number_audios =  $this->getSetting('number_audios');
-    dpm($number_audios);
+    $number_media =  $this->getSetting('number_media');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
@@ -168,7 +167,6 @@ class StrawberryAudioFormatter extends FormatterBase {
 			  "url": "s3://f23/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.mp3",
 			  "name": "My Super Audio",
 		  	"type": "Audio",
-		  	"encodingFormat": "audio/mpeg",
 		  	"duration": "T0M15S", //https://en.wikipedia.org/wiki/ISO_8601
 			  "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b",
 			  "tracks": [
@@ -187,7 +185,7 @@ class StrawberryAudioFormatter extends FormatterBase {
       if (isset($jsondata[$key])) {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
-          if ($i > (int) $number_audios) {
+          if ($i > (int) $number_media) {
             break;
           }
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Audio') {
@@ -295,6 +293,7 @@ class StrawberryAudioFormatter extends FormatterBase {
       if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
         unset($elements[$delta]["#attributes"]);
       }
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
     }
     return $elements;
   }
