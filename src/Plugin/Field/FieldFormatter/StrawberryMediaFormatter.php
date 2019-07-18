@@ -10,7 +10,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\webform_strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
@@ -42,7 +42,6 @@ class StrawberryMediaFormatter extends FormatterBase {
       'json_key_source' => 'as:image',
       'max_width' => 720,
       'max_height' => 480,
-
     ];
   }
   /**
@@ -177,8 +176,8 @@ class StrawberryMediaFormatter extends FormatterBase {
       /* Expected structure of an Media item inside JSON
       "as:images": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-         "fid": 32, // Drupal's FID
-         "for": "add_some_master_images", // The webform element key that generated this one
+         "dr:fid": 32, // Drupal's FID
+         "dr:for": "add_some_master_images", // The webform element key that generated this one
          "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
          "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
          "type": "Image",
@@ -205,6 +204,7 @@ class StrawberryMediaFormatter extends FormatterBase {
               // we should inform to logs and continue
               if (!$file) {
                 continue;
+
               }
               if ($this->checkAccess($file)) {
                 $iiifidentifier = urlencode(
@@ -273,6 +273,10 @@ class StrawberryMediaFormatter extends FormatterBase {
       }
       else {
          $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
+      }
+      // Get rid of empty #attributes key to avoid render error
+      if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
+        unset($elements[$delta]["#attributes"]);
       }
     }
 
