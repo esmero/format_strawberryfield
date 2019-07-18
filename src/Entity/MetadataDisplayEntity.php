@@ -299,6 +299,32 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ])
       ->setDisplayConfigurable('view', TRUE);
 
+    // What type of output is expected from the twig template processing.
+    $fields['mimetype'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
+      ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
+      ->setSettings(array(
+        'default_value' => 'text/html',
+        'max_length' => 64,
+        'cardinality' => 1,
+        'allowed_values' => [
+          'text/html' => 'HTML',
+          'application/json' => 'JSON',
+          'application/ld+json' => 'JSON-LD',
+          'application/xml' => 'XML',
+          'text/text' => 'TEXT',
+          'text/turtle' => 'RDF/TURTLE'
+        ],
+      ))
+      ->setRequired(TRUE)
+      ->setDisplayOptions('view', [
+        'region' => 'hidden',
+      ])
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('form', TRUE)
+      ->addConstraint('NotBlank');
+
+
     return $fields;
   }
 }
