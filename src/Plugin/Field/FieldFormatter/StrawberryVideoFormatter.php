@@ -24,7 +24,7 @@ use Drupal\Core\Url;
  * @FieldFormatter(
  *   id = "strawberry_video_formatter",
  *   label = @Translation("Strawberry Field Video Formatter"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryAudioFormatter",
+ *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryVideoFormatter",
  *   field_types = {
  *     "strawberryfield_field"
  *   },
