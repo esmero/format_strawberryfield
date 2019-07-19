@@ -42,6 +42,7 @@ class StrawberryMediaFormatter extends FormatterBase {
       'json_key_source' => 'as:image',
       'max_width' => 720,
       'max_height' => 480,
+      'thumbnails' => TRUE,
     ];
   }
   /**
@@ -67,6 +68,11 @@ class StrawberryMediaFormatter extends FormatterBase {
         '#type' => 'checkbox',
         '#title' => t('Group all Media files in a single viewer?'),
         '#default_value' => $this->getSetting('iiif_group'),
+      ],
+      'thumbnails' => [
+        '#type' => 'checkbox',
+        '#title' => t('Show a thumbnail reference bar.'),
+        '#default_value' => $this->getSetting('thumbnails'),
       ],
       'json_key_source' => [
         '#type' => 'textfield',
@@ -115,6 +121,11 @@ class StrawberryMediaFormatter extends FormatterBase {
         '%iiif_group' => $this->getSetting('iiif_group'),
       ]);
     }
+    if ($this->getSetting('thumbnails')) {
+      $summary[] = $this->t('Show thumbnail navigation bar: %thumbnails', [
+        '%thumbnails' => $this->getSetting('thumbnails'),
+      ]);
+    }
     if ($this->getSetting('json_key_source')) {
       $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
         '%json_key_source' => $this->getSetting('json_key_source'),
@@ -149,6 +160,7 @@ class StrawberryMediaFormatter extends FormatterBase {
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
     $grouped = $this->getSetting('iiif_group');
+    $thumbnails = $this->getSettings('thumbnails');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -175,7 +187,7 @@ class StrawberryMediaFormatter extends FormatterBase {
       }
       /* Expected structure of an Media item inside JSON
       "as:images": {
-         "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
+         "urn:uuid:someuuid": {
          "dr:fid": 32, // Drupal's FID
          "dr:for": "add_some_master_images", // The webform element key that generated this one
          "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
@@ -216,7 +228,6 @@ class StrawberryMediaFormatter extends FormatterBase {
                 // ImageToolKit use the $file->getFileUri(), we don't want that yet
                 // @see https://github.com/esmero/format_strawberry/issues/1
 
-
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
                 $filecachetags = $file->getCacheTags();
 
@@ -236,6 +247,7 @@ class StrawberryMediaFormatter extends FormatterBase {
                     'class' => ['strawberry-media-item','field-iiif','container'],
                     'data-iiif-infojson' => $iiifserver,
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
+                    'data-iiif-thumbnails' => $thumbnails,
                     'width' => $max_width,
                     'height' => $max_height,
                   ],
