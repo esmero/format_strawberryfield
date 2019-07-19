@@ -84,3 +84,20 @@ av_strawberry:
   css:
     component:
       css/htmlaudiovideo.css: {}
+jsm_modeler:
+  version: 0.45
+  js:
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/lib/three.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.ext.three.js: { external: true, minified: true, preprocess: false}
+
+jsm_model_strawberry:
+  version: 1.0
+  js:
+    js/jsm-model_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/jquery.ui
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/jsm_modeler
