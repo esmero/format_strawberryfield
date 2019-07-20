@@ -3,7 +3,7 @@ A Drupal 8 module that provides Cool Field Formatters for StrawberryField (JSON)
 
 ## Help
 
-Having issues with this module? Check out the Archipelago Commons google groups for 
+Having issues with this module? Check out the Archipelago Commons google groups for tech + emotional support + updates.
 
 * [Archipelago Commons](https://groups.google.com/forum/#!forum/archipelago-commons)
 
