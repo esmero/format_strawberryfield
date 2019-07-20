@@ -138,7 +138,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
       'metadatadisplayentity_id' => 'Media',
-      'metadatadisplayentity_uselabel' => FALSE,
+      'metadatadisplayentity_uselabel' => TRUE,
     ];
   }
 
