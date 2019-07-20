@@ -39,6 +39,8 @@ entity.metadatadisplay_entity.delete_form:
   requirements:
     _entity_access: 'metadatadisplay_entity.delete'
 
+# Metadatadisplay settings route
+
 format_strawberryfield.metadatadisplay_settings:
   path: 'admin/structure/metadatadisplay_entity_settings'
   defaults:
@@ -61,6 +63,22 @@ format_strawberryfield.iiifav:
     uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     format: .+
     _entity_access: 'node.view'
+# Direct access to Metadata display processed json
+format_strawberryfield.metadatadisplay:
+  path: '/do/{node}/metadata/{metadatadisplay_entity}/{format}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplayController::castViaTwig'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      metadatadisplay_entity:
+        type: 'entity:metadataexpose_entity'
+  requirements:
+    node: \d+
+    format: .+
+    _entity_access: 'node.view'
 
 format_strawberryfield.iiif_admin_settings_form:
   path: '/admin/config/archipelago/iiif'
@@ -71,3 +89,5 @@ format_strawberryfield.iiif_admin_settings_form:
     _permission: 'access administration pages'
   options:
     _admin_route: TRUE
+
+

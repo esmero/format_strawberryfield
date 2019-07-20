@@ -17,3 +17,10 @@ format_strawberryfield.iiif_admin_settings_form:
   description: 'Configure IIIF Server'
   parent: strawberryfield.group.admin
   weight: 99
+#Adds to Archipelago Expose Metadata Config
+entity.metadataexpose_entity.collection:
+  title: 'Configure Exposed Metadata Endpoints'
+  route_name: entity.metadataexpose_entity.collection
+  description: 'Configure what Metadata will be exposed as direct access URIs on each Digital Object via Metadata Display Entities (Twig).'
+  parent: strawberryfield.group.admin
+  weight: 100
