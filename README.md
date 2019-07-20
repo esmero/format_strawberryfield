@@ -14,6 +14,7 @@ Having issues with this module? Check out the Archipelago Commons google groups 
 ## Caring & Coding + Fixing
 
 * [Diego Pino](https://github.com/DiegoPino)
+* [Giancarlo Birello](https://github.com/giancarlobi)
 
 ## License
 
