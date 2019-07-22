@@ -64,7 +64,7 @@ format_strawberryfield.iiifav:
     format: .+
     _entity_access: 'node.view'
 # Direct access to Metadata display processed json
-format_strawberryfield.metadatadisplay:
+format_strawberryfield.metadatadisplay_caster:
   path: '/do/{node}/metadata/{metadatadisplay_entity}/{format}'
   methods: [GET]
   defaults:

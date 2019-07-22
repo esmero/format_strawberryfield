@@ -2,7 +2,7 @@
 namespace Drupal\format_strawberryfield\Entity\Controller;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
+use Drupal\Core\Entity\EntityListBuilder;
 
 
   /**
@@ -10,7 +10,7 @@ use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
    *
    * @ingroup format_strawberryfield
    */
-class MetadataDisplayListBuilder extends ConfigEntityListBuilder {
+class MetadataDisplayListBuilder extends EntityListBuilder {
 
   /**
    * {@inheritdoc}
