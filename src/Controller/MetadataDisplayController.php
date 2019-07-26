@@ -67,7 +67,7 @@ class MetadataDisplayController extends ControllerBase {
 
 
   /**
-   * Serves the AV File.
+   * Serves the JSON via a Twig transform.
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    * @param string $uuid

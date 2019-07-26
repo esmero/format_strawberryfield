@@ -1,0 +1,27 @@
+'metadataexpose_entity.metadataexpose_entity.*':
+  type: config_entity
+  label: 'Exposed Metadata using Twig Configuration'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+       type: label
+       label: 'Label'
+    uuid:
+      type: string
+    target_entity_types:
+      type: sequence
+      sequence:
+        - type: string
+    source_entityfield_name:
+      type: string
+      label: 'Strawberry Field Name that serves as JSON source'
+    processor_entity_id:
+      label: 'Metadata Display entity that will process the json'
+      type: integer
+    cache:
+      type: boolean
+    active:
+      type: boolean
+      label: 'Whether this endpoint is active'

@@ -49,26 +49,17 @@ class MetadataExposeConfigEntityForm extends EntityForm {
     $form = parent::form($form, $form_state);
     /* @var MetadataExposeConfigEntity $metadataconfig */
     $metadataconfig = $this->entity;
-    /*
-     *  "id",
-     *  "label",
-     *  "uuid",
-     *     "targetEntityType",
-  *     "sourceEntity",
-  *     "processorEntity",
-  *     "cache",
-  *     "active",
-     *
-     */
+
     $entity = NULL;
+
     if ($metadataconfig->getTargetEntityTypes()) {
       $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')
-        ->load($this->getSetting('sourceEntity'));
+        ->load($metadataconfig->getProcessorEntityId());
     }
     $bundles = $this->entityTypeBundleInfo->getBundleInfo('node');
-    dpm($bundles);
+    $nodebundleoptions = [];
     foreach ($bundles as $id => $definition) {
-      $options[$id] = $definition['label'];
+      $nodebundleoptions[$id] = $definition['label'];
     }
     $form = [
       'label' => [
@@ -89,20 +80,22 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#disabled' => !$metadataconfig->isNew(),
         '#description' => $this->t('Machine name used in the URL path to access your Metadata. E.g if "iiif" is chosen as value, access URL will be in the form of "/do/1/metadata/<b>iiif</b>/manifest.json"'),
       ],
-      'sourceEntity' => [
+      'processor_entity_id' => [
         '#type' => 'entity_autocomplete',
         '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data at this endpoint.'),
         '#target_type' => 'metadatadisplay_entity',
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => FALSE,
         '#required' => TRUE,
-        '#default_value' => $entity,
+        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getMetadataDisplayEntity() : NULL,
       ],
-      'targetEntityType' => [
+      'target_entity_types' => [
         '#type' => 'checkboxes',
-        '#options' => ['SAT' => $this->t('SAT'), 'ACT' => $this->t('ACT')],
+        '#options' => $nodebundleoptions,
         '#title' => $this->t('Which Content types will this metadata be allowed to be exposed?'),
-      ],
+        '#required'=> TRUE,
+        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): NULL,
+        ],
       'active' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Is this exposed Metadata Endpoint active?'),
@@ -126,7 +119,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
     if ($status) {
       $this->messenger()->addMessage(
         $this->t(
-          'Saved the %label Example.',
+          'Saved the %label Metadata exposure endpoint.',
           [
             '%label' => $metadataconfig->label(),
           ]
@@ -149,7 +142,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
   }
 
   /**
-   * Helper function to check whether an Example configuration entity exists.
+   * Helper function to check whether an configuration entity exists.
    */
   public function exist($id) {
     $entity = $this->entityTypeManager->getStorage('metadataexpose_entity')

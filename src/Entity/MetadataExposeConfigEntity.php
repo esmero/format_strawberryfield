@@ -39,15 +39,14 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
  *     "id",
  *     "label",
  *     "uuid",
- *     "targetEntityTypes",
- *     "sourceEntity",
- *     "processorEntity",
+ *     "target_entity_types",
+ *     "source_entityfield_name",
+ *     "processor_entity_id",
  *     "cache",
  *     "active",
  *   },
  *   links = {
- *     "canonical" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}",
- *     "edit-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}",
+ *     "edit-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/edit",
  *     "add-form" = "/admin/config/archipelago/metadataexpose/add",
  *     "delete-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/delete",
  *     "collection" = "/admin/config/archipelago/metadataexpose",
@@ -72,28 +71,31 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
   protected $label;
 
   /**
-   * The entity types this configuration entity can target
+   * The node entity types this configuration entity can target
    *
    * @var array
    */
-  protected $targetEntityTypes = [];
+  protected $target_entity_types = [];
 
   /**
-   * The Metadata Display entity this configuration will use to process the JSON
-   *
-   *
-   * @var \Drupal\format_strawberryfield\MetadataDisplayInterface
-   */
-  protected $processorEntity;
-
-
-  /**
-   * The Field Name that will server as source
+   * The Metadata Display entity id
+   * for a \Drupal\format_strawberryfield\MetadataDisplayInterface
    *
    * @var string
    */
-  protected $sourceEntityFieldName;
+  protected $processor_entity_id = NULL;
 
+  /**
+   * @var \Drupal\format_strawberryfield\MetadataDisplayInterface
+   */
+  protected $metadataDisplayEntity = NULL;
+
+  /**
+   * The Node Field Name that will server as source
+   *
+   * @var string
+   */
+  protected $source_entityfield_name = NULL;
 
   /**
    * Whether or not the rendered output of is cached by default.
@@ -107,7 +109,85 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    *
    * @var boolean
    */
-  protected $active = true;
+  protected $active = TRUE;
+
+  /**
+   * @return string
+   */
+  public function getLabel(): string {
+    return $this->label;
+  }
+
+  /**
+   * @param string $label
+   */
+  public function setLabel(string $label): void {
+    $this->label = $label;
+  }
+
+  /**
+   * @return array
+   */
+  public function getTargetEntityTypes(): array {
+    return $this->target_entity_types;
+  }
+
+  /**
+   * @param array $target_entity_types
+   */
+  public function setTargetEntityTypes(array $target_entity_types): void {
+    $this->target_entity_types = $target_entity_types;
+  }
+
+  /**
+   * @return string
+   */
+  public function getProcessorEntityId() {
+    return $this->processor_entity_id;
+  }
+
+  /**
+   * @param string $processor_entity_id
+   */
+  public function setProcessorEntityId(string $processor_entity_id): void {
+    $this->processor_entity_id = $processor_entity_id;
+  }
+
+  /**
+   * @return \Drupal\format_strawberryfield\MetadataDisplayInterface
+   */
+  public function getMetadataDisplayEntity(
+  ) {
+    if (empty($this->metadataDisplayEntity)) {
+      $this->metadataDisplayEntity = \Drupal::service('entity_type.manager')->getStorage('metadatadisplay_entity')
+      ->load($this->processor_entity_id);
+    }
+    return $this->metadataDisplayEntity;
+  }
+
+
+  public function getSourceEntityfieldName() {
+    return $this->source_entityfield_name;
+  }
+
+
+  public function setSourceEntityfieldName(string $source_entityfield_name
+  ) {
+    $this->source_entityfield_name = $source_entityfield_name;
+    return $this;
+  }
+
+  /**
+   * @return bool
+   */
+  public function isCache(): bool {
+    return $this->cache;
+  }
+
+
+  public function setCache(bool $cache): void {
+    $this->cache = $cache;
+  }
 
 
   /**
@@ -128,75 +208,15 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
 
 
   /**
-   * @return mixed
-   */
-  public function getProcessorEntity() {
-    return $this->sourceEntity;
-  }
-
-
-  /**
-   * @param \Drupal\format_strawberryfield\MetadataDisplayInterface $metadatadisplay_entity
-   *
-   * @return $this
-   */
-  public function setProcessorEntity(MetadataDisplayInterface $metadatadisplay_entity) {
-    $this->sourceEntity = $metadatadisplay_entity;
-    return $this;
-  }
-
-
-  /**
-   * @return string
-   */
-  public function getTargetEntityTypes(): array {
-    return $this->targetEntityTypes;
-  }
-
-
-  /**
-   * @param string $targetEntityType
-   *
-   * @return $this
-   */
-  public function setTargetEntityTypes(array $targetEntityTypes) {
-    $this->targetEntityTypes = $targetEntityTypes;
-    return $this;
-  }
-
-
-  /**
-   * @return string
-   */
-  public function getSourceEntityFieldName(): string {
-    return $this->sourceEntityFieldName;
-  }
-
-  /**
-   * @param string $sourceEntityFieldName
-   */
-  public function setSourceEntityFieldName(string $sourceEntityFieldName
-  ) {
-    $this->sourceEntityFieldName = $sourceEntityFieldName;
-    return $this;
-  }
-
-  /**
    * {@inheritdoc}
    */
   public function calculateDependencies() {
     parent::calculateDependencies();
-    $target_entity_type = $this->entityTypeManager->getDefinition(
-      $this->targetEntityType
-    );
-    $source_entity_type = $this->entityTypeManager->getDefinition(
-      $this->sourceEntity->getEntityTypeId()
-    );
 
-    dpm(\Drupal::service('entity_field.manager')->getFieldMapByFieldType('strawberryfield_field'));
-
-    $this->addDependency('module', $target_entity_type->getProvider());
-    $this->addDependency('module', $source_entity_type->getProvider());
+    $this->addDependency('module',  \Drupal::entityTypeManager()->getDefinition(
+      'node')->getProvider());
+    $this->addDependency('module', \Drupal::entityTypeManager()->getDefinition(
+      'metadatadisplay_entity')->getProvider());
     return $this;
   }
 
@@ -205,7 +225,7 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    */
   public function preSave(EntityStorageInterface $storage) {
     parent::preSave($storage);
-    \Drupal::entityTypeManager()->clearCachedFieldDefinitions();
+    \Drupal::entityTypeManager()->clearCachedDefinitions();
   }
 
   /**
@@ -216,7 +236,7 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
     array $entities
   ) {
     parent::preDelete($storage, $entities);
-    \Drupal::entityTypeManager()->clearCachedFieldDefinitions();
+    \Drupal::entityTypeManager()->clearCachedDefinitions();
   }
 
   /**
@@ -225,7 +245,7 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
   protected function urlRouteParameters($rel) {
     $uri_route_parameters = parent::urlRouteParameters($rel);
     if ($rel === 'add-form') {
-      $uri_route_parameters['entity_type_id'] = $this->getTargetEntityType();
+      $uri_route_parameters['entity_type_id'] = $this->getProcessorEntityId();
     }
     return $uri_route_parameters;
   }

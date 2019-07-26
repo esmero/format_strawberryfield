@@ -2,7 +2,8 @@
 namespace Drupal\format_strawberryfield\Entity\Controller;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\EntityListBuilder;
+use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
+
 
 
   /**
@@ -10,7 +11,7 @@ use Drupal\Core\Entity\EntityListBuilder;
    *
    * @ingroup format_strawberryfield
    */
-class MetadataExposeConfigEntityListBuilder extends EntityListBuilder {
+class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
 
   /**
    * {@inheritdoc}
@@ -40,9 +41,8 @@ class MetadataExposeConfigEntityListBuilder extends EntityListBuilder {
    * and inserts the 'edit' and 'delete' links as defined for the entity type.
    */
   public function buildHeader() {
-    $header['id'] = $this->t('Metadata Display ID');
-    $header['name'] = $this->t('Name');
-    $header['last update'] = $this->t('Last update');
+    $header['id'] = $this->t('Metadata Endpoint Config Display ID');
+    $header['label'] = $this->t('Name');
     return $header + parent::buildHeader();
   }
 
@@ -52,8 +52,8 @@ class MetadataExposeConfigEntityListBuilder extends EntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
     $row['id'] = $entity->id();
-    $row['name'] = $entity->toLink();
-    $row['last update'] = \Drupal::service('date.formatter')->format($entity->changed->value, 'custom', 'd/m/Y');
+    $row['label'] = $entity->label();
+
     return $row + parent::buildRow($entity);
   }
 

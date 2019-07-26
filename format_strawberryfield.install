@@ -1,6 +1,7 @@
 <?php
 use Drupal\Core\Field\BaseFieldDefinition;
-
+use Drupal\Core\Config\Entity\ConfigEntityType;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 /**
 * Add 'mime type' field to 'metadata display' entities.
 */
@@ -32,4 +33,35 @@ $storage_definition = BaseFieldDefinition::create('list_string')
   ->addConstraint('NotBlank');
 
   \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('mimetype', 'metadatadisplay_entity', 'format_strawberryfield', $storage_definition);
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Installs metadataexpose_entity config entity for exposing twig output via routes.
+ *
+ * @see 'https://www.drupal.org/node/3034742'
+ */
+function format_strawberryfield_update_8701() {
+  \Drupal::entityDefinitionUpdateManager()->installEntityType(new ConfigEntityType([
+    'id' => 'metadataexpose_entity',
+    'label' => new TranslatableMarkup('Exposed Metadata using Twig Configuration'),
+    'config_prefix' => 'metadataexpose_entity',
+    'admin_permission' => 'administer site configuration',
+    'entity_keys' => ['id' => 'id',
+      'label' => 'label',
+      'uuid' => 'uuid',
+      'active' => 'active',
+    ],
+    'config_export' => [
+      'id',
+      'label',
+      'uuid',
+      'target_entity_types',
+      'source_entityfield_name',
+      'processor_entity_id',
+      'cache',
+      'active'
+    ],
+  ]));
 }
