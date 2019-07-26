@@ -11,7 +11,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
-use Drupal\webform_strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
@@ -385,8 +385,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
 
     $baseiiifserveruri = $this->getSetting('iiif_base_url');
 
-
-
     // This little one is a bit different to the Open Seadragon viewer.
     // Needs to deal with as type:Image and as type Document
     // Since people can setup this to a key we will handle both.
@@ -398,7 +396,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     // We also allow a Twig template / Media Display to be used
     // To generate an on the Fly Manifest. We coded our JS to read from manifests
     // Finally we allow also an Manifest URL to be passed.
-
 
 
     $nodeuuid = $items->getEntity()->uuid();
@@ -436,11 +433,12 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       /* Expected structure of an Media item inside JSON
       "as:images": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-         "fid": 32, // Drupal's FID
-         "for": "add_some_master_images", // The webform element key that generated this one
+         "dr:fid": 32, // Drupal's FID
+         "dr:for": "add_some_master_images", // The webform element key that generated this one
          "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
          "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
          "type": "Image",
+         "sequence" : 1,
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
@@ -449,8 +447,8 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
 
       "as:documents" :  {
          "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf": {
-         "fid": 32, // Drupal's FID
-         "for": "add_some_pdf_files", // The webform element key that generated this one
+         "dr:fid": 32, // Drupal's FID
+         "dr:for": "add_some_pdf_files", // The webform element key that generated this one
          "url": "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
          "name": "new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
          "type": "Document",
@@ -632,8 +630,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
 
-
-
     if ($this->getSetting('metadatadisplayentity_source')) {
       $entity = $this->entityTypeManager->getStorage(
         'metadatadisplay_entity'
@@ -642,6 +638,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
 
         // Quickly sort the pages. We assume user will use the as:image key
         // Since the actual generation happens via a twig template.
+        // @TODO add a config option for this key too.
         $mainkey = 'as:image';
         $ordersubkey = 'sequence';
         $this->orderPages($jsondata, $mainkey, $ordersubkey);

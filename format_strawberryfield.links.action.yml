@@ -5,3 +5,8 @@ format_strawberryfield.metadatadisplay_add:
   appears_on:
     - entity.metadatadisplay_entity.canonical
     - entity.metadatadisplay_entity.collection
+entity.metadataexpose_entity.add_form:
+  route_name: 'entity.metadataexpose_entity.add_form'
+  title: 'Add Exposed Metadata Endpoint'
+  appears_on:
+    - entity.metadataexpose_entity.collection
