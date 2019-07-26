@@ -264,7 +264,7 @@ class StrawberryVideoFormatter extends FormatterBase {
                   'uuid' => $file->uuid(),
                   'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
                 ];
-                $publicurl = Url::fromRoute('format_strawberryfield.iiifav', $route_parameters);
+                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
 
                 $filecachetags = $file->getCacheTags();
                 //@TODO check this filecachetags and see if they make sense
