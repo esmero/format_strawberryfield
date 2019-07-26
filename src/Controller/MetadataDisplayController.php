@@ -36,7 +36,7 @@ class MetadataDisplayController extends ControllerBase {
   protected $strawberryfieldUtility;
 
   /**
-   * IiifAVController constructor.
+   * IiifBinaryController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The request object.

@@ -17,7 +17,7 @@ use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 /**
  * A IIIF Wrapper Controller for non public files.
  */
-class IiifAVController extends ControllerBase {
+class IiifBinaryController extends ControllerBase {
 
   /**
    * Symfony\Component\HttpFoundation\RequestStack definition.
@@ -35,7 +35,7 @@ class IiifAVController extends ControllerBase {
   protected $strawberryfieldUtility;
 
   /**
-   * IiifAVController constructor.
+   * IiifBinaryController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The request object.
