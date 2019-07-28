@@ -55,3 +55,21 @@
     background-color: rgb(245,245,245) !important;
     color: rgb(45,45,45) !important;
 }
+
+/* Zoom box */
+div#BRviewpage {
+	width: inherit;
+	max-width: 97%;
+	height: 97%;
+	margin: 1%;
+	text-align: center;
+}
+
+div.viewpLeft, div.viewpRight {
+	font-size: 1.1em;
+	color: black;
+	height: 100%;
+	width: 48%;
+	display: inline-block;
+	padding: 1%;
+}

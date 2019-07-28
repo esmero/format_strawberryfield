@@ -459,6 +459,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       */
 
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     }
     return $elements;
   }
@@ -716,7 +717,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
 
     if ($this->getSetting('manifesturl_source')) {
       $manifest_url_key = $this->getSetting('manifesturl_source');
-      if ($jsondata[$manifest_url_key]) {  
+      if ($jsondata[$manifest_url_key]) {
         $manifest_url = $jsondata[$manifest_url_key];
         if (UrlHelper::isValid($manifest_url, TRUE)) {
           $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
