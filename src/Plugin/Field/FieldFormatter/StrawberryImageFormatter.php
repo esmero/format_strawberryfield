@@ -33,13 +33,15 @@ use Drupal\format_strawberryfield\Tools\IiifHelper;
  * )
  */
 class StrawberryImageFormatter extends FormatterBase {
+  
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
+    //todo @marlo: make these iiif urls vars since they are repeated, when you get to abstracting the base class.
     return [
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+      'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('pub_server_url', FALSE),
+      'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('int_server_url', FALSE),
       'json_key_source' => 'as:image',
       'max_width' => 180,
       'max_height' => 0,
@@ -47,8 +49,19 @@ class StrawberryImageFormatter extends FormatterBase {
       'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
-
+      'use_iiif_defaults' => TRUE,
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function reset_iiif_defaults() {
+
+    return parent::setSettings([
+      'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('pub_server_url', FALSE),
+      'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('int_server_url', FALSE)
+    ]);
   }
 
   /**
@@ -67,6 +80,13 @@ class StrawberryImageFormatter extends FormatterBase {
         '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
         '#default_value' => $this->getSetting('iiif_base_url_internal'),
         '#required' => TRUE,
+      ],
+      'iiif_reset_button' => [
+        '#type' => 'submit',
+        '#name' => 'iiif_reset_button',
+        '#value' => t('Reset to IIIF Defaults'),
+        '#submit' => [[$this, 'reset_iiif_defaults']],
+
       ],
       'json_key_source' => [
         '#type' => 'textfield',
@@ -102,10 +122,12 @@ class StrawberryImageFormatter extends FormatterBase {
     ];
   }
 
+
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
+
     $summary = [];
     $summary[] = $this->t('Displays Static from JSON using a IIIF server endpoint');
     if ($this->getSetting('iiif_base_url')) {
