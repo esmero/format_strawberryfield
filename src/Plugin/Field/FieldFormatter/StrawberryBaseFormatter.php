@@ -22,41 +22,22 @@ use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Exception\ConnectException;
 
-/**
- * Base Strawberry Field formatter with dependency injection.
- *
- * @FieldFormatter(
- *   id = "strawberry_base_formatter",
- *   label = @Translation("Strawberry Field Base Formatter for others using IIIF references"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryBaseFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
- */
 
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
 
   /**
    * The HTTP client to check if IIIF servers are there.
    *
-   * @var \GuzzleHttp\Client
+   * @var \GuzzleHttp\ClientInterface
    */
   protected $httpClient;
 
   /**
-   * @var string
+   * The Config Factory for getting default IIIF config settings.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface;
    */
-  protected $iiif_pub_server;
-
-  /**
-   * @var string
-   */
-  protected $iiif_int_server;
-
+  protected $IiifConfig;
 
   /**
    * {@inheritdoc}
@@ -77,18 +58,19 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
 
   /**
    * @param string $plugin_id
-   * @param array $settings
    * @param mixed $plugin_definition
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   * @param GuzzleHttp\ClientInterface $httpClient
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
    *   The definition of the field to which the formatter is associated.
+   * @param array $settings
    * @param string $label
    *   The formatter settings.
    * @param $view_mode
    *   The view mode.
    * @param array $third_party_settings
    *   Any third party settings.
+   * @param \GuzzleHttp\ClientInterface $httpClient
+   *   The definition of the field to which the formatter is associated.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    */
   public function __construct(
     $plugin_id,
@@ -99,7 +81,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $view_mode,
     array $third_party_settings,
     ClientInterface $httpClient,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $configFactory
   ) {
     parent::__construct(
       $plugin_id,
@@ -111,17 +93,16 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $third_party_settings
     );
     $this->httpClient = $httpClient;
-    $config = $config_factory->get('format_strawberryfield.iiif_settings');
-    $this->iiif_pub_server = $config->get('pub_server_url');
-    $this->iiif_int_server = $config->get('int_server_url');
+    $this->IiifConfig = $configFactory->get('format_strawberryfield.iiif_settings');
   }
 
   //todo @marlo -- use config factory, Docs say best practice is to use dep injection, not \Drupal::
   public static function defaultSettings() {
+    // dpm(self::$configFactory);
     return [
       'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('pub_server_url', FALSE),
       'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('int_server_url', FALSE),
-      ] + parent::defaultSettings();
+      ];
   }
 
   /**
@@ -142,10 +123,11 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         '#required' => TRUE,
         '#element_validate' => [[$this, 'validateIiifUrl']],
       ],
+      // todo @marlo: Also, you could check if there actually stored defaults at all? And if not, remove the reset button #active = false or something like that, or simply an if around the element
       'iiif_reset_button' => [
         '#type' => 'button',
         '#name' => 'iiif_reset_button',
-        '#value' => t('Reset to IIIF Defaults'),
+        '#value' => t('Reset to global IIIF Defaults'),
         '#executes_submit_callback' => TRUE,
         '#submit' => [[$this, 'resetIiifDefaults']],
       ],
@@ -154,8 +136,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
 
 
   public function validateIiifUrl(array $form, FormStateInterface $form_state) {
-    // todo: @marlo -- also broken, same issue with non-updated form_state
-    error_log(var_export( $form_state->get('iiif_base_url_internal'), true));
+    //todo: @marlo -- also broken, same issue with non-updated form_state
+    //todo: @marlo Since this is also used somewhere else and we will need to validate URLs until we grow old, maybe we can join all the http validations into another class.. just an idea.
+    error_log(var_export( 'validate '.$form_state->get('iiif_base_url_internal'), true));
+    dpm($form_state->get('iiif_base_url_internal'));
     if ($form_state->get('iiif_base_url_internal')) {
     try {
       $response = $this->httpClient
@@ -188,16 +172,14 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
   /**
    * {@inheritdoc}
    */
-  public function resetIiifDefaults(array $form, FormStateInterface $form_state) {
-    $this->setSettings([
-      'iiif_base_url' => $this->iiif_pub_server,
-      'iiif_base_url_internal' => $this->iiif_int_server
-    ]);
+  public function resetIiifDefaults(array &$form, FormStateInterface $form_state) {
+    error_log(var_export( 'reset '. $this->IiifConfig->get('pub_server_url'), true));
+    $this->setSetting('iiif_base_url', $this->IiifConfig->get('pub_server_url'));
+    $this->setSetting('iiif_base_url_internal', $this->IiifConfig->get('int_server_url'));
     //todo: @marlo - this is broken :(
-    $form_state->set('iiif_base_url', $this->iiif_pub_server);
-    $form_state->set('iiif_base_url_internal', $this->iiif_int_server);
+    $form_state->setValue('iiif_base_url', $this->IiifConfig->get('pub_server_url'));
+    $form_state->setValue('iiif_base_url_internal', $this->IiifConfig->get('int_server_url'));
     $form_state->setRebuild(true);
-    return $form;
   }
 
     /**
