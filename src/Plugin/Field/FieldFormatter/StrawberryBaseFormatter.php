@@ -21,6 +21,8 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Exception\ConnectException;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ReplaceCommand;
 
 
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
@@ -37,7 +39,48 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface;
    */
-  protected $IiifConfig;
+  protected $configFactory;
+
+
+  /**
+   * @param string $plugin_id
+   * @param mixed $plugin_definition
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   *   The definition of the field to which the formatter is associated.
+   * @param array $settings
+   * @param string $label
+   *   The formatter settings.
+   * @param $view_mode
+   *   The view mode.
+   * @param array $third_party_settings
+   *   Any third party settings.
+   * @param \GuzzleHttp\ClientInterface $httpClient
+   *   The definition of the field to which the formatter is associated.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   */
+  public function __construct(
+    $plugin_id,
+    $plugin_definition,
+    FieldDefinitionInterface $field_definition,
+    array $settings,
+    $label,
+    $view_mode,
+    array $third_party_settings,
+    ClientInterface $httpClient,
+    ConfigFactoryInterface $config_factory
+  ) {
+    parent::__construct(
+      $plugin_id,
+      $plugin_definition,
+      $field_definition,
+      $settings,
+      $label,
+      $view_mode,
+      $third_party_settings
+    );
+    $this->httpClient = $httpClient;
+    $this->configFactory = $config_factory->get('format_strawberryfield.iiif_settings');
+  }
 
   /**
    * {@inheritdoc}
@@ -56,49 +99,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     );
   }
 
-  /**
-   * @param string $plugin_id
-   * @param mixed $plugin_definition
-   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
-   *   The definition of the field to which the formatter is associated.
-   * @param array $settings
-   * @param string $label
-   *   The formatter settings.
-   * @param $view_mode
-   *   The view mode.
-   * @param array $third_party_settings
-   *   Any third party settings.
-   * @param \GuzzleHttp\ClientInterface $httpClient
-   *   The definition of the field to which the formatter is associated.
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
-   */
-  public function __construct(
-    $plugin_id,
-    $plugin_definition,
-    FieldDefinitionInterface $field_definition,
-    array $settings,
-    $label,
-    $view_mode,
-    array $third_party_settings,
-    ClientInterface $httpClient,
-    ConfigFactoryInterface $configFactory
-  ) {
-    parent::__construct(
-      $plugin_id,
-      $plugin_definition,
-      $field_definition,
-      $settings,
-      $label,
-      $view_mode,
-      $third_party_settings
-    );
-    $this->httpClient = $httpClient;
-    $this->IiifConfig = $configFactory->get('format_strawberryfield.iiif_settings');
-  }
-
-  //todo @marlo -- use config factory, Docs say best practice is to use dep injection, not \Drupal::
   public static function defaultSettings() {
-    // dpm(self::$configFactory);
     return [
       'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('pub_server_url', FALSE),
       'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('int_server_url', FALSE),
@@ -108,81 +109,45 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
   /**
    * {@inheritdoc}
    */
-  public function IiifSettingsForm(array $form, FormStateInterface $form_state) {
-    return [
-      'iiif_base_url' => [
+  public function IiifsettingsForm(array $form, FormStateInterface $form_state) {
+
+    //todo: URL VS TEXTFIELD ?? what is the difference.
+    $element['iiif_base_url'] = [
         '#type' => 'url',
         '#title' => $this->t('Base Public accesible URL of your IIIF Media Server'),
         '#default_value' => $this->getSetting('iiif_base_url'),
+        '#prefix' => '<div id="wrapper_iiif_base_url">',
+        '#suffix' => '</div>',
         '#required' => TRUE
-      ],
-      'iiif_base_url_internal' => [
+      ];
+      $element['iiif_base_url_internal'] = [
         '#type' => 'url',
         '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
         '#default_value' => $this->getSetting('iiif_base_url_internal'),
+        '#prefix' => '<div id="wrapper_iiif_base_url_internal">',
+        '#suffix' => '</div>',
         '#required' => TRUE,
         '#element_validate' => [[$this, 'validateIiifUrl']],
-      ],
-      // todo @marlo: Also, you could check if there actually stored defaults at all? And if not, remove the reset button #active = false or something like that, or simply an if around the element
-      'iiif_reset_button' => [
-        '#type' => 'button',
-        '#name' => 'iiif_reset_button',
-        '#value' => t('Reset to global IIIF Defaults'),
-        '#executes_submit_callback' => TRUE,
-        '#submit' => [[$this, 'resetIiifDefaults']],
-      ],
-    ];
-  }
+      ];
 
+      // If either pub_server_url or int_server_url is set in the config, display the reset to global defaults button
+      if (!empty($this->configFactory->get('pub_server_url')) || !empty($this->configFactory->get('int_server_url'))) {
+        $element['iiif_reset_button'] = [
+          '#type' => 'button',
+          '#name' => 'iiif_reset_button',
+          '#value' => $this->t('Reset to global IIIF Defaults'),
+          '#ajax' => [
+            'callback' => [$this, 'resetIiifDefaults'],
+            'wrapper' => ['wrapper_iiif_base_url', 'wrapper_iiif_base_url_internal']
+          ]
+        ];
+      }
 
-  public function validateIiifUrl(array $form, FormStateInterface $form_state) {
-    //todo: @marlo -- also broken, same issue with non-updated form_state
-    //todo: @marlo Since this is also used somewhere else and we will need to validate URLs until we grow old, maybe we can join all the http validations into another class.. just an idea.
-    error_log(var_export( 'validate '.$form_state->get('iiif_base_url_internal'), true));
-    dpm($form_state->get('iiif_base_url_internal'));
-    if ($form_state->get('iiif_base_url_internal')) {
-    try {
-      $response = $this->httpClient
-        ->head(
-          $form_state->get('iiif_base_url_internal')
-        );
-    }
-    catch(ConnectException $exception) {
-      $responseMessage = $exception->getMessage();
-      $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
-      ]));
-    }
-    catch(ClientException $exception) {
-      $responseMessage = $exception->getMessage();
-      $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
-      ]));
-    }
-    catch (ServerException $exception) {
-      $responseMessage = $exception->getMessage();
-      $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
-      ]));
-    }
-    }
+    return $element;
   }
 
 
   /**
-   * {@inheritdoc}
-   */
-  public function resetIiifDefaults(array &$form, FormStateInterface $form_state) {
-    error_log(var_export( 'reset '. $this->IiifConfig->get('pub_server_url'), true));
-    $this->setSetting('iiif_base_url', $this->IiifConfig->get('pub_server_url'));
-    $this->setSetting('iiif_base_url_internal', $this->IiifConfig->get('int_server_url'));
-    //todo: @marlo - this is broken :(
-    $form_state->setValue('iiif_base_url', $this->IiifConfig->get('pub_server_url'));
-    $form_state->setValue('iiif_base_url_internal', $this->IiifConfig->get('int_server_url'));
-    $form_state->setRebuild(true);
-  }
-
-    /**
    * {@inheritdoc}
    */
   public function IiifSettingsSummary() {
@@ -200,6 +165,61 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
     return $summary;
   }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function resetIiifDefaults(array &$form, FormStateInterface $form_state) {
+    $field_name = $this->fieldDefinition->getName();
+    $this->setSetting('iiif_base_url', $this->configFactory->get('pub_server_url'));
+    $this->setSetting('iiif_base_url_internal', $this->configFactory->get('int_server_url'));
+    // In settings forms, the form snippet created in settingsForm() is not at the root of the form, but rather nested deeply. This is why we can't simply say e.g. $form['iiif_base_url'].
+    $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url']['#value'] = $this->configFactory->get('pub_server_url');
+    $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url_internal']['#value'] = $this->configFactory->get('int_server_url');
+    $response = new AjaxResponse();
+    // Custom response. Issue commands that replaces the elements with given #ids. This way we can return changes to more than one element.
+    $response->addCommand(new ReplaceCommand('#wrapper_iiif_base_url', $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url']));
+    $response->addCommand(new ReplaceCommand('#wrapper_iiif_base_url_internal', $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url_internal']));
+
+    return $response;
+  }
+
+
+  public function validateIiifUrl(array $form, FormStateInterface $form_state) {
+    //todo: @marlo -- also broken, same issue with non-updated form_state
+    //todo: @marlo Since this is also used somewhere else and we will need to validate URLs until we grow old, maybe we can join all the http validations into another class.. just an idea.
+//    dpm($form_state->get('iiif_base_url_internal'));
+    if ($form_state->get('iiif_base_url_internal')) {
+      error_log(var_export( 'validate '.$form_state->get('iiif_base_url_internal'), true));
+      try {
+        $response = $this->httpClient
+          ->head(
+            $form_state->get('iiif_base_url_internal')
+          );
+      }
+      catch(ConnectException $exception) {
+        $responseMessage = $exception->getMessage();
+        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
+          '@error' => $responseMessage
+        ]));
+      }
+      catch(ClientException $exception) {
+        $responseMessage = $exception->getMessage();
+        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
+          '@error' => $responseMessage
+        ]));
+      }
+      catch (ServerException $exception) {
+        $responseMessage = $exception->getMessage();
+        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
+          '@error' => $responseMessage
+        ]));
+      }
+    }
+  }
+
+
 
   /**
    * {@inheritdoc}
