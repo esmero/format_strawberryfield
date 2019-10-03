@@ -29,7 +29,7 @@
                         });
                         }
                        $(this).height(520); //@TODO this needs to be a setting. C'mon
-                       $(this).width('100%');
+                       $(this).css("width","100%");
 
                         console.log('initializing Pannellum')
                         // When loading a webform with an embeded Viewer
