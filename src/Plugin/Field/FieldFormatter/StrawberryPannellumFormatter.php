@@ -37,6 +37,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     return parent::defaultSettings() + [
       'json_key_source' => 'as:image',
       'json_key_hotspots' => 'hotspot',
+      'json_key_multiscene' => 'panorama_tour',
       'max_width' => 600,
       'max_height' => 400,
       'panorama_type' => 'equirectangular',
@@ -63,6 +64,12 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Pannellum Hotspots'),
         '#default_value' => $this->getSetting('json_key_hotspots'),
+      ],
+      'json_key_multiscene' => [
+        '#type' => 'textfield',
+        '#title' => t('JSON Key from where to fetch a Multi Scene Panellum Tour.'),
+        '#description' => t('If found, JSON Key from where to fetch Media URLs will be used to load images from other Digital Object Panoramas'),
+        '#default_value' => $this->getSetting('json_key_multiscene'),
       ],
       'number_images' => [
         '#type' => 'number',
@@ -142,6 +149,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
     $hotspots =  $this->getSetting('json_key_hotspots');
+    $multiscene = trim($this->getSetting('json_key_multiscene'));
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -164,17 +172,29 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           ]);
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
+
+      if (!empty($multiscene) && isset($jsondata[$multiscene]) && count($jsondata[$multiscene])) {
+        // We assume that any other Entity will contain Data in the same fieldname
+        // @TODO explore edge cases of multi SBFs around?
+        // WE could use the SBF service to get the field names too.
+        $elements[$delta] = $this->processMultiScene($jsondata[$multiscene], $fieldname, $nodeid);
+        if (is_array($elements[$delta]) && !empty($elements[$delta])) {
+          continue;
+        }
+      }
+
       /* Expected structure of an Media item inside JSON
-      "as:image": {
-         "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-         "fid": 32, // Drupal's FID
-         "for": "add_some_master_images", // The webform element key that generated this one
-         "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
-         "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
-         "type": "Image",
-         "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
-         }
-      }*/
+          "as:image": {
+             "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
+             "fid": 32, // Drupal's FID
+             "for": "add_some_master_images", // The webform element key that generated this one
+             "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
+             "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
+             "type": "Image",
+             "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
+             }
+          }*/
+
       $i = 0;
       if (isset($jsondata[$key])) {
         $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
@@ -323,5 +343,113 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       }
     }
     return $elements;
+  }
+
+  /**
+   * Processes a Multi Scene JSON key and extracts referenced Scenes and HotSpots.
+   * @param array $jsondata_scene
+   * @param string $fieldname
+   */
+  public function processMultiScene(array $jsondata_scene, string $fieldname, int $ownnodeid) {
+    // We need to check if there are many or a single one first.
+
+    if (isset($jsondata_scene['scene'])) {
+      // Means its a unique scene.
+      $scenes[] = $jsondata_scene;
+    }
+    else {
+      foreach($jsondata_scene as $scene) {
+        $scenes[] = $scene;
+      }
+    }
+    // Now we have a common structure
+    // Create an Empty render array
+    $reusedarray['panorama1'] = [
+      "#type" => "container"
+    ];
+    $single_scenes = new \stdClass();
+    $default_scene = new \stdClass();
+    $full_tour =  new \stdClass();
+    $single_scene_details = new \stdClass();
+    $panorama_id = NULL;
+    foreach ($scenes as $key => $scenes) {
+      // Now this is sweet, We will assume that the user wants same specs as this
+      // Formatter (makes sense!).
+      $nid = $scenes["scene"];
+      // Don't allow circular references
+      if ($nid != $ownnodeid) {
+        // @TODO inject-it as we do in the other formatters.
+        $node = \Drupal::service('entity.manager')->getStorage('node')->load(
+          $nid
+        );
+        $type = $this->pluginId;
+        $settings = $this->getSettings();
+        // Let's reuse the same settings we have!
+        // but remove 'multiscene' key to make sure
+        // That we don't end loading circular
+        // references, deep tours in tours or even ourselves!
+        $settings['json_key_multiscene'] = '';
+        if ($this->checkAccess($node)) {
+          foreach ($node->{$fieldname} as $i => $delta) {
+            // @see \Drupal\Core\Entity\EntityViewBuilderInterface::viewField()
+            $renderarray = $delta->view(['type' => $type, 'settings' => $settings]);
+            // We only want first image always.
+            if (isset($renderarray['panorama1'])) {
+              if ($key == 0) {
+                $reusedarray = $renderarray;
+                // Lets build our objects here!
+                $default_scene->firstScene = 'scene'.$nid.'-'.$i;
+                $single_scene_details = new \stdClass();
+                $single_scene_details->title = $node->label();
+                $single_scene_details->type = 'equirectangular';
+                $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                $single_scenes->{'scene'.$nid.'-'.$i} = clone $single_scene_details;
+                $panorama_id = $renderarray['panorama1']['#attributes']['id'];
+                dpm($panorama_id);
+                unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
+              } else {
+                $single_scene_details->title = $node->label();
+                $single_scene_details->type = 'equirectangular';
+                $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                $single_scenes->{'scene'.$nid.'-'.$i} = clone $single_scene_details;
+              }
+            }
+          }
+        }
+      }
+    }
+    $full_tour->default = $default_scene;
+    $full_tour->scenes = $single_scenes;
+    //@TODO we should validate this puppies probably.
+    if (!empty($panorama_id)) {
+      $reusedarray["#attached"]["drupalSettings"]["format_strawberryfield"]["pannellum"][$panorama_id]["tour"] = $full_tour;
+    }
+    return $reusedarray;
+  }
+  /**
+   * {@inheritdoc}
+   */
+  public function view(FieldItemListInterface $items, $langcode = NULL) {
+
+    $elements = parent::view($items, $langcode);
+    return $elements;
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function checkAccess(EntityInterface $entity) {
+    // Only check access if the current file access control handler explicitly
+    // opts in by implementing FileAccessFormatterControlHandlerInterface.
+    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
+    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
+      return $entity->access('view', NULL, FALSE);
+    }
+    else {
+      return AccessResult::allowed();
+    }
   }
 }
