@@ -23,6 +23,10 @@ use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Exception\ConnectException;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Component\Utility\NestedArray;
+
 
 
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
@@ -40,7 +44,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    * @var \Drupal\Core\Config\ConfigFactoryInterface;
    */
   protected $configFactory;
-
 
   /**
    * @param string $plugin_id
@@ -99,127 +102,101 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     );
   }
 
+  // todo: book page 300. can i pass storagedefinitioninterface? or something. to access settings.
   public static function defaultSettings() {
     return [
-      'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('pub_server_url', FALSE),
-      'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->getOriginal('int_server_url', FALSE),
+      'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->get('pub_server_url'),
+      'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->get('int_server_url'),
+      'use_iiif_globals' => TRUE
       ];
   }
 
   /**
    * {@inheritdoc}
    */
-  public function IiifsettingsForm(array $form, FormStateInterface $form_state) {
-
-    //todo: URL VS TEXTFIELD ?? what is the difference.
-    $element['iiif_base_url'] = [
-        '#type' => 'url',
-        '#title' => $this->t('Base Public accesible URL of your IIIF Media Server'),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#prefix' => '<div id="wrapper_iiif_base_url">',
-        '#suffix' => '</div>',
-        '#required' => TRUE
-      ];
-      $element['iiif_base_url_internal'] = [
-        '#type' => 'url',
-        '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#prefix' => '<div id="wrapper_iiif_base_url_internal">',
-        '#suffix' => '</div>',
-        '#required' => TRUE,
-        '#element_validate' => [[$this, 'validateIiifUrl']],
-      ];
-
-      // If either pub_server_url or int_server_url is set in the config, display the reset to global defaults button
-      if (!empty($this->configFactory->get('pub_server_url')) || !empty($this->configFactory->get('int_server_url'))) {
-        $element['iiif_reset_button'] = [
-          '#type' => 'button',
-          '#name' => 'iiif_reset_button',
-          '#value' => $this->t('Reset to global IIIF Defaults'),
-          '#ajax' => [
-            'callback' => [$this, 'resetIiifDefaults'],
-            'wrapper' => ['wrapper_iiif_base_url', 'wrapper_iiif_base_url_internal']
-          ]
-        ];
-      }
-
-    return $element;
-  }
-
-
-  /**
-   * {@inheritdoc}
-   */
-  public function IiifSettingsSummary() {
+  public function settingsSummary() {
     $summary = [];
-    $summary[] = $this->t('Displays Static from JSON using a IIIF server endpoint');
+      $summary[] = $this->t('Use IIIF Global Urls? %value', [
+        '%value' => boolval($this->getSetting('use_iiif_globals')) === true  ? "Yes." : "No, use custom."
+      ]);
     if ($this->getSetting('iiif_base_url')) {
-      $summary[] = $this->t('IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
+      $summary[] = $this->t('IIIF Media Server base URI: %url', [
+//        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
+        '%url' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url')
       ]);
     }
     if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t('Internal IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url_internal'),
+      $summary[] = $this->t('Internal IIIF Media Server base URI: %url', [
+        '%url' => $this->getSetting('iiif_base_url_internal'),
       ]);
     }
     return $summary;
   }
 
-
   /**
    * {@inheritdoc}
    */
-  public function resetIiifDefaults(array &$form, FormStateInterface $form_state) {
-    $field_name = $this->fieldDefinition->getName();
-    $this->setSetting('iiif_base_url', $this->configFactory->get('pub_server_url'));
-    $this->setSetting('iiif_base_url_internal', $this->configFactory->get('int_server_url'));
-    // In settings forms, the form snippet created in settingsForm() is not at the root of the form, but rather nested deeply. This is why we can't simply say e.g. $form['iiif_base_url'].
-    $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url']['#value'] = $this->configFactory->get('pub_server_url');
-    $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url_internal']['#value'] = $this->configFactory->get('int_server_url');
-    $response = new AjaxResponse();
-    // Custom response. Issue commands that replaces the elements with given #ids. This way we can return changes to more than one element.
-    $response->addCommand(new ReplaceCommand('#wrapper_iiif_base_url', $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url']));
-    $response->addCommand(new ReplaceCommand('#wrapper_iiif_base_url_internal', $form['fields'][$field_name]['plugin']['settings_edit_form']['settings']['iiif_base_url_internal']));
+  public function settingsForm(array $form, FormStateInterface $form_state) {
+    $element['use_iiif_globals'] = [
+        '#type' => 'checkbox',
+        '#title' => t('Use Global IIIF Urls'),
+        '#description' => t('<b>Current Globals: </b><br>') . 'Public: '.$this->configFactory->get('pub_server_url') . '<br>Internal: ' . $this->configFactory->get('int_server_url'),
+        '#default_value' => $this->getSetting('use_iiif_globals'),
+        // Created custom 'data-*' selector rather than using name or id, because the name and id attributes are already set by Drupal and deeply nested for settingsForms. Overriding them causes problems with data submission. Trying to access them in #states is hard. So this is easier. This is valid HTML5.
+        '#attributes' => [
+          'data-checkbox-selector' => 'use_iiif_globals'
+        ],
+      ];
+    $element['iiif_base_url'] = [
+        '#type' => 'url',
+        '#title' => $this->t('Custom base public accessible URL of your IIIF Media Server'),
+        '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url'),
+        '#states' => [
+          'visible' => [
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
+          ]
+        ],
+      //todo: make required / validation work / conditionally
+      //'#element_validate' => [[$this, 'validatePublicUrl']],
+    ];
+      $element['iiif_base_url_internal'] = [
+        '#type' => 'url',
+        '#title' => $this->t('Custom base URL of your IIIF Media Server accessible from inside this Webserver'),
+        '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('int_server_url'): $this->getSetting('iiif_base_url_internal'),
+//        '#required' => true,
+        '#states' => [
+          'visible' => [
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
+          ]
+        ],
+        //todo: make required / validation work / conditionally
+        //'#element_validate' => [[$this, 'validateInternalUrl']],
+      ];
 
-    return $response;
+    return $element;
   }
 
+  public function validateInternalUrl(&$element, FormStateInterface $form_state, &$complete_form) {
+    $validator = new IiifUrlValidator();
+    $internalUrlError = $validator->checkInternalUrl($element['#value']);
 
-  public function validateIiifUrl(array $form, FormStateInterface $form_state) {
-    //todo: @marlo -- also broken, same issue with non-updated form_state
-    //todo: @marlo Since this is also used somewhere else and we will need to validate URLs until we grow old, maybe we can join all the http validations into another class.. just an idea.
-//    dpm($form_state->get('iiif_base_url_internal'));
-    if ($form_state->get('iiif_base_url_internal')) {
-      error_log(var_export( 'validate '.$form_state->get('iiif_base_url_internal'), true));
-      try {
-        $response = $this->httpClient
-          ->head(
-            $form_state->get('iiif_base_url_internal')
-          );
-      }
-      catch(ConnectException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-          '@error' => $responseMessage
-        ]));
-      }
-      catch(ClientException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-          '@error' => $responseMessage
-        ]));
-      }
-      catch (ServerException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Public IIIF server: @error", [
-          '@error' => $responseMessage
-        ]));
-      }
+    if (!empty($internalUrlError)) {
+      $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Internal IIIF server: @error", [
+        '@error' => $internalUrlError
+      ]));
     }
   }
 
+  public function validatePublicUrl(&$element, FormStateInterface $form_state, &$complete_form) {
+    $validator = new IiifUrlValidator();
+    $publicUrlError = $validator->checkPublicUrl($element['#value']);
 
+    if (!empty($publicUrlError)) {
+      $form_state->setErrorByName('iiif_base_url', t("We could not contact your Public IIIF server: @error", [
+        '@error' => $publicUrlError
+      ]));
+    }
+  }
 
   /**
    * {@inheritdoc}
