@@ -9,6 +9,9 @@ field.formatter.settings.strawberry_media_formatter:
     iiif_base_url:
       type: string
       label: 'IIIF media Server URI.'
+    iiif_base_url_internal:
+      type: string
+      label: 'IIIF internal media Server URI.'
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
@@ -25,3 +28,26 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
+field.formatter.settings.strawberry_image_formatter:
+  type: mapping
+  label: 'FORMATTER Config for strawberry_image_formatter'
+  mapping:
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    iiif_base_url:
+      type: string
+      label: 'IIIF media Server URI.'
+    iiif_base_url_internal:
+      type: string
+      label: 'IIIF internal media Server URI.'
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'

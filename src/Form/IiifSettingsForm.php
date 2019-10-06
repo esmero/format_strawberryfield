@@ -4,13 +4,10 @@ namespace Drupal\format_strawberryfield\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use GuzzleHttp\Exception\ConnectException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
+
 
 /**
  * Class IiifSettingsForm.
@@ -96,32 +93,22 @@ class IiifSettingsForm extends ConfigFormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     // Don't validate External one, since PHP could probably fail.
-    try {
-      /* @var Client $this->httpClient  */
-      $response = $this->httpClient
-        ->head(
-          $form_state
-            ->getValue('int_server_url')
-        );
-      }
-    catch(ConnectException $exception) {
-      $responseMessage = $exception->getMessage();
-      $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
+    $validator = new IiifUrlValidator();
+
+    $internalUrlError = $validator->checkInternalUrl($form_state->getValue('int_server_url'));
+    // todo book p. 303 i think there is an isEmpty() method
+    if (!empty($internalUrlError)) {
+      $form_state->setErrorByName('int_server_url', t("We could not contact your Internal IIIF server: @error", [
+        '@error' => $internalUrlError
       ]));
     }
-      catch(ClientException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
+
+    $publicUrlError = $validator->checkPublicUrl($form_state->getValue('pub_server_url'));
+    if (!empty($publicUrlError)) {
+      $form_state->setErrorByName('pub_server_url', t("We could not contact your Public IIIF server: @error", [
+        '@error' => $publicUrlError
       ]));
-      }
-      catch (ServerException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-          '@error' => $responseMessage
-        ]));
-      }
+    }
 
     parent::validateForm(
       $form,
