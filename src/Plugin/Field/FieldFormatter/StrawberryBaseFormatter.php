@@ -21,11 +21,8 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\ServerException;
 use GuzzleHttp\Exception\ConnectException;
-use Drupal\Core\Ajax\AjaxResponse;
-use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
-use Drupal\Component\Utility\NestedArray;
 
 
 
@@ -102,12 +99,11 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     );
   }
 
-  // todo: book page 300. can i pass storagedefinitioninterface? or something. to access settings.
   public static function defaultSettings() {
     return [
       'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->get('pub_server_url'),
       'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->get('int_server_url'),
-      'use_iiif_globals' => TRUE
+      'use_iiif_globals' => true
       ];
   }
 
@@ -121,7 +117,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       ]);
     if ($this->getSetting('iiif_base_url')) {
       $summary[] = $this->t('IIIF Media Server base URI: %url', [
-//        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
         '%url' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url')
       ]);
     }
@@ -153,11 +148,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url'),
         '#states' => [
           'visible' => [
-            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
           ]
         ],
-      //todo: make required / validation work / conditionally
-      //'#element_validate' => [[$this, 'validatePublicUrl']],
+      '#element_validate' => [[$this, 'validateUrl']],
     ];
       $element['iiif_base_url_internal'] = [
         '#type' => 'url',
@@ -166,35 +160,38 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
 //        '#required' => true,
         '#states' => [
           'visible' => [
-            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
           ]
         ],
-        //todo: make required / validation work / conditionally
-        //'#element_validate' => [[$this, 'validateInternalUrl']],
+        '#element_validate' => [[$this, 'validateUrl']],
       ];
 
     return $element;
   }
 
-  public function validateInternalUrl(&$element, FormStateInterface $form_state, &$complete_form) {
-    $validator = new IiifUrlValidator();
-    $internalUrlError = $validator->checkInternalUrl($element['#value']);
+  public function validateUrl(&$element, FormStateInterface $form_state, &$complete_form) {
 
-    if (!empty($internalUrlError)) {
-      $form_state->setErrorByName('iiif_base_url_internal', t("We could not contact your Internal IIIF server: @error", [
-        '@error' => $internalUrlError
-      ]));
-    }
-  }
+    $parents = $element['#parents'];
+    $url_type = end($parents);
+    $checkbox = array_slice($parents, 0, -1);
+    $checkbox[] = 'use_iiif_globals';
 
-  public function validatePublicUrl(&$element, FormStateInterface $form_state, &$complete_form) {
-    $validator = new IiifUrlValidator();
-    $publicUrlError = $validator->checkPublicUrl($element['#value']);
+    // Only validate if using locally defined urls. The globals have already been validated.
+    if (boolval($form_state->getValue($checkbox)) === false) {
+      $validator = new IiifUrlValidator();
+      if ($url_type === 'iiif_base_url') {
+        $error = $validator->checkPublicUrl($element['#value']);
 
-    if (!empty($publicUrlError)) {
-      $form_state->setErrorByName('iiif_base_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $publicUrlError
-      ]));
+      } else if ($url_type === 'iiif_base_url_internal') {
+        $error = $validator->checkInternalUrl($element['#value']);
+      }
+
+      if (!empty($error)) {
+        // todo: find the actual place in form_state to place error inline.
+        $form_state->setErrorByName($url_type, t("We could not contact your IIIF server: @error", [
+          '@error' => $error
+        ]));
+      }
     }
   }
 

@@ -35,7 +35,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    return
+      parent::defaultSettings() + [
       'json_key_source' => 'as:image',
       'max_width' => 180,
       'max_height' => 0,
@@ -43,7 +44,6 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
-      'use_iiif_defaults' => TRUE,
     ];
   }
 
@@ -52,8 +52,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
 
-    return parent::IiifSettingsForm($form, $form_state) +
-      [
+    return [
       'json_key_source' => [
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
@@ -85,7 +84,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
 
@@ -94,7 +93,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    */
   public function settingsSummary() {
 
-    $summary = parent::IiifSettingsSummary();
+    $summary = parent::settingsSummary();
 
     if ($this->getSetting('json_key_source')) {
       $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
@@ -193,7 +192,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
               //@TODO if no media key to file loading was possible
               // means we have a broken/missing media reference
               // we should inform to logs and continue
-              if ($this->checkAccess($file)) {
+              if (parent::checkAccess($file)) {
                 $iiifidentifier = urlencode(
                   file_uri_target($file->getFileUri())
                 );
@@ -310,5 +309,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
     }
     return $elements;
   }
+
+
 
 }
