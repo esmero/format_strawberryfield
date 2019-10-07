@@ -14,23 +14,14 @@ use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
  */
 class IiifSettingsForm extends ConfigFormBase {
 
-
-  /**
-   * The HTTP client to check if IIIF servers are there.
-   *
-   * @var \GuzzleHttp\Client
-   */
-  protected $httpClient;
-
   /**
    * Constructs a \Drupal\system\ConfigFormBase object.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, ClientInterface $httpClient) {
+  public function __construct(ConfigFactoryInterface $config_factory) {
     $this->setConfigFactory($config_factory);
-    $this->httpClient = $httpClient;
   }
 
   /**
@@ -38,8 +29,7 @@ class IiifSettingsForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('config.factory'),
-      $container->get('http_client')
+      $container->get('config.factory')
     );
   }
 
