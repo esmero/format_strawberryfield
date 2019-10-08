@@ -404,9 +404,10 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 $single_scene_details->type = 'equirectangular';
                 $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
                 $single_scenes->{'scene'.$nid.'-'.$i} = clone $single_scene_details;
                 $panorama_id = $renderarray['panorama1']['#attributes']['id'];
-                dpm($panorama_id);
+
                 unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
               } else {
                 $single_scene_details->title = $node->label();
@@ -422,7 +423,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     }
     $full_tour->default = $default_scene;
     $full_tour->scenes = $single_scenes;
-    //@TODO we should validate this puppies probably.
+    //@TODO we should validate these puppies probably.
     if (!empty($panorama_id)) {
       $reusedarray["#attached"]["drupalSettings"]["format_strawberryfield"]["pannellum"][$panorama_id]["tour"] = $full_tour;
     }
