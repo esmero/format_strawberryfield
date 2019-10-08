@@ -53,7 +53,7 @@ field.formatter.settings.strawberry_image_formatter:
     rotation:
       type: string
 field.formatter.settings.strawberry_media_formatter:
-  type: mapping
+  type: strawberryfield_formatter_base
   label: 'FORMATTER Config for strawberry_media_formatter'
   mapping:
     iiif_group:

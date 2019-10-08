@@ -35,7 +35,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    return
+      parent::defaultSettings() + [
       'json_key_source' => 'as:image',
       'max_width' => 180,
       'max_height' => 0,
