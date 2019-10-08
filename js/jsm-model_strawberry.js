@@ -73,4 +73,4 @@
                     }
                 });
         }};
-})(jQuery, Drupal, drupalSettings, JSM);
+})(jQuery, Drupal, drupalSettings, window.JSM);
