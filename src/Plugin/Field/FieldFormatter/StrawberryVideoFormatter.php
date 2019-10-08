@@ -33,21 +33,19 @@ use Drupal\Core\Url;
  *   }
  * )
  */
-class StrawberryVideoFormatter extends FormatterBase {
+class StrawberryVideoFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
+    return parent::defaultSettings() + [
       'json_key_source' => 'as:video',
       'max_width' => 720,
       'max_height' => 240,
       'audio_type' => 'mp4',
       'number_media' => 1,
       'posterframe' => 'iiif',
-      'json_key_source_for_poster' => 'as:image',
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+      'json_key_source_for_poster' => 'as:image'
     ];
   }
 
@@ -100,32 +98,6 @@ class StrawberryVideoFormatter extends FormatterBase {
           'data-formatter-selector' => 'posterframe',
         ],
       ],
-      'iiif_base_url' => [
-        '#type' => 'url',
-        '#title' => $this->t(
-          'Base URL of your IIIF Media Server public accesible from the Outside World'
-        ),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#required' => TRUE,
-        '#states' => [
-          'visible' => [
-            ':input[data-formatter-selector="posterframe"]' => ['value' => 'iiif'],
-          ],
-        ],
-      ],
-      'iiif_base_url_internal' => [
-        '#type' => 'url',
-        '#title' => $this->t(
-          'Base URL of your IIIF Media Server accesible from inside this Webserver'
-        ),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#required' => TRUE,
-        '#states' => [
-          'visible' => [
-            ':input[data-formatter-selector="posterframe"]' => ['value' => 'iiif'],
-          ],
-        ],
-      ],
       'json_key_source_for_poster' => [
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URL for the Poster Frame'),
@@ -136,16 +108,14 @@ class StrawberryVideoFormatter extends FormatterBase {
           ],
         ],
       ],
-
-
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t('Plays Video from JSON');
 
     if ($this->getSetting('json_key_source')) {
@@ -402,40 +372,4 @@ class StrawberryVideoFormatter extends FormatterBase {
     return $media_element;
   }
 
-  /**
-   * Tries to guess mimetype of external referenced Uris
-   *
-   * @param string $uripath
-   *
-   * @return string
-   *  A guessed Mimetype
-   */
-  protected function guessMimeForExternalURI(string $uripath) {
-    return \Drupal::service('file.mime_type.guesser')->guess($uripath);
-  }
-
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
-  }
 }

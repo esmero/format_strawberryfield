@@ -8,11 +8,8 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -32,14 +29,12 @@ use Drupal\format_strawberryfield\Tools\IiifHelper;
  *   }
  * )
  */
-class StrawberryPannellumFormatter extends FormatterBase {
+class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+    return parent::defaultSettings() + [
       'json_key_source' => 'as:image',
       'json_key_hotspots' => 'hotspot',
       'max_width' => 600,
@@ -47,11 +42,10 @@ class StrawberryPannellumFormatter extends FormatterBase {
       'panorama_type' => 'equirectangular',
       'image_type' => 'jpg',
       'number_images' => 1,
+      // todo: quality, rotation, and hotspotdebug not used but I put them in schema for now
       'quality' => 'default',
       'rotation' => '0',
       'hotSpotDebug' => TRUE,
-
-
     ];
   }
 
@@ -60,18 +54,6 @@ class StrawberryPannellumFormatter extends FormatterBase {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'iiif_base_url' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base Public accesible URL of your IIIF Media Server'),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#required' => TRUE,
-      ],
-      'iiif_base_url_internal' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#required' => TRUE,
-      ],
       'json_key_source' => [
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
@@ -108,25 +90,15 @@ class StrawberryPannellumFormatter extends FormatterBase {
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t('Displays Panoramas from JSON using Pannellum and a IIIF server endpoint');
-    if ($this->getSetting('iiif_base_url')) {
-      $summary[] = $this->t('IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
-      ]);
-    }
-    if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t('Internal IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url_internal'),
-      ]);
-    }
     if ($this->getSetting('json_key_source')) {
       $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
         '%json_key_source' => $this->getSetting('json_key_source'),
@@ -356,29 +328,5 @@ class StrawberryPannellumFormatter extends FormatterBase {
       }
     }
     return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
   }
 }

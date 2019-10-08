@@ -86,7 +86,6 @@ class IiifSettingsForm extends ConfigFormBase {
     $validator = new IiifUrlValidator();
 
     $internalUrlError = $validator->checkInternalUrl($form_state->getValue('int_server_url'));
-    // todo book p. 303 i think there is an isEmpty() method
     if (!empty($internalUrlError)) {
       $form_state->setErrorByName('int_server_url', t("We could not contact your Internal IIIF server: @error", [
         '@error' => $internalUrlError

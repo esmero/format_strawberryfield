@@ -16,24 +16,12 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
-use GuzzleHttp\Exception\ConnectException;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
 
 
 
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
-
-  /**
-   * The HTTP client to check if IIIF servers are there.
-   *
-   * @var \GuzzleHttp\ClientInterface
-   */
-  protected $httpClient;
 
   /**
    * The Config Factory for getting default IIIF config settings.
@@ -54,7 +42,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *   The view mode.
    * @param array $third_party_settings
    *   Any third party settings.
-   * @param \GuzzleHttp\ClientInterface $httpClient
    *   The definition of the field to which the formatter is associated.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    */
@@ -66,7 +53,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $label,
     $view_mode,
     array $third_party_settings,
-    ClientInterface $httpClient,
     ConfigFactoryInterface $config_factory
   ) {
     parent::__construct(
@@ -78,7 +64,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $view_mode,
       $third_party_settings
     );
-    $this->httpClient = $httpClient;
     $this->configFactory = $config_factory->get('format_strawberryfield.iiif_settings');
   }
 
@@ -94,7 +79,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $configuration['label'],
       $configuration['view_mode'],
       $configuration['third_party_settings'],
-      $container->get('http_client'),
       $container->get('config.factory')
     );
   }
@@ -115,16 +99,12 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $summary[] = $this->t('Use IIIF Global Urls? %value', [
         '%value' => boolval($this->getSetting('use_iiif_globals')) === true  ? "Yes." : "No, use custom."
       ]);
-    if ($this->getSetting('iiif_base_url')) {
       $summary[] = $this->t('IIIF Media Server base URI: %url', [
-        '%url' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url')
+        '%url' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url')) ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url')
       ]);
-    }
-    if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t('Internal IIIF Media Server base URI: %url', [
-        '%url' => $this->getSetting('iiif_base_url_internal'),
+      $summary[] = $this->t('IIIF Media Server Internal base URI: %url', [
+        '%url' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url_internal')) ? $this->configFactory->get('int_server_url'): $this->getSetting('iiif_base_url_internal'),
       ]);
-    }
     return $summary;
   }
 
@@ -149,17 +129,22 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         '#states' => [
           'visible' => [
             ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
+          ],
+          'required' => [
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
           ]
         ],
-      '#element_validate' => [[$this, 'validateUrl']],
+        '#element_validate' => [[$this, 'validateUrl']],
     ];
       $element['iiif_base_url_internal'] = [
         '#type' => 'url',
         '#title' => $this->t('Custom base URL of your IIIF Media Server accessible from inside this Webserver'),
         '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('int_server_url'): $this->getSetting('iiif_base_url_internal'),
-//        '#required' => true,
         '#states' => [
           'visible' => [
+            ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
+          ],
+          'required' => [
             ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
           ]
         ],
@@ -218,5 +203,16 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
   }
 
+  /**
+   * Tries to guess mimetype of external referenced Uris
+   *
+   * @param string $uripath
+   *
+   * @return string
+   *  A guessed Mimetype
+   */
+  protected function guessMimeForExternalURI(string $uripath) {
+    return \Drupal::service('file.mime_type.guesser')->guess($uripath);
+  }
 
 }

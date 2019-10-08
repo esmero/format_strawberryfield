@@ -23,6 +23,7 @@ use Twig_Error_Syntax;
 use Twig_Environment;
 use Twig_Error_Runtime;
 use Twig_Loader_Array;
+//todo: should we rename to strawberry_metadata_twig_formatter?
 /**
  * Twig based Strawberry Field formatter.
  *
@@ -196,6 +197,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
+    // todo: $label and $specs are not used, remove from settings & schema?
     $label = $this->getSetting('label');
     $specs = $this->getSetting('specs');
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
