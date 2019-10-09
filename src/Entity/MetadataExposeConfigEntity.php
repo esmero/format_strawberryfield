@@ -3,7 +3,6 @@ namespace Drupal\format_strawberryfield\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\format_strawberryfield\MetadataConfigInterface;
-use Drupal\format_strawberryfield\MetadataDisplayInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 
