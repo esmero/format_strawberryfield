@@ -25,63 +25,55 @@ class IiifUrlValidator {
    */
   protected $httpClient;
 
-
   public function __construct () {
     $this->httpClient = $this->httpClient = \Drupal::httpClient();
-
   }
 
   public function checkPublicUrl($publicUrl) {
-    // todo: figure out how to check public urls from docker. this works except for localhost, actually contacting the host machine. I tried using the 'host-net' bridge from the docker-compose.yml file? But I am not understanding apparently.
-    // For now unless the field is empty, just return no errors.
-    if (!trim($publicUrl)) {
+    // check if there's a value entered
+    if (trim($publicUrl)) {
+      $isLocalhost = strpos($publicUrl, 'localhost');
+      if ($isLocalhost !== false) {
+        // the url is localhost. so don't try to validate and just return no errors.
+        return false;
+      } else {
+        // it's not localhost so actually test it
+        if ($this->isInvalid($publicUrl)) {
+          return "You entered an invalid IIIF Public Url.";
+        }
+      }
+    } else {
       return 'Please enter a value for IIIF Public Url.';
     }
-    return false;
-//    if (trim($publicUrl)) {
-//      try {
-//        /* @var Client $this ->httpClient */
-//        $response = $this->httpClient
-//          ->head($publicUrl);
-//      } catch (ConnectException $exception) {
-//        error_log(var_export('IIIF Url Validate: Public 1', true));
-//        $responseMessage = $exception->getMessage();
-//        return $responseMessage;
-//      } catch (ClientException $exception) {
-//        error_log(var_export('IIIF Url Validate: Public 2', true));
-//        $responseMessage = $exception->getMessage();
-//        return $responseMessage;
-//      } catch (ServerException $exception) {
-//        error_log(var_export('IIIF Url Validate: Public 3', true));
-//        $responseMessage = $exception->getMessage();
-//        return $responseMessage;
-//      }
-//    } else {
-//      return 'Please enter a value for IIIF Public Url.';
-//    }
   }
 
   public function checkInternalUrl($internalUrl) {
+    // check if there's a value entered
     if (trim($internalUrl)) {
-      try {
-        /* @var Client $this ->httpClient */
-        $response = $this->httpClient
-          ->head($internalUrl);
-      } catch (ConnectException $exception) {
-        error_log(var_export('IIIF Url Validate: Internal 1', true));
-        $responseMessage = $exception->getMessage();
-        return $responseMessage;
-      } catch (ClientException $exception) {
-        error_log(var_export('IIIF Url Validate: Internal 2', true));
-        $responseMessage = $exception->getMessage();
-        return $responseMessage;
-      } catch (ServerException $exception) {
-        error_log(var_export('IIIF Url Validate: Internal 3', true));
-        $responseMessage = $exception->getMessage();
-        return $responseMessage;
+      if ($this->isInvalid($internalUrl)) {
+        return "You entered an invalid IIIF Internal Url.";
       }
     } else {
       return 'Please enter a value for IIIF Internal Url.';
     }
   }
+
+  private function isInvalid($url) {
+    try {
+      /* @var Client $this ->httpClient */
+      $response = $this->httpClient
+        ->head($url);
+    } catch (ConnectException $exception) {
+      error_log(var_export($exception->getMessage(), true));
+      return true;
+    } catch (ClientException $exception) {
+      error_log(var_export($exception->getMessage(), true));
+      return true;
+    } catch (ServerException $exception) {
+      error_log(var_export($exception->getMessage(), true));
+      return true;
+    }
+    return false;
+  }
+
 }

@@ -134,8 +134,6 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -143,6 +141,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
+
       if (empty($value)) {
         continue;
       }
@@ -201,8 +200,6 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                 $filecachetags = $file->getCacheTags();
                 //@TODO check this filecachetags and see if they make sense
 
-                // @TODO move the IIIF server baser URL to a global config and an local fieldformatter override.
-                $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
 
                 $uniqueid =
                   'iiif-'.$items->getName(
@@ -212,13 +209,15 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                 // @ see https://www.drupal.org/files/issues/2517030-125.patch
                 $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
-                $internal_iiifserver = "{$baseiiifserveruri_internal}{$iiifidentifier}/info.json";
-                $iiifhelper = new IiifHelper($internal_iiifserver);
+
+                $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal'], $iiifidentifier);
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson();
                 $iiifsizes = $iiifhelper->getImageSizes();
+
                 if (!$iiifsizes) {
                   $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
                     [
-                      '@url' => $iiifserver,
+                      '@url' => $iiifpublicinfojson,
                       '@id' => $nodeid,
                     ]);
                   \Drupal::logger('format_strawberryfield')->warning($message);
@@ -239,8 +238,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                     $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
                   }
 
-
-                  $iiifserverthumb = "{$baseiiifserveruri}{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
+                  // todo: put this in IiifHelper
+                  $iiifserverthumb = "{$this->getIiifUrls()['public']}{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
                   $elements[$delta]['media_thumb' . $i] = [
                     '#theme' => 'image',
                     '#attributes' => [
@@ -273,7 +272,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   // Drupal JS settings get accumulated. So in a single search results site we will have for each
                   // Formatter one passed. Reason we use 'innode' array using our $uniqueid
                   // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
+                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                   $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 }
 

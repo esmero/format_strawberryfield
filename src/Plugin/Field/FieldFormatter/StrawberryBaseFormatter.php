@@ -24,11 +24,27 @@ use Drupal\Core\Access\AccessResult;
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
 
   /**
-   * The Config Factory for getting default IIIF config settings.
+   * The Config for getting default IIIF settings.
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface;
    */
-  protected $configFactory;
+  protected $iiifConfig;
+
+  /**
+   * The Config for getting formatter settings based on the View Mode
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface;
+   */
+  protected $viewModeConfig;
+
+  /**
+   *
+   * Whether or not new global IIIF urls conflict with ones previously set in config on a new module install.
+   * Set here so can be accessed in the static defaultSettings function
+   *
+   * @var boolean;
+   */
+//  protected $globalsConflict;
 
   /**
    * @param string $plugin_id
@@ -64,7 +80,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $view_mode,
       $third_party_settings
     );
-    $this->configFactory = $config_factory->get('format_strawberryfield.iiif_settings');
+    $this->iiifConfig = $config_factory->get('format_strawberryfield.iiif_settings');
+    $this->viewModeConfig =  $config_factory->getEditable('core.entity_view_display.node.digital_object.'.$view_mode);
   }
 
   /**
@@ -83,12 +100,64 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     );
   }
 
+  // The only situation where this is an issue is if 1) Use Globals was previously selected as TRUE and
+  // 2) There were new globals defined in the module's /config/install folder that conflict with the old globals.
+  // In this case the old saved globals would be overwritten when the module is reinstalled.
+  // In all other cases, like if Use Globals was unset or set to FALSE, then this is not an issue.
+  // So, save the old globals as new locals, change Use Globals to false, and notify user.
+  //todo: above.
+  //todo: move this code somewhere that only fires on install
+  //todo: also this loop is wrong. This is firing for each format_strawberryfield on the page. The whole PAGE is the form (for the view mode) and can have multiple or zero format_straberryfields.
+  private function hasGlobalsConflict() {
+    $viewModeFields =  $this->viewModeConfig->get('third_party_settings.ds.fields');
+    foreach ($viewModeFields as $field => $fieldConfig ) {
+      if (boolval($fieldConfig['settings']['formatter']['use_iiif_globals']) === true) {
+        // if what's saved in config doesn't equal the new settings for either public or internal url
+        if ($fieldConfig['settings']['formatter']['iiif_base_url'] !== $this->iiifConfig->get('pub_server_url') || $fieldConfig['settings']['formatter']['iiif_base_url_internal'] !== $this->iiifConfig->get('int_server_url')) {
+          // set the formatter to use local, and preserve the old urls. notify the user.
+//          \Drupal::messenger()->addMessage(t('You previously set a formatter to use global IIIF Urls, but your globals have changed. If you would like to use the new global urls, please edit below.'), 'status');
+          //todo can't access to set the config. this isn't working.
+          // preserve the old settings into this form
+          $this->setSetting('iiif_base_url', $fieldConfig['settings']['formatter']['iiif_base_url']);
+          $this->setSetting('iiif_base_url_internal', $fieldConfig['settings']['formatter']['iiif_base_url_internal']);
+          // turn them into local settings. now there shouldn't be a conflict again, and this code will not fire again.
+          $this->setSetting('use_iiif_globals', false);
+          $fieldConfig['settings']['formatter']['use_iiif_globals'] = false;
+//          error_log(var_export($fieldConfig['plugin_id'].' whats the global now?', true));
+//          error_log(var_export('1 '. $this->getSetting('use_iiif_globals'), true));
+//          error_log(var_export( '2 '.$this->getSetting('iiif_base_url'), true));
+//          error_log(var_export( '3 '.$fieldConfig['settings']['formatter']['iiif_base_url'], true));
+        }
+      }
+    }
+    return false;
+  }
+
+  // todo: related to globals overwrite on new install with new globals. Again this only matters if 1) use globals was set true and 2) the module is reinstalled with new globals, and we need to preserve the old ones.
+  // todo: needs to set Setting behind the scenes. This should fire when 'use globals' has been selected and the local inputs are hidden. without this function the values being sent in on form submit are still old and therefore the deep config is not updated. Even though the display knows to serve the global IIIF url config settings. Trying to do it on Ajax because there was no simple form submit to hook into on the 'Update' (for formatter; not Submit of entire View Mode form) to just set the value there. That would be the simplest approach.
+  public function setGlobals(array $form, FormStateInterface $form_state) {
+//    $form_state_formatter = $form_state->get(['#complete_form']['#field_settings']['display_field_copy:node-field_descriptive_metadata_image']['settings']['plugin_settings']['formatter']);
+    // todo: get value of checkbox from just the $form, without help of $element variable and its parents like in validateUrl!?
+//    if (boolval($form_state->getValue($checkbox)) === true) {
+//      $this->setSetting('iiif_base_url', ...);
+//      $this->setSetting('iiif_base_url_internal', ...);
+//    }
+    return $form;
+  }
+
   public static function defaultSettings() {
     return [
       'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->get('pub_server_url'),
       'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->get('int_server_url'),
       'use_iiif_globals' => true
       ];
+  }
+
+  public function getIiifUrls() {
+    return [
+      'public' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url')) ? $this->iiifConfig->get('pub_server_url') : rtrim($this->getSetting('iiif_base_url'), "/"),
+      'internal' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url_internal')) ? $this->iiifConfig->get('int_server_url') : rtrim($this->getSetting('iiif_base_url_internal'), "/")
+    ];
   }
 
   /**
@@ -100,10 +169,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         '%value' => boolval($this->getSetting('use_iiif_globals')) === true  ? "Yes." : "No, use custom."
       ]);
       $summary[] = $this->t('IIIF Media Server base URI: %url', [
-        '%url' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url')) ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url')
+        '%url' => $this->getIiifUrls()['public']
       ]);
       $summary[] = $this->t('IIIF Media Server Internal base URI: %url', [
-        '%url' => boolval($this->getSetting('use_iiif_globals')) === true || empty($this->getSetting('iiif_base_url_internal')) ? $this->configFactory->get('int_server_url'): $this->getSetting('iiif_base_url_internal'),
+        '%url' => $this->getIiifUrls()['internal']
       ]);
     return $summary;
   }
@@ -115,17 +184,20 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $element['use_iiif_globals'] = [
         '#type' => 'checkbox',
         '#title' => t('Use Global IIIF Urls'),
-        '#description' => t('<b>Current Globals: </b><br>') . 'Public: '.$this->configFactory->get('pub_server_url') . '<br>Internal: ' . $this->configFactory->get('int_server_url'),
+        '#description' => t('<b>Current Globals: </b><br>') . 'Public: '.$this->iiifConfig->get('pub_server_url') . '<br>Internal: ' . $this->iiifConfig->get('int_server_url'),
         '#default_value' => $this->getSetting('use_iiif_globals'),
         // Created custom 'data-*' selector rather than using name or id, because the name and id attributes are already set by Drupal and deeply nested for settingsForms. Overriding them causes problems with data submission. Trying to access them in #states is hard. So this is easier. This is valid HTML5.
         '#attributes' => [
           'data-checkbox-selector' => 'use_iiif_globals'
         ],
+//      '#ajax' => [
+//        'callback' => $this->setGlobals($form, $form_state)
+//      ]
       ];
     $element['iiif_base_url'] = [
         '#type' => 'url',
-        '#title' => $this->t('Custom base public accessible URL of your IIIF Media Server'),
-        '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('pub_server_url'): $this->getSetting('iiif_base_url'),
+        '#title' => $this->t('Custom base public accessible URL of your IIIF Media Server. Trailing slashes will be removed.'),
+        '#default_value' => $this->getIiifUrls()['public'],
         '#states' => [
           'visible' => [
             ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
@@ -138,8 +210,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     ];
       $element['iiif_base_url_internal'] = [
         '#type' => 'url',
-        '#title' => $this->t('Custom base URL of your IIIF Media Server accessible from inside this Webserver'),
-        '#default_value' => boolval($this->getSetting('use_iiif_globals')) === true ? $this->configFactory->get('int_server_url'): $this->getSetting('iiif_base_url_internal'),
+        '#title' => $this->t('Custom base URL of your IIIF Media Server accessible from inside this Webserver. Trailing slashes will be removed.'),
+        '#default_value' => $this->getIiifUrls()['internal'],
         '#states' => [
           'visible' => [
             ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => true],
@@ -155,7 +227,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
   }
 
   public function validateUrl(&$element, FormStateInterface $form_state, &$complete_form) {
-
     $parents = $element['#parents'];
     $url_type = end($parents);
     $checkbox = array_slice($parents, 0, -1);
@@ -180,7 +251,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
   }
 
-  /**
+    /**
    * {@inheritdoc}
    */
   public function view(FieldItemListInterface $items, $langcode = NULL) {

@@ -11,7 +11,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
-
+use Drupal\format_strawberryfield\Tools\IiifHelper;
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -138,8 +138,6 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -203,22 +201,22 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
                 $filecachetags = $file->getCacheTags();
-
-                // @TODO move the IIIF server baser URL to a global config and add local fieldformatter override.
-                $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
-
+                $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal'], $iiifidentifier);
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson();
 
                 $groupid = 'iiif-'.$items->getName(
                   ).'-'.$nodeuuid.'-'.$delta.'-media';
                 $uniqueid =  $groupid.$i;
 
+                error_log(var_export($this->getIiifUrls()['public'], true));
                 $elements[$delta]['media'.$i] = [
                   '#type' => 'container',
                   '#default_value' => $uniqueid,
                   '#attributes' => [
                     'id' => $uniqueid,
                     'class' => ['strawberry-media-item','field-iiif','container'],
-                    'data-iiif-infojson' => $iiifserver,
+                    'data-iiif-infojson' => $iiifpublicinfojson,
+//                    'data-iiif-infojson' => "{$this->getIiifUrls()['public']}/{$iiifidentifier}/info.json",
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
                     'width' => $max_width,
@@ -242,7 +240,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 // Drupal JS settings get accumulated. So in a single search results site we will have for each
                 // Formatter one passed. Reason we use 'innode' array key using our $uniqueid
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
+                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
               }
             } elseif (isset($mediaitem['url'])) {

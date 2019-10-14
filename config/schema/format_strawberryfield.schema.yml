@@ -8,15 +8,12 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
-# this definition is used internally so as not to repeat
-strawberryfield_formatter_base:
-  type: mapping
-  label: 'Base configurations for Strawberryfield formatters'
+format_strawberryfield.formatter.*:
+  type: config_entity
+  label: 'Formatter config for strawberry field formatters'
   mapping:
-    iiif_base_url:
-      type: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal:
-      type: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -27,24 +24,19 @@ strawberryfield_formatter_base:
     use_iiif_globals:
       type: boolean
       label: 'Whether to use global IIIF settings or not.'
-# individual formatters:
-field.formatter.settings.strawberry_3d_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_3d_formatter'
+    formatter_config:
+      type: format_strawberryfield.formatter.[%parent.type]
+format_strawberryfield.formatter.strawberry_audio_formatter:
+  type: config_object
+  label: 'Specific config for strawberry_audio_formatter'
   mapping:
-    number_models:
-      type: integer
-field.formatter.settings.strawberry_audio_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_audio_formatter'
-  mapping:
-    audio_type:
+    maudio_type:
       type: string
-    number_media:
-      type: integer
-field.formatter.settings.strawberry_image_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_image_formatter'
+      number_media:
+        type: integer
+format_strawberryfield.formatter.strawberry_image_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_image_formatter'
   mapping:
     number_images:
       type: integer
@@ -52,19 +44,18 @@ field.formatter.settings.strawberry_image_formatter:
       type: string
     rotation:
       type: string
-field.formatter.settings.strawberry_media_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_media_formatter'
+format_strawberryfield.formatter.strawberry_media_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_media_formatter'
   mapping:
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
     thumbnails:
       type: boolean
-# note: strawberry_metadata_formatter is not using the base like the others.
-field.formatter.settings.strawberry_metadata_formatter:
-  type: mapping
-  label: 'FORMATTER Config for strawberry_metadata_formatter using Twig'
+format_strawberryfield.formatter.strawberry_metadata_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_metadata_formatter using Twig'
   mapping:
     label:
       type: string
@@ -74,9 +65,9 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: boolean
-field.formatter.settings.strawberry_paged_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_paged_formatter'
+format_strawberryfield.formatter.strawberry_paged_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_paged_formatter'
   mapping:
     type: boolean
     label: 'Whether multiple media sources should use a single IIIF viewer or not.'
@@ -86,9 +77,9 @@ field.formatter.settings.strawberry_paged_formatter:
     type: string
   manifesturl_source:
     type: string
-field.formatter.settings.strawberry_pannellum_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_pannellum_formatter'
+format_strawberryfield.formatter.strawberry_pannellum_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pannellum_formatter'
   mapping:
     hotSpotDebug:
       type: boolean
@@ -102,9 +93,9 @@ field.formatter.settings.strawberry_pannellum_formatter:
       type: string
     rotation:
       type: string
-field.formatter.settings.strawberry_video_formatter:
-  type: strawberryfield_formatter_base
-  label: 'FORMATTER Config for strawberry_video_formatter'
+format_strawberryfield.formatter.settings.strawberry_video_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_video_formatter'
   mapping:
     audio_type:
       type: string

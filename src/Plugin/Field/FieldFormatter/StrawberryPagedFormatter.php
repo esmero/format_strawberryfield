@@ -286,9 +286,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         case 'metadatadisplayentity':
           $entity = NULL;
           if ($this->getSetting('metadatadisplayentity_source')) {
-            $entity = $this->entityTypeManager->getStorage(
-              'metadatadisplay_entity'
-            )->load($this->getSetting('metadatadisplayentity_source'));
+            $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_source'));
             $label = $entity->toLink()->getText();
             $summary[] = $this->t(
               'Pages processed by the "%manifesturl_source" Metadata Data Display template',

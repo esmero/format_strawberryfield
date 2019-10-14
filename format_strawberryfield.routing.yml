@@ -90,11 +90,11 @@ format_strawberryfield.iiif_admin_settings_form:
   options:
     _admin_route: TRUE
 
-# All Routes for the Metadata Display Content Entity that will store Twig templates
+# All Routes for the Metadata Expose Content Entity that will store Twig templates
 entity.metadataexpose_entity.canonical:
   path: '/admin/config/archipelago/metadataexpose/{metadataexpose_entity}'
   defaults:
     _entity_view: 'metadataexpose_entity'
-    _title: 'Metadata Display Content'
+    _title: 'Metadata Expose Content'
   requirements:
     _entity_access: 'metadataexpose_entity.view'
