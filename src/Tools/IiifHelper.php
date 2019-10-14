@@ -21,7 +21,7 @@ class IiifHelper {
   /**
    * @var array;
    */
-  protected $remoteInfoJsonData;
+  protected $remoteInfoJson;
 
   /**
    * @var \GuzzleHttp\Client;
@@ -29,17 +29,15 @@ class IiifHelper {
   protected $httpClient;
 
 
-  public function __construct($publicUrl, $internalUrl, $identifier) {
+  public function __construct($publicUrl, $internalUrl) {
     //@TODO verify that remoteURL is a valid, actual IIIF info json URL.
     $this->httpClient = \Drupal::httpClient();
-    $this->remoteInfoJsonData = $this->getRemoteInfoJsonData();
     $this->publicUrl = $publicUrl;
     $this->internalUrl = $internalUrl;
-    $this->identifier = $identifier;
   }
 
-  public function getRemoteInfoJsonData() {
-    $infojsonurl = $this->getInternalInfoJson();
+  public function getRemoteInfoJson($id) {
+    $infojsonurl = $this->getInternalInfoJson($id);
 
     // This is expensive, reason why we process and store in cache
     $jsondata = [];
@@ -79,22 +77,23 @@ class IiifHelper {
     return $jsondata;
   }
 
-  public function getImageSizes() {
-    if (empty($this->remoteInfoJsonData)) {
+  public function getImageSizes($id) {
+    $remoteInfoJson = $this->getRemoteInfoJson($id);
+    if (empty($remoteInfoJson)) {
       return [];
     }
-    if (isset($this->remoteInfoJsonData['sizes'])) {
-      return $this->remoteInfoJsonData['sizes'];
+    if (isset($remoteInfoJson['sizes'])) {
+      return $remoteInfoJson['sizes'];
     }
     return [];
   }
 
-  public function getInternalInfoJson() {
-      return "{$this->internalUrl}/{$this->identifier}/info.json";
+  public function getInternalInfoJson($id) {
+      return "{$this->internalUrl}/{$id}/info.json";
   }
 
-  public function getPublicInfoJson() {
-    return "{$this->publicUrl}/{$this->identifier}/info.json";
+  public function getPublicInfoJson($id) {
+    return "{$this->publicUrl}/{$id}/info.json";
   }
 
 }

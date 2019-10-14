@@ -107,6 +107,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    *   The Loaded twig Environment
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    */
+
   public function __construct(
     $plugin_id,
     $plugin_definition,
@@ -115,11 +116,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $label,
     $view_mode,
     array $third_party_settings,
+    ConfigFactoryInterface $config_factory,
     AccountInterface $current_user,
     EntityTypeManagerInterface $entity_type_manager,
-    TwigEnvironment $twigEnvironment,
-    // todo: now that this is extending the base class, I have to include this param? Seems wrong pattern with construct.
-    ConfigFactoryInterface $config_factory
+    TwigEnvironment $twigEnvironment
   ) {
     parent::__construct(
       $plugin_id,
@@ -139,7 +139,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
   /**
    * {@inheritdoc}
    */
-  public static function create(
+  public static function create (
     ContainerInterface $container,
     array $configuration,
     $plugin_id,
@@ -153,10 +153,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       $configuration['label'],
       $configuration['view_mode'],
       $configuration['third_party_settings'],
+      $container->get('config.factory'),
       $container->get('current_user'),
       $container->get('entity_type.manager'),
-      $container->get('twig'),
-      $container->get('config.factory')
+      $container->get('twig')
     );
   }
 

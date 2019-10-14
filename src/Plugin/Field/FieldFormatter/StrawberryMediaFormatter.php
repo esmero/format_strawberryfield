@@ -167,8 +167,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
+      $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
       $i = 0;
-
       // We need to load main Library on each page for views to see it.
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
 
@@ -201,8 +201,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
                 $filecachetags = $file->getCacheTags();
-                $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal'], $iiifidentifier);
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson();
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
 
                 $groupid = 'iiif-'.$items->getName(
                   ).'-'.$nodeuuid.'-'.$delta.'-media';

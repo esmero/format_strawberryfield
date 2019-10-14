@@ -176,6 +176,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
          }
       }*/
       $i = 0;
+      $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
       if (isset($jsondata[$key])) {
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
@@ -217,8 +218,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 // @ see https://www.drupal.org/files/issues/2517030-125.patch
                 $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
-                $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal'], $iiifidentifier);
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson();
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
                 $iiifsizes = $iiifhelper->getImageSizes();
 
                 if (!$iiifsizes) {

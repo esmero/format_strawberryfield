@@ -29,50 +29,32 @@ class IiifUrlValidator {
     $this->httpClient = $this->httpClient = \Drupal::httpClient();
   }
 
-  public function checkPublicUrl($publicUrl) {
-    // check if there's a value entered
-    if (trim($publicUrl)) {
-      $isLocalhost = strpos($publicUrl, 'localhost');
-      if ($isLocalhost !== false) {
-        // the url is localhost. so don't try to validate and just return no errors.
-        return false;
-      } else {
-        // it's not localhost so actually test it
-        if ($this->isInvalid($publicUrl)) {
-          return "You entered an invalid IIIF Public Url.";
-        }
-      }
-    } else {
-      return 'Please enter a value for IIIF Public Url.';
+  public function checkUrl($url, $type) {
+    if (!$url) { return t('Please enter a value for IIIF Public Url.'); };
+
+    // check for localhost.
+    $localUrls = ['localhost', '127.0.0.1', '0.0.0.0'];
+    $host = trim(parse_url($url, PHP_URL_HOST));
+    if (in_array($host, $localUrls)) {
+      // it's local so just return with no errors.
+      return false;
     }
+
+    $title = $type === 'iiif_base_url_internal' ? 'Internal' : 'Public';
+    return $this->isInvalid($url) === true ? t('You entered an invalid '.$title.' IIIF Url.') :  false;
   }
 
-  public function checkInternalUrl($internalUrl) {
-    // check if there's a value entered
-    if (trim($internalUrl)) {
-      if ($this->isInvalid($internalUrl)) {
-        return "You entered an invalid IIIF Internal Url.";
-      }
-    } else {
-      return 'Please enter a value for IIIF Internal Url.';
-    }
-  }
 
   private function isInvalid($url) {
     try {
       /* @var Client $this ->httpClient */
       $response = $this->httpClient
         ->head($url);
-    } catch (ConnectException $exception) {
-      error_log(var_export($exception->getMessage(), true));
-      return true;
-    } catch (ClientException $exception) {
-      error_log(var_export($exception->getMessage(), true));
-      return true;
-    } catch (ServerException $exception) {
-      error_log(var_export($exception->getMessage(), true));
+    } catch (\Exception $e) {
+      error_log(var_export($e->getMessage(), true));
       return true;
     }
+
     return false;
   }
 

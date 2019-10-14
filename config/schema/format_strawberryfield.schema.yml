@@ -30,10 +30,10 @@ format_strawberryfield.formatter.strawberry_audio_formatter:
   type: config_object
   label: 'Specific config for strawberry_audio_formatter'
   mapping:
-    maudio_type:
+    audio_type:
       type: string
-      number_media:
-        type: integer
+    number_media:
+      type: integer
 format_strawberryfield.formatter.strawberry_image_formatter:
   type: config_object
   label: 'Specific Config for strawberry_image_formatter'
@@ -61,6 +61,7 @@ format_strawberryfield.formatter.strawberry_metadata_formatter:
       type: string
     specs:
       type: url
+    # todo: Can you check metadatadisplayentity_id? not sure the id right now is a string but a number (since its the entity->id(). If we move to UUID i guess we can use string but we should also look at who/what natively exists to use uuid as a type
     metadatadisplayentity_id:
       type: string
     metadatadisplayentity_uselabel:

@@ -168,6 +168,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
+      $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
       $i = 0;
       if (isset($jsondata[$key])) {
         foreach ($jsondata[$key] as $mediaitem) {
@@ -210,9 +211,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                 $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
 
-                $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal'], $iiifidentifier);
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson();
-                $iiifsizes = $iiifhelper->getImageSizes();
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
+                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
 
                 if (!$iiifsizes) {
                   $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
@@ -238,8 +238,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                     $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
                   }
 
-                  // todo: put this in IiifHelper
-                  $iiifserverthumb = "{$this->getIiifUrls()['public']}{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
+                  $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
                   $elements[$delta]['media_thumb' . $i] = [
                     '#theme' => 'image',
                     '#attributes' => [
