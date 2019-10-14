@@ -105,6 +105,9 @@ class MetadataExposeDisplayController extends ControllerBase {
     $metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity(
     );
     try {
+      //@TODO future work. https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Render%21MainContent%21HtmlRenderer.php/class/HtmlRenderer/8.8.x
+      // Maybe we could make a lot more by creating our own rendered + exploiding
+      // Cache system better.
       $twigtemplate = $metadatadisplay_entity->get('twig')->getValue();
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ field.label }}";
 

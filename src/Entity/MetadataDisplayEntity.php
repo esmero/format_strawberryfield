@@ -6,8 +6,10 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
+use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
 use Drupal\user\UserInterface;
+use \Twig\Source;
 
 /**
  * Defines the Metadata Display Content entity.
@@ -127,6 +129,14 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
   use EntityChangedTrait; // Implements methods defined by EntityChangedInterface.
 
+
+  /**
+   * Calculated Twig vars used by this template
+   *
+   * @var array|NULL
+   */
+  protected $usedTwigVars = NULL;
+
   /**
    * {@inheritdoc}
    *
@@ -175,6 +185,13 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
   public function setOwner(UserInterface $account) {
     $this->set('user_id', $account->id());
     return $this;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function twigEnvironment() {
+    return  \Drupal::service('twig');
   }
 
   /**
@@ -326,5 +343,84 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
 
     return $fields;
+  }
+
+  /**
+   * Processes this Twig template into an Render array.
+   *
+   * @param array $context
+   *
+   * @return array
+   */
+  public function processHTML(array $context) {
+    if (!isset($context['data']) || !is_array($context['data']) || empty($context['data'])) {
+      throw new InvalidArgumentException('Processing a Metadata Display requires a valid "data" structure to be passed');
+    }
+    //@TODO should we have a custom theme hint here?
+    $templaterenderelement = [
+      '#type' => 'inline_template',
+      '#template' => $this->get('twig')->getValue(),
+      '#context' => $context,
+    ];
+    return $templaterenderelement;
+  }
+
+  /**
+   * @param array $context
+   */
+  public function renderNative($context) {
+
+  }
+
+  /**
+   * Returns an array will all defined Twig Variables for this Twig template.
+   *
+   * @return array
+   * @throws \Twig\Error\SyntaxError
+   */
+  public function getTwigVariablesUsed() {
+    if ($this->usedTwigVars == NULL) {
+      $twigtemplate = $this->get('twig')->getValue();
+      $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
+      // Create a \Twig Source first
+      $source = new Source($twigtemplate, $this->label(), '');
+      $tokens = $this->twigEnvironment()->tokenize($source);
+      $nodes = $this->twigEnvironment()->parse($tokens);
+      $used_vars = $this->getTwigVariableNames($nodes);
+      $this->usedTwigVars = $used_vars;
+    }
+    return $this->usedTwigVars;
+
+  }
+
+  /**
+   * Fetches recursively Twig Template Variables.
+   *
+   * @param \Twig\Node\ModuleNode $nodes
+   *
+   * @return array
+   */
+  private function getTwigVariableNames(\Twig\Node\ModuleNode $nodes): array
+  {
+    $variables = [];
+    foreach ($nodes as $node) {
+      if ($node instanceof \Twig_Node_Expression_Name) {
+        $name = $node->getAttribute('name');
+        $variables[$name] = $name;
+      } elseif ($node instanceof \Twig_Node_Expression_Constant && $nodes instanceof \Twig_Node_Expression_GetAttr) {
+        $value = $node->getAttribute('value');
+        if (!empty($value) && is_string($value)) {
+          $variables[$value] = $value;
+        }
+      } elseif ($node instanceof \Twig_Node_Expression_GetAttr) {
+        $path = implode('.', $this->getTwigVariableNames($node));
+        if (!empty($path)) {
+          $variables[$path] = $path;
+        }
+      } elseif ($node instanceof \Twig_Node) {
+        $variables += $this->getTwigVariableNames($node);
+      }
+    }
+  return $variables;
   }
 }
