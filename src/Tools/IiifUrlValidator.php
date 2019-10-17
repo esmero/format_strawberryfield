@@ -51,7 +51,7 @@ class IiifUrlValidator {
       $response = $this->httpClient
         ->head($url);
     } catch (\Exception $e) {
-      error_log(var_export($e->getMessage(), true));
+
       return true;
     }
 

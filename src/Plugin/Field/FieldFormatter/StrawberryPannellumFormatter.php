@@ -176,8 +176,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
          }
       }*/
       $i = 0;
-      $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
       if (isset($jsondata[$key])) {
+        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > $number_images) {

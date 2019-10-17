@@ -167,12 +167,12 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
       $i = 0;
       // We need to load main Library on each page for views to see it.
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
 
       if (isset($jsondata[$key])) {
+        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
@@ -207,7 +207,6 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                   ).'-'.$nodeuuid.'-'.$delta.'-media';
                 $uniqueid =  $groupid.$i;
 
-                error_log(var_export($this->getIiifUrls()['public'], true));
                 $elements[$delta]['media'.$i] = [
                   '#type' => 'container',
                   '#default_value' => $uniqueid,
@@ -215,7 +214,6 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                     'id' => $uniqueid,
                     'class' => ['strawberry-media-item','field-iiif','container'],
                     'data-iiif-infojson' => $iiifpublicinfojson,
-//                    'data-iiif-infojson' => "{$this->getIiifUrls()['public']}/{$iiifidentifier}/info.json",
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
                     'width' => $max_width,

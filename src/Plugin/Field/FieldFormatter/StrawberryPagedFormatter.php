@@ -183,8 +183,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     $entity = NULL;
     if ($this->getSetting('metadatadisplayentity_source')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')
-        ->load($this->getSetting('metadatadisplayentity_source'));
+      $entity = $this->entityTypeManager->getStorage(
+        'metadatadisplay_entity'
+      )->load($this->getSetting('metadatadisplayentity_source'));
     }
 
     return [

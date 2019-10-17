@@ -36,6 +36,11 @@ class IiifHelper {
     $this->internalUrl = $internalUrl;
   }
 
+
+  /**
+   * @param $id string
+   * @return array|mixed
+   */
   public function getRemoteInfoJson($id) {
     $infojsonurl = $this->getInternalInfoJson($id);
 
@@ -69,7 +74,7 @@ class IiifHelper {
     }
     $message= $this->t('Looks like data fetched from @url is not in IIIF or JSON format.<br> JSON says: @$jsonerror <br>Please check your URL!',
       [
-        '@url' =>  $infojsonurl,
+        '@url' => $infojsonurl,
         '@$jsonerror' => $json_error
       ]);
 
@@ -77,6 +82,11 @@ class IiifHelper {
     return $jsondata;
   }
 
+
+  /**
+   * @param $id string
+   * @return array|mixed
+   */
   public function getImageSizes($id) {
     $remoteInfoJson = $this->getRemoteInfoJson($id);
     if (empty($remoteInfoJson)) {
@@ -85,13 +95,23 @@ class IiifHelper {
     if (isset($remoteInfoJson['sizes'])) {
       return $remoteInfoJson['sizes'];
     }
+    dpm($remoteInfoJson['sizes']);
     return [];
   }
 
+
+  /**
+   * @param $id string
+   * @return string
+   */
   public function getInternalInfoJson($id) {
       return "{$this->internalUrl}/{$id}/info.json";
   }
 
+  /**
+   * @param $id string
+   * @return string
+   */
   public function getPublicInfoJson($id) {
     return "{$this->publicUrl}/{$id}/info.json";
   }

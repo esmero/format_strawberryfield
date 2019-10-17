@@ -31,22 +31,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
   protected $iiifConfig;
 
   /**
-   * The Config for getting formatter settings based on the View Mode
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface;
-   */
-  protected $viewModeConfig;
-
-  /**
-   *
-   * Whether or not new global IIIF urls conflict with ones previously set in config on a new module install.
-   * Set here so can be accessed in the static defaultSettings function
-   *
-   * @var boolean;
-   */
-//  protected $globalsConflict;
-
-  /**
    * @param string $plugin_id
    * @param mixed $plugin_definition
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
@@ -81,7 +65,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $third_party_settings
     );
     $this->iiifConfig = $config_factory->get('format_strawberryfield.iiif_settings');
-    $this->viewModeConfig =  $config_factory->getEditable('core.entity_view_display.node.digital_object.'.$view_mode);
   }
 
   /**
