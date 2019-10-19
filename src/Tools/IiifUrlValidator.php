@@ -29,6 +29,13 @@ class IiifUrlValidator {
     $this->httpClient = $this->httpClient = \Drupal::httpClient();
   }
 
+  /**
+   * Checks user-entered URLs for errors. Skips local hosts. Returns errors, or false if clear.
+   *
+   * @param $url
+   * @param $type
+   * @return bool|\Drupal\Core\StringTranslation\TranslatableMarkup
+   */
   public function checkUrl($url, $type) {
     if (!$url) { return t('Please enter a value for IIIF Public Url.'); };
 
@@ -44,7 +51,12 @@ class IiifUrlValidator {
     return $this->isInvalid($url) === true ? t('You entered an invalid '.$title.' IIIF Url.') :  false;
   }
 
-
+  /**
+   * Queries URL over http; if no exceptions, returns false.
+   *
+   * @param $url
+   * @return bool
+   */
   private function isInvalid($url) {
     try {
       /* @var Client $this ->httpClient */
@@ -52,6 +64,7 @@ class IiifUrlValidator {
         ->head($url);
     } catch (\Exception $e) {
 
+      \Drupal::logger('format_strawberryfield')->error($e);
       return true;
     }
 

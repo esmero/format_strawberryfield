@@ -38,6 +38,8 @@ class IiifHelper {
 
 
   /**
+   * Fetches info.json when passed an asset identifier, using the internal IIIF url of the formatter.
+   *
    * @param $id string
    * @return array|mixed
    */
@@ -84,6 +86,8 @@ class IiifHelper {
 
 
   /**
+   * Based on the asset identifier, returns the value of the 'sizes' key from a remote info.json url.
+   *
    * @param $id string
    * @return array|mixed
    */
@@ -95,12 +99,13 @@ class IiifHelper {
     if (isset($remoteInfoJson['sizes'])) {
       return $remoteInfoJson['sizes'];
     }
-    dpm($remoteInfoJson['sizes']);
     return [];
   }
 
 
   /**
+   * Constructs info.json URL based on formatter's Internal IIIF Url and asset identifier.
+   *
    * @param $id string
    * @return string
    */
@@ -109,6 +114,8 @@ class IiifHelper {
   }
 
   /**
+   * Constructs info.json URL based on formatter's Public IIIF Url and asset identifier.
+   *
    * @param $id string
    * @return string
    */

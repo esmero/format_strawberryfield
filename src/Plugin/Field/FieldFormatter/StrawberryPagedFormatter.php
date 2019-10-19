@@ -82,6 +82,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @param array $third_party_settings
    *   Any third party settings.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
   /**
    * StrawberryMetadataTwigFormatter constructor.
@@ -106,6 +107,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
    *   The Loaded twig Environment
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
 
   public function __construct(
