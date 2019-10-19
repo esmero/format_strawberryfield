@@ -152,11 +152,19 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     }
 
     return [
-      'label' => [
-        '#type' => 'string',
-        '#title' => $this->t('Public facing Label for this Metadata Display'),
-        '#default_value' => $this->getSetting('label'),
+      'cutomtext' => [
+        '#type' => 'item',
+        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, visit /metadatadisplay/list, and add it. Then start typing in the textfield below - it will be an option in the autocomplete.</p>',
+      ],
+      'metadatadisplayentity_id' => [
+        '#type' => 'entity_autocomplete',
+        '#title' => $this->t('Choose your metadata template (Start typing! Autocomplete.)'),
+        '#target_type' => 'metadatadisplay_entity',
+        '#description' => 'To view a full list of templates, visit /metadatadisplay/list',
+        '#selection_handler' => 'default:metadatadisplay',
+        '#validate_reference' => FALSE,
         '#required' => TRUE,
+        '#default_value' => $entity,
       ],
       'specs' => [
         '#type' => 'url',
@@ -164,13 +172,11 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         '#default_value' => $this->getSetting('specs'),
         '#required' => TRUE,
       ],
-      'metadatadisplayentity_id' => [
-        '#type' => 'entity_autocomplete',
-        '#target_type' => 'metadatadisplay_entity',
-        '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
+      'label' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Public facing Label for this Metadata Display'),
+        '#default_value' => $this->getSetting('label'),
         '#required' => TRUE,
-        '#default_value' => $entity,
       ],
       'metadatadisplayentity_uselabel' => [
         '#type' => 'checkbox',
