@@ -29,7 +29,7 @@ use Twig_Loader_Array;
  *
  * @FieldFormatter(
  *   id = "strawberry_metadata_formatter",
- *   label = @Translation("Strawberry Field Custom Metadata Template"),
+ *   label = @Translation("Strawberry Field Formatter for Custom Metadata Templates"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMetadataTwigFormatter",
  *   field_types = {
  *     "strawberryfield_field"
