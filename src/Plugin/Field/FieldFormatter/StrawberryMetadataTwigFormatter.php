@@ -155,7 +155,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return [
       'cutomtext' => [
         '#type' => 'item',
-        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, visit /metadatadisplay/list, and add it. Then start typing in the textfield below - it will be an option in the autocomplete.</p>',
+        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, visit /metadatadisplay/list, and add it. </p>',
       ],
       'metadatadisplayentity_id' => [
         '#type' => 'entity_autocomplete',
