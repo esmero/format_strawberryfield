@@ -29,7 +29,7 @@ use Twig_Loader_Array;
  *
  * @FieldFormatter(
  *   id = "strawberry_metadata_formatter",
- *   label = @Translation("Strawberry Field Metadata Formatter using Twig"),
+ *   label = @Translation("Strawberry Field Custom Metadata Template"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMetadataTwigFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -155,7 +155,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return [
       'cutomtext' => [
         '#type' => 'item',
-        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, visit /metadatadisplay/list, and add it. Then start typing in the textfield below - it will be an option in the autocomplete.</p>',
+        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, visit /metadatadisplay/list, and add it. </p>',
       ],
       'metadatadisplayentity_id' => [
         '#type' => 'entity_autocomplete',
@@ -193,7 +193,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    */
   public function settingsSummary() {
     $summary = [];
-    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something else.');
+    $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
     return $summary;
   }
 
