@@ -4,26 +4,15 @@ namespace Drupal\format_strawberryfield\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use GuzzleHttp\Exception\ConnectException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
+
 
 /**
  * Class IiifSettingsForm.
  */
 class IiifSettingsForm extends ConfigFormBase {
-
-
-  /**
-   * The HTTP client to check if IIIF servers are there.
-   *
-   * @var \GuzzleHttp\Client
-   */
-  protected $httpClient;
 
   /**
    * Constructs a \Drupal\system\ConfigFormBase object.
@@ -31,9 +20,8 @@ class IiifSettingsForm extends ConfigFormBase {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, ClientInterface $httpClient) {
+  public function __construct(ConfigFactoryInterface $config_factory) {
     $this->setConfigFactory($config_factory);
-    $this->httpClient = $httpClient;
   }
 
   /**
@@ -41,8 +29,7 @@ class IiifSettingsForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('config.factory'),
-      $container->get('http_client')
+      $container->get('config.factory')
     );
   }
 
@@ -96,32 +83,21 @@ class IiifSettingsForm extends ConfigFormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     // Don't validate External one, since PHP could probably fail.
-    try {
-      /* @var Client $this->httpClient  */
-      $response = $this->httpClient
-        ->head(
-          $form_state
-            ->getValue('int_server_url')
-        );
-      }
-    catch(ConnectException $exception) {
-      $responseMessage = $exception->getMessage();
-      $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
+    $validator = new IiifUrlValidator();
+
+    $internalUrlError = $validator->checkInternalUrl($form_state->getValue('int_server_url'));
+    if (!empty($internalUrlError)) {
+      $form_state->setErrorByName('int_server_url', t("We could not contact your Internal IIIF server: @error", [
+        '@error' => $internalUrlError
       ]));
     }
-      catch(ClientException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $responseMessage
+
+    $publicUrlError = $validator->checkPublicUrl($form_state->getValue('pub_server_url'));
+    if (!empty($publicUrlError)) {
+      $form_state->setErrorByName('pub_server_url', t("We could not contact your Public IIIF server: @error", [
+        '@error' => $publicUrlError
       ]));
-      }
-      catch (ServerException $exception) {
-        $responseMessage = $exception->getMessage();
-        $form_state->setErrorByName('int_server_url', t("We could not contact your Public IIIF server: @error", [
-          '@error' => $responseMessage
-        ]));
-      }
+    }
 
     parent::validateForm(
       $form,

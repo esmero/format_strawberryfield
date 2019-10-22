@@ -8,13 +8,10 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
-
+use Drupal\format_strawberryfield\Tools\IiifHelper;
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -30,14 +27,12 @@ use Drupal\Core\Form\FormStateInterface;
  *   }
  * )
  */
-class StrawberryMediaFormatter extends FormatterBase {
+class StrawberryMediaFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+    return parent::defaultSettings() + [
       'iiif_group' => TRUE,
       'json_key_source' => 'as:image',
       'max_width' => 720,
@@ -49,21 +44,8 @@ class StrawberryMediaFormatter extends FormatterBase {
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    //@TODO validate IIIF server responses, first one via AJAX, second via CURL.
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     return [
-      'iiif_base_url' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base URL of your IIIF Media Server public accesible from the Outside World'),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#required' => TRUE,
-      ],
-      'iiif_base_url_internal' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#required' => TRUE,
-      ],
       'iiif_group' => [
         '#type' => 'checkbox',
         '#title' => t('Group all Media files in a single viewer?'),
@@ -97,25 +79,16 @@ class StrawberryMediaFormatter extends FormatterBase {
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t('Displays Zoomable Media from JSON using a IIIF server and the OpenSeadragon viewer.');
-    if ($this->getSetting('iiif_base_url')) {
-      $summary[] = $this->t('External IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
-      ]);
-    }
-    if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t('Internal IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url_internal'),
-      ]);
-    }
+
     if ($this->getSetting('iiif_group')) {
       $summary[] = $this->t('Use a single Viewer for multiple media: %iiif_group', [
         '%iiif_group' => $this->getSetting('iiif_group'),
@@ -165,8 +138,6 @@ class StrawberryMediaFormatter extends FormatterBase {
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -197,11 +168,11 @@ class StrawberryMediaFormatter extends FormatterBase {
          }
       }*/
       $i = 0;
-
       // We need to load main Library on each page for views to see it.
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
 
       if (isset($jsondata[$key])) {
+        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
@@ -230,10 +201,7 @@ class StrawberryMediaFormatter extends FormatterBase {
 
                 //@ TODO recheck cache tags here, since we are not really using the file itself.
                 $filecachetags = $file->getCacheTags();
-
-                // @TODO move the IIIF server baser URL to a global config and add local fieldformatter override.
-                $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
-
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
 
                 $groupid = 'iiif-'.$items->getName(
                   ).'-'.$nodeuuid.'-'.$delta.'-media';
@@ -245,7 +213,7 @@ class StrawberryMediaFormatter extends FormatterBase {
                   '#attributes' => [
                     'id' => $uniqueid,
                     'class' => ['strawberry-media-item','field-iiif','container'],
-                    'data-iiif-infojson' => $iiifserver,
+                    'data-iiif-infojson' => $iiifpublicinfojson,
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
                     'width' => $max_width,
@@ -269,7 +237,7 @@ class StrawberryMediaFormatter extends FormatterBase {
                 // Drupal JS settings get accumulated. So in a single search results site we will have for each
                 // Formatter one passed. Reason we use 'innode' array key using our $uniqueid
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
+                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
               }
             } elseif (isset($mediaitem['url'])) {
@@ -293,29 +261,5 @@ class StrawberryMediaFormatter extends FormatterBase {
     }
 
     return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
   }
 }

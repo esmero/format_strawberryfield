@@ -1,20 +1,3 @@
-field.formatter.settings.strawberry_media_formatter:
-  type: mapping
-  label: 'FORMATTER Config for strawberry_media_formatter'
-  mapping:
-    max_width:
-      type: integer
-    max_height:
-      type: integer
-    iiif_base_url:
-      type: string
-      label: 'IIIF media Server URI.'
-    iiif_group:
-      type: boolean
-      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
-    json_key_source:
-      type: string
-      label: 'Strawberryfield/JSON key containing file URIs to display'
 format_strawberryfield.iiif_settings:
   type: config_object
   label: 'Archipelago IIIF Server configurations'
@@ -25,3 +8,101 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
+format_strawberryfield.formatter.*:
+  type: config_entity
+  label: 'Formatter config for strawberry field formatters'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    formatter_config:
+      type: format_strawberryfield.formatter.[%parent.type]
+format_strawberryfield.formatter.strawberry_audio_formatter:
+  type: config_object
+  label: 'Specific config for strawberry_audio_formatter'
+  mapping:
+    audio_type:
+      type: string
+    number_media:
+      type: integer
+format_strawberryfield.formatter.strawberry_image_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_image_formatter'
+  mapping:
+    number_images:
+      type: integer
+    quality:
+      type: string
+    rotation:
+      type: string
+format_strawberryfield.formatter.strawberry_media_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_media_formatter'
+  mapping:
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    thumbnails:
+      type: boolean
+format_strawberryfield.formatter.strawberry_metadata_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_metadata_formatter using Twig'
+  mapping:
+    label:
+      type: string
+    specs:
+      type: url
+    # todo: Can you check metadatadisplayentity_id? not sure the id right now is a string but a number (since its the entity->id(). If we move to UUID i guess we can use string but we should also look at who/what natively exists to use uuid as a type
+    metadatadisplayentity_id:
+      type: string
+    metadatadisplayentity_uselabel:
+      type: boolean
+format_strawberryfield.formatter.strawberry_paged_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_paged_formatter'
+  mapping:
+    type: boolean
+    label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+  mediasource:
+    type: string
+  metadatadisplayentity_source:
+    type: string
+  manifesturl_source:
+    type: string
+format_strawberryfield.formatter.strawberry_pannellum_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pannellum_formatter'
+  mapping:
+    hotSpotDebug:
+      type: boolean
+    image_type:
+      type: string
+    json_key_hotspots:
+      type: string
+    panorama_type:
+      type: integer
+    quality:
+      type: string
+    rotation:
+      type: string
+format_strawberryfield.formatter.settings.strawberry_video_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_video_formatter'
+  mapping:
+    audio_type:
+      type: string
+    json_key_source_for_poster:
+      type: string
+    number_media:
+      type: integer
+    posterframe:
+      type: string

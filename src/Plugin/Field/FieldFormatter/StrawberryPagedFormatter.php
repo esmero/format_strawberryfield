@@ -8,14 +8,12 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -44,7 +42,7 @@ use Twig_Loader_Array;
  *   }
  * )
  */
-class StrawberryPagedFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
+class StrawberryPagedFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
    * The current user.
@@ -83,6 +81,8 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
    *   The view mode.
    * @param array $third_party_settings
    *   Any third party settings.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
   /**
    * StrawberryMetadataTwigFormatter constructor.
@@ -106,7 +106,10 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
    *   The Entity Type manager
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
    *   The Loaded twig Environment
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
    */
+
   public function __construct(
     $plugin_id,
     $plugin_definition,
@@ -115,6 +118,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
     $label,
     $view_mode,
     array $third_party_settings,
+    ConfigFactoryInterface $config_factory,
     AccountInterface $current_user,
     EntityTypeManagerInterface $entity_type_manager,
     TwigEnvironment $twigEnvironment
@@ -126,18 +130,18 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       $settings,
       $label,
       $view_mode,
-      $third_party_settings
+      $third_party_settings,
+      $config_factory
     );
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
-
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function create(
+  public static function create (
     ContainerInterface $container,
     array $configuration,
     $plugin_id,
@@ -151,6 +155,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       $configuration['label'],
       $configuration['view_mode'],
       $configuration['third_party_settings'],
+      $container->get('config.factory'),
       $container->get('current_user'),
       $container->get('entity_type.manager'),
       $container->get('twig')
@@ -162,9 +167,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+   return parent::defaultSettings() + [
       'iiif_group' => TRUE,
       'mediasource' => 'json_key',
       'json_key_source' => 'as:image',
@@ -172,7 +175,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       'manifesturl_source' => 'iiifmanifest',
       'max_width' => 720,
       'max_height' => 480,
-
     ];
   }
 
@@ -180,32 +182,15 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    //@TODO validate IIIF server responses, first one via AJAX, second via CURL.
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
-
     $entity = NULL;
     if ($this->getSetting('metadatadisplayentity_source')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')
-        ->load($this->getSetting('metadatadisplayentity_source'));
+      $entity = $this->entityTypeManager->getStorage(
+        'metadatadisplay_entity'
+      )->load($this->getSetting('metadatadisplayentity_source'));
     }
 
     return [
-      'iiif_base_url' => [
-        '#type' => 'url',
-        '#title' => $this->t(
-          'Base URL of your IIIF Media Server public accesible from the Outside World'
-        ),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#required' => TRUE,
-      ],
-      'iiif_base_url_internal' => [
-        '#type' => 'url',
-        '#title' => $this->t(
-          'Base URL of your IIIF Media Server accesible from inside this Webserver'
-        ),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#required' => TRUE,
-      ],
       'mediasource' => [
         '#type' => 'select',
         '#title' => $this->t('Source for your paged media'),
@@ -254,7 +239,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
           ],
         ],
       ],
-
       'max_width' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum width'),
@@ -273,34 +257,17 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t(
       'Displays Paged Media from JSON using a IIIF server and the IABook Reader viewer.'
     );
-    if ($this->getSetting('iiif_base_url')) {
-      $summary[] = $this->t(
-        'External IIIF Media Server base URI: %iiif_base_url',
-        [
-          '%iiif_base_url' => $this->getSetting('iiif_base_url'),
-        ]
-      );
-    }
-    if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t(
-        'Internal IIIF Media Server base URI: %iiif_base_url',
-        [
-          '%iiif_base_url' => $this->getSetting('iiif_base_url_internal'),
-        ]
-      );
-    }
-
     if ($this->getSetting('mediasource')) {
       switch ($this->getSetting('mediasource')) {
         case 'json_key':
@@ -322,9 +289,7 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
         case 'metadatadisplayentity':
           $entity = NULL;
           if ($this->getSetting('metadatadisplayentity_source')) {
-            $entity = $this->entityTypeManager->getStorage(
-              'metadatadisplay_entity'
-            )->load($this->getSetting('metadatadisplayentity_source'));
+            $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_source'));
             $label = $entity->toLink()->getText();
             $summary[] = $this->t(
               'Pages processed by the "%manifesturl_source" Metadata Data Display template',
@@ -462,33 +427,6 @@ class StrawberryPagedFormatter extends FormatterBase implements ContainerFactory
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     }
     return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of(
-      $access_handler_class,
-      '\Drupal\file\FileAccessFormatterControlHandlerInterface'
-    )) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
   }
 
   /**

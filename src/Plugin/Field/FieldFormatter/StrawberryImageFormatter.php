@@ -8,11 +8,8 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -32,14 +29,14 @@ use Drupal\format_strawberryfield\Tools\IiifHelper;
  *   }
  * )
  */
-class StrawberryImageFormatter extends FormatterBase {
+class StrawberryImageFormatter extends StrawberryBaseFormatter {
+  
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
-      'iiif_base_url' => 'http://localhost:8183/iiif/2/',
-      'iiif_base_url_internal' => 'http://esmero-cantaloupe:8182/iiif/2/',
+    return
+      parent::defaultSettings() + [
       'json_key_source' => 'as:image',
       'max_width' => 180,
       'max_height' => 0,
@@ -47,7 +44,6 @@ class StrawberryImageFormatter extends FormatterBase {
       'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
-
     ];
   }
 
@@ -56,18 +52,6 @@ class StrawberryImageFormatter extends FormatterBase {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'iiif_base_url' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base Public accesible URL of your IIIF Media Server'),
-        '#default_value' => $this->getSetting('iiif_base_url'),
-        '#required' => TRUE,
-      ],
-      'iiif_base_url_internal' => [
-        '#type' => 'url',
-        '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver'),
-        '#default_value' => $this->getSetting('iiif_base_url_internal'),
-        '#required' => TRUE,
-      ],
       'json_key_source' => [
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
@@ -99,25 +83,15 @@ class StrawberryImageFormatter extends FormatterBase {
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
+
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
-    $summary[] = $this->t('Displays Static from JSON using a IIIF server endpoint');
-    if ($this->getSetting('iiif_base_url')) {
-      $summary[] = $this->t('IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url'),
-      ]);
-    }
-    if ($this->getSetting('iiif_base_url_internal')) {
-      $summary[] = $this->t('Internal IIIF Media Server base URI: %iiif_base_url', [
-        '%iiif_base_url' => $this->getSetting('iiif_base_url_internal'),
-      ]);
-    }
+    $summary = parent::settingsSummary();
     if ($this->getSetting('json_key_source')) {
       $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
         '%json_key_source' => $this->getSetting('json_key_source'),
@@ -160,8 +134,6 @@ class StrawberryImageFormatter extends FormatterBase {
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -169,6 +141,7 @@ class StrawberryImageFormatter extends FormatterBase {
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
+
       if (empty($value)) {
         continue;
       }
@@ -197,6 +170,7 @@ class StrawberryImageFormatter extends FormatterBase {
       }*/
       $i = 0;
       if (isset($jsondata[$key])) {
+        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > $number_images) {
@@ -227,8 +201,6 @@ class StrawberryImageFormatter extends FormatterBase {
                 $filecachetags = $file->getCacheTags();
                 //@TODO check this filecachetags and see if they make sense
 
-                // @TODO move the IIIF server baser URL to a global config and an local fieldformatter override.
-                $iiifserver = "{$baseiiifserveruri}{$iiifidentifier}/info.json";
 
                 $uniqueid =
                   'iiif-'.$items->getName(
@@ -238,13 +210,14 @@ class StrawberryImageFormatter extends FormatterBase {
                 // @ see https://www.drupal.org/files/issues/2517030-125.patch
                 $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
-                $internal_iiifserver = "{$baseiiifserveruri_internal}{$iiifidentifier}/info.json";
-                $iiifhelper = new IiifHelper($internal_iiifserver);
-                $iiifsizes = $iiifhelper->getImageSizes();
+
+                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
+                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
+
                 if (!$iiifsizes) {
                   $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
                     [
-                      '@url' => $iiifserver,
+                      '@url' => $iiifpublicinfojson,
                       '@id' => $nodeid,
                     ]);
                   \Drupal::logger('format_strawberryfield')->warning($message);
@@ -265,8 +238,7 @@ class StrawberryImageFormatter extends FormatterBase {
                     $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
                   }
 
-
-                  $iiifserverthumb = "{$baseiiifserveruri}{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
+                  $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
                   $elements[$delta]['media_thumb' . $i] = [
                     '#theme' => 'image',
                     '#attributes' => [
@@ -299,7 +271,7 @@ class StrawberryImageFormatter extends FormatterBase {
                   // Drupal JS settings get accumulated. So in a single search results site we will have for each
                   // Formatter one passed. Reason we use 'innode' array using our $uniqueid
                   // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifserver;
+                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                   $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 }
 
@@ -331,29 +303,5 @@ class StrawberryImageFormatter extends FormatterBase {
       }
     }
     return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
   }
 }

@@ -8,11 +8,8 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Component\Utility\UrlHelper;
@@ -33,7 +30,7 @@ use Drupal\Core\Url;
  *   }
  * )
  */
-class StrawberryAudioFormatter extends FormatterBase {
+class StrawberryAudioFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
    */
@@ -343,42 +340,5 @@ class StrawberryAudioFormatter extends FormatterBase {
       }
     }
     return $media_element;
-  }
-
-  /**
-   * Tries to guess mimetype of external referenced Uris
-   *
-   * @param string $uripath
-   *
-   * @return string
-   *  A guessed Mimetype
-   */
-  protected function guessMimeForExternalURI(string $uripath) {
-    return \Drupal::service('file.mime_type.guesser')->guess($uripath);
-  }
-
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
   }
 }
