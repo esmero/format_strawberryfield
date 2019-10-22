@@ -18,4 +18,31 @@ interface MetadataDisplayInterface extends ContentEntityInterface, EntityOwnerIn
    * @return TwigEnvironment
    */
   public function twigEnvironment();
+
+  /**
+   * Processes this Twig template into an Render array.
+   *
+   * @param array $context
+   *
+   * @return array
+   */
+  public function processHTML(array $context);
+
+  /**
+   * Renders a Twig template using a Context array.
+   *
+   * @param array $context
+   *
+   * @return \Drupal\Component\Render\MarkupInterface|string
+   */
+  public function renderNative(array $context);
+
+  /**
+   * Returns an array will all defined Twig Variables for this Twig template.
+   *
+   * @return array
+   * @throws \Twig\Error\SyntaxError
+   */
+  public function getTwigVariablesUsed();
+
 }
