@@ -5,20 +5,20 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Zend\Diactoros\Response\XmlResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Drupal\Core\Cache\CacheableJsonResponse;
+use Drupal\Core\Cache\CacheableResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
-use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
-use Drupal\Core\Template\TwigEnvironment;
+use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\Render\RenderContext;
 
 /**
- * A Wrapper Controller to access Twig processed JSON on a URL
+ * A Wrapper Controller to access Twig processed JSON on a URL.
  */
 class MetadataExposeDisplayController extends ControllerBase {
 
@@ -30,38 +30,42 @@ class MetadataExposeDisplayController extends ControllerBase {
   protected $requestStack;
 
   /**
-   * The Strawberry Field Utility Service
+   * The Strawberry Field Utility Service.
    *
    * @var \Drupal\strawberryfield\StrawberryfieldUtilityService
    */
   protected $strawberryfieldUtility;
 
+
   /**
-   * @var \Drupal\Core\Template\TwigEnvironment
+   * The Drupal Renderer.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
    */
-  protected $twigEnvironment;
+  protected $renderer;
 
   /**
    * MetadataExposeDisplayController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   *   The Symfony Request Stack.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityService $strawberryfield_utility_service
-   *  The SBF Utility Service
+   *   The SBF Utility Service.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entitytype_manager
-   *  Drupal's Entity Type manager service
-   * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
-   *  Drupal's Twig Environment
+   *   The Entity Type Manager.
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The Drupal Renderer Service.
    */
   public function __construct(
     RequestStack $request_stack,
     StrawberryfieldUtilityService $strawberryfield_utility_service,
     EntityTypeManagerInterface $entitytype_manager,
-    TwigEnvironment $twigEnvironment
+    RendererInterface $renderer
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->entityTypeManager = $entitytype_manager;
-    $this->twigEnvironment = $twigEnvironment;
+    $this->renderer = $renderer;
 
   }
 
@@ -73,22 +77,24 @@ class MetadataExposeDisplayController extends ControllerBase {
       $container->get('request_stack'),
       $container->get('strawberryfield.utility'),
       $container->get('entity_type.manager'),
-      $container->get('twig')
-
+      $container->get('renderer')
     );
   }
 
-
   /**
-   * Serves the JSON via a Twig transform.
+   * Main Controller Method.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadatadisplay_entity
+   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   *   A Node Entity.
+   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
+   *   The Metadata Expose Config Entity.
    * @param string $format
+   *   A String Format.
    *
-   * @return \Symfony\Component\HttpFoundation\Response
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
+   *   A Valid Cacheable response based on the mimetype.
+   *
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
   public function castViaTwig(
     ContentEntityInterface $node,
@@ -102,25 +108,22 @@ class MetadataExposeDisplayController extends ControllerBase {
         "Sorry, this metadata service is not enabled for this Content Type"
       );
     }
-    $metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity(
-    );
-    try {
-      //@TODO future work. https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Render%21MainContent%21HtmlRenderer.php/class/HtmlRenderer/8.8.x
-      // Maybe we could make a lot more by creating our own rendered + exploiding
-      // Cache system better.
-      $twigtemplate = $metadatadisplay_entity->get('twig')->getValue();
-      $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ field.label }}";
-
-      $context = [];
-
-      if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
-        $node
+    $context = [];
+    if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
+      $node
+    )) {
+      if ($metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity(
       )) {
+
+        $responsetype = $metadatadisplay_entity->get('mimetype')
+          ->first()
+          ->getValue();
+        // @TODO: ask around. Is HTML the most sensible default?
+        $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
         foreach ($sbf_fields as $field_name) {
           /* @var $field StrawberryFieldItem[] */
           $field = $node->get($field_name);
-
           foreach ($field as $offset => $fielditem) {
             $data = json_decode($fielditem->value, TRUE);
             $json_error = json_last_error();
@@ -141,39 +144,72 @@ class MetadataExposeDisplayController extends ControllerBase {
               $context['data'] = $data;
             }
             else {
-              $context['data_' . $offset] = $data;
+              $context['data'][$offset] = $data;
             }
           }
 
+          $context['node'] = $node;
+
+          $context['iiif_server'] = $this->config(
+            'format_strawberryfield.iiif_settings'
+          )->get('pub_server_url');
+          $cacheabledata = [];
+          // @see https://www.drupal.org/node/2638686 to understand
+          // What cacheable, Bubbleable metadata and early rendering means.
+          $cacheabledata = $this->renderer->executeInRenderContext(
+            new RenderContext(),
+            function () use ($context, $metadatadisplay_entity) {
+              return $metadatadisplay_entity->renderNative($context);
+            }
+          );
         }
-        $context['node'] = $node;
+        switch ($responsetype) {
+          case 'application/json':
+          case 'application/ld+json':
+            $response = new CacheableJsonResponse(
+              $cacheabledata,
+              200,
+              ['content-type' => $responsetype],
+              TRUE
+            );
+            break;
 
-        $context['iiif_server'] = $this->config(
-          'format_strawberryfield.iiif_settings'
-        )->get('pub_server_url');
+          case 'application/xml':
+          case 'text/text':
+          case 'text/turtle':
+          case 'text/html':
+            $response = new CacheableResponse(
+              $cacheabledata,
+              200,
+              ['content-type' => $responsetype]
+            );
+            break;
 
-        $rendered = $this->twigEnvironment->renderInline(
-          $twigtemplate,
-          $context
-        );
-        //@TODO. Still wrong. If output is HTML/XML/etc we need to return different responses
-        //@TODO the response body needs to be validated against the default format
-        //@TODO
+          default:
+            throw new BadRequestHttpException(
+              "Sorry, this Metadata endpoint has configuration issues."
+            );
+        }
 
-        $response = new JsonResponse(json_decode($rendered));
-
+        if ($response) {
+          $response->addCacheableDependency($node);
+          $response->addCacheableDependency($metadatadisplay_entity);
+        }
         return $response;
 
       }
+      else {
+        throw new NotFoundHttpException(
+          'Referenced Metadata Display Entity is missing'
+        );
+      }
+    }
+    else {
       throw new UnprocessableEntityHttpException(
         "Sorry, this Content has no Metadata."
-      );
-    } catch (\Exception $exception) {
-      //@TODO there are a lot of throwables here
-      // Deal with each exception correctly and log them
-      throw new UnprocessableEntityHttpException(
-        "Sorry, this endpoint has configuration issues."
+
       );
     }
   }
+
 }

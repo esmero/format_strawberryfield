@@ -1,6 +1,8 @@
 <?php
+
 namespace Drupal\format_strawberryfield\Entity;
 
+use Twig\Node\ModuleNode;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\ContentEntityBase;
@@ -9,7 +11,7 @@ use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
 use Drupal\user\UserInterface;
-use \Twig\Source;
+use Twig\Source;
 
 /**
  * Defines the Metadata Display Content entity.
@@ -101,7 +103,7 @@ use \Twig\Source;
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
  * )
  *
- * The 'links' above are defined by their path. For core to find the corresponding
+ * The 'links' above are defined by their path. For core to find the
  * route, the route name must follow the correct pattern:
  *
  * entity.<entity-name>.<link-name> (replace dashes with underscores)
@@ -109,13 +111,13 @@ use \Twig\Source;
  *
  * See routing file above for the corresponding implementation
  *
- * The 'MetadataDisplayEntity' class defines methods and fields for the contact entity.
+ * This class defines methods and fields for the  Metadata Display Entity
  *
  * Being derived from the ContentEntityBase class, we can override the methods
  * we want. In our case we want to provide access to the standard fields about
  * creation and changed time stamps.
  *
- * Our interface (see MetadataDisplayInterface) also exposes the EntityOwnerInterface.
+ * MetadataDisplayInterface also exposes the EntityOwnerInterface.
  * This allows us to provide methods for setting and providing ownership
  * information.
  *
@@ -127,13 +129,14 @@ use \Twig\Source;
  */
 class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplayInterface {
 
-  use EntityChangedTrait; // Implements methods defined by EntityChangedInterface.
+  // Implements methods defined by EntityChangedInterface.
+  use EntityChangedTrait;
 
 
   /**
-   * Calculated Twig vars used by this template
+   * Calculated Twig vars used by this template.
    *
-   * @var array|NULL
+   * @var array|null
    */
   protected $usedTwigVars = NULL;
 
@@ -145,9 +148,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    */
   public static function preCreate(EntityStorageInterface $storage_controller, array &$values) {
     parent::preCreate($storage_controller, $values);
-    $values += array(
+    $values += [
       'user_id' => \Drupal::currentUser()->id(),
-    );
+    ];
   }
 
   /**
@@ -188,10 +191,13 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
   }
 
   /**
-   * @inheritDoc
+   * Returns the Twig Environment.
+   *
+   * @return \Drupal\Core\Template\TwigEnvironment|mixed
+   *   The Drupal Twig Service.
    */
   public function twigEnvironment() {
-    return  \Drupal::service('twig');
+    return \Drupal::service('twig');
   }
 
   /**
@@ -221,30 +227,29 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // Name field for the contact.
     // We set display options for the view as well as the form.
     // Users with correct privileges can change the view and edit configuration.
-
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
       ->setDescription(t('The name of the Metadata Display entity.'))
       ->setRevisionable(FALSE)
-      ->setSettings(array(
+      ->setSettings([
         'default_value' => '',
         'max_length' => 255,
         'text_processing' => 0,
-      ))
-      ->setDisplayOptions('view', array(
+      ])
+      ->setDisplayOptions('view', [
         'label' => 'above',
         'type' => 'string',
         'weight' => -6,
-      ))
-      ->setDisplayOptions('form', array(
+      ])
+      ->setDisplayOptions('form', [
         'type' => 'string_textfield',
         'weight' => -6,
-      ))
+      ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE)
       ->setRequired(TRUE);
 
-    // Holds the actual Twig template
+    // Holds the actual Twig template.
     // @TODO see https://twig.symfony.com/doc/2.x/api.html#sandbox-extension
     $fields['twig'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Twig template'))
@@ -266,9 +271,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('view', TRUE)
       ->setRequired(TRUE)
       ->addConstraint('NotBlank')
-      ->addConstraint('TwigTemplateConstraint',['useTwigMessage' => false]);
-
-
+      ->addConstraint('TwigTemplateConstraint', ['useTwigMessage' => FALSE]);
 
     // Owner field of the Metadata Display Entity.
     // Entity reference field, holds the reference to the user object.
@@ -279,21 +282,21 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDescription(t('The Name of the associated user.'))
       ->setSetting('target_type', 'user')
       ->setSetting('handler', 'default')
-      ->setDisplayOptions('view', array(
+      ->setDisplayOptions('view', [
         'label' => 'above',
         'type' => 'entity_reference_label',
         'weight' => -3,
-      ))
-      ->setDisplayOptions('form', array(
+      ])
+      ->setDisplayOptions('form', [
         'type' => 'entity_reference_autocomplete',
-        'settings' => array(
+        'settings' => [
           'match_operator' => 'CONTAINS',
           'size' => 60,
           'autocomplete_type' => 'tags',
           'placeholder' => '',
-        ),
+        ],
         'weight' => -3,
-      ))
+      ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
@@ -320,7 +323,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $fields['mimetype'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
       ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
-      ->setSettings(array(
+      ->setSettings([
         'default_value' => 'text/html',
         'max_length' => 64,
         'cardinality' => 1,
@@ -330,9 +333,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           'application/ld+json' => 'JSON-LD',
           'application/xml' => 'XML',
           'text/text' => 'TEXT',
-          'text/turtle' => 'RDF/TURTLE'
+          'text/turtle' => 'RDF/TURTLE',
         ],
-      ))
+      ])
       ->setRequired(TRUE)
       ->setDisplayOptions('view', [
         'region' => 'hidden',
@@ -341,48 +344,56 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('form', TRUE)
       ->addConstraint('NotBlank');
 
-
     return $fields;
   }
 
   /**
-   * Processes this Twig template into an Render array.
-   *
-   * @param array $context
-   *
-   * @return array
+   * {@inheritdoc}
    */
-  public function processHTML(array $context) {
+  public function processHtml(array $context) {
     if (!isset($context['data']) || !is_array($context['data']) || empty($context['data'])) {
       throw new InvalidArgumentException('Processing a Metadata Display requires a valid "data" structure to be passed');
     }
-    //@TODO should we have a custom theme hint here?
+    $twigtemplate = $this->get('twig')->getValue();
+    $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
+    // @TODO should we have a custom theme hint here?
     $templaterenderelement = [
       '#type' => 'inline_template',
-      '#template' => $this->get('twig')->getValue(),
+      '#template' => $twigtemplate,
       '#context' => $context,
     ];
     return $templaterenderelement;
   }
 
   /**
-   * @param array $context
+   * {@inheritdoc}
    */
-  public function renderNative($context) {
-
+  public function renderNative(array $context) {
+    // Note about this method
+    // Symfony/Drupal render pipeline uses something named Render Context
+    // Twig templates, while being proccesed & depending on what is being used.
+    // Inside them (e.g URL, etc) can generated Cacheable/Bubbleable
+    // Metadata. If That happens, the render pipeline will complain about us
+    // leaking that metadata/early rendering when using it in a Cacheable
+    // response Controller.
+    // @See \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController.
+    $twigtemplate = $this->get('twig')->getValue();
+    $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
+    $rendered = $this->twigEnvironment()->renderInline(
+      $twigtemplate,
+      $context
+    );
+    return $rendered;
   }
 
   /**
-   * Returns an array will all defined Twig Variables for this Twig template.
-   *
-   * @return array
-   * @throws \Twig\Error\SyntaxError
+   * {@inheritdoc}
    */
   public function getTwigVariablesUsed() {
     if ($this->usedTwigVars == NULL) {
       $twigtemplate = $this->get('twig')->getValue();
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
-      // Create a \Twig Source first
+      // Create a \Twig Source first.
       $source = new Source($twigtemplate, $this->label(), '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
@@ -397,30 +408,35 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * Fetches recursively Twig Template Variables.
    *
    * @param \Twig\Node\ModuleNode $nodes
+   *   A Twig Module Nodes object.
    *
    * @return array
+   *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(\Twig\Node\ModuleNode $nodes): array
-  {
+  private function getTwigVariableNames(ModuleNode $nodes): array {
     $variables = [];
     foreach ($nodes as $node) {
       if ($node instanceof \Twig_Node_Expression_Name) {
         $name = $node->getAttribute('name');
         $variables[$name] = $name;
-      } elseif ($node instanceof \Twig_Node_Expression_Constant && $nodes instanceof \Twig_Node_Expression_GetAttr) {
+      }
+      elseif ($node instanceof \Twig_Node_Expression_Constant && $nodes instanceof \Twig_Node_Expression_GetAttr) {
         $value = $node->getAttribute('value');
         if (!empty($value) && is_string($value)) {
           $variables[$value] = $value;
         }
-      } elseif ($node instanceof \Twig_Node_Expression_GetAttr) {
+      }
+      elseif ($node instanceof \Twig_Node_Expression_GetAttr) {
         $path = implode('.', $this->getTwigVariableNames($node));
         if (!empty($path)) {
           $variables[$path] = $path;
         }
-      } elseif ($node instanceof \Twig_Node) {
+      }
+      elseif ($node instanceof \Twig_Node) {
         $variables += $this->getTwigVariableNames($node);
       }
     }
-  return $variables;
+    return $variables;
   }
+
 }
