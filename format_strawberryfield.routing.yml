@@ -65,7 +65,7 @@ format_strawberryfield.iiifbinary:
     _entity_access: 'node.view'
 # Direct access to Metadata display processed json
 format_strawberryfield.metadatadisplay_caster:
-  path: '/do/{node}/metadata/{metadataexposeconfig_entity}/{format}'
+  path: '/node/{node}/metadata/{metadataexposeconfig_entity}/{format}'
   methods: [GET]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController::castViaTwig'
