@@ -1,74 +1,123 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: dpino
- * Date: 11/27/18
- * Time: 1:06 PM
- */
 
 namespace Drupal\format_strawberryfield\Tools;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
-use GuzzleHttp\Exception\ConnectException;
 
+/**
+ * Class IiifUrlValidator.
+ *
+ * @package Drupal\format_strawberryfield\Tools
+ */
 class IiifUrlValidator {
 
   use StringTranslationTrait;
 
   /**
-   * @var \GuzzleHttp\Client;
+   * Const for Internal IIIF URL types.
+   */
+  const IIIF_INTERNAL_URL_TYPE = 'internal';
+
+  /**
+   * Const for EXTERNAL IIIF URL types.
+   */
+  const IIIF_EXTERNAL_URL_TYPE = 'external';
+
+  /**
+   * The HTTP Client.
+   *
+   * @var \GuzzleHttp\ClientInterface
    */
   protected $httpClient;
 
-  public function __construct () {
+  /**
+   * IiifUrlValidator constructor.
+   */
+  public function __construct() {
     $this->httpClient = $this->httpClient = \Drupal::httpClient();
+
   }
 
   /**
-   * Checks user-entered URLs for errors. Skips local hosts. Returns errors, or false if clear.
+   * Validates user-entered IIIF URLs.
    *
-   * @param $url
-   * @param $type
-   * @return bool|\Drupal\Core\StringTranslation\TranslatableMarkup
-   */
-  public function checkUrl($url, $type) {
-    if (!$url) { return t('Please enter a value for IIIF Public Url.'); };
-
-    // check for localhost.
-    $localUrls = ['localhost', '127.0.0.1', '0.0.0.0'];
-    $host = trim(parse_url($url, PHP_URL_HOST));
-    if (in_array($host, $localUrls)) {
-      // it's local so just return with no errors.
-      return false;
-    }
-
-    $title = $type === 'iiif_base_url_internal' ? 'Internal' : 'Public';
-    return $this->isInvalid($url) === true ? t('You entered an invalid '.$title.' IIIF Url.') :  false;
-  }
-
-  /**
-   * Queries URL over http; if no exceptions, returns false.
+   * @param string $url
+   *   A Cantaloupe IIIF URL endpoint.
+   * @param string $type
+   *   The Type of URL. Use CONST. defined in this class.
    *
-   * @param $url
    * @return bool
+   *   FALSE if errored.
    */
-  private function isInvalid($url) {
-    try {
-      /* @var Client $this ->httpClient */
-      $response = $this->httpClient
-        ->head($url);
-    } catch (\Exception $e) {
+  public function checkUrl(
+    string $url,
+    $type = IiifUrlValidator::IIIF_INTERNAL_URL_TYPE
+  ) {
 
-      \Drupal::logger('format_strawberryfield')->error($e);
-      return true;
+    if (!filter_var(trim($url), FILTER_VALIDATE_URL)) {
+      return t('Please enter a value for IIIF Public Url.');
+    };
+
+    $localUrls = ['localhost', '127.0.0.1', '0.0.0.0'];
+
+    // Really no need to add to the constructor.
+    // @TODO maybe nothing should go into the constructor.
+    // This is a helper class and i feel all should be simply static.
+    $request_stack = \Drupal::requestStack();
+    $current_drupal_request_url = $request_stack->getCurrentRequest()
+      ->getSchemeAndHttpHost();
+
+    // No need to check if valid, there will be always a URL here.
+    $drupal_parsed = parse_url($current_drupal_request_url);
+    $drupal_url = $drupal_parsed['scheme'] . '://' . $drupal_parsed['host'];
+
+    $iiifparsedurl = parse_url(trim($url));
+    $iiif_url = $iiifparsedurl['scheme'] . '://' . $iiifparsedurl['host'];
+
+    if (($type == self::IIIF_EXTERNAL_URL_TYPE) &&
+      ($drupal_url == $iiif_url) &&
+      in_array($iiifparsedurl['host'], $localUrls)
+    ) {
+      // it's External, localhost, same as Drupal, return with no errors.
+      return TRUE;
     }
 
-    return false;
+    return $this->isValid($url);
+  }
+
+  /**
+   * Queries URL via HEAD over http.
+   *
+   * @param string $url
+   *   A Cantaloupe IIIF url.
+   *
+   * @return bool
+   *   TRUE if we could access the URL. FALSE if exception or not a Cantaloupe.
+   */
+  private function isValid(string $url) {
+    $valid = FALSE;
+    try {
+      $response = $this->httpClient->head($url);
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('format_strawberryfield')->error(
+        "We could not contact the IIIF Server at @url with error: @e",
+        [
+          "@url" => $url,
+          "@e" => $e->getMessage(),
+        ]
+          );
+      return $valid;
+    }
+    $cantaloupe_header = $response->getHeader('X-Powered-By');
+    if (isset($cantaloupe_header[0]) && substr(
+        $cantaloupe_header[0],
+        0,
+        strlen('Cantaloupe')
+      ) === 'Cantaloupe') {
+      $valid = TRUE;
+    }
+    return $valid;
   }
 
 }
