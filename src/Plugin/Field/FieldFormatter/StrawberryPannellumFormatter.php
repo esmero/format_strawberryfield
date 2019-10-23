@@ -219,7 +219,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
                 $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
-                $iiifsizes = $iiifhelper->getImageSizes();
+                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
 
                 if (!$iiifsizes) {
                   $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
@@ -247,8 +247,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   // Pannellum recommends max 4096 pixel width images for WebGl. Lets use that as max.
                   $max_width_source = ($iiifsizes[0]['width'] > 4096) ? '4096,' : 'max';
 
-                  // todo: put this in IiifHelper
-                  $iiifserverimg = "{$this->getIiifUrls()['public']}{$iiifidentifier}"."/full/{$max_width_source}/0/default.jpg";
+                  $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width_source}/0/default.jpg";
                   $elements[$delta]['panorama' . $i] = [
                     '#type' => 'container',
                     '#attributes' => [
