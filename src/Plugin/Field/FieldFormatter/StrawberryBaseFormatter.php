@@ -105,7 +105,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *    ]
    */
   public function getIiifUrls() {
-
+    // Note. In case you wonder. All URLs are saved with the last '/' stripped.
+    // Always add a slash when using them in Twig templates
+    // @TODO maybe we want the opposite? like add the slash always?
+    // Also why are we not removing on save but on fetch?
     $urls = [
       'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? $this->iiifConfig->get('pub_server_url') : rtrim($this->getSetting('iiif_base_url'), "/"),
       'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? $this->iiifConfig->get('int_server_url') : rtrim($this->getSetting('iiif_base_url_internal'), "/"),
@@ -156,7 +159,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $element['iiif_base_url'] = [
       '#type' => 'url',
       '#title' => $this->t('Custom base public accessible URL of your IIIF Media Server. Trailing slashes will be removed.'),
-      '#default_value' => $this->getIiifUrls()['public'],
+      '#default_value' => $this->iiifConfig->get('pub_server_url'),
       '#states' => [
         'visible' => [
           ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
@@ -170,7 +173,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $element['iiif_base_url_internal'] = [
       '#type' => 'url',
       '#title' => $this->t('Custom base URL of your IIIF Media Server accessible from inside this Webserver. Trailing slashes will be removed.'),
-      '#default_value' => $this->getIiifUrls()['internal'],
+      '#default_value' => $this->iiifConfig->get('int_server_url'),
       '#states' => [
         'visible' => [
           ':checkbox[data-checkbox-selector="use_iiif_globals"]' => ['unchecked' => TRUE],
