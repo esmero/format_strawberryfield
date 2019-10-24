@@ -74,10 +74,10 @@ class IiifHelper {
     if ($json_error == JSON_ERROR_NONE) {
       return $jsondata;
     }
-    $message= $this->t('Looks like data fetched from @url is not in IIIF or JSON format.<br> JSON says: @$jsonerror <br>Please check your URL!',
+    $message= $this->t('Looks like data fetched from @url is not in IIIF or JSON format.<br> JSON says: @jsonerror <br>Please check your URL!',
       [
         '@url' => $infojsonurl,
-        '@$jsonerror' => $json_error
+        '@jsonerror' => $json_error
       ]);
 
     \Drupal::logger('format_strawberryfield')->warning($message);

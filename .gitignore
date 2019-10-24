@@ -14,3 +14,4 @@
 .idea/vcs.xml
 
 src/Plugin/Field/FieldType/IIIFlinkItem.php
+.idea/format_strawberryfield.iml

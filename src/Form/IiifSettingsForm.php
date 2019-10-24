@@ -82,21 +82,16 @@ class IiifSettingsForm extends ConfigFormBase {
    * @inheritDoc
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    // Don't validate External one, since PHP could probably fail.
     $validator = new IiifUrlValidator();
 
-    $internalUrlError = $validator->checkInternalUrl($form_state->getValue('int_server_url'));
-    if (!empty($internalUrlError)) {
-      $form_state->setErrorByName('int_server_url', t("We could not contact your Internal IIIF server: @error", [
-        '@error' => $internalUrlError
-      ]));
+    $internalUrlValid = $validator->checkUrl($form_state->getValue('int_server_url'), $validator::IIIF_INTERNAL_URL_TYPE );
+    if (!$internalUrlValid) {
+      $form_state->setErrorByName('int_server_url', $this->t("We could not contact your Internal IIIF server"));
     }
 
-    $publicUrlError = $validator->checkPublicUrl($form_state->getValue('pub_server_url'));
-    if (!empty($publicUrlError)) {
-      $form_state->setErrorByName('pub_server_url', t("We could not contact your Public IIIF server: @error", [
-        '@error' => $publicUrlError
-      ]));
+    $publicUrlValid = $validator->checkUrl($form_state->getValue('pub_server_url'), $validator::IIIF_EXTERNAL_URL_TYPE);
+    if (!$publicUrlValid) {
+      $form_state->setErrorByName('pub_server_url', $this->t("We could not contact your Public IIIF server"));
     }
 
     parent::validateForm(
