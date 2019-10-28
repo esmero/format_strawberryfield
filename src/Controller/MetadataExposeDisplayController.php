@@ -115,9 +115,25 @@ class MetadataExposeDisplayController extends ControllerBase {
       if ($metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity(
       )) {
 
-        $responsetype = $metadatadisplay_entity->get('mimetype')
-          ->first()
-          ->getValue();
+        try {
+          $responsetypefield = $metadatadisplay_entity->get('mimetype');
+          $responsetype = $responsetypefield->first()->getValue();
+          // We can have a LogicException or a Data One, both extend different
+          // classes, so better catch any.
+        }
+        catch (\Exception $exception) {
+          $this->loggerFactory->get('format_strawberryfield')->error(
+            'Metadata endpoint using @metadatadisplay has no mimetype Drupal field setup or no value. Please check that your entity has that field and there is a default Output Format value for it. Error message is @e',
+            [
+              '@metadatadisplay' => $metadatadisplay_entity->label(),
+              '@e' => $exception->getMessage(),
+            ]
+          );
+          throw new BadRequestHttpException(
+            "Sorry, this Metadata endpoint has configuration issues."
+          );
+        }
+
         // @TODO: ask around. Is HTML the most sensible default?
         $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
