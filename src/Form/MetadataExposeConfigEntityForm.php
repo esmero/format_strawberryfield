@@ -94,7 +94,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#options' => $nodebundleoptions,
         '#title' => $this->t('Which Content types will this metadata be allowed to be exposed?'),
         '#required'=> TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): NULL,
+        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): [],
         ],
       'active' => [
         '#type' => 'checkbox',
