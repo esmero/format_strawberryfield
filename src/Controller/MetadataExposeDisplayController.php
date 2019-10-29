@@ -16,6 +16,9 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
+use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
+use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -45,6 +48,13 @@ class MetadataExposeDisplayController extends ControllerBase {
   protected $renderer;
 
   /**
+   * The MIME type guesser.
+   *
+   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   */
+  protected $mimeTypeGuesser;
+
+  /**
    * MetadataExposeDisplayController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
@@ -60,12 +70,14 @@ class MetadataExposeDisplayController extends ControllerBase {
     RequestStack $request_stack,
     StrawberryfieldUtilityService $strawberryfield_utility_service,
     EntityTypeManagerInterface $entitytype_manager,
-    RendererInterface $renderer
+    RendererInterface $renderer,
+    MimeTypeGuesserInterface $mime_type_guesser
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->entityTypeManager = $entitytype_manager;
     $this->renderer = $renderer;
+    $this->mimeTypeGuesser = $mime_type_guesser;
 
   }
 
@@ -77,25 +89,12 @@ class MetadataExposeDisplayController extends ControllerBase {
       $container->get('request_stack'),
       $container->get('strawberryfield.utility'),
       $container->get('entity_type.manager'),
-      $container->get('renderer')
+      $container->get('renderer'),
+      $container->get('file.mime_type.guesser')
     );
   }
 
-  /**
-   * Main Controller Method.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
-   *   A Node Entity.
-   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
-   *   The Metadata Expose Config Entity.
-   * @param string $format
-   *   A String Format.
-   *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A Valid Cacheable response based on the mimetype.
-   *
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   */
+
   public function castViaTwig(
     ContentEntityInterface $node,
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
@@ -136,6 +135,15 @@ class MetadataExposeDisplayController extends ControllerBase {
 
         // @TODO: ask around. Is HTML the most sensible default?
         $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
+
+        // Gues mimetype using $format.
+
+        $mimetype = $this->mimeTypeGuesser->guess($format);
+        if ($mimetype != $responsetype) {
+          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'],415);
+          return $badresponse;
+        }
+
 
         foreach ($sbf_fields as $field_name) {
           /* @var $field StrawberryFieldItem[] */
