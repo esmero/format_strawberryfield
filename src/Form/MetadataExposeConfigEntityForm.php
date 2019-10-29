@@ -85,7 +85,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data at this endpoint.'),
         '#target_type' => 'metadatadisplay_entity',
         '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
+        '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getMetadataDisplayEntity() : NULL,
       ],
@@ -94,7 +94,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#options' => $nodebundleoptions,
         '#title' => $this->t('Which Content types will this metadata be allowed to be exposed?'),
         '#required'=> TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): NULL,
+        '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): [],
         ],
       'active' => [
         '#type' => 'checkbox',

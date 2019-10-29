@@ -11,7 +11,7 @@ use Drupal\Core\Entity\Plugin\EntityReferenceSelection\DefaultSelection;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
- * Provides specific access control for the node entity type.
+ * Metadata Display plugin implementation of the Entity Reference Selection plugin.
  *
  * @EntityReferenceSelection(
  *   id = "default:metadatadisplay",

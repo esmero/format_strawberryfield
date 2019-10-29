@@ -10,7 +10,7 @@ namespace Drupal\format_strawberryfield\Plugin\EntityReferenceSelection;
 use Drupal\node\Plugin\EntityReferenceSelection\NodeSelection;
 
 /**
- * Provides specific access control for the node entity type.
+ * Node with SBF plugin implementation of the Entity Reference Selection plugin.
  *
  * @EntityReferenceSelection(
  *   id = "default:nodewithstrawberry",
