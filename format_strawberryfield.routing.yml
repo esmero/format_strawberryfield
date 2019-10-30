@@ -75,8 +75,9 @@ format_strawberryfield.metadatadisplay_caster:
         type: 'entity:node'
       metadataexposeconfig_entity:
         type: 'entity:metadataexpose_entity'
+      resource_type:
+        type: 'ado'
   requirements:
-    node: \d+
     format: .+
     _entity_access: 'node.view'
 

@@ -237,11 +237,11 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
     ConfigEntityInterface $a,
     ConfigEntityInterface $b
   ) {
-    /** @var \Drupal\Core\Entity\EntityDisplayModeInterface $a */
-    /** @var \Drupal\Core\Entity\EntityDisplayModeInterface $b */
+    /** @var \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $a */
+    /** @var \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $b */
     // Sort by the type the source Metadata Display this entity uses.
-    $a_type = $a->getProcessorEntity();
-    $b_type = $b->getProcessorEntity();
+    $a_type = $a->getLabel();
+    $b_type = $b->getLabel();
     $type_order = strnatcasecmp($a_type, $b_type);
     return $type_order != 0 ? $type_order : parent::sort($a, $b);
   }
