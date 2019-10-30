@@ -1,7 +1,7 @@
 <?php
 namespace Drupal\format_strawberryfield\Form;
 
-use Drupal\Core\Entity\ContentEntityConfirmFormBase;
+use Drupal\Core\Entity\EntityConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 
@@ -10,7 +10,7 @@ use Drupal\Core\Url;
  *
  * @ingroup format_strawberryfield
  */
-class MetadataExposeConfigEntityDeleteForm extends ContentEntityConfirmFormBase {
+class MetadataExposeConfigEntityDeleteForm extends EntityConfirmFormBase {
 
   public function getQuestion() {
     return $this->t('Are you sure you want to delete %name?', ['%name' => $this->entity->label()]);
@@ -32,10 +32,9 @@ class MetadataExposeConfigEntityDeleteForm extends ContentEntityConfirmFormBase 
     $this->entity->delete();
 
     $this->messenger()->addMessage(
-      $this->t('content @type: deleted @label.',
+      $this->t('Metadata exposed endpoint @label deleted.',
         [
-          '@type' => $this->entity->bundle(),
-          '@label' => $this->entity->label(),
+          '@label' => $this->entity->getLabel(),
         ]
       )
     );
