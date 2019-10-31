@@ -100,7 +100,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#type' => 'checkbox',
         '#title' => $this->t('Is this exposed Metadata Endpoint active?'),
         '#return_value' => TRUE,
-        '#default_value' => TRUE
+        '#default_value' => ($metadataconfig->isNew()) ? TRUE : $metadataconfig->isActive()
       ]
      ];
 

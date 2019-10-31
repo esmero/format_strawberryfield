@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -17,7 +18,6 @@ use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
 use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
-use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 /**
@@ -65,6 +65,8 @@ class MetadataExposeDisplayController extends ControllerBase {
    *   The Entity Type Manager.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The Drupal Renderer Service.
+   * @param \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface $mime_type_guesser
+   *   The Drupal Mime type guesser Service.
    */
   public function __construct(
     RequestStack $request_stack,
@@ -94,12 +96,31 @@ class MetadataExposeDisplayController extends ControllerBase {
     );
   }
 
-
+  /**
+   * Main Controller Method. Casts JSON via Twig.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   *   A Node as argument.
+   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
+   *   The Metadata Exposed Config Entity that carries the settings.
+   * @param string $format
+   *   A possible Filename used in the last part of the Route.
+   *
+   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
+   *   A cacheable response.
+   */
   public function castViaTwig(
     ContentEntityInterface $node,
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
     string $format = 'default.json'
   ) {
+    // Check if Config entity is actually enablewd.
+    if (!$metadataexposeconfig_entity->isActive()) {
+      throw new AccessDeniedHttpException(
+        "Sorry, this metadata service is currently disabled."
+      );
+    }
+
     $valid_bundles = (array) $metadataexposeconfig_entity->getTargetEntityTypes(
     );
     if (!in_array($node->bundle(), $valid_bundles)) {
@@ -137,13 +158,11 @@ class MetadataExposeDisplayController extends ControllerBase {
         $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
         // Gues mimetype using $format.
-
         $mimetype = $this->mimeTypeGuesser->guess($format);
         if ($mimetype != $responsetype) {
-          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'],415);
+          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], 415);
           return $badresponse;
         }
-
 
         foreach ($sbf_fields as $field_name) {
           /* @var $field StrawberryFieldItem[] */
@@ -218,6 +237,7 @@ class MetadataExposeDisplayController extends ControllerBase {
         if ($response) {
           $response->addCacheableDependency($node);
           $response->addCacheableDependency($metadatadisplay_entity);
+          $response->addCacheableDependency($metadataexposeconfig_entity);
         }
         return $response;
 
