@@ -253,6 +253,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
 
     $vmmappings = $form_state->get('vmmappings') ? $form_state->get('vmmappings') : [];
     $vmmappings[] = ['jsontype' => $form_state->getValue('type'), 'view_mode' => $form_state->getValue('viewmode')];
+    $this->messenger()->addWarning('You have unsaved changes.');
     $form_state->set('vmmappings', $vmmappings);
     $form_state->setRebuild();
   }
