@@ -17,6 +17,13 @@ format_strawberryfield.iiif_admin_settings_form:
   description: 'Configure IIIF Server'
   parent: strawberryfield.group.admin
   weight: 99
+#Adds to Archipelago a global IIIF admin settings
+format_strawberryfield.view_mode_mapping_settings_form:
+  title: 'ADO type to View Mode Mapping Form'
+  route_name: format_strawberryfield.view_mode_mapping_settings_form
+  description: 'Configure how ADO type defined in your SBF JSON can be magically mapped to Drupal Content View Modes.'
+  parent: strawberryfield.group.admin
+  weight: 100
 #Adds to Archipelago Expose Metadata Config
 entity.metadataexpose_entity.collection:
   title: 'Configure Exposed Metadata Endpoints'
