@@ -106,3 +106,33 @@ format_strawberryfield.formatter.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
+# Multiple JSON type / View Mode Mappings
+format_strawberryfield.viewmodemapping_settings:
+  type: config_object
+  label: 'Archipelago View Mode to JSON Type Key mapping Configurations'
+  mapping:
+    type_to_viewmode:
+      type: sequence
+      label: 'JSON type key to View Mode Mapping'
+      sequence:
+        type: format_strawberryfield.viewmodemapping_settings.mapping
+
+format_strawberryfield.viewmodemapping_settings.mapping:
+  type: mapping
+  label: 'JSON Type Key/ View Mode pair'
+  mapping:
+    jsontype:
+      type: string
+      label: 'JSON Type Key'
+    view_mode:
+      type: string
+      label: 'View mode'
+    active:
+      type: boolean
+      label: 'Whether this Config pair is enabled or not'
+    weight:
+      type: integer
+      label: 'Order in which this is evaluated'
+
+
+

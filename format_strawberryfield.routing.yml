@@ -48,6 +48,7 @@ format_strawberryfield.metadatadisplay_settings:
     _title: 'Metadata Display Settings'
   requirements:
     _permission: 'administer metadatadisplay entity'
+
 # Direct File access for SBF managed files.
 format_strawberryfield.iiifbinary:
   path: '/do/{node}/iiif/{uuid}/full/full/0/{format}'
@@ -88,6 +89,16 @@ format_strawberryfield.iiif_admin_settings_form:
   defaults:
     _form: '\Drupal\format_strawberryfield\Form\IiifSettingsForm'
     _title: 'IIIF Server Settings Form'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+
+format_strawberryfield.view_mode_mapping_settings_form:
+  path: '/admin/config/archipelago/viewmode_mapping'
+  defaults:
+    _form: '\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm'
+    _title: 'ADO Type to View Mode Mapping Form'
   requirements:
     _permission: 'access administration pages'
   options:
