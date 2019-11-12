@@ -52,6 +52,7 @@ function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterf
       'format_strawberryfield.viewmodemapping_settings'
       );
       $viewmodemappings = $config->get('type_to_viewmode');
+      $viewmodemappings = !empty($viewmodemappings) ? (array) $viewmodemappings : [];
       usort($viewmodemappings, ['\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm', 'sortSettings']);
 
       foreach ($viewmodemappings as $viewmodemapping) {
