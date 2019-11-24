@@ -56,8 +56,14 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
     $form['info'] = [
       '#markup' => $this->t('This Form allows you to map ADO (Archipelago Digital Object) "types" to existing Drupal View Mode Configurations.'),
     ];
-
-    $form['type'] = [
+    $form['add_fieldset'] = [
+      '#title' => $this->t('Add a new mapping'),
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#tree' => TRUE
+    ];
+    $form['add_fieldset']['type'] = [
       '#type' => 'select',
       '#options' => $this->getTypesFromSolr(),
       '#title' => $this->t('The ADO Type'),
@@ -65,7 +71,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       '#default_value' => '',
       '#required' => TRUE,
     ];
-    $form['viewmode'] = [
+    $form['add_fieldset']['viewmode'] = [
       '#type' => 'select',
       '#options' => $this->getViewModes(),
       '#title' => $this->t('View Mode'),
@@ -74,11 +80,11 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     ];
 
-    $form['actions']['add_more'] = [
+    $form['add_fieldset']['add_more'] = [
       '#type' => 'submit',
       '#value' => t('Add'),
     // No validation.
-      '#limit_validation_errors' => [['type'], ['viewmode']],
+      '#limit_validation_errors' => [['add_fieldset','type'], ['add_fieldset','viewmode']],
     // #submit required.
       '#submit' => ['::addPair'],
       '#ajax' => [
@@ -252,7 +258,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
   public function addPair(array &$form, FormStateInterface $form_state) {
 
     $vmmappings = $form_state->get('vmmappings') ? $form_state->get('vmmappings') : [];
-    $vmmappings[] = ['jsontype' => $form_state->getValue('type'), 'view_mode' => $form_state->getValue('viewmode')];
+    $vmmappings[] = ['jsontype' => $form_state->getValue(['add_fieldset','type']), 'view_mode' => $form_state->getValue(['add_fieldset','viewmode'])];
     $this->messenger()->addWarning('You have unsaved changes.');
     $form_state->set('vmmappings', $vmmappings);
     $form_state->setRebuild();
