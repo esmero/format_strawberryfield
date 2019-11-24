@@ -56,6 +56,9 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
     $form['info'] = [
       '#markup' => $this->t('This Form allows you to map ADO (Archipelago Digital Object) "types" to existing Drupal View Mode Configurations.'),
     ];
+
+    $view_mode_list = $this->getViewModes();
+
     $form['add_fieldset'] = [
       '#title' => $this->t('Add a new mapping'),
       '#type' => 'fieldset',
@@ -73,7 +76,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
     ];
     $form['add_fieldset']['viewmode'] = [
       '#type' => 'select',
-      '#options' => $this->getViewModes(),
+      '#options' => $view_mode_list,
       '#title' => $this->t('View Mode'),
       '#description' => $this->t('A View Mode to be used when displaying a Node bearing SBF that contains in its JSON a "type" key with the first value.'),
       '#default_value' => 'Default',
@@ -132,7 +135,8 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         '#default_value' => $mapping['jsontype'],
       ];
       $form['table-row'][$key]['vm'] = [
-        '#type' => 'textfield',
+        '#prefix' => '<div>'.$view_mode_list[$mapping['view_mode']].'</div>',
+        '#type' => 'value',
         '#required' => TRUE,
         '#default_value' => $mapping['view_mode'],
       ];
