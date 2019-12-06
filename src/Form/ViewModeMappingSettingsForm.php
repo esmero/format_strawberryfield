@@ -54,32 +54,50 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('format_strawberryfield.viewmodemapping_settings');
     $form['info'] = [
-      '#markup' => $this->t('This Form allows you to map ADO (Archipelago Digital Object) "types" to existing Drupal View Mode Configurations.'),
+      '#markup' => $this->t(
+        'This Form allows you to map ADO (Archipelago Digital Object) "types" to existing Drupal View Mode Configurations.'
+      ),
     ];
 
-    $form['type'] = [
+    $view_mode_list = $this->getViewModes();
+
+    $form['add_fieldset'] = [
+      '#title' => $this->t('Add a new mapping'),
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#tree' => TRUE,
+    ];
+    $form['add_fieldset']['type'] = [
       '#type' => 'select',
       '#options' => $this->getTypesFromSolr(),
       '#title' => $this->t('The ADO Type'),
-      '#description' => $this->t('The value of a "type" Key as found in a SBF JSON of an ADO.'),
+      '#description' => $this->t(
+        'The value of a "type" Key as found in a SBF JSON of an ADO.'
+      ),
       '#default_value' => '',
       '#required' => TRUE,
     ];
-    $form['viewmode'] = [
+    $form['add_fieldset']['viewmode'] = [
       '#type' => 'select',
-      '#options' => $this->getViewModes(),
+      '#options' => $view_mode_list,
       '#title' => $this->t('View Mode'),
-      '#description' => $this->t('A View Mode to be used when displaying a Node bearing SBF that contains in its JSON a "type" key with the first value.'),
+      '#description' => $this->t(
+        'A View Mode to be used when displaying a Node bearing SBF that contains in its JSON a "type" key with the first value.'
+      ),
       '#default_value' => 'Default',
       '#required' => TRUE,
     ];
 
-    $form['actions']['add_more'] = [
+    $form['add_fieldset']['add_more'] = [
       '#type' => 'submit',
       '#value' => t('Add'),
-    // No validation.
-      '#limit_validation_errors' => [['type'], ['viewmode']],
-    // #submit required.
+      // No validation.
+      '#limit_validation_errors' => [
+        ['add_fieldset', 'type'],
+        ['add_fieldset', 'viewmode'],
+      ],
+      // #submit required.
       '#submit' => ['::addPair'],
       '#ajax' => [
         'callback' => '::addmoreCallback',
@@ -110,11 +128,19 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       ],
     ];
     $storedsettings = $config->get('type_to_viewmode');
-    if (empty($form_state->get('vmmappings')) && !empty($storedsettings) && !$form_state->isRebuilding()) {
+    if (empty(
+      $form_state->get(
+        'vmmappings'
+      )
+      ) && !empty($storedsettings) && !$form_state->isRebuilding()) {
       // Prepopulate our $formstate vmmappings variable from stored settings;.
       $form_state->set('vmmappings', $storedsettings);
     }
-    $current_mappings = !empty($form_state->get('vmmappings')) ? $form_state->get('vmmappings') : [];
+    $current_mappings = !empty(
+    $form_state->get(
+      'vmmappings'
+    )
+    ) ? $form_state->get('vmmappings') : [];
     foreach ($current_mappings as $index => $mapping) {
       $key = $index + 1;
       $form['table-row'][$key]['#attributes']['class'][] = 'draggable';
@@ -125,11 +151,29 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         '#required' => TRUE,
         '#default_value' => $mapping['jsontype'],
       ];
-      $form['table-row'][$key]['vm'] = [
-        '#type' => 'textfield',
-        '#required' => TRUE,
-        '#default_value' => $mapping['view_mode'],
-      ];
+      $view_mode_mapping_for_this_row = isset($view_mode_list[$mapping['view_mode']]) ? $view_mode_list[$mapping['view_mode']] : t(
+        'View mode @view_mode does not exist! Please select a new one.',
+        ['@view_mode' => $mapping['view_mode']]
+      );
+
+      if (isset($view_mode_list[$mapping['view_mode']])) {
+        $form['table-row'][$key]['vm'] = [
+          '#prefix' => '<div>' . $view_mode_mapping_for_this_row . '</div>',
+          '#type' => 'value',
+          '#required' => TRUE,
+          '#default_value' => $mapping['view_mode'],
+        ];
+      }
+      else {
+        // The View Mode saved in our settings is not longer available, show a select box
+        $form['table-row'][$key]['vm'] = [
+          '#prefix' => '<div>' . $view_mode_mapping_for_this_row . '</div>',
+          '#type' => 'select',
+          '#options' => $view_mode_list,
+          '#required' => TRUE,
+          '#default_value' => 'default',
+        ];
+      }
       $form['table-row'][$key]['active'] = [
         '#type' => 'checkbox',
         '#required' => FALSE,
@@ -140,9 +184,9 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         '#rowtodelete' => $key,
         '#name' => 'deleteitem_' . $key,
         '#value' => t('Remove'),
-      // No validation.
+        // No validation.
         '#limit_validation_errors' => [['table-row']],
-      // #submit required if ajax!.
+        // #submit required if ajax!.
         '#submit' => ['::deletePair'],
         '#ajax' => [
           'callback' => '::deleteoneCallback',
@@ -151,7 +195,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       ];
       $form['table-row'][$key]['weight'] = [
         '#type' => 'weight',
-        '#title' => $this->t('Weight for @title', ['@title' => $mapping['jsontype']]),
+        '#title' => $this->t(
+          'Weight for @title',
+          ['@title' => $mapping['jsontype']]
+        ),
         '#title_display' => 'invisible',
         '#default_value' => isset($mapping['weight']) ? $mapping['weight'] : $key,
         '#attributes' => ['class' => ['table-sort-weight']],
@@ -231,7 +278,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
    *
    * Selects and returns the fieldset with the names in it.
    */
-  public function addmoreCallback(array &$form, FormStateInterface $form_state) {
+  public function addmoreCallback(
+    array &$form,
+    FormStateInterface $form_state
+  ) {
     return $form['table-row'];
   }
 
@@ -240,7 +290,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
    *
    * Selects and returns the fieldset with the names in it.
    */
-  public function deleteoneCallback(array &$form, FormStateInterface $form_state) {
+  public function deleteoneCallback(
+    array &$form,
+    FormStateInterface $form_state
+  ) {
     return $form['table-row'];
   }
 
@@ -251,8 +304,15 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
    */
   public function addPair(array &$form, FormStateInterface $form_state) {
 
-    $vmmappings = $form_state->get('vmmappings') ? $form_state->get('vmmappings') : [];
-    $vmmappings[] = ['jsontype' => $form_state->getValue('type'), 'view_mode' => $form_state->getValue('viewmode')];
+    $vmmappings = $form_state->get('vmmappings') ? $form_state->get(
+      'vmmappings'
+    ) : [];
+    $vmmappings[] = [
+      'jsontype' => $form_state->getValue(
+        ['add_fieldset', 'type']
+      ),
+      'view_mode' => $form_state->getValue(['add_fieldset', 'viewmode']),
+    ];
     $this->messenger()->addWarning('You have unsaved changes.');
     $form_state->set('vmmappings', $vmmappings);
     $form_state->setRebuild();
@@ -267,7 +327,9 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
 
     $triggering = $form_state->getTriggeringElement();
     if (isset($triggering['#rowtodelete'])) {
-      $vmmappings = $form_state->get('vmmappings') ? $form_state->get('vmmappings') : [];
+      $vmmappings = $form_state->get('vmmappings') ? $form_state->get(
+        'vmmappings'
+      ) : [];
       unset($vmmappings[$triggering['#rowtodelete'] - 1]);
       $form_state->set('vmmappings', array_values($vmmappings));
       $this->messenger()->addWarning('You have unsaved changes.');
@@ -311,7 +373,8 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       )->save();
     }
     else {
-      $this->config('format_strawberryfield.viewmodemapping_settings')->delete();
+      $this->config('format_strawberryfield.viewmodemapping_settings')->delete(
+      );
     }
     parent::submitForm($form, $form_state);
   }
