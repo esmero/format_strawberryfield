@@ -13,6 +13,7 @@ use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\file\FileInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -47,6 +48,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       'quality' => 'default',
       'rotation' => '0',
       'hotSpotDebug' => TRUE,
+      'autoLoad' => FALSE,
     ];
   }
 
@@ -97,6 +99,11 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
       ],
+        'autoLoad' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Autoload Panoramas'),
+          '#default_value' => $this->getSetting('autoLoad'),
+        ],
     ] + parent::settingsForm($form, $form_state);
   }
 
@@ -150,6 +157,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $key = $this->getSetting('json_key_source');
     $hotspots =  $this->getSetting('json_key_hotspots');
     $multiscene = trim($this->getSetting('json_key_multiscene'));
+    $settings_hotspotdebug = $this->getSetting('hotSpotDebug');
+    $settings_autoload = $this->getSetting('autoLoad');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -252,7 +261,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 }
                 else {
                   //@see \template_preprocess_image for further theme_image() attributes.
-                  // Look. This one uses the public accesible base URL. That is how world works.
+                  // Look. This one uses the public accessible base URL.
+                  // That is how world works.
                   if (($max_width == 0) && ($max_height == 0)) {
                     $max_width = $iiifsizes[0]['width'];
                     $max_height = $iiifsizes[0]['height'];
@@ -283,6 +293,10 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     )
                   ];
                   // Lets add hotspots
+                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = [
+                    'hotSpotDebug' => $settings_hotspotdebug ,
+                    'autoLoad' => $settings_autoload ,
+                  ];
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
                   $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
                   // Hotspots are a list of objects in the form of
@@ -438,19 +452,4 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     return $elements;
   }
 
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
-  }
 }

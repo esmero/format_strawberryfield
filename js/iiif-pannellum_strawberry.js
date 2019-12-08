@@ -32,6 +32,7 @@
                        $(this).css("width","100%");
 
                         console.log('initializing Pannellum')
+                        console.log(drupalSettings.format_strawberryfield.pannellum[element_id].settings);
                         // When loading a webform with an embeded Viewer
                         // The context of Pannellum is not global
                         // So we can't really use 'pannellum' directly
@@ -41,7 +42,8 @@
                             var viewer = window.pannellum.viewer(element_id, {
                                 "type": "equirectangular",
                                 "panorama": $(value).data('iiifImage'),
-                                "hotSpotDebug": true,
+                                "hotSpotDebug": drupalSettings.format_strawberryfield.pannellum[element_id].settings.hotSpotDebug,
+                                "autoLoad":drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad,
                                 "hotSpots": hotspots,
                             });
                         }

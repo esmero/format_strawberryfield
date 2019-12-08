@@ -94,6 +94,8 @@ format_strawberryfield.formatter.strawberry_pannellum_formatter:
       type: string
     rotation:
       type: string
+    autoLoad:
+      type: boolean
 format_strawberryfield.formatter.settings.strawberry_video_formatter:
   type: config_object
   label: 'Specific Config for strawberry_video_formatter'
