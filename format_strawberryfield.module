@@ -24,6 +24,8 @@ function format_strawberryfield_page_attachments(array &$page) {
     }*/
     $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
+    $page['#attached']['library'][] = 'format_strawberryfield/pannellum';
+    $page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
 
 }
 
