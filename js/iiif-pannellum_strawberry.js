@@ -57,7 +57,7 @@
 
                 })}}
     /**
-     * Extend the TableResponsive function with a list of managed tables.
+     * Extend the FormatStrawberryfieldPanoramas.
      */
     $.extend(
         FormatStrawberryfieldPanoramas,
