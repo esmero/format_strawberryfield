@@ -8,10 +8,8 @@
     }
 
     function FormatStrawberryfieldhotspotPopUp(event, url) {
-
         if (url!== null) {
             var $myDialog = $('<div class="format-strawberryfield-hotspot-dialog"></div>').appendTo('body');
-            console.log(url);
             var ajaxObject = Drupal.ajax({
                 url: url,
                 dialogType: 'modal',
@@ -24,7 +22,6 @@
             ajaxObject.execute();
         event.preventDefault();
         }
-
     }
 
 
@@ -46,6 +43,11 @@
                             !$multiscene
                         ) {
                             $.each(drupalSettings.format_strawberryfield.pannellum[element_id].hotspots, function (id, hotspotdata)  {
+                                // Also add Popups for Standalone Panoramas if they have an URL.
+                                if (hotspotdata.hasOwnProperty('URL')) {
+                                    hotspotdata.clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
+                                    hotspotdata.clickHandlerArgs = hotspotdata.URL;
+                                }
                                 hotspots.push(hotspotdata);
                         });
                         }
