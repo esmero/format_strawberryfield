@@ -7,6 +7,27 @@
         console.log('new viewer!');
     }
 
+    function FormatStrawberryfieldhotspotPopUp(event, url) {
+
+        if (url!== null) {
+            var $myDialog = $('<div class="format-strawberryfield-hotspot-dialog"></div>').appendTo('body');
+            console.log(url);
+            var ajaxObject = Drupal.ajax({
+                url: url,
+                dialogType: 'modal',
+                dialog: {width: '800px'},
+                progress: {
+                    type: 'fullscreen',
+                    message: Drupal.t('Please wait...')
+                }
+            });
+            ajaxObject.execute();
+        event.preventDefault();
+        }
+
+    }
+
+
     Drupal.behaviors.format_strawberryfield_pannellum_initiate = {
         attach: function(context, settings) {
             $('.strawberry-panorama-item[data-iiif-image]').once('attache_pnl')
@@ -37,7 +58,6 @@
                         // The context of Pannellum is not global
                         // So we can't really use 'pannellum' directly
 
-
                         if (!$multiscene) {
                             var viewer = window.pannellum.viewer(element_id, {
                                 "type": "equirectangular",
@@ -49,9 +69,26 @@
                         }
                         else {
                             console.log('multiscene!');
+                            console.log(drupalSettings.format_strawberryfield.pannellum[element_id].tour);
+                            $.each(drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes, function (sceneid, data)  {
+                            // Add Model Window Behaviour to hotSpots with Links
+                                if (data.hasOwnProperty('hotSpots')) {
+                                    $.each(data.hotSpots, function (hotspotid, hotspotdata) {
+                                        console.log(hotspotdata);
+                                        if (hotspotdata.hasOwnProperty('URL')) {
+                                            console.log(hotspotdata);
+                                            drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
+                                            drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerArgs = hotspotdata.URL;
+                                        }
+
+                                    });
+
+                                }
+                            });
                             var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
                         }
                         FormatStrawberryfieldPanoramas.panoramas.set(element_id, new FormatStrawberryfieldPanoramas(viewer));
+
 
                     }
 
@@ -71,6 +108,9 @@
             hotspots:  new Map(),
         },
     );
+
     // Make the FormatStrawberryfieldPanoramas object available in the Drupal namespace.
     Drupal.FormatStrawberryfieldPanoramas = FormatStrawberryfieldPanoramas;
+    // Make the FormatStrawberryfieldhotspotPopUp function available in the Drupal namespace.
+    Drupal.FormatStrawberryfieldhotspotPopUp = FormatStrawberryfieldhotspotPopUp;
 })(jQuery, Drupal, drupalSettings, window.pannellum);
