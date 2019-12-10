@@ -65,7 +65,7 @@
                                 "type": "equirectangular",
                                 "panorama": $(value).data('iiifImage'),
                                 "hotSpotDebug": drupalSettings.format_strawberryfield.pannellum[element_id].settings.hotSpotDebug,
-                                "autoLoad":drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad,
+                                "autoLoad": Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad),
                                 "hotSpots": hotspots,
                             });
                         }
