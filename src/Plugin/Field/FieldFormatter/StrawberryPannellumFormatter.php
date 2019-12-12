@@ -412,23 +412,42 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
               if ($key == 0) {
                 $reusedarray = $renderarray;
                 // Lets build our objects here!
-                $default_scene->firstScene = 'scene'.$nid.'-'.$i;
+                $default_scene->firstScene = 'scene'.$nid;
                 $single_scene_details = new \stdClass();
                 $single_scene_details->title = $node->label();
                 $single_scene_details->type = 'equirectangular';
+                if (isset($scenes['hfov'])) {
+                  $single_scene_details->hfov = (int) $scenes['hfov'];
+                }
+                if (isset($scenes['pitch'])) {
+                  $single_scene_details->pitch = (int) $scenes['pitch'];
+                }
+                if (isset($scenes['yaw'])) {
+                  $single_scene_details->yaw = (int) $scenes['yaw'];
+                }
                 $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                 // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
-                $single_scenes->{'scene'.$nid.'-'.$i} = clone $single_scene_details;
+                $single_scenes->{'scene'.$nid} = clone $single_scene_details;
                 $panorama_id = $renderarray['panorama1']['#attributes']['id'];
 
                 unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
               } else {
+
                 $single_scene_details->title = $node->label();
                 $single_scene_details->type = 'equirectangular';
+                if (isset($scenes['hfov'])) {
+                  $single_scene_details->hfov = (int) $scenes['hfov'];
+                }
+                if (isset($scenes['pitch'])) {
+                  $single_scene_details->pitch = (int) $scenes['pitch'];
+                }
+                if (isset($scenes['yaw'])) {
+                  $single_scene_details->yaw = (int) $scenes['yaw'];
+                }
                 $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                $single_scenes->{'scene'.$nid.'-'.$i} = clone $single_scene_details;
+                $single_scenes->{'scene'.$nid} = clone $single_scene_details;
               }
             }
           }
@@ -440,6 +459,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     //@TODO we should validate these puppies probably.
     if (!empty($panorama_id)) {
       $reusedarray["#attached"]["drupalSettings"]["format_strawberryfield"]["pannellum"][$panorama_id]["tour"] = $full_tour;
+      // make sure Drupal Ajax Dialog Library is present for the pop ups.
+      // $reusedarray["#attached"]["library"][] = 'core/drupal.dialog.ajax';
     }
     return $reusedarray;
   }
