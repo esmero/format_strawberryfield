@@ -397,7 +397,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           $node = \Drupal::service('entity.manager')->getStorage('node')->load(
             $nid
           );
-          if (!node) {
+          if (!$node) {
             continue;
           }
           $type = $this->pluginId;
