@@ -412,7 +412,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
               if ($key == 0) {
                 $reusedarray = $renderarray;
                 // Lets build our objects here!
-                $default_scene->firstScene = 'scene'.$nid;
+                $default_scene->firstScene = "{$nid}";
                 $single_scene_details = new \stdClass();
                 $single_scene_details->title = $node->label();
                 $single_scene_details->type = 'equirectangular';
@@ -428,7 +428,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                 // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
-                $single_scenes->{'scene'.$nid} = clone $single_scene_details;
+                $single_scenes->{"$nid"} = clone $single_scene_details;
                 $panorama_id = $renderarray['panorama1']['#attributes']['id'];
 
                 unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
@@ -447,7 +447,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 }
                 $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                $single_scenes->{'scene'.$nid} = clone $single_scene_details;
+                $single_scenes->{"$nid"} = clone $single_scene_details;
               }
             }
           }
