@@ -389,65 +389,73 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     foreach ($scenes as $key => $scenes) {
       // Now this is sweet, We will assume that the user wants same specs as this
       // Formatter (makes sense!).
-      $nid = $scenes["scene"];
-      // Don't allow circular references
-      if ($nid != $ownnodeid) {
-        // @TODO inject-it as we do in the other formatters.
-        $node = \Drupal::service('entity.manager')->getStorage('node')->load(
-          $nid
-        );
-        $type = $this->pluginId;
-        $settings = $this->getSettings();
-        // Let's reuse the same settings we have!
-        // but remove 'multiscene' key to make sure
-        // That we don't end loading circular
-        // references, deep tours in tours or even ourselves!
-        $settings['json_key_multiscene'] = '';
-        if ($this->checkAccess($node)) {
-          foreach ($node->{$fieldname} as $i => $delta) {
-            // @see \Drupal\Core\Entity\EntityViewBuilderInterface::viewField()
-            $renderarray = $delta->view(['type' => $type, 'settings' => $settings]);
-            // We only want first image always.
-            if (isset($renderarray['panorama1'])) {
-              if ($key == 0) {
-                $reusedarray = $renderarray;
-                // Lets build our objects here!
-                $default_scene->firstScene = "{$nid}";
-                $single_scene_details = new \stdClass();
-                $single_scene_details->title = $node->label();
-                $single_scene_details->type = 'equirectangular';
-                if (isset($scenes['hfov'])) {
-                  $single_scene_details->hfov = (int) $scenes['hfov'];
-                }
-                if (isset($scenes['pitch'])) {
-                  $single_scene_details->pitch = (int) $scenes['pitch'];
-                }
-                if (isset($scenes['yaw'])) {
-                  $single_scene_details->yaw = (int) $scenes['yaw'];
-                }
-                $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
-                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
-                $single_scenes->{"$nid"} = clone $single_scene_details;
-                $panorama_id = $renderarray['panorama1']['#attributes']['id'];
+      if (isset($scenes["scene"])) {
+        $nid = $scenes["scene"];
+        // Don't allow circular references
+        if ($nid != $ownnodeid) {
+          // @TODO inject-it as we do in the other formatters.
+          $node = \Drupal::service('entity.manager')->getStorage('node')->load(
+            $nid
+          );
+          if (!node) {
+            continue;
+          }
+          $type = $this->pluginId;
+          $settings = $this->getSettings();
+          // Let's reuse the same settings we have!
+          // but remove 'multiscene' key to make sure
+          // That we don't end loading circular
+          // references, deep tours in tours or even ourselves!
+          $settings['json_key_multiscene'] = '';
+          if ($this->checkAccess($node)) {
+            foreach ($node->{$fieldname} as $i => $delta) {
+              // @see \Drupal\Core\Entity\EntityViewBuilderInterface::viewField()
+              $renderarray = $delta->view(
+                ['type' => $type, 'settings' => $settings]
+              );
+              // We only want first image always.
+              if (isset($renderarray['panorama1'])) {
+                if ($key == 0) {
+                  $reusedarray = $renderarray;
+                  // Lets build our objects here!
+                  $default_scene->firstScene = "{$nid}";
+                  $single_scene_details = new \stdClass();
+                  $single_scene_details->title = $node->label();
+                  $single_scene_details->type = 'equirectangular';
+                  if (isset($scenes['hfov'])) {
+                    $single_scene_details->hfov = (int) $scenes['hfov'];
+                  }
+                  if (isset($scenes['pitch'])) {
+                    $single_scene_details->pitch = (int) $scenes['pitch'];
+                  }
+                  if (isset($scenes['yaw'])) {
+                    $single_scene_details->yaw = (int) $scenes['yaw'];
+                  }
+                  $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                  // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
+                  $single_scenes->{"$nid"} = clone $single_scene_details;
+                  $panorama_id = $renderarray['panorama1']['#attributes']['id'];
 
-                unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
-              } else {
+                  unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
+                }
+                else {
 
-                $single_scene_details->title = $node->label();
-                $single_scene_details->type = 'equirectangular';
-                if (isset($scenes['hfov'])) {
-                  $single_scene_details->hfov = (int) $scenes['hfov'];
+                  $single_scene_details->title = $node->label();
+                  $single_scene_details->type = 'equirectangular';
+                  if (isset($scenes['hfov'])) {
+                    $single_scene_details->hfov = (int) $scenes['hfov'];
+                  }
+                  if (isset($scenes['pitch'])) {
+                    $single_scene_details->pitch = (int) $scenes['pitch'];
+                  }
+                  if (isset($scenes['yaw'])) {
+                    $single_scene_details->yaw = (int) $scenes['yaw'];
+                  }
+                  $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                  $single_scenes->{"$nid"} = clone $single_scene_details;
                 }
-                if (isset($scenes['pitch'])) {
-                  $single_scene_details->pitch = (int) $scenes['pitch'];
-                }
-                if (isset($scenes['yaw'])) {
-                  $single_scene_details->yaw = (int) $scenes['yaw'];
-                }
-                $single_scene_details->panorama =  $renderarray['panorama1']['#attributes']['data-iiif-image'];
-                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                $single_scenes->{"$nid"} = clone $single_scene_details;
               }
             }
           }
