@@ -4,7 +4,6 @@
 
     function FormatStrawberryfieldPanoramas(panorama) {
         this.panorama = panorama;
-        console.log('new viewer!');
     }
 
     function FormatStrawberryfieldhotspotPopUp(event, url) {
@@ -54,8 +53,7 @@
                        $(this).height(520); //@TODO this needs to be a setting. C'mon
                        $(this).css("width","100%");
 
-                        console.log('initializing Pannellum')
-                        console.log(drupalSettings.format_strawberryfield.pannellum[element_id].settings);
+                        console.log('Initializing Pannellum.')
                         // When loading a webform with an embeded Viewer
                         // The context of Pannellum is not global
                         // So we can't really use 'pannellum' directly
@@ -70,15 +68,12 @@
                             });
                         }
                         else {
-                            console.log('multiscene!');
-                            console.log(drupalSettings.format_strawberryfield.pannellum[element_id].tour);
+                            console.log('Pannellum Multiscene found.');
                             $.each(drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes, function (sceneid, data)  {
                             // Add Model Window Behaviour to hotSpots with Links
                                 if (data.hasOwnProperty('hotSpots')) {
                                     $.each(data.hotSpots, function (hotspotid, hotspotdata) {
-                                        console.log(hotspotdata);
                                         if (hotspotdata.hasOwnProperty('URL')) {
-                                            console.log(hotspotdata);
                                             drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
                                             drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerArgs = hotspotdata.URL;
                                         }

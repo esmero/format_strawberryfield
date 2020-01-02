@@ -37,8 +37,6 @@
                     var nodeuuid = settings.format_strawberryfield.openseadragon.innode[element_id];
                 });
 
-            console.log(groupsinfojsons);
-            console.log(groupsid);
             $.each(groupsid, function (group, element_id)  {
                 var tiles = groupsinfojsons[group];
                 var sequence = false;
@@ -47,7 +45,6 @@
                     sequence = true;
                     thumbs = showthumbs;
                 }
-                console.log(element_id);
                 viewers[element_id] = OpenSeadragon({
                     showRotationControl: true,
                     gestureSettingsTouch: {
