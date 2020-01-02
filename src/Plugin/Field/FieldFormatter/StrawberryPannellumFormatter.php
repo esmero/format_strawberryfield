@@ -20,9 +20,8 @@ use Drupal\file\FileInterface;
  *
  * @FieldFormatter(
  *   id = "strawberry_pannellum_formatter",
- *   label = @Translation("Strawberry Field Panorama Formatter using Pannellum
- *   and IIIF"), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPannellumFormatter",
+ *   label = @Translation("Strawberry Field Panorama Formatter using Pannellum and IIIF"),
+ *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPannellumFormatter",
  *   field_types = {
  *     "strawberryfield_field"
  *   },
