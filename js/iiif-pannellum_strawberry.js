@@ -19,7 +19,7 @@
                 }
             });
             ajaxObject.execute();
-        event.preventDefault();
+            event.preventDefault();
         }
     }
 
@@ -48,10 +48,10 @@
                                     hotspotdata.clickHandlerArgs = hotspotdata.URL;
                                 }
                                 hotspots.push(hotspotdata);
-                        });
+                            });
                         }
-                       $(this).height(520); //@TODO this needs to be a setting. C'mon
-                       $(this).css("width","100%");
+                        $(this).height(520); //@TODO this needs to be a setting. C'mon
+                        $(this).css("width","100%");
 
                         console.log('Initializing Pannellum.')
                         // When loading a webform with an embeded Viewer
@@ -70,7 +70,7 @@
                         else {
                             console.log('Pannellum Multiscene found.');
                             $.each(drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes, function (sceneid, data)  {
-                            // Add Model Window Behaviour to hotSpots with Links
+                                // Add Model Window Behaviour to hotSpots with Links
                                 if (data.hasOwnProperty('hotSpots')) {
                                     $.each(data.hotSpots, function (hotspotid, hotspotdata) {
                                         if (hotspotdata.hasOwnProperty('URL')) {
