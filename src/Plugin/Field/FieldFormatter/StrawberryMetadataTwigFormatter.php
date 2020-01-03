@@ -192,7 +192,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    // Get the metadata tempalte's label for display in the summary
+    // Get the metadata template's label for display in the summary
     $entity_label = NULL;
     if ($this->getSetting('metadatadisplayentity_id')) {
       $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
