@@ -23,13 +23,13 @@ use Twig_Error_Syntax;
 use Twig_Environment;
 use Twig_Error_Runtime;
 use Twig_Loader_Array;
-//todo: should we rename to strawberry_metadata_twig_formatter?
+
 /**
  * Twig based Strawberry Field formatter.
  *
  * @FieldFormatter(
  *   id = "strawberry_metadata_formatter",
- *   label = @Translation("Strawberry Field Metadata Formatter using Twig"),
+ *   label = @Translation("Strawberry Field Formatter for Custom Metadata Templates"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMetadataTwigFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -153,11 +153,19 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     }
 
     return [
-      'label' => [
-        '#type' => 'string',
-        '#title' => $this->t('Public facing Label for this Metadata Display'),
-        '#default_value' => $this->getSetting('label'),
+      'customtext' => [
+        '#type' => 'item',
+        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
+      ],
+      'metadatadisplayentity_id' => [
+        '#type' => 'entity_autocomplete',
+        '#title' => $this->t('Choose your metadata template (Start typing! Autocomplete.)'),
+        '#target_type' => 'metadatadisplay_entity',
+        '#description' => 'Metadata template name',
+        '#selection_handler' => 'default:metadatadisplay',
+        '#validate_reference' => FALSE,
         '#required' => TRUE,
+        '#default_value' => $entity,
       ],
       'specs' => [
         '#type' => 'url',
@@ -165,13 +173,11 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         '#default_value' => $this->getSetting('specs'),
         '#required' => TRUE,
       ],
-      'metadatadisplayentity_id' => [
-        '#type' => 'entity_autocomplete',
-        '#target_type' => 'metadatadisplay_entity',
-        '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
+      'label' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Public facing Label for this Metadata Display'),
+        '#default_value' => $this->getSetting('label'),
         '#required' => TRUE,
-        '#default_value' => $entity,
       ],
       'metadatadisplayentity_uselabel' => [
         '#type' => 'checkbox',
@@ -186,8 +192,19 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * {@inheritdoc}
    */
   public function settingsSummary() {
+    // Get the metadata template's label for display in the summary
+    $entity_label = NULL;
+    if ($this->getSetting('metadatadisplayentity_id')) {
+      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+      $entity_label = $entity->label();
+    }
+
+    // Build the summary
     $summary = [];
-    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something else.');
+    $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
+    $summary[] = $this->t('Selected: %template', [
+      '%template' => $entity_label ? $entity_label : 'None selected. Falling back to default Raw Metadata JSON display.',
+    ]);
     return $summary;
   }
 
@@ -197,7 +214,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    // todo: $label and $specs are not used, remove from settings & schema?
     $label = $this->getSetting('label');
     $specs = $this->getSetting('specs');
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
