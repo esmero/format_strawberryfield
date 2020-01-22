@@ -65,8 +65,8 @@ format_strawberryfield.iiifbinary:
     format: .+
     _entity_access: 'node.view'
 
-# Direct File access for SBF managed files.
-format_strawberryfield.directiiifbinary:
+# Direct File access for owner to Temporary files.
+format_strawberryfield.tempiiifbinary:
   path: '/domedia/iiif/{uuid}/full/full/0/{format}'
   methods: [GET]
   defaults:
