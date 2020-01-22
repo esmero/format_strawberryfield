@@ -207,7 +207,7 @@ class IiifBinaryController extends ControllerBase {
       $fileentity = current($fileentityarray);
     }
 
-    if (($fileentity->getOwnerId() ==  $this->currentUser()) &&  $fileentity->isTemporary()){
+    if (($fileentity->getOwnerId() ==  $this->currentUser()->id()) &&  $fileentity->isTemporary()){
       $uri = $fileentity->getFileUri();
       $filename = $fileentity->getFilename();
 
