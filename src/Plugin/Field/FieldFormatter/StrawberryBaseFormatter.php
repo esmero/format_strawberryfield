@@ -7,7 +7,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -224,7 +224,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
   /**
    * {@inheritdoc}
    */
-  protected function checkAccess(EntityInterface $entity) {
+  protected function checkAccess(ContentEntityInterface $entity) {
     // Only check access if the current file access control handler explicitly
     // opts in by implementing FileAccessFormatterControlHandlerInterface.
     $access_handler_class = $entity->getEntityType()->getHandlerClass('access');

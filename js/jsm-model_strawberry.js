@@ -23,7 +23,7 @@
                     if (browser_supported) {
                         var urls = sourceurl;
                         if (urls === undefined || urls === null) {
-                            console.log('Invalid source files for' + element_id);
+                            console.log('JSM Invalid source files for' + element_id);
                             return;
                         }
 
@@ -39,7 +39,7 @@
 
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
-                                    console.log('Error initializing Viewer' + element_id);
+                                    console.log('Error initializing JSM Viewer' + element_id);
                                     return;
                                 }
 
@@ -73,4 +73,4 @@
                     }
                 });
         }};
-})(jQuery, Drupal, drupalSettings, JSM);
+})(jQuery, Drupal, drupalSettings, window.JSM);
