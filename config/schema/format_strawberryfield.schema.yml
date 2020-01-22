@@ -8,9 +8,10 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
-format_strawberryfield.formatter.*:
-  type: config_entity
-  label: 'Formatter config for strawberry field formatters'
+
+format_strawberryfield.formatter.strawberry_audio_formatter:
+  type: config_object
+  label: 'Specific config for strawberry_audio_formatter'
   mapping:
     iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
     iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
@@ -24,12 +25,6 @@ format_strawberryfield.formatter.*:
     use_iiif_globals:
       type: boolean
       label: 'Whether to use global IIIF settings or not.'
-    formatter_config:
-      type: format_strawberryfield.formatter.[%parent.type]
-format_strawberryfield.formatter.strawberry_audio_formatter:
-  type: config_object
-  label: 'Specific config for strawberry_audio_formatter'
-  mapping:
     audio_type:
       type: string
     number_media:
@@ -38,6 +33,18 @@ format_strawberryfield.formatter.strawberry_image_formatter:
   type: config_object
   label: 'Specific Config for strawberry_image_formatter'
   mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     number_images:
       type: integer
     quality:
@@ -48,6 +55,18 @@ format_strawberryfield.formatter.strawberry_media_formatter:
   type: config_object
   label: 'Specific Config for strawberry_media_formatter'
   mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
@@ -57,6 +76,18 @@ format_strawberryfield.formatter.strawberry_metadata_formatter:
   type: config_object
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
   mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     label:
       type: string
     specs:
@@ -70,23 +101,38 @@ format_strawberryfield.formatter.strawberry_paged_formatter:
   type: config_object
   label: 'Specific Config for strawberry_paged_formatter'
   mapping:
-    type: boolean
-    label: 'Whether multiple media sources should use a single IIIF viewer or not.'
-  mediasource:
-    type: string
-  metadatadisplayentity_source:
-    type: string
-  manifesturl_source:
-    type: string
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    mediasource:
+      type: string
+    metadatadisplayentity_source:
+      type: string
+    manifesturl_source:
+      type: string
 format_strawberryfield.formatter.strawberry_pannellum_formatter:
   type: config_object
   label: 'Specific Config for strawberry_pannellum_formatter'
   mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     hotSpotDebug:
       type: boolean
     image_type:
       type: string
     json_key_hotspots:
+      type: string
+    json_key_multiscene:
       type: string
     panorama_type:
       type: integer
@@ -100,6 +146,18 @@ format_strawberryfield.formatter.settings.strawberry_video_formatter:
   type: config_object
   label: 'Specific Config for strawberry_video_formatter'
   mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     audio_type:
       type: string
     json_key_source_for_poster:

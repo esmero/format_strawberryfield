@@ -6,6 +6,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\format_strawberryfield\MetadataConfigInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 
 /**
  * Defines the MetadataExposeConfigEntity entity.*.
@@ -55,6 +56,7 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
  */
 class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataConfigInterface {
 
+  use DependencySerializationTrait;
   /**
    * The ID of the Metadata Config Entity.
    *
