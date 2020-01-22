@@ -74,6 +74,7 @@ format_strawberryfield.tempiiifbinary:
   requirements:
     uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     format: .+
+    _permission: 'access content'
 
 # Direct access to Metadata display processed json using Metadata Expose Config Entity.
 format_strawberryfield.metadatadisplay_caster:
