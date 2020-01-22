@@ -65,6 +65,16 @@ format_strawberryfield.iiifbinary:
     format: .+
     _entity_access: 'node.view'
 
+# Direct File access for SBF managed files.
+format_strawberryfield.directiiifbinary:
+  path: '/domedia/iiif/{uuid}/full/full/0/{format}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifBinaryController::servetempfile'
+  requirements:
+    uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    format: .+
+
 # Direct access to Metadata display processed json using Metadata Expose Config Entity.
 format_strawberryfield.metadatadisplay_caster:
   path: '/do/{node}/metadata/{metadataexposeconfig_entity}/{format}'

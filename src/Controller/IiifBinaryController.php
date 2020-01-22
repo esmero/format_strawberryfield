@@ -12,6 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 
 /**
@@ -92,25 +93,25 @@ class IiifBinaryController extends ControllerBase {
             'uuid' => $uuid,
           ]);
 
-      // This type has no source field configuration.
-      if (!$field) {
-        throw new \Exception(
-          "No Strawberry field found for {$node} ."
-        );
-      }
-      if (!$fileentityarray) {
-        throw new NotFoundHttpException(
-          "The Requested Resource does not exist."
-        );
-      } else {
-        $fileentity = current($fileentityarray);
-      }
-      // now that we know the file actually exists, lets check if this
-      // SBF has that file in its definition
+        // This type has no source field configuration.
+        if (!$field) {
+          throw new \Exception(
+            "No Strawberry field found for {$node} ."
+          );
+        }
+        if (!$fileentityarray) {
+          throw new NotFoundHttpException(
+            "The Requested Resource does not exist."
+          );
+        } else {
+          $fileentity = current($fileentityarray);
+        }
+        // now that we know the file actually exists, lets check if this
+        // SBF has that file in its definition
 
-      $files = $node->get('field_file_drop')->getValue();
-      foreach($files as $offset => $fileinfo) {
-        if ($fileinfo['target_id'] == $fileentity->id()) {
+        $files = $node->get('field_file_drop')->getValue();
+        foreach($files as $offset => $fileinfo) {
+          if ($fileinfo['target_id'] == $fileentity->id()) {
             $found = $fileentity;
             break;
           }
@@ -147,36 +148,81 @@ class IiifBinaryController extends ControllerBase {
         "This Content does not bear files we can serve via IIIF "
       );
     }
- /*//
-        // Caching...
-        $sLastModified = filemtime($sFileName);
-        $sEtag = md5_file($sFileName);
+    //@TODO for beta3, explore caching here.
+    /*
+           $sLastModified = filemtime($sFileName);
+           $sEtag = md5_file($sFileName);
 
-        $sFileSize = filesize($sFileName);
-        $aInfo = getimagesize($sFileName);
+           $sFileSize = filesize($sFileName);
+           $aInfo = getimagesize($sFileName);
 
-        if(in_array($sEtag, $oRequest->getETags()) || $oRequest->headers->get('If-Modified-Since') === gmdate("D, d M Y H:i:s", $sLastModified)." GMT" ){
-            $oResponse->headers->set("Content-Type", $aInfo['mime']);
-            $oResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
-            $oResponse->setETag($sEtag);
-            $oResponse->setPublic();
-            $oResponse->setStatusCode(304);
+           if(in_array($sEtag, $oRequest->getETags()) || $oRequest->headers->get('If-Modified-Since') === gmdate("D, d M Y H:i:s", $sLastModified)." GMT" ){
+               $oResponse->headers->set("Content-Type", $aInfo['mime']);
+               $oResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
+               $oResponse->setETag($sEtag);
+               $oResponse->setPublic();
+               $oResponse->setStatusCode(304);
 
-            return $oResponse;
-        }
+               return $oResponse;
+           }
 
-        $oStreamResponse = new StreamedResponse();
-        $oStreamResponse->headers->set("Content-Type", $aInfo['mime']);
-        $oStreamResponse->headers->set("Content-Length", $sFileSize);
-        $oStreamResponse->headers->set("ETag", $sEtag);
-        $oStreamResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
+           $oStreamResponse = new StreamedResponse();
+           $oStreamResponse->headers->set("Content-Type", $aInfo['mime']);
+           $oStreamResponse->headers->set("Content-Length", $sFileSize);
+           $oStreamResponse->headers->set("ETag", $sEtag);
+           $oStreamResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
 
-        $oStreamResponse->setCallback(function() use ($sFileName) {
-            readfile($sFileName);
-        });
+           $oStreamResponse->setCallback(function() use ($sFileName) {
+               readfile($sFileName);
+           });
 
-        return $oStreamResponse;
-    }
- */
+           return $oStreamResponse;
+       }
+    */
   }
+
+  /**
+   * Serves the a temp File to its owner.
+   *
+   * @param string $uuid
+   * @param string $format
+   *
+   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws  \Symfony\Component\HttpFoundation\AccessDeniedHttpException
+   */
+  public function servetempfile(string $uuid, string $format = 'default.jpg') {
+    /* @var $fileentityarray \Drupal\file\Entity\File[] */
+    $fileentityarray = $this->entityTypeManager
+      ->getStorage('file')
+      ->loadByProperties([
+        'uuid' => $uuid,
+      ]);
+    if (!$fileentityarray) {
+      throw new NotFoundHttpException(
+        "The Requested Resource does not exist."
+      );
+    } else {
+      $fileentity = current($fileentityarray);
+    }
+
+    if (($fileentity->getOwnerId() ==  $this->currentUser()) &&  $fileentity->isTemporary()){
+      $uri = $fileentity->getFileUri();
+      $filename = $fileentity->getFilename();
+
+      $response = new BinaryFileResponse($uri);
+      $response->setContentDisposition(
+        ResponseHeaderBag::DISPOSITION_INLINE,
+        $filename
+      );
+      return $response;
+    }
+    else {
+      throw new AccessDeniedHttpException(
+        "You are not allowed to access this resource via IIIF "
+      );
+    }
+  }
+
 }
