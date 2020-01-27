@@ -19,6 +19,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
 use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryBaseFormatter;
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -183,6 +184,12 @@ class MetadataExposeDisplayController extends ControllerBase {
                 "Sorry, we could not process metadata for this service"
               );
             }
+            // Preorder as:media by sequence
+            $ordersubkey = 'sequence';
+            foreach (StrawberryBaseFormatter::as_file_type as $key) {
+              $this->orderSequence($data, $key, $ordersubkey);
+            }
+
             if ($offset == 0) {
               $context['data'] = $data;
             }

@@ -242,6 +242,9 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           $this->getIiifUrls()['public'],
           $this->getIiifUrls()['internal']
         );
+        // Order Images based on a given 'sequence' key
+        $ordersubkey = 'sequence';
+        $this->orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > $number_images) {

@@ -430,36 +430,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
   }
 
   /**
-   * Sort passed pages based on a sequence key integer
-   *
-   * @param array $jsondata
-   */
-  protected function orderPages(
-    array &$jsondata,
-    $mainkey = 'as:image',
-    $orderkey = 'sequence'
-  ) {
-    if (!isset($jsondata[$mainkey])) {
-      return;
-    }
-    uasort(
-      $jsondata[$mainkey],
-      function ($a, $b) use ($orderkey) {
-        if ((array_key_exists($orderkey, $a)) && (array_key_exists(
-            $orderkey,
-            $b
-          ))) {
-          return (int) $a[$orderkey] <=> (int) $b[$orderkey];
-        }
-        else {
-          return 0;
-        }
-      }
-    );
-  }
-
-
-  /**
    * Generates render element for a Twig generated manifest.
    *
    * @param int $delta
@@ -492,7 +462,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // @TODO add a config option for this key too.
         $mainkey = 'as:image';
         $ordersubkey = 'sequence';
-        $this->orderPages($jsondata, $mainkey, $ordersubkey);
+        $this->orderSequence($jsondata, $mainkey, $ordersubkey);
 
         $context = [
           'data' => $jsondata,

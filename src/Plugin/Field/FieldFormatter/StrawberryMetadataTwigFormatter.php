@@ -263,6 +263,15 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         // C) Embeded (but hidden JSON-LD, etc)
         // So we need to make sure People can "tag" that need.
 
+        // Order as: structures based on sequence key
+        // We will assume here people are using our automatic keys
+        // If they are using other ones, they will have to apply ordering
+        // Directly on their Twig Templates.
+        $ordersubkey = 'sequence';
+        foreach (StrawberryBaseFormatter::as_file_type as $key) {
+          $this->orderSequence($jsondata, $key, $ordersubkey);
+        }
+
         $templaterenderelement = [
           '#type' => 'inline_template',
           '#template' => $twigtemplate,
