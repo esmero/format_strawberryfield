@@ -208,6 +208,9 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
       */
       $i = 0;
       if (isset($jsondata[$key])) {
+        // Order Video based on a given 'sequence' key
+        $ordersubkey = 'sequence';
+        $this->orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > (int) $number_media) {

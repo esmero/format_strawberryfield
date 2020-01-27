@@ -180,6 +180,9 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
       */
       $i = 0;
       if (isset($jsondata[$key])) {
+        // Order Audio based on a given 'sequence' key
+        $ordersubkey = 'sequence';
+        $this->orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > (int) $number_media) {

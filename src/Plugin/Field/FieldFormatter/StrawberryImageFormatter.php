@@ -170,6 +170,9 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       }*/
       $i = 0;
       if (isset($jsondata[$key])) {
+        // Order Images based on a given 'sequence' key
+        $ordersubkey = 'sequence';
+        $this->orderSequence($jsondata, $key, $ordersubkey);
         $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
