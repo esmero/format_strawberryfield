@@ -14,6 +14,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\file\FileInterface;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -244,7 +245,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         );
         // Order Images based on a given 'sequence' key
         $ordersubkey = 'sequence';
-        $this->orderSequence($jsondata, $key, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > $number_images) {

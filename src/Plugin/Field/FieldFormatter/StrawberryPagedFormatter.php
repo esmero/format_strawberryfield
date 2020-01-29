@@ -20,6 +20,7 @@ use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use stdClass;
 use Twig_Error_Syntax;
 use Twig_Environment;
@@ -462,7 +463,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // @TODO add a config option for this key too.
         $mainkey = 'as:image';
         $ordersubkey = 'sequence';
-        $this->orderSequence($jsondata, $mainkey, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
 
         $context = [
           'data' => $jsondata,

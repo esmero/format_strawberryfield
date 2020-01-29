@@ -13,6 +13,7 @@ use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Url;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Strawberry 3D Field formatter.
@@ -169,7 +170,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       if (isset($jsondata[$key])) {
         // Order 3D Models based on a given 'sequence' key
         $ordersubkey = 'sequence';
-        $this->orderSequence($jsondata, $key, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > $number_models) {

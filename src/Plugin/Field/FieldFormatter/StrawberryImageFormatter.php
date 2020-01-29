@@ -13,6 +13,7 @@ use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -172,7 +173,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       if (isset($jsondata[$key])) {
         // Order Images based on a given 'sequence' key
         $ordersubkey = 'sequence';
-        $this->orderSequence($jsondata, $key, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;

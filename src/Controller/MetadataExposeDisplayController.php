@@ -19,7 +19,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
 use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryBaseFormatter;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -169,7 +169,7 @@ class MetadataExposeDisplayController extends ControllerBase {
           /* @var $field StrawberryFieldItem[] */
           $field = $node->get($field_name);
           foreach ($field as $offset => $fielditem) {
-            $data = json_decode($fielditem->value, TRUE);
+            $jsondata = json_decode($fielditem->value, TRUE);
             $json_error = json_last_error();
             if ($json_error != JSON_ERROR_NONE) {
               $this->loggerFactory->get('format_strawberryfield')->error(
@@ -186,15 +186,15 @@ class MetadataExposeDisplayController extends ControllerBase {
             }
             // Preorder as:media by sequence
             $ordersubkey = 'sequence';
-            foreach (StrawberryBaseFormatter::as_file_type as $key) {
-              $this->orderSequence($data, $key, $ordersubkey);
+            foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+              StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
             }
 
             if ($offset == 0) {
-              $context['data'] = $data;
+              $context['data'] = $jsondata;
             }
             else {
-              $context['data'][$offset] = $data;
+              $context['data'][$offset] = $jsondata;
             }
           }
 

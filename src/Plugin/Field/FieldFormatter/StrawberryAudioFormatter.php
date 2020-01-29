@@ -14,6 +14,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Url;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Audio Strawberry Field formatter.
@@ -182,7 +183,7 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
       if (isset($jsondata[$key])) {
         // Order Audio based on a given 'sequence' key
         $ordersubkey = 'sequence';
-        $this->orderSequence($jsondata, $key, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
           if ($i > (int) $number_media) {

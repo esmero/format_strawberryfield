@@ -19,6 +19,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Twig_Error_Syntax;
 use Twig_Environment;
 use Twig_Error_Runtime;
@@ -268,8 +269,8 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         // If they are using other ones, they will have to apply ordering
         // Directly on their Twig Templates.
         $ordersubkey = 'sequence';
-        foreach (StrawberryBaseFormatter::as_file_type as $key) {
-          $this->orderSequence($jsondata, $key, $ordersubkey);
+        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+          StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         }
 
         $templaterenderelement = [
