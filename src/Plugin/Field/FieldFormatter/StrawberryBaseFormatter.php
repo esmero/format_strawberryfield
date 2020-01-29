@@ -17,15 +17,6 @@ use Drupal\Core\Access\AccessResult;
  */
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
 
-  const as_file_type = [
-    'as:image',
-    'as:document',
-    'as:video',
-    'as:audio',
-    'as:application',
-    'as:text'
-  ];
-
   /**
    * The Config for getting default IIIF settings.
    *
@@ -255,35 +246,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    */
   protected function guessMimeForExternalUri(string $uripath) {
     return \Drupal::service('file.mime_type.guesser')->guess($uripath);
-  }
-
-  /**
-   * Sort passed as:media based on a sequence key integer
-   *
-   * @param array $jsondata
-   */
-  protected function orderSequence(
-    array &$jsondata,
-    $mainkey = 'as:image',
-    $orderkey = 'sequence'
-  ) {
-    if (!isset($jsondata[$mainkey])) {
-      return;
-    }
-    uasort(
-      $jsondata[$mainkey],
-      function ($a, $b) use ($orderkey) {
-        if ((array_key_exists($orderkey, $a)) && (array_key_exists(
-            $orderkey,
-            $b
-          ))) {
-          return (int) $a[$orderkey] <=> (int) $b[$orderkey];
-        }
-        else {
-          return 0;
-        }
-      }
-    );
   }
 
 }
