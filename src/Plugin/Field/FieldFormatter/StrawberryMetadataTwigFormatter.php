@@ -139,7 +139,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
-      'metadatadisplayentity_id' => 'Media',
+      'metadatadisplayentity_id' => NULL,
       'metadatadisplayentity_uselabel' => TRUE,
     ];
   }
@@ -164,7 +164,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         '#target_type' => 'metadatadisplay_entity',
         '#description' => 'Metadata template name',
         '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
+        '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $entity,
       ],
@@ -197,14 +197,16 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     $entity_label = NULL;
     if ($this->getSetting('metadatadisplayentity_id')) {
       $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
-      $entity_label = $entity->label();
+      if ($entity) {
+        $entity_label = $entity->label();
+      }
     }
 
     // Build the summary
     $summary = [];
     $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
     $summary[] = $this->t('Selected: %template', [
-      '%template' => $entity_label ? $entity_label : 'None selected. Falling back to default Raw Metadata JSON display.',
+      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
     ]);
     return $summary;
   }
