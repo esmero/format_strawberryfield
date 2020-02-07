@@ -33,7 +33,7 @@ function format_strawberryfield_page_attachments(array &$page) {
 }
 
 function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
-  if ($entity->getEntityTypeId() == 'node' && node_is_page($entity) && $view_mode == 'full') {
+  if ($entity->getEntityTypeId() == 'node' && $view_mode == 'full') {
     $adotype = [];
     $original_view_mode = $view_mode;
     /* @var \Drupal\Core\Config\ImmutableConfig $config */
