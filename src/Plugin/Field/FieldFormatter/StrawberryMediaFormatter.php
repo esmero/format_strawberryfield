@@ -197,6 +197,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 $iiifidentifier = urlencode(
                   file_uri_target($file->getFileUri())
                 );
+                //@TODO replace with  \Drupal::service('stream_wrapper_manager')->getTarget()
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
                   continue;
                 }

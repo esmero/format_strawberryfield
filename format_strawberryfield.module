@@ -72,3 +72,17 @@ function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterf
     /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
   }
 }
+
+/**
+ * Implements hook_theme().
+ */
+function format_strawberryfield_theme() {
+  return [
+    'format_strawberryfield_pdfs' => [
+      'variables' => [
+        'item' => NULL
+      ],
+      'template' => 'format-strawberryfield-pdfs'
+    ],
+  ];
+}
