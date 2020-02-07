@@ -166,6 +166,33 @@ format_strawberryfield.formatter.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
+format_strawberryfield.formatter.settings.strawberry_pdf_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pdf_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    number_documents:
+      type: integer
+      label: 'Number of PDF Documents to load'
+    number_pages:
+      type: integer
+      label: 'Number of Pages to show per PDF'
+    initial_pages:
+      type: integer
+      label: 'First Page to display per PDF'
+
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
   type: config_object
