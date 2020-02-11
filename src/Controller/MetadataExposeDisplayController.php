@@ -113,7 +113,7 @@ class MetadataExposeDisplayController extends ControllerBase {
   public function castViaTwig(
     ContentEntityInterface $node,
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
-    string $format = 'default.json'
+    $format = 'default.json'
   ) {
     // Check if Config entity is actually enablewd.
     if (!$metadataexposeconfig_entity->isActive()) {
@@ -202,7 +202,7 @@ class MetadataExposeDisplayController extends ControllerBase {
 
           $context['iiif_server'] = $this->config(
             'format_strawberryfield.iiif_settings'
-          )->get('pub_server_url');
+          )->get('pub_server_url').'/';
           $cacheabledata = [];
           // @see https://www.drupal.org/node/2638686 to understand
           // What cacheable, Bubbleable metadata and early rendering means.
@@ -242,6 +242,8 @@ class MetadataExposeDisplayController extends ControllerBase {
         }
 
         if ($response) {
+          // Set CORS. IIIF and others will assume this is true.
+          $response->headers->set('access-control-allow-origin','*');
           $response->addCacheableDependency($node);
           $response->addCacheableDependency($metadatadisplay_entity);
           $response->addCacheableDependency($metadataexposeconfig_entity);

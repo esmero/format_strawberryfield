@@ -468,7 +468,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $context = [
           'data' => $jsondata,
           'node' => $item->getEntity(),
-          'baseiiifserveruri' => $this->getIiifUrls()['public'].'/',
+          'iiif_server' => $this->getIiifUrls()['public'].'/',
         ];
         $twigtemplate = $entity->get('twig')->getValue();
         $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ field.label }}";
