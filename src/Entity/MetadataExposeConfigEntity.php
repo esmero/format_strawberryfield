@@ -7,6 +7,7 @@ use Drupal\format_strawberryfield\MetadataConfigInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
  * Defines the MetadataExposeConfigEntity entity.*.
@@ -310,5 +311,69 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
   public function setActive(bool $active): void {
     $this->active = $active;
   }
+
+
+ /* Generates a valid Example URL given a Node UUID.
+  *
+  * @param string $uuid
+  * An UUID of a node configured for this Exposed endpoint.
+  * @return \Drupal\Core\GeneratedUrl|null|string
+  * A Drupal URL if we have enough arguments or NULL if not.
+ */
+  public function getUrlForItemFromNodeUUID(string $uuid, $absolute = FALSE) {
+
+    $url = NULL;
+    $extension = NULL;
+
+    try {
+      $responsetypefield = $this->getMetadataDisplayEntity()->get('mimetype');
+      $responsetype = $responsetypefield->first()->getValue();
+      // We can have a LogicException or a Data One, both extend different
+      // classes, so better catch any.
+    }
+    catch (\Exception $exception) {
+      $this->messenger()->addError(
+        'For Metadata endpoint @metadataexposed, either @metadatadisplay does not exist or has no mimetype Drupal field setup or no value for it. Please check that @metadatadisplay still exists, the entity has that field and there is a default Output Format value for it. Error message is @e',
+        [
+          '@metadataexposed' => $this->label(),
+          '@metadatadisplay' => $this->getMetadataDisplayEntity()->label(),
+          '@e' => $exception->getMessage(),
+        ]
+      );
+      return $url;
+    }
+
+    $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
+
+    // Guess extension based on mime,
+    // \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeExtensionGuesser
+    // has no application/ld+json even if recent
+
+    if ($responsetype == 'application/ld+json') {
+      $extension = 'jsonld';
+    }
+    else {
+      $guesser = ExtensionGuesser::getInstance();
+      $extension = $guesser->guess($responsetype);
+    }
+
+    $filename = !empty($extension) ? 'default.' . $extension : 'default.html';
+
+    $url = \Drupal::urlGenerator()
+      ->generateFromRoute(
+        'format_strawberryfield.metadatadisplay_caster',
+        [
+          'node' => $uuid,
+          'metadataexposeconfig_entity' => $this->id(),
+          'format' => $filename,
+        ],
+        [
+          'absolute' => $absolute
+        ]
+      );
+    return $url;
+  }
+
+
 
 }
