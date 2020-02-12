@@ -26,8 +26,8 @@ use Drupal\Component\Utility\NestedArray;
  *
  * @FieldFormatter(
  *   id = "strawberry_mirador_formatter",
- *   label = @Translation("Strawberry Field Paged Formatter using the Mirador IIIF Viewer
- *   plugin"), class =
+ *   label = @Translation("Strawberry Field Paged Formatter using the Mirador
+ *   IIIF Viewer plugin"), class =
  *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -138,13 +138,11 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     return parent::defaultSettings() + [
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
-          'manifesturl' => 0,
-          'manifestnodelist' => 0
         ],
         'main_mediasource' => 'metadataexposeentity',
         'metadataexposeentity_source' => NULL,
-        'manifestnodelist_source' => 'isrelatedto',
-        'manifesturl_source' => 'iiifmanifest',
+        'manifestnodelist_json_key_source' => 'isrelatedto',
+        'manifesturl_json_key_source' => 'iiifmanifest',
         'max_width' => 720,
         'max_height' => 480,
       ];
@@ -162,16 +160,21 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'metadataexpose_entity'
       )->load($this->getSetting('metadataexposeentity_source'));
     }
-    $options_for_mainsource = is_array($this->getSetting('mediasource')) && !empty($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : self::defaultSettings()['mediasource'];
+    $options_for_mainsource = is_array(
+      $this->getSetting('mediasource')
+    ) && !empty($this->getSetting('mediasource')) ? $this->getSetting(
+      'mediasource'
+    ) : self::defaultSettings()['mediasource'];
 
-    if (($triggering_element = $form_state->getTriggeringElement()) && isset($triggering_element['#ajax']['callback'])) {
+    if (($triggering_element = $form_state->getTriggeringElement(
+      )) && isset($triggering_element['#ajax']['callback'])) {
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
       if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
-       $parents = array_slice($triggering_element['#parents'], 0, -1);
-      $options_for_mainsource = $form_state->getValue($parents);
-     }
+        $parents = array_slice($triggering_element['#parents'], 0, -1);
+        $options_for_mainsource = $form_state->getValue($parents);
+      }
     }
     $all_options_form_source = [
       'metadataexposeentity' => $this->t(
@@ -185,7 +188,10 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       ),
     ];
     $options_for_mainsource = array_filter($options_for_mainsource);
-    $options_for_mainsource =  array_intersect_key($options_for_mainsource, $all_options_form_source);
+    $options_for_mainsource = array_intersect_key(
+      $options_for_mainsource,
+      $all_options_form_source
+    );
 
     // Define #ajax callback.
     $ajax = [
@@ -207,7 +213,9 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         ],
         'main_mediasource' => [
           '#type' => 'select',
-          '#title' => $this->t('Select which Source will be handled as the primary one.'),
+          '#title' => $this->t(
+            'Select which Source will be handled as the primary one.'
+          ),
           '#options' => $options_for_mainsource,
           '#default_value' => $this->getSetting('mediasource'),
           '#required' => FALSE,
@@ -217,21 +225,34 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'metadataexposeentity_source' => [
           '#type' => 'entity_autocomplete',
           '#target_type' => 'metadataexpose_entity',
+          '#title' => $this->t(
+            'Select which Exposed Metadata Endpoint will generate the Manifests'
+          ),
+          '#description' => $this->t(
+            'This value is used for Metadata Exposed Entities and also for Node Lists as Processing source for IIIF Manifests'
+          ),
           '#selection_handler' => 'default',
           '#validate_reference' => TRUE,
           '#default_value' => $entity,
           '#states' => [
-            'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
+            [
+              'visible' => [
+                ':input[data-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
+              ]
             ],
+            [
+              'visible' => [
+                ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
+              ]
+            ]
           ],
         ],
-        'manifesturl_source' => [
+        'manifesturl_json_key_source' => [
           '#type' => 'textfield',
           '#title' => t(
             'JSON Key from where to fetch one or more IIIF manifest URLs. URLs can be external.'
           ),
-          '#default_value' => $this->getSetting('manifesturl_source'),
+          '#default_value' => $this->getSetting('manifesturl_json_key_source'),
           '#states' => [
             'visible' => [
               ':input[data-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
@@ -239,12 +260,14 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           ],
         ],
 
-        'manifestnodelist_source' => [
+        'manifestnodelist_json_key_source' => [
           '#type' => 'textfield',
           '#title' => t(
             'JSON Key from where to fetch one or more Nodes. Values can be either NODE IDs (Integers) or UUIDs (Strings). But all of the same type.'
           ),
-          '#default_value' => $this->getSetting('manifesturl_source'),
+          '#default_value' => $this->getSetting(
+            'manifestnodelist_json_key_source'
+          ),
           '#states' => [
             'visible' => [
               ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
@@ -272,14 +295,12 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       ] + parent::settingsForm($form, $form_state);
     if (empty($options_for_mainsource)) {
       // let's give people a hint of what they are doing wrong
-      $settings_form['main_mediasource']['#empty_option'] = t('- No Source for your IIIF Manifest Urls. Please check one! -');
+      $settings_form['main_mediasource']['#empty_option'] = t(
+        '- No Source for your IIIF Manifest Urls. Please check one! -'
+      );
 
     }
     return $settings_form;
-  }
-
-  private function getActiveMetadataConfigEntitiesAsOptions() {
-    $this->entityTypeManager->getStorage('metadataexpose_entity');
   }
 
   /**
@@ -293,7 +314,10 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
    * @return array
    *   An associative array containing entity reference details element.
    */
-  public static function ajaxCallbackMainSource(array $form, FormStateInterface $form_state) {
+  public static function ajaxCallbackMainSource(
+    array $form,
+    FormStateInterface $form_state
+  ) {
     $form_parents = $form_state->getTriggeringElement()['#array_parents'];
     $form_parents = array_slice($form_parents, 0, -2);
     $form_parents[] = 'main_mediasource';
@@ -301,45 +325,61 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
   }
 
 
-
-
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = parent::settingsSummary();
     $summary[] = $this->t(
-      'Displays Media from a IIIF API Manifest using the Mirador viewer.'
+      'Displays Media using the Mirador IIIF viewer <br>'
     );
-    if ($this->getSetting('mediasource')) {
-      switch ($this->getSetting('mediasource')) {
-        case 'manifesturl':
-          $summary[] = $this->t(
-            'Media fetched from a IIIF Manifest url at  "%manifesturl_source" key',
-            [
-              '%manifesturl_source' => $this->getSetting('manifesturl_source'),
-            ]
-          );
-          break;
-        case 'metadataexposeentity':
-          $entity = NULL;
-          if ($this->getSetting('metadatadisplayentity_source')) {
-            $entity = $this->entityTypeManager->getStorage(
-              'metadatadisplay_entity'
-            )->load($this->getSetting('metadataexposeentity_source'));
-            $label = $entity->toLink()->getText();
+
+    $main_mediasource = $this->getSetting(
+      'main_mediasource'
+    ) ? $this->getSetting('main_mediasource') : NULL;
+
+    if ($this->getSetting('mediasource') && is_array($this->getSetting('mediasource'))) {
+      foreach ($this->getSetting('mediasource') as $source => $enabled) {
+        switch ($enabled) {
+          case 'metadataexposeentity':
+            $entity = NULL;
+            if ($this->getSetting('metadataexposeentity_source')) {
+              $entity = $this->entityTypeManager->getStorage(
+                'metadataexpose_entity'
+              )->load($this->getSetting('metadataexposeentity_source'));
+              $label = $entity->label();
+              $summary[] = $this->t(
+                'IIIF Manifest generated by the "%metadatadisplayentity" Metadata Data Expose Endpoint%primary.',
+                ['%metadatadisplayentity' => $label,
+                  '%primary' => ($main_mediasource == $enabled) ? '(PRIMARY)' : '',]
+              );
+            }
+            continue 2;
+          case 'manifesturl':
             $summary[] = $this->t(
-              'Media processed by the "%manifesturl_source" Metadata Data Expose Endpoint',
+              'IIIF Manifest URL fetched from JSON "%manifesturl_json_key_source" key%primary.',
               [
-                '%manifesturl_source' => $label,
+                '%manifesturl_json_key_source' => $this->getSetting(
+                  'manifesturl_json_key_source'
+                ),
+                '%primary' => ($main_mediasource == $enabled) ? '(PRIMARY)' : '',
               ]
             );
-          }
-          break;
-        default:
-          $summary[] = $this->t('This formatter still needs to be setup');
-
+            continue 2;
+          case 'manifestnodelist':
+            $summary[] = $this->t(
+              'IIIF Manifest generated from Node IDs fetched from JSON "%manifestnodelist_json_key_source" key%primary.',
+              [
+                '%manifestnodelist_json_key_source' => $this->getSetting(
+                  'manifestnodelist_json_key_source'
+                ),
+                '%primary' => ($main_mediasource == $enabled) ? '(PRIMARY)' : '',
+              ]
+            );
+        }
       }
+    }
+    else {
+      $summary[] = $this->t('This formatter still needs to be setup');
     }
 
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
@@ -368,7 +408,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       );
     }
 
-    return $summary;
+    return array_merge($summary, parent::settingsSummary());
   }
 
 
@@ -379,7 +419,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     $elements = [];
     $max_width = $this->getSetting('max_width');
     $max_height = $this->getSetting('max_height');
-    $pagestrategy = $this->getSetting('mediasource');
+    $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
+    $main_pagestrategy = $this->getSetting('main_mediasource');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -398,8 +439,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
 
 
     $nodeuuid = $items->getEntity()->uuid();
-    $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
     /* @var FieldItemInterface $item */
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()
@@ -418,96 +457,218 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       }
       // A rendered Manifest
       $manifest = '';
-      switch ($pagestrategy) {
-        case 'metadataexposeentity':
-          $elements[$delta] = $this->processElementforMetadataExposeEntity(
-            $delta,
-            $jsondata,
-            $item
-          );
-          break;
+      foreach ($mediasource as $pagestrategy) {
+        switch ($pagestrategy) {
+          case 'metadataexposeentity':
+            $manifests['metadataexposeentity'] = $this->processManifestforMetadataExposeEntity(
+              $jsondata,
+              $item
+            );
+            continue 2;
+          case 'manifesturl':
+            $manifests['manifesturl'] = $this->processManifestforURL(
+              $jsondata,
+              $item
+            );
+            continue 2;
+          case 'manifestnodelist':
+            $manifests['manifestnodelist'] = $this->processManifestforNodeList(
+              $jsondata,
+              $item
+            );
+            continue 2;
+        }
       }
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/mirador_strawberry';
 
+      $groupid = 'iiif-' . $item->getName(
+        ) . '-' . $nodeuuid . '-' . $delta . '-media';
+      $htmlid = $groupid;
+
+      $elements[$delta]['media'] = [
+        '#type' => 'container',
+        '#default_value' => $htmlid,
+        '#attributes' => [
+          'id' => $htmlid,
+          'class' => [
+            'strawberry-mirador-item',
+            'MiradorViewer',
+            'field-iiif',
+            'container',
+          ],
+          'style' => "width: {$max_width} px; height:{$max_height}",
+          'width' => $max_width,
+          'height' => $max_height,
+        ],
+      ];
+
+      // get the URL to our Metadata Expose Endpoint, we will get a string here.
+
+      $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid'] = $nodeuuid;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl'] = reset($manifests['metadataexposeentity']);
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestotherurl'] = isset($manifests['manifesturl']) ? $manifests['manifesturl'] : [];
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestotherados'] = isset($manifests['manifestnodelist']) ? $manifests['manifestnodelist'] : [];
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['main_pagestrategy'] = $main_pagestrategy;
+
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width'] = max(
+        $max_width,
+        400
+      );
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height'] = max(
+        $max_height,
+        320
+      );
+
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/mirador_strawberry';
+      if (isset($item->_attributes)) {
+        $elements[$delta] += ['#attributes' => []];
+        $elements[$delta]['#attributes'] += $item->_attributes;
+        // Unset field item attributes since they have been included in the
+        // formatter output and should not be rendered in the field template.
+      }
     }
+    unset($item->_attributes);
     return $elements;
   }
 
   /**
-   * Generates render element for a Twig generated manifest.
+   *  Generates URL string for a Twig generated manifest for the current Node.
    *
-   * @param int $delta
    * @param array $jsondata
    * @param \Drupal\Core\Field\FieldItemInterface $item
-   *
    * @return array
+   *    A List of URLs pointing to a IIIF Manifest for this node.
+   *    We are using an array even if we only return one
+   *    to match other processManifest Functions and have a single way
+   *    of Processing them.
+   *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function processElementforMetadataExposeEntity(
-    $delta = 0,
+  public function processManifestforMetadataExposeEntity(
     array $jsondata,
     FieldItemInterface $item
   ) {
-    $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
-    $max_width = $this->getSetting('max_width');
-    $max_height = $this->getSetting('max_height');
+    $manifests = [];
 
-    if ($this->getSetting('metadataexposeentity_source')) {
+    if ($this->getSetting('metadataexposeentity_source'
+    )) {
       /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity */
       $entity = $this->entityTypeManager->getStorage(
         'metadataexpose_entity'
       )->load($this->getSetting('metadataexposeentity_source'));
       if ($entity) {
-
-        $groupid = 'iiif-' . $item->getName(
-          ) . '-' . $nodeuuid . '-' . $delta . '-media';
-        $htmlid = $groupid;
-
-        $element['media'] = [
-          '#type' => 'container',
-          '#default_value' => $htmlid,
-          '#attributes' => [
-            'id' => $htmlid,
-            'class' => [
-              'strawberry-mirador-item',
-              'MiradorViewer',
-              'field-iiif',
-              'container',
-            ],
-            'style' => "width: {$max_width} px; height:{$max_height}",
-            'width' => $max_width,
-            'height' => $max_height,
-          ],
-        ];
-        if (isset($item->_attributes)) {
-          $element += ['#attributes' => []];
-          $element['#attributes'] += $item->_attributes;
-          // Unset field item attributes since they have been included in the
-          // formatter output and should not be rendered in the field template.
-          unset($item->_attributes);
-        }
-        // get the URL to our Metadata Expose Endpoint, we will get a string here.
         $url = $entity->getUrlForItemFromNodeUUID($nodeuuid, TRUE);
-
-        $element['media']['#attributes']['data-iiif-infojson'] = '';
-
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid'] = $nodeuuid;
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl'] = $url;
-
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width'] = max(
-          $max_width,
-          400
-        );
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height'] = max(
-          $max_height,
-          320
-        );
+        $manifests[] = $url;
       }
     }
-
-    return $element;
+    return $manifests;
   }
+
+  /**
+   *  Fetches Manifest URLs from a JSON Key.
+   *
+   * @param array $jsondata
+   * @param \Drupal\Core\Field\FieldItemInterface $item
+   * @return array
+   *    A List of URLs pointing to a IIIF Manifest for this node.
+   *    We are using an array even if we only return one
+   *    to match other processManifest Functions and have a single way
+   *    of Processing them.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  public function processManifestforURL(
+    array $jsondata,
+    FieldItemInterface $item
+  ) {
+
+    $manifests = [];
+
+    if ($this->getSetting('manifesturl_json_key_source'
+    )) {
+      $jsonkey = $this->getSetting('manifesturl_json_key_source');
+
+      if (isset($jsondata[$jsonkey])) {
+        if (is_array($jsondata[$jsonkey])) {
+          foreach ($jsondata[$jsonkey] as $url) {
+            if (is_string($url) && UrlHelper::isValid($url, TRUE)) {
+              $manifests[] = $url;
+            }
+          }
+        }
+        else {
+          if (is_string($jsondata[$jsonkey]) && UrlHelper::isValid(
+              $jsondata[$jsonkey],
+              TRUE
+            )) {
+            $manifests[] = $jsondata[$jsonkey];
+          }
+        }
+      }
+    }
+    return $manifests;
+  }
+
+  /**
+   * Generates Manifest URLs from a JSON Key containing a list of nodes.
+   *
+   * This function reuses 'metadataexposeentity_json_key_source'
+   *
+   * @param array $jsondata
+   * @param \Drupal\Core\Field\FieldItemInterface $item
+   * @return array
+   *    A List of URLs pointing to a IIIF Manifest for this node.
+   *    We are using an array even if we only return one
+   *    to match other processManifest Functions and have a single way
+   *    of Processing them.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  public function processManifestforNodeList(
+    array $jsondata,
+    FieldItemInterface $item
+  ) {
+    $manifests = [];
+
+    if ($this->getSetting('manifestnodelist_json_key_source') && $this->getSetting('metadataexposeentity_source')) {
+      $jsonkey = $this->getSetting('manifestnodelist_json_key_source');
+      $entity = $this->entityTypeManager->getStorage(
+        'metadataexpose_entity'
+      )->load($this->getSetting('metadataexposeentity_source'));
+      if ($entity) {
+        $access_manager = \Drupal::service('access_manager');
+        if (isset($jsondata[$jsonkey])) {
+          if (is_array($jsondata[$jsonkey])) {
+            $cleannodelist = [];
+            foreach ($jsondata[$jsonkey] as $nodeid) {
+              if (is_integer($nodeid)) {
+                $cleannodelist[] = $nodeid;
+              }
+            }
+          }
+          else {
+            if (is_integer($jsondata[$jsonkey])){
+              $cleannodelist[] = $jsondata[$jsonkey];
+            }
+          }
+        }
+        foreach ($this->entityTypeManager->getStorage('node')->loadMultiple(
+          $cleannodelist
+        ) as $node) {
+          $has_access = $access_manager->checkNamedRoute('format_strawberryfield.metadatadisplay_caster', ['node' => $node->uuid(), 'metadataexposeconfig_entity' => $entity->id(), 'format' => 'manifest.jsonld' ], $this->currentUser);
+          if ($has_access) {
+            $manifests[] = $entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE);
+          }
+        }
+      }
+    }
+    return $manifests;
+  }
+
+
 }
