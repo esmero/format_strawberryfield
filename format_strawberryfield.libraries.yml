@@ -140,6 +140,9 @@ mirador_strawberry:
   version: 1.0
   js:
     js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
   dependencies:
     - core/jquery
     - core/drupal

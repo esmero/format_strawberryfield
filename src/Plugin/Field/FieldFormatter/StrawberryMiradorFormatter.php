@@ -277,6 +277,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
@@ -418,9 +419,10 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
-    $main_pagestrategy = $this->getSetting('main_mediasource');
+    $main_mediasource = $this->getSetting('main_mediasource');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -480,51 +482,59 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         }
       }
 
-      $groupid = 'iiif-' . $item->getName(
-        ) . '-' . $nodeuuid . '-' . $delta . '-media';
-      $htmlid = $groupid;
+      // Check which one is our main source and if it really exists
+      if (isset($manifests[$main_mediasource]) && !empty($manifests[$main_mediasource])) {
+        // Take only the first since we could have more
+        $main_manifesturl = array_shift($manifests[$main_mediasource]);
+        $all_manifesturl =  array_reduce($manifests,'array_merge',[]);
+      } else {
+        // reduce flattens and applies a merge. Basically we get a simple list.
+        $all_manifesturl = array_reduce($manifests,'array_merge',[]);
+        $main_manifesturl = array_shift($all_manifesturl);
+      }
 
-      $elements[$delta]['media'] = [
-        '#type' => 'container',
-        '#default_value' => $htmlid,
-        '#attributes' => [
-          'id' => $htmlid,
-          'class' => [
-            'strawberry-mirador-item',
-            'MiradorViewer',
-            'field-iiif',
-            'container',
+      // Only process is we got at least one manifest
+      if (!empty($main_manifesturl)) {
+
+        $groupid = 'iiif-' . $item->getName(
+          ) . '-' . $nodeuuid . '-' . $delta . '-media';
+        $htmlid = $groupid;
+
+        $elements[$delta]['media'] = [
+          '#type' => 'container',
+          '#default_value' => $htmlid,
+          '#attributes' => [
+            'id' => $htmlid,
+            'class' => [
+              'strawberry-mirador-item',
+              'MiradorViewer',
+              'field-iiif',
+              'container',
+            ],
+            'style' => "width:{$max_width_css}; height:{$max_height}px",
+            'width' => $max_width,
+            'height' => $max_height,
           ],
-          'style' => "width: {$max_width} px; height:{$max_height}",
-          'width' => $max_width,
-          'height' => $max_height,
-        ],
-      ];
+        ];
 
-      // get the URL to our Metadata Expose Endpoint, we will get a string here.
+        // get the URL to our Metadata Expose Endpoint, we will get a string here.
 
-      $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid'] = $nodeuuid;
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl'] = reset($manifests['metadataexposeentity']);
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestotherurl'] = isset($manifests['manifesturl']) ? $manifests['manifesturl'] : [];
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestotherados'] = isset($manifests['manifestnodelist']) ? $manifests['manifestnodelist'] : [];
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['main_pagestrategy'] = $main_pagestrategy;
-
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width'] = max(
-        $max_width,
-        400
-      );
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height'] = max(
-        $max_height,
-        320
-      );
-
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/mirador_strawberry';
-      if (isset($item->_attributes)) {
-        $elements[$delta] += ['#attributes' => []];
-        $elements[$delta]['#attributes'] += $item->_attributes;
-        // Unset field item attributes since they have been included in the
-        // formatter output and should not be rendered in the field template.
+        $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid'] = $nodeuuid;
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl'] = $main_manifesturl;
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestother'] = is_array($all_manifesturl) ? $all_manifesturl : [];
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width'] = $max_width_css;
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height'] = max(
+          $max_height,
+          480
+        );
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/mirador_strawberry';
+        if (isset($item->_attributes)) {
+          $elements[$delta] += ['#attributes' => []];
+          $elements[$delta]['#attributes'] += $item->_attributes;
+          // Unset field item attributes since they have been included in the
+          // formatter output and should not be rendered in the field template.
+        }
       }
     }
     unset($item->_attributes);

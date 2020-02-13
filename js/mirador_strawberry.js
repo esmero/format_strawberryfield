@@ -13,7 +13,7 @@
 
                         $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
                         $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
-                        // Defines our basic options for IIIF.
+                        // Defines our basic options for Mirador IIIF.
                         var $options = {
                             id: element_id,
                             windows: [{
@@ -21,9 +21,19 @@
                                 thumbnailNavigationPosition: 'far-bottom',
                             }]
                         };
-
+                        var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
+                        var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
+                        var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
+                        if (Array.isArray($allmanifests) || $allmanifests.length) {
+                            // This implies auto-magically that a $secondmanifest exists!
+                            var $secondwindow = new Object();
+                            $secondwindow.manifestId = $secondmanifest;
+                            $secondwindow.thumbnailNavigationPosition = 'far-bottom';
+                            $options.windows.push($secondwindow);
+                        }
+                        //@TODO add an extra Manifests key with every other one so people can select the others.
                         var miradorInstance = Mirador.viewer($options);
-                        console.log('initializing Mirador 3.0.0')
+                        console.log('initializing Mirador 3.0.0-beta.4')
                     }
                 })}}
 })(jQuery, Drupal, drupalSettings, window.Mirador);
