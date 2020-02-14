@@ -121,3 +121,31 @@ pdfs_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pdfs_mozilla
+
+mirador_projectmirador:
+  version: 3.0.0-beta.4
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/mirador@3.0.0-beta.4/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+
+mirador_font:
+ css:
+   base:
+     'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
+
+mirador_strawberry:
+  version: 1.0
+  js:
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/mirador_projectmirador
+    - format_strawberryfield/mirador_font

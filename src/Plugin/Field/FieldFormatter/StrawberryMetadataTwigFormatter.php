@@ -20,6 +20,7 @@ use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Twig_Error_Syntax;
 use Twig_Environment;
 use Twig_Error_Runtime;
@@ -40,7 +41,7 @@ use Twig_Loader_Array;
  *   }
  * )
  */
-class StrawberryMetadataTwigFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
+class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
 
   /**
@@ -104,8 +105,8 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
    *   The Loaded twig Environment
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
@@ -126,7 +127,9 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
       $configuration['third_party_settings'],
       $container->get('current_user'),
       $container->get('entity_type.manager'),
-      $container->get('twig')
+      $container->get('twig'),
+      $container->get('config.factory')
+
     );
   }
 
@@ -136,7 +139,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
+    return parent::defaultSettings() + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
       'metadatadisplayentity_id' => NULL,
@@ -281,6 +284,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
           '#context' => [
             'data' => $jsondata,
             'node' => $items->getEntity(),
+            'iif_server' => $this->getIiifUrls()['public'].'/',
           ],
         ];
 
@@ -321,20 +325,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return $elements;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
-  }
 
   public function setSetting($key, $value) {
     /** @var \Drupal\Core\Template\TwigEnvironment $environment */
