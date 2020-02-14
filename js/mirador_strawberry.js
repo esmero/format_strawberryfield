@@ -30,6 +30,14 @@
                             $secondwindow.manifestId = $secondmanifest;
                             $secondwindow.thumbnailNavigationPosition = 'far-bottom';
                             $options.windows.push($secondwindow);
+                            var $manifests = new Object();
+                            $allmanifests.forEach(manifestURL => {
+                                // TODO Provider should be passed by metadata at
+                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter::viewElements
+                                // Deal with this for Beta3
+                                $manifests[manifestURL] = new Object({'provider':'See Metadata'});
+                            })
+                            $options.manifests = $manifests;
                         }
                         //@TODO add an extra Manifests key with every other one so people can select the others.
                         var miradorInstance = Mirador.viewer($options);
