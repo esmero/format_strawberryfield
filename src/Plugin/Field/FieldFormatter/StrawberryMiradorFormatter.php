@@ -450,7 +450,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     // To generate an on the Fly Manifest. We coded our JS to read from manifests
     // Finally we allow also an Manifest URL to be passed.
 
-
     $nodeuuid = $items->getEntity()->uuid();
     /* @var FieldItemInterface $item */
     foreach ($items as $delta => $item) {
@@ -469,7 +468,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       // A rendered Manifest
-      $manifest = '';
+
       foreach ($mediasource as $pagestrategy) {
         switch ($pagestrategy) {
           case 'metadataexposeentity':
