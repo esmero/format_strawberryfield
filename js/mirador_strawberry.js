@@ -24,8 +24,8 @@
                         var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
                         var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
                         var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
-                        if (Array.isArray($allmanifests) || $allmanifests.length) {
-                            // This implies auto-magically that a $secondmanifest exists!
+
+                        if (Array.isArray($allmanifests) && $allmanifests.length && typeof($secondmanifest) != 'undefined') {
                             var $secondwindow = new Object();
                             $secondwindow.manifestId = $secondmanifest;
                             $secondwindow.thumbnailNavigationPosition = 'far-bottom';
