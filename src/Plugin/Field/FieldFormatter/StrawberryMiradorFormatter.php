@@ -26,7 +26,7 @@ use Drupal\Component\Utility\NestedArray;
  *
  * @FieldFormatter(
  *   id = "strawberry_mirador_formatter",
- *   label = @Translation("Strawberry Field Paged Formatter using the Mirador
+ *   label = @Translation("Strawberry Field Media Formatter using the Mirador
  *   IIIF Viewer plugin"), class =
  *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter",
  *   field_types = {
@@ -198,6 +198,17 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       'callback' => [get_class($this), 'ajaxCallbackMainSource'],
       'wrapper' => 'main-mediasource-ajax-container',
     ];
+    // Because main media source needs to update its choices based on
+    // Media Source checked options, we need to recalculate its default
+    // Value also.
+    $default_value_main_mediasoruce = ($this->getSetting(
+        'main_mediasource'
+      ) && array_key_exists(
+        $this->getSetting('main_mediasource'),
+        $options_for_mainsource
+      )) ? $this->getSetting('main_mediasource') : reset(
+      $options_for_mainsource
+    );
 
     $settings_form = [
         'mediasource' => [
@@ -217,7 +228,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             'Select which Source will be handled as the primary one.'
           ),
           '#options' => $options_for_mainsource,
-          '#default_value' => $this->getSetting('mediasource'),
+          '#default_value' => $default_value_main_mediasoruce,
           '#required' => FALSE,
           '#prefix' => '<div id="main-mediasource-ajax-container">',
           '#suffix' => '</div>',
