@@ -681,7 +681,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     FieldItemInterface $item
   ) {
     $manifests = [];
-
+    $cleannodelist = [];
     if ($this->getSetting('manifestnodelist_json_key_source') && $this->getSetting('metadataexposeentity_source')) {
       $jsonkey = $this->getSetting('manifestnodelist_json_key_source');
       $entity = $this->entityTypeManager->getStorage(
@@ -699,23 +699,33 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             }
           }
           else {
-            if (is_integer($jsondata[$jsonkey])){
+            if (is_integer($jsondata[$jsonkey])) {
               $cleannodelist[] = $jsondata[$jsonkey];
             }
           }
-        }
-        foreach ($this->entityTypeManager->getStorage('node')->loadMultiple(
-          $cleannodelist
-        ) as $node) {
-          $has_access = $access_manager->checkNamedRoute('format_strawberryfield.metadatadisplay_caster', ['node' => $node->uuid(), 'metadataexposeconfig_entity' => $entity->id(), 'format' => 'manifest.jsonld' ], $this->currentUser);
-          if ($has_access) {
-            $manifests[] = $entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE);
+
+          foreach ($this->entityTypeManager->getStorage('node')->loadMultiple(
+            $cleannodelist
+          ) as $node) {
+            $has_access = $access_manager->checkNamedRoute(
+              'format_strawberryfield.metadatadisplay_caster',
+              [
+                'node' => $node->uuid(),
+                'metadataexposeconfig_entity' => $entity->id(),
+                'format' => 'manifest.jsonld'
+              ],
+              $this->currentUser
+            );
+            if ($has_access) {
+              $manifests[] = $entity->getUrlForItemFromNodeUUID(
+                $node->uuid(),
+                TRUE
+              );
+            }
           }
         }
       }
     }
     return $manifests;
   }
-
-
 }
