@@ -284,7 +284,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           '#context' => [
             'data' => $jsondata,
             'node' => $items->getEntity(),
-            'iif_server' => $this->getIiifUrls()['public'].'/',
+            'iiif_server' => $this->getIiifUrls()['public'],
           ],
         ];
 
