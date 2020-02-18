@@ -7,7 +7,7 @@
             var viewers = [];
             var groupsinfojsons =  {};
             var groupsid =  {};
-
+            var showthumbs = false
             $('.strawberry-media-item[data-iiif-infojson]').once('attache_osd')
                 .each(function (index, value) {
                     var default_width =  $(this).attr("width")>0 ? $(this).attr("width"): 320;
@@ -16,6 +16,7 @@
                     var element_id = $(this).attr("id");
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
+                    showthumbs = $(this).data("iiif-thumbnails");
                     if (!groupsinfojsons.hasOwnProperty(group)) {
                         groupsinfojsons[group]= [infojson];
                         // We only need a single css id per group
@@ -36,13 +37,14 @@
                     var nodeuuid = settings.format_strawberryfield.openseadragon.innode[element_id];
                 });
 
-            console.log(groupsinfojsons);
-            console.log(groupsid);
             $.each(groupsid, function (group, element_id)  {
                 var tiles = groupsinfojsons[group];
                 var sequence = false;
-                if (tiles.length > 1) {sequence = true}
-                console.log(element_id);
+                var thumbs = false
+                if (tiles.length > 1) {
+                    sequence = true;
+                    thumbs = showthumbs;
+                }
                 viewers[element_id] = OpenSeadragon({
                     showRotationControl: true,
                     gestureSettingsTouch: {
@@ -57,7 +59,9 @@
                     showNavigator: true,
                     navigatorAutoFade:  true,
                     crossOriginPolicy: 'Anonymous',
-                    ajaxWithCredentials: false
+                    ajaxWithCredentials: false,
+                    showReferenceStrip: thumbs,
+                    referenceStripScroll: 'horizontal',
                 });
 
             });

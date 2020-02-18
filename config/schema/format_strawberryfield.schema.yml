@@ -1,17 +1,256 @@
-field.formatter.settings.strawberry_media_formatter:
-  type: mapping
-  label: 'FORMATTER Config for strawberry_media_formatter'
+format_strawberryfield.iiif_settings:
+  type: config_object
+  label: 'Archipelago IIIF Server configurations'
   mapping:
+    pub_server_url:
+      type: string
+      label: 'Public IIIF server URL'
+    int_server_url:
+      type: string
+      label: 'Internal IIIF server URL'
+
+format_strawberryfield.formatter.strawberry_audio_formatter:
+  type: config_object
+  label: 'Specific config for strawberry_audio_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
       type: integer
     max_height:
       type: integer
-    iiif_base_url:
-      type: string
-      label: 'IIIF media Server URI.'
-    iiif_group:
+    use_iiif_globals:
       type: boolean
-      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+      label: 'Whether to use global IIIF settings or not.'
+    audio_type:
+      type: string
+    number_media:
+      type: integer
+format_strawberryfield.formatter.strawberry_image_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_image_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    number_images:
+      type: integer
+    quality:
+      type: string
+    rotation:
+      type: string
+format_strawberryfield.formatter.strawberry_media_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_media_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    thumbnails:
+      type: boolean
+format_strawberryfield.formatter.strawberry_metadata_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_metadata_formatter using Twig'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    label:
+      type: string
+    specs:
+      type: url
+    # todo: Can you check metadatadisplayentity_id? not sure the id right now is a string but a number (since its the entity->id(). If we move to UUID i guess we can use string but we should also look at who/what natively exists to use uuid as a type
+    metadatadisplayentity_id:
+      type: string
+    metadatadisplayentity_uselabel:
+      type: boolean
+format_strawberryfield.formatter.strawberry_paged_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_paged_formatter'
+  mapping:
+    iiif_group:
+      type: boolean
+      label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    mediasource:
+      type: string
+    metadatadisplayentity_source:
+      type: string
+    manifesturl_source:
+      type: string
+format_strawberryfield.formatter.strawberry_pannellum_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pannellum_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    hotSpotDebug:
+      type: boolean
+    image_type:
+      type: string
+    json_key_hotspots:
+      type: string
+    json_key_multiscene:
+      type: string
+    panorama_type:
+      type: integer
+    quality:
+      type: string
+    rotation:
+      type: string
+    autoLoad:
+      type: boolean
+format_strawberryfield.formatter.settings.strawberry_video_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_video_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: integer
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    audio_type:
+      type: string
+    json_key_source_for_poster:
+      type: string
+    number_media:
+      type: integer
+    posterframe:
+      type: string
+format_strawberryfield.formatter.settings.strawberry_pdf_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pdf_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+    number_documents:
+      type: integer
+      label: 'Number of PDF Documents to load'
+    number_pages:
+      type: integer
+      label: 'Number of Pages to show per PDF'
+    initial_pages:
+      type: integer
+      label: 'First Page to display per PDF'
+format_strawberryfield.formatter.settings.strawberry_mirador_formatter:
+  type: config_object
+  label: 'Specific Config for strawberry_pdf_formatter'
+  mapping:
+    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
+    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    mediasource:
+      type: sequence
+      label: 'Sources for IIIF URL'
+    sequence:
+        type: string
+        label: 'Source for IIIF URL'
+    main_mediasource:
+      type: string
+      label: 'Primary IIIF URL Source used'
+    metadataexposeentity_source:
+      type: string
+      label: 'metadataexpose_entity machine name'
+    manifestnodelist_json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing NODE ids or UUIDs from which to generate Manifest URLs'
+    manifesturl_json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing IIIF Manifest URLs to display'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: integer
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
+# Multiple JSON type / View Mode Mappings
+format_strawberryfield.viewmodemapping_settings:
+  type: config_object
+  label: 'Archipelago View Mode to JSON Type Key mapping Configurations'
+  mapping:
+    type_to_viewmode:
+      type: sequence
+      label: 'JSON type key to View Mode Mapping'
+      sequence:
+        type: format_strawberryfield.viewmodemapping_settings.mapping
+
+format_strawberryfield.viewmodemapping_settings.mapping:
+  type: mapping
+  label: 'JSON Type Key/ View Mode pair'
+  mapping:
+    jsontype:
+      type: string
+      label: 'JSON Type Key'
+    view_mode:
+      type: string
+      label: 'View mode'
+    active:
+      type: boolean
+      label: 'Whether this Config pair is enabled or not'
+    weight:
+      type: integer
+      label: 'Order in which this is evaluated'
+
+
+

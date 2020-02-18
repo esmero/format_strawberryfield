@@ -19,16 +19,19 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Twig_Error_Syntax;
 use Twig_Environment;
 use Twig_Error_Runtime;
 use Twig_Loader_Array;
+
 /**
  * Twig based Strawberry Field formatter.
  *
  * @FieldFormatter(
  *   id = "strawberry_metadata_formatter",
- *   label = @Translation("Strawberry Field Metadata Formatter using Twig"),
+ *   label = @Translation("Strawberry Field Formatter for Custom Metadata Templates"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMetadataTwigFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -38,7 +41,7 @@ use Twig_Loader_Array;
  *   }
  * )
  */
-class StrawberryMetadataTwigFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
+class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
 
   /**
@@ -102,8 +105,8 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
    *   The Loaded twig Environment
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
@@ -124,7 +127,9 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
       $configuration['third_party_settings'],
       $container->get('current_user'),
       $container->get('entity_type.manager'),
-      $container->get('twig')
+      $container->get('twig'),
+      $container->get('config.factory')
+
     );
   }
 
@@ -134,11 +139,11 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return [
+    return parent::defaultSettings() + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
-      'metadatadisplayentity_id' => 'Media',
-      'metadatadisplayentity_uselabel' => FALSE,
+      'metadatadisplayentity_id' => NULL,
+      'metadatadisplayentity_uselabel' => TRUE,
     ];
   }
 
@@ -152,11 +157,19 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     }
 
     return [
-      'label' => [
-        '#type' => 'string',
-        '#title' => $this->t('Public facing Label for this Metadata Display'),
-        '#default_value' => $this->getSetting('label'),
+      'customtext' => [
+        '#type' => 'item',
+        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
+      ],
+      'metadatadisplayentity_id' => [
+        '#type' => 'entity_autocomplete',
+        '#title' => $this->t('Choose your metadata template (Start typing! Autocomplete.)'),
+        '#target_type' => 'metadatadisplay_entity',
+        '#description' => 'Metadata template name',
+        '#selection_handler' => 'default:metadatadisplay',
+        '#validate_reference' => TRUE,
         '#required' => TRUE,
+        '#default_value' => $entity,
       ],
       'specs' => [
         '#type' => 'url',
@@ -164,13 +177,11 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         '#default_value' => $this->getSetting('specs'),
         '#required' => TRUE,
       ],
-      'metadatadisplayentity_id' => [
-        '#type' => 'entity_autocomplete',
-        '#target_type' => 'metadatadisplay_entity',
-        '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
+      'label' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Public facing Label for this Metadata Display'),
+        '#default_value' => $this->getSetting('label'),
         '#required' => TRUE,
-        '#default_value' => $entity,
       ],
       'metadatadisplayentity_uselabel' => [
         '#type' => 'checkbox',
@@ -185,8 +196,21 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
    * {@inheritdoc}
    */
   public function settingsSummary() {
+    // Get the metadata template's label for display in the summary
+    $entity_label = NULL;
+    if ($this->getSetting('metadatadisplayentity_id')) {
+      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+      if ($entity) {
+        $entity_label = $entity->label();
+      }
+    }
+
+    // Build the summary
     $summary = [];
-    $summary[] = $this->t('Casts your Strawberry Field JSON data using a Twig template to something else.');
+    $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
+    $summary[] = $this->t('Selected: %template', [
+      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
+    ]);
     return $summary;
   }
 
@@ -245,12 +269,22 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         // C) Embeded (but hidden JSON-LD, etc)
         // So we need to make sure People can "tag" that need.
 
+        // Order as: structures based on sequence key
+        // We will assume here people are using our automatic keys
+        // If they are using other ones, they will have to apply ordering
+        // Directly on their Twig Templates.
+        $ordersubkey = 'sequence';
+        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+          StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+        }
+
         $templaterenderelement = [
           '#type' => 'inline_template',
           '#template' => $twigtemplate,
           '#context' => [
             'data' => $jsondata,
             'node' => $items->getEntity(),
+            'iif_server' => $this->getIiifUrls()['public'].'/',
           ],
         ];
 
@@ -277,7 +311,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
         ];
 
       }
-      return $elements;
+
     }
     return $elements;
   }
@@ -291,20 +325,6 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return $elements;
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(EntityInterface $entity) {
-    // Only check access if the current file access control handler explicitly
-    // opts in by implementing FileAccessFormatterControlHandlerInterface.
-    $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
-      return $entity->access('view', NULL, FALSE);
-    }
-    else {
-      return AccessResult::allowed();
-    }
-  }
 
   public function setSetting($key, $value) {
     /** @var \Drupal\Core\Template\TwigEnvironment $environment */
@@ -314,7 +334,7 @@ class StrawberryMetadataTwigFormatter extends FormatterBase implements Container
     return parent::setSetting(
       $key,
       $value
-    ); // TODO: Change the autogenerated stub
+    );
   }
 
 

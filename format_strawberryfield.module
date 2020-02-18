@@ -3,7 +3,8 @@
  * @file
  * Contains formater_strawberryfield.module.
  */
-
+use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Entity\EntityInterface;
 /**
  * Implements hook_page_attachments().
  *
@@ -23,5 +24,65 @@ function format_strawberryfield_page_attachments(array &$page) {
     }*/
     $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
+    $page['#attached']['library'][] = 'format_strawberryfield/pannellum';
+    $page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
+    $page['#attached']['library'][] = 'core/jquery';
+    $page['#attached']['library'][] = 'core/drupal.dialog.ajax';
+    $page['#attached']['library'][] = 'core/drupal.ajax';
 
+}
+
+function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
+  if ($entity->getEntityTypeId() == 'node' && $view_mode == 'full') {
+    $adotype = [];
+    $original_view_mode = $view_mode;
+    /* @var \Drupal\Core\Config\ImmutableConfig $config */
+    if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
+      foreach ($sbf_fields as $field_name) {
+        /* @var $field StrawberryFieldItem */
+        $field = $entity->get($field_name);
+        if (!$field->isEmpty()) {
+          foreach ($field->getIterator() as $delta => $itemfield) {
+            /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
+            $flatvalues = (array) $itemfield->provideFlatten();
+            if (isset($flatvalues['type'])) {
+              $adotype = array_merge($adotype, (array) $flatvalues['type']);
+            }
+          }
+        }
+      }
+    }
+    if (!empty($adotype)) {
+      $config = \drupal::config(
+      'format_strawberryfield.viewmodemapping_settings'
+      );
+      $viewmodemappings = $config->get('type_to_viewmode');
+      $viewmodemappings = !empty($viewmodemappings) ? (array) $viewmodemappings : [];
+      usort($viewmodemappings, ['\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm', 'sortSettings']);
+
+      foreach ($viewmodemappings as $viewmodemapping) {
+        if (($viewmodemapping['active'] == TRUE) && in_array($viewmodemapping['jsontype'],$adotype)) {
+          $view_mode = $viewmodemapping['view_mode'];
+          break;
+        }
+      }
+    }
+    // To be determined if we want to be dependat on ds module or not
+    // if so we really want to act on this alter and not the general one.
+    /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function format_strawberryfield_theme() {
+  return [
+    'format_strawberryfield_pdfs' => [
+      'variables' => [
+        'item' => NULL
+      ],
+      'template' => 'format-strawberryfield-pdfs'
+    ],
+  ];
 }

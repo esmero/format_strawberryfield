@@ -63,12 +63,13 @@ iiif_iabookreader_strawberry:
     - core/drupal.debounce
     - format_strawberryfield/iiif_iabookreader
 pannellum:
-  version: 2.4.1
+  version: 2.5.4
   css:
     component:
-      https://cdn.jsdelivr.net/npm/pannellum@2.4.1/build/pannellum.css: { external: true}
+      https://cdn.jsdelivr.net/npm/pannellum@2.5.4/build/pannellum.css: { external: true}
   js:
-    https://cdn.jsdelivr.net/npm/pannellum@2.4.1/build/pannellum.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/pannellum@2.5.4/build/pannellum.js: { external: true, minified: true, preprocess: false}
+
 
 iiif_pannellum_strawberry:
   version: 1.0
@@ -79,3 +80,72 @@ iiif_pannellum_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
+av_strawberry:
+  version: 1.0
+  css:
+    component:
+      css/htmlaudiovideo.css: {}
+jsm_modeler:
+  version: 0.45
+  js:
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/lib/three.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.ext.three.js: { external: true, minified: true, preprocess: false}
+
+jsm_model_strawberry:
+  version: 1.0
+  js:
+    js/jsm-model_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/jquery.ui
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/jsm_modeler
+
+pdfs_mozilla:
+  version: 2.2.228
+  license:
+    name: Apache
+    url: //raw.githubusercontent.com/mozilla/pdf.js/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.min.js: { external: true, minified: true, preprocess: false}
+
+pdfs_strawberry:
+  version: 1.0
+  js:
+    js/pdfs_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/pdfs_mozilla
+
+mirador_projectmirador:
+  version: 3.0.0-beta.4
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/mirador@3.0.0-beta.4/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+
+mirador_font:
+ css:
+   base:
+     'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
+
+mirador_strawberry:
+  version: 1.0
+  js:
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/mirador_projectmirador
+    - format_strawberryfield/mirador_font
