@@ -9,7 +9,7 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Internal IIIF server URL'
 
-format_strawberryfield.formatter.strawberry_audio_formatter:
+field.formatter.settings.strawberry_audio_formatter:
   type: config_object
   label: 'Specific config for strawberry_audio_formatter'
   mapping:
@@ -29,7 +29,7 @@ format_strawberryfield.formatter.strawberry_audio_formatter:
       type: string
     number_media:
       type: integer
-format_strawberryfield.formatter.strawberry_image_formatter:
+field.formatter.settings.strawberry_image_formatter:
   type: config_object
   label: 'Specific Config for strawberry_image_formatter'
   mapping:
@@ -51,7 +51,7 @@ format_strawberryfield.formatter.strawberry_image_formatter:
       type: string
     rotation:
       type: string
-format_strawberryfield.formatter.strawberry_media_formatter:
+field.formatter.settings.strawberry_media_formatter:
   type: config_object
   label: 'Specific Config for strawberry_media_formatter'
   mapping:
@@ -72,7 +72,7 @@ format_strawberryfield.formatter.strawberry_media_formatter:
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
     thumbnails:
       type: boolean
-format_strawberryfield.formatter.strawberry_metadata_formatter:
+field.formatter.settings.strawberry_metadata_formatter:
   type: config_object
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
   mapping:
@@ -97,7 +97,7 @@ format_strawberryfield.formatter.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: boolean
-format_strawberryfield.formatter.strawberry_paged_formatter:
+field.formatter.settings.strawberry_paged_formatter:
   type: config_object
   label: 'Specific Config for strawberry_paged_formatter'
   mapping:
@@ -110,7 +110,7 @@ format_strawberryfield.formatter.strawberry_paged_formatter:
       type: string
     manifesturl_source:
       type: string
-format_strawberryfield.formatter.strawberry_pannellum_formatter:
+field.formatter.settings.strawberry_pannellum_formatter:
   type: config_object
   label: 'Specific Config for strawberry_pannellum_formatter'
   mapping:
@@ -142,7 +142,7 @@ format_strawberryfield.formatter.strawberry_pannellum_formatter:
       type: string
     autoLoad:
       type: boolean
-format_strawberryfield.formatter.settings.strawberry_video_formatter:
+field.formatter.settings.settings.strawberry_video_formatter:
   type: config_object
   label: 'Specific Config for strawberry_video_formatter'
   mapping:
@@ -166,7 +166,7 @@ format_strawberryfield.formatter.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
-format_strawberryfield.formatter.settings.strawberry_pdf_formatter:
+field.formatter.settings.settings.strawberry_pdf_formatter:
   type: config_object
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
@@ -192,7 +192,7 @@ format_strawberryfield.formatter.settings.strawberry_pdf_formatter:
     initial_pages:
       type: integer
       label: 'First Page to display per PDF'
-format_strawberryfield.formatter.settings.strawberry_mirador_formatter:
+field.formatter.settings.settings.strawberry_mirador_formatter:
   type: config_object
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
