@@ -255,7 +255,7 @@ field.formatter.settings.strawberry_pdf_formatter:
     number_pages:
       type: integer
       label: 'Number of Pages to show per PDF'
-    initial_pages:
+    initial_page:
       type: integer
       label: 'First Page to display per PDF'
 field.formatter.settings.strawberry_mirador_formatter:
