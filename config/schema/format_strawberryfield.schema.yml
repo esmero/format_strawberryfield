@@ -83,7 +83,9 @@ field.formatter.settings.strawberry_media_formatter:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
     thumbnails:
-      type:
+      type: boolean
+      label: 'TNs?'
+
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
   label: 'Specific Config for strawberry_3d_formatter'
