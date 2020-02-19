@@ -51,7 +51,7 @@ field.formatter.settings.strawberry_image_formatter:
     max_height:
       type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     number_images:
       type: integer
@@ -77,7 +77,7 @@ field.formatter.settings.strawberry_media_formatter:
     max_height:
       type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     iiif_group:
       type: boolean
@@ -111,7 +111,7 @@ field.formatter.settings.strawberry_metadata_formatter:
     metadatadisplayentity_id:
       type: string
     metadatadisplayentity_uselabel:
-      type: string
+      type: integer
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -130,7 +130,7 @@ field.formatter.settings.strawberry_paged_formatter:
     max_height:
       type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     mediasource:
       type: string
@@ -242,19 +242,29 @@ field.formatter.settings.strawberry_mirador_formatter:
     iiif_base_url_internal:
       type: string
       label: 'Custom internal IIIF Server URL'
+    metadataexposeentity:
+      type: string
+      label: 'Machine name of the exposed Metadata Config Entity endpoint'
     mediasource:
-      type: sequence
+      type: mapping
       label: 'Sources for IIIF URL'
-    sequence:
-        type: string
-        label: 'Source for IIIF URL'
+      mapping:
+        manifestnodelist:
+          type: string
+          label: 'If manifestnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        manifesturl:
+          type: string
+          label: 'If manifesturl is being used'
     main_mediasource:
       type: string
       label: 'Primary IIIF URL Source used'
     metadataexposeentity_source:
       type: string
       label: 'metadataexpose_entity machine name'
-    manifestnodelist_json_key_source:
+     manifestnodelist_json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing NODE ids or UUIDs from which to generate Manifest URLs'
     manifesturl_json_key_source:
@@ -266,7 +276,7 @@ field.formatter.settings.strawberry_mirador_formatter:
     max_height:
       type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
