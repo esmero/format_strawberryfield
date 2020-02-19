@@ -13,8 +13,12 @@ field.formatter.settings.strawberry_audio_formatter:
   type: mapping
   label: 'Specific config for strawberry_audio_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -33,8 +37,12 @@ field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -55,8 +63,12 @@ field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -76,8 +88,12 @@ field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -101,6 +117,12 @@ field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
   mapping:
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
@@ -114,8 +136,12 @@ field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pannellum_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -146,8 +172,12 @@ field.formatter.settings.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -170,8 +200,12 @@ field.formatter.settings.settings.strawberry_pdf_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
@@ -196,8 +230,12 @@ field.formatter.settings.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
-    iiif_base_url: format_strawberryfield.iiif_settings.pub_server_url
-    iiif_base_url_internal: format_strawberryfield.iiif_settings.int_server_url
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
     mediasource:
       type: sequence
       label: 'Sources for IIIF URL'
