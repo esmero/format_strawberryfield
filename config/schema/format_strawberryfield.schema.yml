@@ -72,6 +72,12 @@ format_strawberryfield.formatter.strawberry_media_formatter:
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
     thumbnails:
       type: boolean
+    specs:
+      type: string
+      label: 'Specs'
+    metadatadisplayentity_id:
+      type: string
+      label: 'Metadata Display ID'
 format_strawberryfield.formatter.strawberry_metadata_formatter:
   type: config_object
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -234,7 +240,6 @@ format_strawberryfield.viewmodemapping_settings:
       label: 'JSON type key to View Mode Mapping'
       sequence:
         type: format_strawberryfield.viewmodemapping_settings.mapping
-
 format_strawberryfield.viewmodemapping_settings.mapping:
   type: mapping
   label: 'JSON Type Key/ View Mode pair'
@@ -252,5 +257,15 @@ format_strawberryfield.viewmodemapping_settings.mapping:
       type: integer
       label: 'Order in which this is evaluated'
 
-
+# todo: not working, for other copy fields as well (static, image)
+# if I can figure out the display field copy schema issues it will solve the majority of errors
+#'ds.field_plugin.display_field_copy:node-formatted_metadata':
+#  type: mapping
+#  label: 'Settings'
+#  mapping:
+#    settings:
+#      type: mapping
+#      mapping:
+#        formatter:
+#          type: format_strawberryfield.formatter.strawberry_metadata_formatter
 
