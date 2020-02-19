@@ -111,7 +111,7 @@ field.formatter.settings.strawberry_metadata_formatter:
     metadatadisplayentity_id:
       type: string
     metadatadisplayentity_uselabel:
-      type: integer
+      type: string
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
