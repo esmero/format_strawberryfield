@@ -264,7 +264,7 @@ field.formatter.settings.strawberry_mirador_formatter:
     metadataexposeentity_source:
       type: string
       label: 'metadataexpose_entity machine name'
-     manifestnodelist_json_key_source:
+    manifestnodelist_json_key_source:
       type: string
       label: 'Strawberryfield/JSON key containing NODE ids or UUIDs from which to generate Manifest URLs'
     manifesturl_json_key_source:
