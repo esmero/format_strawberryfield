@@ -258,7 +258,10 @@ format_strawberryfield.viewmodemapping_settings.mapping:
       label: 'Order in which this is evaluated'
 
 # todo: not working, for other copy fields as well (static, image)
-# if I can figure out the display field copy schema issues it will solve the majority of errors
+# this is the way to fixing all the core.entity_view_display errors (most of the errors)
+# problem is missing schema for ds.field_plugin.display_field_copy:node-formatted_metadata (or any of the other 2 copyfields) SETTINGS
+# if I can figure out the display field copy settings schema issues it will solve the majority of errors
+# this example is just dealing with strawberry_metadata_formatter but there are errors with many other formatter settings as well
 #'ds.field_plugin.display_field_copy:node-formatted_metadata':
 #  type: mapping
 #  label: 'Settings'
