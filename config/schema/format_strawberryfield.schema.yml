@@ -168,7 +168,7 @@ field.formatter.settings.strawberry_pannellum_formatter:
       type: string
     autoLoad:
       type: boolean
-field.formatter.settings.settings.strawberry_video_formatter:
+field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
   mapping:
@@ -196,7 +196,7 @@ field.formatter.settings.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
-field.formatter.settings.settings.strawberry_pdf_formatter:
+field.formatter.settings.strawberry_pdf_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
@@ -226,7 +226,7 @@ field.formatter.settings.settings.strawberry_pdf_formatter:
     initial_pages:
       type: integer
       label: 'First Page to display per PDF'
-field.formatter.settings.settings.strawberry_mirador_formatter:
+field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
   mapping:
@@ -290,5 +290,8 @@ format_strawberryfield.viewmodemapping_settings.mapping:
       type: integer
       label: 'Order in which this is evaluated'
 
+# Given any DS field plugin formatter key a type
+ds.field_plugin.*.formatter:
+  type: field.formatter.settings.[%parent.%parent.formatter]
 
 
