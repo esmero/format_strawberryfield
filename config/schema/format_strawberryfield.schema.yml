@@ -23,11 +23,11 @@ field.formatter.settings.strawberry_audio_formatter:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
-      type: integer
+      type: string
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     audio_type:
       type: string
@@ -47,9 +47,9 @@ field.formatter.settings.strawberry_image_formatter:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
-      type: integer
+      type: string
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
       type: boolean
       label: 'Whether to use global IIIF settings or not.'
@@ -73,9 +73,9 @@ field.formatter.settings.strawberry_media_formatter:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
-      type: integer
+      type: string
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
       type: boolean
       label: 'Whether to use global IIIF settings or not.'
@@ -102,17 +102,16 @@ field.formatter.settings.strawberry_metadata_formatter:
     max_height:
       type: integer
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     label:
       type: string
     specs:
-      type: url
-    # todo: Can you check metadatadisplayentity_id? not sure the id right now is a string but a number (since its the entity->id(). If we move to UUID i guess we can use string but we should also look at who/what natively exists to use uuid as a type
+      type: string
     metadatadisplayentity_id:
       type: string
     metadatadisplayentity_uselabel:
-      type: boolean
+      type: string
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -126,6 +125,13 @@ field.formatter.settings.strawberry_paged_formatter:
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    max_width:
+      type: string
+    max_height:
+      type: string
+    use_iiif_globals:
+      type: boolean
+      label: 'Whether to use global IIIF settings or not.'
     mediasource:
       type: string
     metadatadisplayentity_source:
@@ -146,11 +152,11 @@ field.formatter.settings.strawberry_pannellum_formatter:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
-      type: integer
+      type: string
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     hotSpotDebug:
       type: boolean
@@ -182,11 +188,11 @@ field.formatter.settings.strawberry_video_formatter:
       type: string
       label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
-      type: integer
+      type: string
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     audio_type:
       type: string
@@ -213,9 +219,9 @@ field.formatter.settings.strawberry_pdf_formatter:
       type: string
       label: 'Max with for the Viewer. Can be either a % or just a number'
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
-      type: boolean
+      type: string
       label: 'Whether to use global IIIF settings or not.'
     number_documents:
       type: integer
@@ -258,7 +264,7 @@ field.formatter.settings.strawberry_mirador_formatter:
       type: string
       label: 'Max with for the Viewer. Can be either a % or just a number'
     max_height:
-      type: integer
+      type: string
     use_iiif_globals:
       type: boolean
       label: 'Whether to use global IIIF settings or not.'
@@ -291,7 +297,12 @@ format_strawberryfield.viewmodemapping_settings.mapping:
       label: 'Order in which this is evaluated'
 
 # Given any DS field plugin formatter key a type
-ds.field_plugin.*.formatter:
-  type: field.formatter.settings.[%parent.%parent.formatter]
+ds.field_plugin.*:
+  type: mapping
+  mapping:
+    formatter:
+      type: field.formatter.settings.[%parent.%parent.formatter]
+      label: "Formatter settings for a generic ds.field plugin"
+
 
 
