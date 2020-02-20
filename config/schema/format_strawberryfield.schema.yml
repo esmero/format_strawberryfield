@@ -144,16 +144,6 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: string
-    mediasource:
-      type: string
-    main_mediasource:
-      type: string
-    metadataexposeentity_source:
-      type: string
-    manifesturl_json_key_source:
-      type: string
-    manifestnodelist_json_key_source:
-      type: string
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -297,15 +287,15 @@ field.formatter.settings.strawberry_mirador_formatter:
       type: mapping
       label: 'Sources for IIIF URL'
       mapping:
-      manifestnodelist:
-        type: string
-        label: 'If manifestnodelist is being used'
-      metadataexposeentity:
-        type: string
-        label: 'If metadataexposeentity is being used'
-      manifesturl:
-        type: string
-        label: 'If manifesturl is being used'
+        manifestnodelist:
+          type: string
+          label: 'If manifestnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        manifesturl:
+          type: string
+          label: 'If manifesturl is being used'
     main_mediasource:
       type: string
       label: 'Primary IIIF URL Source used'
@@ -326,6 +316,10 @@ field.formatter.settings.strawberry_mirador_formatter:
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
+    specs:
+      type: string
+    metadatadisplayentity_id:
+      type: string
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
   type: config_object
