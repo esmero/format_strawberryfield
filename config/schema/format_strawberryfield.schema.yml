@@ -33,6 +33,8 @@ field.formatter.settings.strawberry_audio_formatter:
       type: string
     number_media:
       type: integer
+    number_audios:
+      type: integer
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
@@ -55,6 +57,8 @@ field.formatter.settings.strawberry_image_formatter:
       label: 'Whether to use global IIIF settings or not.'
     number_images:
       type: integer
+    images_type:
+      type: string
     quality:
       type: string
     rotation:
@@ -85,7 +89,9 @@ field.formatter.settings.strawberry_media_formatter:
     thumbnails:
       type: boolean
       label: 'TNs?'
-
+    number_images:
+      type: integer
+      label: 'Number of images'
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
   label: 'Specific Config for strawberry_3d_formatter'
@@ -138,6 +144,16 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: string
+    mediasource:
+      type: string
+    main_mediasource:
+      type: string
+    metadataexposeentity_source:
+      type: string
+    manifesturl_json_key_source:
+      type: string
+    manifestnodelist_json_key_source:
+      type: string
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -151,6 +167,9 @@ field.formatter.settings.strawberry_paged_formatter:
     iiif_group:
       type: boolean
       label: 'Whether multiple media sources should use a single IIIF viewer or not.'
+    json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing file URIs to display'
     max_width:
       type: string
     max_height:
@@ -200,6 +219,9 @@ field.formatter.settings.strawberry_pannellum_formatter:
       type: string
     autoLoad:
       type: boolean
+    number_images:
+      type: integer
+      label: "Number of Images"
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
@@ -275,15 +297,15 @@ field.formatter.settings.strawberry_mirador_formatter:
       type: mapping
       label: 'Sources for IIIF URL'
       mapping:
-        manifestnodelist:
-          type: string
-          label: 'If manifestnodelist is being used'
-        metadataexposeentity:
-          type: string
-          label: 'If metadataexposeentity is being used'
-        manifesturl:
-          type: string
-          label: 'If manifesturl is being used'
+      manifestnodelist:
+        type: string
+        label: 'If manifestnodelist is being used'
+      metadataexposeentity:
+        type: string
+        label: 'If metadataexposeentity is being used'
+      manifesturl:
+        type: string
+        label: 'If manifesturl is being used'
     main_mediasource:
       type: string
       label: 'Primary IIIF URL Source used'
@@ -339,6 +361,4 @@ ds.field_plugin.*:
     formatter:
       type: field.formatter.settings.[%parent.%parent.formatter]
       label: "Formatter settings for a generic ds.field plugin"
-
-
 
