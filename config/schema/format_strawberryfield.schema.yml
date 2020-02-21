@@ -33,8 +33,7 @@ field.formatter.settings.strawberry_audio_formatter:
       type: string
     number_media:
       type: integer
-    number_audios:
-      type: integer
+
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
@@ -143,16 +142,6 @@ field.formatter.settings.strawberry_metadata_formatter:
     metadatadisplayentity_id:
       type: string
     metadatadisplayentity_uselabel:
-      type: string
-    mediasource:
-      type: string
-    main_mediasource:
-      type: string
-    metadataexposeentity_source:
-      type: string
-    manifesturl_json_key_source:
-      type: string
-    manifestnodelist_json_key_source:
       type: string
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
@@ -297,15 +286,15 @@ field.formatter.settings.strawberry_mirador_formatter:
       type: mapping
       label: 'Sources for IIIF URL'
       mapping:
-      manifestnodelist:
-        type: string
-        label: 'If manifestnodelist is being used'
-      metadataexposeentity:
-        type: string
-        label: 'If metadataexposeentity is being used'
-      manifesturl:
-        type: string
-        label: 'If manifesturl is being used'
+        manifestnodelist:
+          type: string
+          label: 'If manifestnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        manifesturl:
+          type: string
+          label: 'If manifesturl is being used'
     main_mediasource:
       type: string
       label: 'Primary IIIF URL Source used'
