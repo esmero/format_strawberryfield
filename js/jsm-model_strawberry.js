@@ -19,6 +19,23 @@
                     var sourceurl = $(value).data('iiif-model');
                     var browser_supported = JSM.IsWebGLEnabled() && JSM.IsFileApiEnabled();
 
+
+                    // Ajusts width to what ever is smallest.
+                    // If given width is less than window size, do nothing
+                    // In any other case make it as width
+                    // TODO. Deal with the parent container. noty
+                    function resizeCanvas ()
+                    {
+
+                        if (canvas !== null && document.body.clientWidth < canvas.data("iiif-image-with")) {
+                            if (canvas instanceof (HTMLCanvasElement)) {
+                                canvas.width = document.body.clientWidth - 20;
+                            } else if (canvas instanceof (SVGSVGElement)) {
+                                canvas.setAttribute ('width', document.body.clientWidth - 20);
+                            }
+                        }
+                    }
+
                     console.log('Initializing JSModeler')
                     if (browser_supported) {
                         var urls = sourceurl;
@@ -69,6 +86,7 @@
                                     console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
+                                window.onresize = resizeCanvas();
                             }
                         });
                     }
