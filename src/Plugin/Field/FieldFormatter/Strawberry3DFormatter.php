@@ -64,6 +64,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       'max_width' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum width'),
+        '#description' => $this->t('Use 0 to force 100% width'),
         '#default_value' => $this->getSetting('max_width'),
         '#size' => 5,
         '#maxlength' => 5,
@@ -136,6 +137,8 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $elements = [];
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    // Because canvases can not be dynamic. But we can make them scale with JS?
+    $max_width = empty($max_width) || $max_width == 0 ? 720 : $max_width ;
     $max_height = $this->getSetting('max_height');
     $number_models =  $this->getSetting('number_models');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -229,6 +232,10 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-iiif', 'strawberry-3d-item'],
                       'id' => $htmlid,
                       'data-iiif-model' => $publicurl->toString(),
+                      'data-iiif-image-width' => $max_width,
+                      'data-iiif-image-height' => $max_height,
+                      'height' => $max_height,
+                      'width' => $max_width,
                       'style' => "width:{$max_width_css}; height:{$max_height}px"
                      ],
                     '#title' => $this->t(
