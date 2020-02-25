@@ -10,6 +10,7 @@
                     var element_id = $(this).attr("id");
                     // Check if we got some data passed via Drupal settings.
                     var canvas = value;
+                    var canvasDom = $(this);
                     var viewerSettings = {
                         cameraEyePosition: [-2.0, -1.5, 1.0],
                         cameraCenterPosition: [0.0, 0.0, 0.0],
@@ -27,11 +28,11 @@
                     function resizeCanvas ()
                     {
 
-                        if (canvas !== null && document.body.clientWidth < canvas.data("iiif-image-with")) {
-                            if (canvas instanceof (HTMLCanvasElement)) {
-                                canvas.width = document.body.clientWidth - 20;
-                            } else if (canvas instanceof (SVGSVGElement)) {
-                                canvas.setAttribute ('width', document.body.clientWidth - 20);
+                        if (canvasDom !== null && document.body.clientWidth < canvasDom.data("iiif-image-with")) {
+                            if (canvasDom instanceof (HTMLCanvasElement)) {
+                                canvasDom.width = document.body.clientWidth - 20;
+                            } else if (canvasDom instanceof (SVGSVGElement)) {
+                                canvasDom.setAttribute ('width', document.body.clientWidth - 20);
                             }
                         }
                     }
