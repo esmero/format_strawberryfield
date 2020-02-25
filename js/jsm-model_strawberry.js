@@ -25,13 +25,10 @@
                     // If given width is less than window size, do nothing
                     // In any other case make it as width
                     // TODO. Deal with the parent container. noty
-                    function resizeCanvas (viewer)
-                    {
-                        console.log('resizing 3D canvas event called');
+                    function resizeCanvas () {
                         if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
                             canvasDom.width(document.body.clientWidth - 20);
-                            canvasDom.attr("width",document.body.clientWidth - 20);
-                            console.log('Actually resizing 3D canvas');
+                            canvasDom.attr("width", document.body.clientWidth - 20);
                         }
                     }
 
