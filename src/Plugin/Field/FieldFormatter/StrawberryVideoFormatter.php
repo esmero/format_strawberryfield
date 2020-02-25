@@ -155,6 +155,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_media =  $this->getSetting('number_media');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -164,6 +165,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
+    //@TODO posterframe is not being used. Make it used.
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -269,14 +271,14 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-av', 'video-av'],
                       'id' => 'video_' . $uniqueid,
                       'controls' => TRUE,
-                      'poster' => ''
+                      'poster' => '',
+                      'style' => "width:{$max_width_css}; height:{$max_height}px",
+
                     ],
                     '#alt' => $this->t(
                       'Video for @label',
                       ['@label' => $items->getEntity()->label()]
                     ),
-                    '#width' => $max_width,
-                    '#height' => $max_height,
                     'source' => [
                       '#type' => 'html_tag',
                       '#tag' => 'source',

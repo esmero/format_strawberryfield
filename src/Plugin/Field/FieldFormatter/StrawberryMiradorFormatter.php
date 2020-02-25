@@ -422,26 +422,26 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
 
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
       $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height pixels',
+        'Maximum size: %max_width x %max_height',
         [
-          '%max_width' => $this->getSetting('max_width'),
-          '%max_height' => $this->getSetting('max_height'),
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
         ]
       );
     }
     elseif ($this->getSetting('max_width')) {
       $summary[] = $this->t(
-        'Maximum width: %max_width pixels',
+        'Maximum width: %max_width',
         [
-          '%max_width' => $this->getSetting('max_width'),
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
         ]
       );
     }
     elseif ($this->getSetting('max_height')) {
       $summary[] = $this->t(
-        'Maximum height: %max_height pixels',
+        'Maximum height: %max_height',
         [
-          '%max_height' => $this->getSetting('max_height'),
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
         ]
       );
     }

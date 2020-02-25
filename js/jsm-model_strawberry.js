@@ -66,6 +66,7 @@
 
                                 var textureLoaded = function () {
                                     viewer.Draw();
+                                    console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
                             }

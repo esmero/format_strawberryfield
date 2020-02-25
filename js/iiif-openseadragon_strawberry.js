@@ -10,10 +10,12 @@
             var showthumbs = false
             $('.strawberry-media-item[data-iiif-infojson]').once('attache_osd')
                 .each(function (index, value) {
-                    var default_width =  $(this).attr("width")>0 ? $(this).attr("width"): 320;
-                    var default_height = $(this).attr("height")>0 ? $(this).attr("height"): Math.round((default_width/4)*3);
+
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
+                    var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
+                    var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
+
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
                     showthumbs = $(this).data("iiif-thumbnails");
@@ -23,8 +25,7 @@
                         groupsid[group] = element_id;
 
                         $(this).height(default_height);
-                        $(this).width(default_width);
-
+                        $(this).css("width",default_width);
 
                     }
                     else {

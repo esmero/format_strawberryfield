@@ -86,15 +86,16 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         'max_width' => [
           '#type' => 'textfield',
           '#title' => $this->t('Maximum width'),
-          '#description' => $this->t('Set to 100% for full with of just a number for pixels'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
         ],
         'max_height' => [
           '#type' => 'number',
-          '#title' => $this->t('Maximum height in pi'),
+          '#title' => $this->t('Maximum height in pixels'),
           '#default_value' => $this->getSetting('max_height'),
           '#size' => 5,
           '#maxlength' => 5,
@@ -126,20 +127,29 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
       ]);
     }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum size: %max_width x %max_height',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum width: %max_width',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum height: %max_height',
+        [
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
+        ]
+      );
     }
 
     return $summary;
@@ -152,6 +162,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_pages =  $this->getSetting('number_pages');
     $number_documents =  $this->getSetting('number_documents');
@@ -251,13 +262,11 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
                   '#attributes' => [
                       'class' => ['field-pdf-canvas','strawberry-document-item'],
                       'id' => 'document_' . $uniqueid,
-                      'style' => "max-width:{$max_width}px;height:{$max_height}",
+                      'style' => "width:{$max_width_css}; height:{$max_height}px",
                       'data-iiif-document' =>  $publicurl->toString(),
                       'data-iiif-initialpage' => $initial_page,
-                      'data-iiif-document-width' => $max_width,
-                      'data-iiif-document-height' => $max_height,
                       'data-iiif-pages' => $number_pages,
-                    ],
+                  ],
                    '#alt' => $this->t(
                       'PDF @name for  @label',
                       [

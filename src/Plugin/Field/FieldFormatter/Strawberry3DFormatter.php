@@ -100,20 +100,29 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       ]);
     }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum size: %max_width x %max_height',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum width: %max_width',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum height: %max_height',
+        [
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
+        ]
+      );
     }
 
     return $summary;
@@ -126,6 +135,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_models =  $this->getSetting('number_models');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -219,10 +229,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-iiif', 'strawberry-3d-item'],
                       'id' => $htmlid,
                       'data-iiif-model' => $publicurl->toString(),
-                      'data-iiif-image-width' => $max_width,
-                      'data-iiif-image-height' => $max_height,
-                      'height' => $max_height,
-                      'width' => $max_width
+                      'style' => "width:{$max_width_css}; height:{$max_height}px"
                      ],
                     '#title' => $this->t(
                       '3D Model for @label',

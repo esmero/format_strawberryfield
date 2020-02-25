@@ -8,11 +8,15 @@
                 .each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
+                    var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
+                    var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
+
                     // Check if we got some data passed via Drupal settings.
                     if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]) != 'undefined') {
 
-                        $(this).height(drupalSettings.format_strawberryfield.iabookreader[element_id]['height']);
-                        $(this).width(drupalSettings.format_strawberryfield.iabookreader[element_id]['width']);
+                        $(this).height(default_height);
+                        $(this).css("width",default_width);
+
                         // Defines our basic options for IIIF.
                         var options = {
                             ui: 'full', // embed, full (responsive)

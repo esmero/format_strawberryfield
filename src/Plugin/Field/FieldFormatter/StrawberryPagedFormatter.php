@@ -236,6 +236,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
@@ -303,26 +304,26 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
 
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
       $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height pixels',
+        'Maximum size: %max_width x %max_height',
         [
-          '%max_width' => $this->getSetting('max_width'),
-          '%max_height' => $this->getSetting('max_height'),
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
         ]
       );
     }
     elseif ($this->getSetting('max_width')) {
       $summary[] = $this->t(
-        'Maximum width: %max_width pixels',
+        'Maximum width: %max_width',
         [
-          '%max_width' => $this->getSetting('max_width'),
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
         ]
       );
     }
     elseif ($this->getSetting('max_height')) {
       $summary[] = $this->t(
-        'Maximum height: %max_height pixels',
+        'Maximum height: %max_height',
         [
-          '%max_height' => $this->getSetting('max_height'),
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
         ]
       );
     }
@@ -336,10 +337,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_height = $this->getSetting('max_height');
     $pagestrategy = $this->getSetting('mediasource');
-
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -395,7 +393,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           break;
       }
 
-
       /* Expected structure of an Media item inside JSON
       "as:images": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
@@ -450,6 +447,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('metadatadisplayentity_source')) {
@@ -493,6 +491,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
               'field-iiif',
               'container',
             ],
+            'style' => "width:{$max_width_css}; height:{$max_height}px",
             'data-iiif-infojson' => '',
             'width' => $max_width,
             'height' => $max_height,
@@ -544,6 +543,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('manifesturl_source')) {

@@ -102,20 +102,29 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
       ]);
     }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum size: %max_width x %max_height',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum width: %max_width',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum height: %max_height',
+        [
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
+        ]
+      );
     }
 
     return $summary;
@@ -128,6 +137,7 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_media =  $this->getSetting('number_media');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -241,14 +251,13 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
                     '#attributes' => [
                       'class' => ['field-av', 'audio-av'],
                       'id' => 'audio_' . $uniqueid,
-                      'controls' => TRUE
+                      'controls' => TRUE,
+                      'style' => "width:{$max_width_css}; height:{$max_height}px",
                     ],
                     '#alt' => $this->t(
                       'Audio for @label',
                       ['@label' => $items->getEntity()->label()]
                     ),
-                    '#width' => $max_width,
-                    '#height' => $max_height,
                     'source' => [
                       '#type' => 'html_tag',
                       '#tag' => 'source',

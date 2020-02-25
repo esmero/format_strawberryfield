@@ -65,6 +65,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       'max_width' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum width'),
+        '#description' => $this->t('Use 0 to force 100% width'),
         '#default_value' => $this->getSetting('max_width'),
         '#size' => 5,
         '#maxlength' => 5,
@@ -106,20 +107,29 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       ]);
     }
     if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum size: %max_width x %max_height',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . 'pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum width: %max_width',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        ]
+      );
     }
     elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
+      $summary[] = $this->t(
+        'Maximum height: %max_height',
+        [
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
+        ]
+      );
     }
 
     return $summary;
@@ -132,6 +142,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $grouped = $this->getSetting('iiif_group');
     $thumbnails = $this->getSettings('thumbnails');
@@ -221,8 +232,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                     'data-iiif-infojson' => $iiifpublicinfojson,
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
-                    'width' => $max_width,
-                    'height' => $max_height,
+                    'style' => "width:{$max_width_css}; height:{$max_height}px",
                   ],
                 ];
                 if (isset($item->_attributes)) {
@@ -244,6 +254,11 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
                 $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
+                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
+                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
+                  $max_height,
+                  480
+                );
               }
             } elseif (isset($mediaitem['url'])) {
               $elements[$delta]['media'.$i] = [
