@@ -13,9 +13,8 @@
 
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
-                    var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
-                    var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
-
+                    var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
+                    var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
                     showthumbs = $(this).data("iiif-thumbnails");
