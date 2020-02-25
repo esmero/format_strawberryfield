@@ -29,8 +29,9 @@
                     {
                         console.log('resizing 3D canvas event called');
                         if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
-                                canvasDom.width(document.body.clientWidth - 20);
-                                console.log('Actually resizing 3D canvas');
+                            canvasDom.width(document.body.clientWidth - 20);
+                            canvasDom.attr("width",document.body.clientWidth - 20);
+                            console.log('Actually resizing 3D canvas');
                         }
                     }
 
