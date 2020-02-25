@@ -96,6 +96,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         'max_height' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum height in pixels'),
+          '#description' => $this->t('Use 0 to force automatic proportional height'),
           '#default_value' => $this->getSetting('max_height'),
           '#size' => 5,
           '#maxlength' => 5,
@@ -147,7 +148,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
       $summary[] = $this->t(
         'Maximum height: %max_height',
         [
-          '%max_height' => $this->getSetting('max_height') . ' pixels',
+          '%max_height' => (int) $this->getSetting('max_height') == 0 ? 'automatic' : $this->getSetting('max_height') . ' pixels',
         ]
       );
     }
@@ -256,13 +257,24 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
                     'id' =>  'document_' . $uniqueid,
                   ]
                 ];
+
+
+                if ($max_height == 0) {
+                  $css_style = "width:{$max_width_css};height:auto";
+                } else {
+                  $css_style = "width:{$max_width_css}; height:{$max_height}px";
+                }
+
+
+
+
                 $elements[$delta]['pdf' . $i] = [
                   '#type' => 'html_tag',
                   '#tag' => 'canvas',
                   '#attributes' => [
                       'class' => ['field-pdf-canvas','strawberry-document-item'],
                       'id' => 'document_' . $uniqueid,
-                      'style' => "width:{$max_width_css}; height:{$max_height}px",
+                      'style' => $css_style,
                       'data-iiif-document' =>  $publicurl->toString(),
                       'data-iiif-initialpage' => $initial_page,
                       'data-iiif-pages' => $number_pages,
