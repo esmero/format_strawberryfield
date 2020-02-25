@@ -30,7 +30,6 @@
                         console.log('resizing 3D canvas event called');
                         if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
                                 canvasDom.width(document.body.clientWidth - 20);
-                                viewer.FitInWindow();
                                 console.log('Actually resizing 3D canvas');
                         }
                     }
@@ -75,19 +74,22 @@
                                             viewer.AdjustClippingPlanes(50.0);
                                             viewer.FitInWindow();
                                         }
+                                        console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                         viewer.EnableDraw(true);
                                         viewer.Draw();
+                                        resizeCanvas();
+                                        $( window ).resize(function() {
+                                            resizeCanvas();
+                                            viewer.FitInWindow();
+                                        });
                                     }
                                 };
 
                                 var textureLoaded = function () {
                                     viewer.Draw();
-                                    console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
-                                $( window ).resize(function(viewer) {
-                                    resizeCanvas(viewer);
-                                });
+
                             }
                         });
                     }
