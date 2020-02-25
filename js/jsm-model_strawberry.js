@@ -85,7 +85,9 @@
                                     console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
-                                window.onresize = resizeCanvas(viewer);
+                                $( window ).resize(function(viewer) {
+                                    resizeCanvas(viewer);
+                                });
                             }
                         });
                     }
