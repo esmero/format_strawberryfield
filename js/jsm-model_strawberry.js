@@ -27,8 +27,7 @@
                     // TODO. Deal with the parent container. noty
                     function resizeCanvas ()
                     {
-
-                        if (canvasDom !== null && document.body.clientWidth < canvasDom.data("iiif-image-with")) {
+                        if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
                             if (canvasDom instanceof (HTMLCanvasElement)) {
                                 canvasDom.width = document.body.clientWidth - 20;
                             } else if (canvasDom instanceof (SVGSVGElement)) {
