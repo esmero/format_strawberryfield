@@ -25,10 +25,13 @@
                     // If given width is less than window size, do nothing
                     // In any other case make it as width
                     // TODO. Deal with the parent container. noty
-                    function resizeCanvas ()
+                    function resizeCanvas (viewer)
                     {
+                        console.log('resizing 3D canvas event called');
                         if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
                                 canvasDom.width(document.body.clientWidth - 20);
+                                viewer.FitInWindow();
+                                console.log('Actually resizing 3D canvas');
                         }
                     }
 
@@ -82,7 +85,7 @@
                                     console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
-                                window.onresize = resizeCanvas();
+                                window.onresize = resizeCanvas(viewer);
                             }
                         });
                     }
