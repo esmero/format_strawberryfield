@@ -8,8 +8,8 @@
                 .each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
-                    var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
-                    var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
+                    var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
+                    var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
 
                     // Check if we got some data passed via Drupal settings.
                     if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]) != 'undefined') {
