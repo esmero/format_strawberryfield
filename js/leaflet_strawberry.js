@@ -21,11 +21,11 @@
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']);
 
                         // load a tile layer
-                        L.tileLayer('http://tiles.mapc.org/basemap/{z}/{x}/{y}.png',
+                        L.tileLayer('https://maps.wikimedia.org/osm-intl/${z}/${x}/${y}.png',
                             {
-                                attribution: 'Tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://mass.gov/mgis">MassGIS</a>',
+                                attribution: 'https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use',
                                 maxZoom: 17,
-                                minZoom: 9
+                                minZoom: 2
                             }).addTo(map);
 
 
