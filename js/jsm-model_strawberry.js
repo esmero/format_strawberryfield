@@ -55,9 +55,10 @@
                                 console.log('Loaded Materials');
                                 console.log(jsonData.materials);
                                 // add a texture?
-                                jsonData.materials[0].texture  = 'http://localhost:8183/iiif/2/0d1%2Fimage-metcalfe-room-test-1-42dcddb6-bec9-4012-a6dc-5e153e99b701.jpg/1536,1024,512,512/512,/0/default.jpg';
+                                /* jsonData.materials[0].texture  = 'http://localhost:8183/iiif/2/someid/1536,1024,512,512/512,/0/default.jpg';
                                 jsonData.materials[0].textureWidth = 1.0;
                                 jsonData.materials[0].textureHeight = 1.0;
+                                */
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);

@@ -86,3 +86,11 @@ function format_strawberryfield_theme() {
     ],
   ];
 }
+
+function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
+  // Add relevant Repository Mimetypes missing from D8
+  $mapping['extensions']['obj'] = 'obj_model_mimetype';
+  // @see https://www.iana.org/assignments/media-types/media-types.xhtml
+  $mapping['mimetypes']['obj_model_mimetype'] = 'model/obj';
+
+}
