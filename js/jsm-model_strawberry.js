@@ -54,6 +54,10 @@
                             onReady: function (fileNames, jsonData) {
                                 console.log('Loaded Materials');
                                 console.log(jsonData.materials);
+                                // add a texture?
+                                jsonData.materials[0].texture  = 'http://bgfons.com/uploads/stone/stone_texture4718.jpg';
+                                jsonData.materials[0].textureWidth = 1.0;
+                                jsonData.materials[0].textureHeight = 1.0;
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
