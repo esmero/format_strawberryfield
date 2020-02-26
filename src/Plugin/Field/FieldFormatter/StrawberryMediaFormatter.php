@@ -131,7 +131,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $grouped = $this->getSetting('iiif_group');
-    $thumbnails = $this->getSettings('thumbnails');
+    $thumbnails = $this->getSetting('thumbnails');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
