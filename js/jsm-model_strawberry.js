@@ -49,7 +49,8 @@
                                 return;
                             },
                             onReady: function (fileNames, jsonData) {
-
+                                var $div = $("<div>", {id: "jsm-preloader", "class": "ajax-progress--throbber"});
+                                canvasDom.append($div);
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
@@ -80,6 +81,7 @@
                                             resizeCanvas();
                                             viewer.FitInWindow();
                                         });
+                                        $("jsm-preloader").fadeOut('slow');
                                     }
                                 };
 
