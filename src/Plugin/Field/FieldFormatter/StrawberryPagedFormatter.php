@@ -545,8 +545,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
                 'container',
               ],
               'data-iiif-infojson' => '',
-              'width' => $max_width,
-              'height' => $max_height,
+              'style' => "width:{$max_width_css}; height:{$max_height}px",
             ],
           ];
           if (isset($item->_attributes)) {
@@ -559,13 +558,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           $element['media']['#attributes']['data-iiif-infojson'] = '';
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max(
-            $max_width,
-            400
-          );
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = $max_width_css;
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max(
             $max_height,
-            320
+            520
           );
         }
       }
