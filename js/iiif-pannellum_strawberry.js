@@ -35,8 +35,8 @@
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     var $multiscene = drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('tour');
-                    var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
-                    var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
+                    var default_width = drupalSettings.format_strawberryfield.pannellum[element_id]['height'];
+                    var default_height = drupalSettings.format_strawberryfield.pannellum[element_id]['width'];
 
 
                     // Check if we got some data passed via Drupal settings.
