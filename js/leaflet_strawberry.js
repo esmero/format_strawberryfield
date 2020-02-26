@@ -2,23 +2,23 @@
 
     'use strict';
 
-    Drupal.behaviors.format_strawberryfield_leafleft_initiate = {
+    Drupal.behaviors.format_strawberryfield_leaflet_initiate = {
         attach: function(context, settings) {
-            $('.strawberry-leafleft-item[data-iiif-infojson]').once('attache_leafleft')
+            $('.strawberry-leaflet-item[data-iiif-infojson]').once('attache_leaflet')
                 .each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     // Check if we got some data passed via Drupal settings.
-                    if (typeof(drupalSettings.format_strawberryfield.leafleft[element_id]) != 'undefined') {
+                    if (typeof(drupalSettings.format_strawberryfield.leaflet[element_id]) != 'undefined') {
 
-                        $(this).height(drupalSettings.format_strawberryfield.leafleft[element_id]['height']);
-                        $(this).width(drupalSettings.format_strawberryfield.leafleft[element_id]['width']);
-                        // Defines our basic options for leafleft GEOJSON
+                        $(this).height(drupalSettings.format_strawberryfield.leaflet[element_id]['height']);
+                        $(this).width(drupalSettings.format_strawberryfield.leaflet[element_id]['width']);
+                        // Defines our basic options for leaflet GEOJSON
 
                         // initialize the map
                         var map = L.map('map').setView([42.35, -71.08], 13);
 
-                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leafleft[element_id]['geojsonurl']);
+                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']);
 
                         // load a tile layer
                         L.tileLayer('http://tiles.mapc.org/basemap/{z}/{x}/{y}.png',
@@ -40,15 +40,15 @@
                        // var jsonTest = new L.GeoJSON.AJAX(["colleges.geojson","counties.geojson"],{onEachFeature:popUp}).addTo(m);
 
 
-                        var $firstgeojson = [drupalSettings.format_strawberryfield.leafleft[element_id]['geojsonurl']];
-                        var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leafleft[element_id]['geojsonother']);
-                        var $secondgeojson = drupalSettings.format_strawberryfield.leafleft[element_id]['geojsonother'].find(x=>x!==undefined);
+                        var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
+                        var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);
+                        var $secondgeojson = drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother'].find(x=>x!==undefined);
 
                         if (Array.isArray($allgeojsons) && $allgeojsons.length && typeof($secondgeojson) != 'undefined') {
 
                             $allgeojsons.forEach(geojsonURL => {
                                 // TODO Provider should be passed by metadata at
-                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryleafleftFormatter::viewElements
+                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryleafletFormatter::viewElements
                                 // Deal with this for Beta3
                                 geojsonLayer.addUrl("geojsonURL");//we now have 2 layers
                             })
@@ -62,7 +62,7 @@
                                 minZoom: 9
                             }).addTo(map);
                         geojsonLayer.addTo(map);
-                        console.log('initializing leafleft 1.6.0')
+                        console.log('initializing leaflet 1.6.0')
                     }
                 })}}
 })(jQuery, Drupal, drupalSettings, window.L);
