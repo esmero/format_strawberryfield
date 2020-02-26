@@ -16,7 +16,7 @@
                         // Defines our basic options for leaflet GEOJSON
 
                         // initialize the map
-                        var map = L.map('map').setView([42.35, -71.08], 13);
+                        var map = L.map(element_id).setView([42.35, -71.08], 13);
 
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']);
 
@@ -27,17 +27,6 @@
                                 maxZoom: 17,
                                 minZoom: 9
                             }).addTo(map);
-
-                        function popUp(f,l){
-                            var out = [];
-                            if (f.properties){
-                                for(key in f.properties){
-                                    out.push(key+": "+f.properties[key]);
-                                }
-                                l.bindPopup(out.join("<br />"));
-                            }
-                        }
-                       // var jsonTest = new L.GeoJSON.AJAX(["colleges.geojson","counties.geojson"],{onEachFeature:popUp}).addTo(m);
 
 
                         var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
