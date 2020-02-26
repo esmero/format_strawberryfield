@@ -57,6 +57,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
+        '#required' => TRUE
       ],
       'number_images' => [
         '#type' => 'number',
@@ -74,6 +75,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
       'max_height' => [
         '#type' => 'number',
@@ -83,6 +85,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
     ] + parent::settingsForm($form, $form_state);
   }
@@ -103,22 +106,13 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '%number' => $this->getSetting('number_images'),
       ]);
     }
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
+    $summary[] = $this->t(
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => $this->getSetting('max_height') . ' pixels',
+      ]
+    );
 
     return $summary;
   }
@@ -130,6 +124,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_images =  $this->getSetting('number_images');
     /* @var \Drupal\file\FileInterface[] $files */

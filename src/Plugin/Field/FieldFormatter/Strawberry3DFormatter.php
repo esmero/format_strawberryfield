@@ -52,6 +52,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
+        '#required' => TRUE
       ],
       'number_models' => [
         '#type' => 'number',
@@ -64,11 +65,13 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       'max_width' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum width'),
+        '#description' => $this->t('Use 0 to force 100% width'),
         '#default_value' => $this->getSetting('max_width'),
         '#size' => 5,
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
       'max_height' => [
         '#type' => 'number',
@@ -78,6 +81,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
     ] + parent::settingsForm($form, $form_state);
   }
@@ -99,22 +103,14 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         '%number' => $this->getSetting('number_models'),
       ]);
     }
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
+    $summary[] = $this->t(
+        'Maximum size: %max_width x %max_height',
+        [
+          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+          '%max_height' => $this->getSetting('max_height') . ' pixels',
+        ]
+      );
+
 
     return $summary;
   }
@@ -126,6 +122,9 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    // Because canvases can not be dynamic. But we can make them scale with JS?
+    $max_width = empty($max_width) || $max_width == 0 ? 720 : $max_width ;
     $max_height = $this->getSetting('max_height');
     $number_models =  $this->getSetting('number_models');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -222,7 +221,8 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
                       'data-iiif-image-width' => $max_width,
                       'data-iiif-image-height' => $max_height,
                       'height' => $max_height,
-                      'width' => $max_width
+                      'width' => $max_width,
+                      'style' => "width:{$max_width_css}; height:{$max_height}px"
                      ],
                     '#title' => $this->t(
                       '3D Model for @label',

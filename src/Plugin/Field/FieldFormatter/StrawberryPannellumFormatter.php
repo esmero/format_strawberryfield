@@ -63,6 +63,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           '#type' => 'textfield',
           '#title' => t('JSON Key from where to fetch Media URLs'),
           '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE
         ],
         'json_key_hotspots' => [
           '#type' => 'textfield',
@@ -90,11 +91,13 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
         'max_height' => [
           '#type' => 'number',
@@ -104,6 +107,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
         'autoLoad' => [
           '#type' => 'checkbox',
@@ -137,31 +141,13 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         ]
       );
     }
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t(
-        'Maximum width: %max_width pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum height: %max_height pixels',
-        [
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
+    $summary[] = $this->t(
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => $this->getSetting('max_height') . ' pixels',
+      ]
+    );
 
     return $summary;
   }
@@ -173,6 +159,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $number_images = $this->getSetting('number_images');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -339,8 +326,12 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-iiif', 'strawberry-panorama-item'],
                       'id' => $htmlid,
                       'data-iiif-image' => $iiifserverimg,
-                      'data-iiif-image-width' => $max_width,
-                      'data-iiif-image-height' => $max_height,
+                      'data-iiif-image-width' => $max_width_css,
+                      'data-iiif-image-height' => max(
+                        $max_height,
+                        520
+                      ),
+                      'style' => "width:{$max_width_css}; height:{$max_height}px",
                     ],
                     '#title' => $this->t(
                       'Panorama for @label',
@@ -353,6 +344,11 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     'autoLoad' => $settings_autoload,
                   ];
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
+                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['width'] = $max_width_css;
+                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['height'] = max(
+                    $max_height,
+                    520
+                  );
                   $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
                   // Hotspots are a list of objects in the form of
                   /*{

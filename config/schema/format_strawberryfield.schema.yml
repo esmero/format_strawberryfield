@@ -350,4 +350,3 @@ ds.field_plugin.*:
     formatter:
       type: field.formatter.settings.[%parent.%parent.formatter]
       label: "Formatter settings for a generic ds.field plugin"
-

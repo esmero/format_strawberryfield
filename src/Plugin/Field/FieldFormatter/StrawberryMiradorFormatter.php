@@ -294,6 +294,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
         'max_height' => [
           '#type' => 'number',
@@ -303,6 +304,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
       ] + parent::settingsForm($form, $form_state);
     if (empty($options_for_mainsource)) {
@@ -420,31 +422,15 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       $summary[] = $this->t('This formatter still needs to be setup');
     }
 
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t(
-        'Maximum width: %max_width pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum height: %max_height pixels',
-        [
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
+    $summary[] = $this->t(
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => $this->getSetting('max_height') . ' pixels',
+      ]
+    );
+
+
 
     return array_merge($summary, parent::settingsSummary());
   }

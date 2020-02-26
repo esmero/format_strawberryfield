@@ -10,6 +10,7 @@
                     var element_id = $(this).attr("id");
                     // Check if we got some data passed via Drupal settings.
                     var canvas = value;
+                    var canvasDom = $(value);
                     var viewerSettings = {
                         cameraEyePosition: [-2.0, -1.5, 1.0],
                         cameraCenterPosition: [0.0, 0.0, 0.0],
@@ -18,6 +19,18 @@
                     };
                     var sourceurl = $(value).data('iiif-model');
                     var browser_supported = JSM.IsWebGLEnabled() && JSM.IsFileApiEnabled();
+
+
+                    // Ajusts width to what ever is smallest.
+                    // If given width is less than window size, do nothing
+                    // In any other case make it as width
+                    // TODO. Deal with the parent container. noty
+                    function resizeCanvas () {
+                        if (document.body.clientWidth < canvasDom.data("iiif-image-width")) {
+                            canvasDom.width(document.body.clientWidth - 20);
+                            canvasDom.attr("width", document.body.clientWidth - 20);
+                        }
+                    }
 
                     console.log('Initializing JSModeler')
                     if (browser_supported) {
@@ -30,16 +43,26 @@
                         var urlList = urls.split('|');
                         // This is in case we have material, textures, etc in the same URL.
                         //@TODO allow people to select default materials
+                        var $div = $("<div>", {id: "jsm-preloader", "class": "sbf-preloader"});
+                        canvasDom.parent().append($div);
                         JSM.ConvertURLListToJsonData(urlList, {
                             onError: function () {
                                 console.log('Could not convert file' + element_id);
+                                $(".sbf-preloader").fadeOut('fast');
                                 return;
                             },
                             onReady: function (fileNames, jsonData) {
-
+                                console.log('Loaded Materials');
+                                console.log(jsonData.materials);
+                                // add a texture?
+                                /* jsonData.materials[0].texture  = 'http://localhost:8183/iiif/2/someid/1536,1024,512,512/512,/0/default.jpg';
+                                jsonData.materials[0].textureWidth = 1.0;
+                                jsonData.materials[0].textureHeight = 1.0;
+                                */
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
+                                    $(".sbf-preloader").fadeOut('fast');
                                     return;
                                 }
 
@@ -59,8 +82,15 @@
                                             viewer.AdjustClippingPlanes(50.0);
                                             viewer.FitInWindow();
                                         }
+                                        console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                         viewer.EnableDraw(true);
                                         viewer.Draw();
+                                        $(".sbf-preloader").fadeOut('slow');
+                                        resizeCanvas();
+                                        $( window ).resize(function() {
+                                            resizeCanvas();
+                                            viewer.FitInWindow();
+                                        });
                                     }
                                 };
 
@@ -68,6 +98,7 @@
                                     viewer.Draw();
                                 };
                                 JSM.ConvertJSONDataToThreeMeshes(jsonData, textureLoaded, environment);
+
                             }
                         });
                     }

@@ -94,6 +94,9 @@ jsm_modeler:
 
 jsm_model_strawberry:
   version: 1.0
+  css:
+    component:
+      css/sbfutils.css: {}
   js:
     js/jsm-model_strawberry.js: {minified: false}
   dependencies:
