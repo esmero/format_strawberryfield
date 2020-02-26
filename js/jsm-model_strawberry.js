@@ -76,12 +76,12 @@
                                         console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                         viewer.EnableDraw(true);
                                         viewer.Draw();
+                                        $(".sbf-preloader").fadeOut('slow');
                                         resizeCanvas();
                                         $( window ).resize(function() {
                                             resizeCanvas();
                                             viewer.FitInWindow();
                                         });
-                                        $("jsm-preloader").fadeOut('slow');
                                     }
                                 };
 
