@@ -42,7 +42,6 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
       'json_key_source' => 'as:video',
       'max_width' => 720,
       'max_height' => 240,
-      'audio_type' => 'mp4',
       'number_media' => 1,
       'posterframe' => 'iiif',
       'json_key_source_for_poster' => 'as:image'
@@ -58,6 +57,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
         '#type' => 'textfield',
         '#title' => t('JSON Key from where to fetch Media URLs'),
         '#default_value' => $this->getSetting('json_key_source'),
+        '#required' => TRUE
       ],
       'number_media' => [
         '#type' => 'number',
@@ -71,19 +71,23 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
         '#type' => 'number',
         '#title' => $this->t('Maximum width'),
         '#default_value' => $this->getSetting('max_width'),
+        '#description' => $this->t('Use 0 to force 100% width'),
         '#size' => 5,
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
       'max_height' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum height'),
+        '#description' => $this->t('Use 0 to force automatic proportional height'),
         '#default_value' => $this->getSetting('max_height'),
         '#size' => 5,
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
+        '#required' => TRUE
       ],
       'posterframe' => [
         '#type' => 'select',
@@ -128,22 +132,13 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
         '%number' => $this->getSetting('number_media'),
       ]);
     }
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum size: %max_width x %max_height pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t('Maximum width: %max_width pixels', [
-        '%max_width' => $this->getSetting('max_width'),
-      ]);
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t('Maximum height: %max_height pixels', [
-        '%max_height' => $this->getSetting('max_height'),
-      ]);
-    }
+    $summary[] = $this->t(
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => (int) $this->getSetting('max_height') == 0 ? 'auto' : $this->getSetting('max_height') . ' pixels',
+      ]
+    );
 
     return $summary;
   }
@@ -155,7 +150,10 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+
     $number_media =  $this->getSetting('number_media');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -164,6 +162,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
+    //@TODO posterframe is not being used. Make it used.
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -269,14 +268,14 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-av', 'video-av'],
                       'id' => 'video_' . $uniqueid,
                       'controls' => TRUE,
-                      'poster' => ''
+                      'poster' => '',
+                      'style' => "width:{$max_width_css}; height:{$max_height_css}",
+
                     ],
                     '#alt' => $this->t(
                       'Video for @label',
                       ['@label' => $items->getEntity()->label()]
                     ),
-                    '#width' => $max_width,
-                    '#height' => $max_height,
                     'source' => [
                       '#type' => 'html_tag',
                       '#tag' => 'source',

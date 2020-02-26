@@ -1,0 +1,17 @@
+.sbf-preloader {
+    border: 1rem solid #f3f3f3;
+    border-top: 1rem solid #4b82bf;
+    border-radius: 50%;
+    width: 3rem;
+    height: 3rem;
+    animation: incircles 1200ms linear infinite;
+    position: absolute;
+    left: 50%;
+    top: 10%;
+    pointer-events: none;
+}
+
+@keyframes incircles {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

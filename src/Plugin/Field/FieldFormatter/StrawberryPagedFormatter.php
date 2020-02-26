@@ -236,11 +236,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
         'max_height' => [
           '#type' => 'number',
@@ -250,6 +252,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
+          '#required' => TRUE
         ],
       ] + parent::settingsForm($form, $form_state);
   }
@@ -301,31 +304,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       }
     }
 
-    if ($this->getSetting('max_width') && $this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_width')) {
-      $summary[] = $this->t(
-        'Maximum width: %max_width pixels',
-        [
-          '%max_width' => $this->getSetting('max_width'),
-        ]
-      );
-    }
-    elseif ($this->getSetting('max_height')) {
-      $summary[] = $this->t(
-        'Maximum height: %max_height pixels',
-        [
-          '%max_height' => $this->getSetting('max_height'),
-        ]
-      );
-    }
+    $summary[] = $this->t(
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => $this->getSetting('max_height') . ' pixels',
+      ]
+    );
 
     return $summary;
   }
@@ -336,10 +321,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_height = $this->getSetting('max_height');
     $pagestrategy = $this->getSetting('mediasource');
-
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -395,7 +377,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           break;
       }
 
-
       /* Expected structure of an Media item inside JSON
       "as:images": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
@@ -450,6 +431,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('metadatadisplayentity_source')) {
@@ -493,9 +475,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
               'field-iiif',
               'container',
             ],
+            'style' => "width:{$max_width_css}; height:{$max_height}px",
             'data-iiif-infojson' => '',
-            'width' => $max_width,
-            'height' => $max_height,
           ],
         ];
         if (isset($item->_attributes)) {
@@ -510,13 +491,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifest'] = json_decode(
           $manifest
         );
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max(
-          $max_width,
-          400
-        );
+        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = $max_width_css;
         $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max(
           $max_height,
-          320
+          520
         );
       }
     }
@@ -544,6 +522,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('manifesturl_source')) {
@@ -566,8 +545,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
                 'container',
               ],
               'data-iiif-infojson' => '',
-              'width' => $max_width,
-              'height' => $max_height,
+              'style' => "width:{$max_width_css}; height:{$max_height}px",
             ],
           ];
           if (isset($item->_attributes)) {
@@ -580,13 +558,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           $element['media']['#attributes']['data-iiif-infojson'] = '';
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = max(
-            $max_width,
-            400
-          );
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = $max_width_css;
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max(
             $max_height,
-            320
+            520
           );
         }
       }
