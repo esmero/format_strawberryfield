@@ -184,4 +184,4 @@ leaflet_strawberry:
     - core/jquery
     - core/drupal
     - core/drupalSettings
-    - format_strawberryfield/leaflet_core
+    - format_strawberryfield/leaflet_ajax
