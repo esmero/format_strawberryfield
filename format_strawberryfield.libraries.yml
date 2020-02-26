@@ -175,7 +175,7 @@ leaflet_ajax:
     https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/src/index.min.js: { external: true, minified: true, preprocess: false}
 
 leaflet_strawberry:
- version: 1.0
+  version: 1.0
   js:
     js/leaflet_strawberry.js: {minified: false}
   dependencies:
