@@ -44,12 +44,6 @@
                         }
                         //@TODO add an extra geojsons key with every other one so people can select the others.
                         // load a tile layer
-                        L.tileLayer('http://tiles.mapc.org/basemap/{z}/{x}/{y}.png',
-                            {
-                                attribution: 'Tiles by <a href="http://mapc.org">MAPC</a>, Data by <a href="http://mass.gov/mgis">MassGIS</a>',
-                                maxZoom: 17,
-                                minZoom: 9
-                            }).addTo(map);
                         geojsonLayer.addTo(map);
                         console.log('initializing leaflet 1.6.0')
                     }
