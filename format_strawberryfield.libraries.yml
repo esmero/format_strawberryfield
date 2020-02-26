@@ -172,7 +172,9 @@ leaflet_ajax:
     url: https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/license.md
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/src/index.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - format_strawberryfield/leaflet_core
 
 leaflet_strawberry:
   version: 1.0
@@ -183,4 +185,3 @@ leaflet_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_core
-    - format_strawberryfield/leaflet_ajax
