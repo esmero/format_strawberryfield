@@ -43,17 +43,21 @@
                         var urlList = urls.split('|');
                         // This is in case we have material, textures, etc in the same URL.
                         //@TODO allow people to select default materials
+                        var $div = $("<div>", {id: "jsm-preloader", "class": "sbf-preloader"});
+                        canvasDom.parent().append($div);
                         JSM.ConvertURLListToJsonData(urlList, {
                             onError: function () {
                                 console.log('Could not convert file' + element_id);
+                                $(".sbf-preloader").fadeOut('fast');
                                 return;
                             },
                             onReady: function (fileNames, jsonData) {
-                                var $div = $("<div>", {id: "jsm-preloader", "class": "sbf-preloader"});
-                                canvasDom.parent().append($div);
+                                console.log('Loaded Materials');
+                                console.log(jsonData.materials);
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
+                                    $(".sbf-preloader").fadeOut('fast');
                                     return;
                                 }
 
