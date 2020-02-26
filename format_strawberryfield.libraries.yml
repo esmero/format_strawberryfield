@@ -152,3 +152,35 @@ mirador_strawberry:
     - core/drupalSettings
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
+
+leaflet_core:
+  version: 1.6.0
+  license:
+    name: BSD-2-Clause
+    url: https://cdn.jsdelivr.net/npm/leaflet@1.6.0/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet-src.min.js { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css { external: true}
+
+leaflet_ajax:
+  version: 2.1.0
+  license:
+    name: MIT
+    url: https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/license.md
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/src/index.min.js { external: true, minified: true, preprocess: false}
+
+leaflet_strawberry:
+ version: 1.0
+  js:
+    js/leaflet_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/leaflet_core
+    - format_strawberryfield/leaflet_ajax
