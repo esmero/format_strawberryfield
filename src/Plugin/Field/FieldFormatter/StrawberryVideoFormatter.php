@@ -81,6 +81,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
       'max_height' => [
         '#type' => 'number',
         '#title' => $this->t('Maximum height'),
+        '#description' => $this->t('Use 0 to force automatic proportional height'),
         '#default_value' => $this->getSetting('max_height'),
         '#size' => 5,
         '#maxlength' => 5,
@@ -135,7 +136,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
       'Maximum size: %max_width x %max_height',
       [
         '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
-        '%max_height' => $this->getSetting('max_height') . ' pixels',
+        '%max_height' => (int) $this->getSetting('max_height') == 0 ? 'auto' : $this->getSetting('max_height') . ' pixels',
       ]
     );
 
@@ -151,6 +152,8 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+
     $number_media =  $this->getSetting('number_media');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -266,7 +269,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
                       'id' => 'video_' . $uniqueid,
                       'controls' => TRUE,
                       'poster' => '',
-                      'style' => "width:{$max_width_css}; height:{$max_height}px",
+                      'style' => "width:{$max_width_css}; height:{$max_height_css}",
 
                     ],
                     '#alt' => $this->t(
