@@ -35,8 +35,8 @@
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     var $multiscene = drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('tour');
-                    var default_width = drupalSettings.format_strawberryfield.pannellum[element_id]['height'];
-                    var default_height = drupalSettings.format_strawberryfield.pannellum[element_id]['width'];
+                    var default_width = drupalSettings.format_strawberryfield.pannellum[element_id]['width'];
+                    var default_height = drupalSettings.format_strawberryfield.pannellum[element_id]['height'];
 
 
                     // Check if we got some data passed via Drupal settings.
@@ -53,7 +53,7 @@
                                 hotspots.push(hotspotdata);
                             });
                         }
-                        $(this).height(default_height); //@TODO this needs to be a setting. C'mon
+                        $(this).height(default_height);
                         $(this).css("width",default_width);
 
                         console.log('Initializing Pannellum.')
