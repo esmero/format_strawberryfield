@@ -50,7 +50,7 @@
                             },
                             onReady: function (fileNames, jsonData) {
                                 var $div = $("<div>", {id: "jsm-preloader", "class": "sbf-preloader"});
-                                canvasDom.parent.append($div);
+                                canvasDom.parent().append($div);
                                 var viewer = new JSM.ThreeViewer();
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
