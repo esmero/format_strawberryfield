@@ -13,7 +13,7 @@
                         var popupText = feature.properties.name +"<br>";
                         layer.bindPopup(popupText);
                     }
-                    var geojsongroup = new L.featureGroup([L.marker([40.1, -100])]);
+                    var markerArray = [L.marker([40.1, -100])];
 
                     function onEachFeature(feature, layer) {
                         console.log(feature);
@@ -37,6 +37,7 @@
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
                             onEachFeature: onEachFeature,
                             pointToLayer: function (feature, latlng) {
+                                markerArray.push(L.marker (latlng));
                                 return L.marker (latlng);
                             },
                         });
@@ -58,9 +59,10 @@
 
 
                         map.on('layeradd', function (e) {
+                            var geojsongroup = new L.featureGroup(markerArray);
                             console.log(e.layer);
                             map.setView(geojsongroup.getBounds().getCenter());
-                            //map.fitBounds(L.featureGroup(e.layer).getBounds());
+                            map.fitBounds(geojsongroup.getBounds());
                         });
 
 
