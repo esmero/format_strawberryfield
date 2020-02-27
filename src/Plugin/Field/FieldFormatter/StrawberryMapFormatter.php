@@ -224,14 +224,14 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         ],
         'tilemap_url' => [
           '#type' => 'url',
-          '#title' => t('Tile Map URL to use on this Map'),
+          '#title' => t('Base Map (Tiles) URL to use on this Map'),
           '#description' => t('E.g https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'),
           '#default_value' => trim($this->getSetting('tilemap_url')),
           '#required' => TRUE,
         ],
         'tilemap_attribution' => [
           '#type' => 'textfield',
-          '#title' => t('Attribution HTML string for the tilemap.'),
+          '#title' => t('Attribution HTML string for the Base Map.'),
           '#description' => t('&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'),
           '#default_value' => trim($this->getSetting('tilemap_attribution')),
           '#required' => TRUE,
@@ -333,12 +333,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         ],
         'min_zoom' => [
           '#type' => 'number',
-          '#title' => $this->t('Minimun possible Zoom'),
+          '#title' => $this->t('Minimum possible Zoom'),
           '#default_value' => $this->getSetting('min_zoom'),
           '#size' => 2,
           '#maxlength' => 2,
           '#min' => 1,
-          '#max' => 18,
+          '#max' => 8,
         ],
         'max_zoom' => [
           '#type' => 'number',
@@ -347,7 +347,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#size' => 2,
           '#maxlength' => 2,
           '#min' => 1,
-          '#max' => 18,
+          '#max' => 22,
         ],
       ] + parent::settingsForm($form, $form_state);
     if (empty($options_for_mainsource)) {
@@ -396,6 +396,21 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
 
         ]
     );
+
+    $summary[] = $this->t(
+      'Base Map (Tiles) URL: %map',
+      [
+        '%map' => $this->getSetting('tilemap_url'),
+      ]
+    );
+
+    $summary[] = $this->t(
+      'Attribution for Base map: %attributions',
+      [
+        '%attributions' => $this->getSetting('tilemap_attribution'),
+      ]
+    );
+
     $main_mediasource = $this->getSetting(
       'main_mediasource'
     ) ? $this->getSetting('main_mediasource') : NULL;
@@ -472,14 +487,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     }
 
     $summary[] = $this->t(
-      'Maximum size: %max_width x %max_height',
+      'Zoom Levels: Min(%min_zoom)/Max(%max_zoom)',
       [
-        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
-        '%max_height' => $this->getSetting('max_height') . ' pixels',
+        '%min_zoom' => (int) $this->getSetting('min_zoom'),
+        '%max_zoom' => $this->getSetting('max_zoom'),
       ]
     );
-
-
 
     return array_merge($summary, parent::settingsSummary());
   }
