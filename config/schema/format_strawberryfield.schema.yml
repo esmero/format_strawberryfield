@@ -347,6 +347,9 @@ field.formatter.settings.strawberry_map_formatter:
   type: mapping
   label: 'Specific Config for strawberry_map_formatter'
   mapping:
+    json_key_source:
+        type: string
+        label: 'JSON or JMESPATH that conditions rendering. If empty will always render'
     iiif_base_url:
       type: string
       label: 'Custom Public IIIF Server URL'

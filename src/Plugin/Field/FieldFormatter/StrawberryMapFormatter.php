@@ -136,6 +136,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
    */
   public static function defaultSettings() {
     return parent::defaultSettings() + [
+        'json_key_source' => 'geographic_location',
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
@@ -211,6 +212,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     );
 
     $settings_form = [
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key or JMESPath search string that needs to exist and not be empty to render a map.'),
+          '#description' => t('Leave empty to render always a map. If present and value is empty, Map will not be rendered'),
+          '#default_value' => trim($this->getSetting('json_key_source')),
+        ],
         'mediasource' => [
           '#type' => 'checkboxes',
           '#title' => $this->t('Source for your GeoJSON URLs.'),
@@ -346,7 +353,13 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     $summary[] = $this->t(
       'Displays Map using the Leaflet and GeoJSON Sources <br>'
     );
+    $summary[] = $this->t(
+        'JSON Key or JMESPATH that needs to return a value for Map to render: %key',
+        [
+          '%key' => !empty(trim($this->getSetting('json_key_source'))) ? trim($this->getSetting('json_key_source')) : 'No restriction set'
 
+        ]
+    );
     $main_mediasource = $this->getSetting(
       'main_mediasource'
     ) ? $this->getSetting('main_mediasource') : NULL;
@@ -463,7 +476,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     // Finally we allow also an geojson URL to be passed.
 
     $nodeuuid = $items->getEntity()->uuid();
-    /* @var FieldItemInterface $item */
+    /* @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $item */
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()
         ->getFieldStorageDefinition()
@@ -479,84 +492,89 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
       if ($json_error != JSON_ERROR_NONE) {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
-      // A rendered geojson
 
-      foreach ($mediasource as $iiifsource) {
-        $pagestrategy = (string)$iiifsource;
-        switch ($pagestrategy) {
-          case 'metadataexposeentity':
-            $geojsons['metadataexposeentity'] = $this->processGeoJsonforMetadataExposeEntity(
-              $jsondata,
-              $item
-            );
-            continue 2;
-          case 'geojsonurl':
-            $geojsons['geojsonurl'] = $this->processGeoJsonforURL(
-              $jsondata,
-              $item
-            );
-            continue 2;
-          case 'geojsonnodelist':
-            $geojsons['geojsonnodelist'] = $this->processGeoJsonforNodeList(
-              $jsondata,
-              $item
-            );
-            continue 2;
+      $json_key = trim($this->getSetting('json_key_source'));
+      // Check if we have a json key and it returns an actual value
+      // @TODO if the key has no . (dots) we can simply evaluate as an array key
+      // That is faster.
+      if (empty($json_key) || !empty($item->searchPath($json_key))) {
+        foreach ($mediasource as $iiifsource) {
+          $pagestrategy = (string)$iiifsource;
+          switch ($pagestrategy) {
+            case 'metadataexposeentity':
+              $geojsons['metadataexposeentity'] = $this->processGeoJsonforMetadataExposeEntity(
+                $jsondata,
+                $item
+              );
+              continue 2;
+            case 'geojsonurl':
+              $geojsons['geojsonurl'] = $this->processGeoJsonforURL(
+                $jsondata,
+                $item
+              );
+              continue 2;
+            case 'geojsonnodelist':
+              $geojsons['geojsonnodelist'] = $this->processGeoJsonforNodeList(
+                $jsondata,
+                $item
+              );
+              continue 2;
+          }
         }
-      }
 
-      // Check which one is our main source and if it really exists
-      if (isset($geojsons[$main_mediasource]) && !empty($geojsons[$main_mediasource])) {
-        // Take only the first since we could have more
-        $main_geojsonurl = array_shift($geojsons[$main_mediasource]);
-        $all_geojsonurl =  array_reduce($geojsons,'array_merge',[]);
-      } else {
-        // reduce flattens and applies a merge. Basically we get a simple list.
-        $all_geojsonurl = array_reduce($geojsons,'array_merge',[]);
-        $main_geojsonurl = array_shift($all_geojsonurl);
-      }
+        // Check which one is our main source and if it really exists
+        if (isset($geojsons[$main_mediasource]) && !empty($geojsons[$main_mediasource])) {
+          // Take only the first since we could have more
+          $main_geojsonurl = array_shift($geojsons[$main_mediasource]);
+          $all_geojsonurl =  array_reduce($geojsons,'array_merge',[]);
+        } else {
+          // reduce flattens and applies a merge. Basically we get a simple list.
+          $all_geojsonurl = array_reduce($geojsons,'array_merge',[]);
+          $main_geojsonurl = array_shift($all_geojsonurl);
+        }
 
-      // Only process is we got at least one geojson
-      if (!empty($main_geojsonurl)) {
+        // Only process is we got at least one geojson
+        if (!empty($main_geojsonurl)) {
 
-        $groupid = 'iiif-' . $item->getName(
-          ) . '-' . $nodeuuid . '-' . $delta . '-media';
-        $htmlid = $groupid;
+          $groupid = 'iiif-' . $item->getName(
+            ) . '-' . $nodeuuid . '-' . $delta . '-media';
+          $htmlid = $groupid;
 
-        $elements[$delta]['media'] = [
-          '#type' => 'container',
-          '#default_value' => $htmlid,
-          '#attributes' => [
-            'id' => $htmlid,
-            'class' => [
-              'strawberry-leaflet-item',
-              'leafletViewer',
-              'field-iiif',
-              'container',
+          $elements[$delta]['media'] = [
+            '#type' => 'container',
+            '#default_value' => $htmlid,
+            '#attributes' => [
+              'id' => $htmlid,
+              'class' => [
+                'strawberry-leaflet-item',
+                'leafletViewer',
+                'field-iiif',
+                'container',
+              ],
+              'style' => "width:{$max_width_css}; height:{$max_height}px",
+              'width' => $max_width,
+              'height' => $max_height,
             ],
-            'style' => "width:{$max_width_css}; height:{$max_height}px",
-            'width' => $max_width,
-            'height' => $max_height,
-          ],
-        ];
+          ];
 
-        // get the URL to our Metadata Expose Endpoint, we will get a string here.
+          // get the URL to our Metadata Expose Endpoint, we will get a string here.
 
-        $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['nodeuuid'] = $nodeuuid;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['geojsonurl'] = $main_geojsonurl;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['geojsonother'] = is_array($all_geojsonurl) ? $all_geojsonurl : [];
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['width'] = $max_width_css;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['height'] = max(
-          $max_height,
-          480
-        );
-        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/leaflet_strawberry';
-        if (isset($item->_attributes)) {
-          $elements[$delta] += ['#attributes' => []];
-          $elements[$delta]['#attributes'] += $item->_attributes;
-          // Unset field item attributes since they have been included in the
-          // formatter output and should not be rendered in the field template.
+          $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['nodeuuid'] = $nodeuuid;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['geojsonurl'] = $main_geojsonurl;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['geojsonother'] = is_array($all_geojsonurl) ? $all_geojsonurl : [];
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['width'] = $max_width_css;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['height'] = max(
+            $max_height,
+            480
+          );
+          $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/leaflet_strawberry';
+          if (isset($item->_attributes)) {
+            $elements[$delta] += ['#attributes' => []];
+            $elements[$delta]['#attributes'] += $item->_attributes;
+            // Unset field item attributes since they have been included in the
+            // formatter output and should not be rendered in the field template.
+          }
         }
       }
     }
