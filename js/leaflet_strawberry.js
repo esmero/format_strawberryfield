@@ -13,6 +13,7 @@
                         var popupText = feature.properties.name +"<br>";
                         layer.bindPopup(popupText);
                     }
+                    var geojsongroup = new L.featureGroup();
 
                     function onEachFeature(feature, layer) {
                         console.log(feature);
@@ -36,6 +37,7 @@
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
                             onEachFeature: onEachFeature,
                             pointToLayer: function (feature, latlng) {
+                                geojsongroup.push( L.marker(latlng));
                                 return L.marker(latlng);
                             },
                         });
@@ -44,6 +46,11 @@
                         var bounds = latLon.toBounds(500); // 500 = metres
                         map.panTo(latLon).fitBounds(bounds);
                         map.setView(new L.LatLng(40.737, -73.923), 8); */
+                        map.on('layeradd', function (e) {
+                            //map.setView(geojsongroup.getBounds().getCenter());
+                            map.fitBounds(geojsongroup.getBounds());
+                        });
+
 
                         // load a tile layer
                         L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
@@ -69,7 +76,8 @@
                         //@TODO add an extra geojsons key with every other one so people can select the others.
                         // load a tile layer
                         geojsonLayer.addTo(map);
-                        map.setView(geojsonLayer.getBounds().getCenter());
+
+
                         console.log('initializing leaflet 1.6.0')
                     }
                 })}}
