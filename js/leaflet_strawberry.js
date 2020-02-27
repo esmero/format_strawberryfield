@@ -45,11 +45,7 @@
                         var bounds = latLon.toBounds(500); // 500 = metres
                         map.panTo(latLon).fitBounds(bounds);
                         map.setView(new L.LatLng(40.737, -73.923), 8); */
-                        map.on('layeradd', function (e) {
-                            console.log(e.layer);
-                            //map.setView(geojsongroup.getBounds().getCenter());
-                            map.fitBounds(L.featureGroup(e.layer).getBounds());
-                        });
+
 
 
                         // load a tile layer
@@ -59,6 +55,14 @@
                                 maxZoom: 17,
                                 minZoom: 4
                             }).addTo(map);
+
+
+                        map.on('layeradd', function (e) {
+                            console.log(e.layer);
+                            //map.setView(geojsongroup.getBounds().getCenter());
+                            map.fitBounds(L.featureGroup(e.layer).getBounds());
+                        });
+
 
                         var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
                         var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);
