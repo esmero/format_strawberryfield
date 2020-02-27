@@ -37,8 +37,6 @@
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
                             onEachFeature: onEachFeature,
                             pointToLayer: function (feature, latlng) {
-                                geojsongroup.push (L.marker(latlng));
-                                console.log(geojsongroup);
                                 return L.marker (latlng);
                             },
                         });
@@ -50,7 +48,7 @@
                         map.on('layeradd', function (e) {
                             console.log(e.layer);
                             //map.setView(geojsongroup.getBounds().getCenter());
-                            map.fitBounds(geojsongroup.getBounds());
+                            map.fitBounds(L.featureGroup(e.layer).getBounds());
                         });
 
 
