@@ -214,7 +214,8 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
       )) ? $this->getSetting('main_mediasource') : reset(
       $options_for_mainsource
     );
-
+    // We can not use the url type for tilemap_url since the curly brackets don't validate!
+    // So sad.
     $settings_form = [
         'json_key_source' => [
           '#type' => 'textfield',
@@ -223,7 +224,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#default_value' => trim($this->getSetting('json_key_source')),
         ],
         'tilemap_url' => [
-          '#type' => 'url',
+          '#type' => 'textfield',
           '#title' => t('Base Map (Tiles) URL to use on this Map'),
           '#description' => t('E.g https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'),
           '#default_value' => trim($this->getSetting('tilemap_url')),
@@ -232,7 +233,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         'tilemap_attribution' => [
           '#type' => 'textfield',
           '#title' => t('Attribution HTML string for the Base Map.'),
-          '#description' => t('&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'),
+          '#description' => t('E.g &amp;copy; &lt;a href=&quot;https://openstreetmap.org/copyright&quot;&gt;OpenStreetMap contributors&lt;/a&gt;'),
           '#default_value' => trim($this->getSetting('tilemap_attribution')),
           '#required' => TRUE,
         ],
