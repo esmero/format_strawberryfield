@@ -337,7 +337,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#type' => 'number',
           '#title' => $this->t('Initial Zoom'),
           '#description' => $this->t('Only applies when a single Point is in the map. When more fit to bounds apply.'),
-          '#default_value' => $this->getSetting('min_zoom'),
+          '#default_value' => $this->getSetting('initial_zoom'),
           '#size' => 2,
           '#maxlength' => 2,
           '#min' => 1,
