@@ -9,30 +9,6 @@
 
                     var $featurecount = 0;
 
-                    var style = {
-                        weight: 3,
-                        color: '#4b82bf',
-                        dashArray: '',
-                        fillOpacity: 0.8
-                    }
-
-                    function zoomToFeature(evt) {
-                        fitBounds(evt.target.getBounds());
-                    }
-                    function fitBounds(bounds){
-                        map.fitBounds(bounds);
-                    }
-                    function highlightFeature(evt) {
-                        var feature = evt.target;
-                        feature.setStyle(style);
-                        if (!L.Browser.ie && !L.Browser.opera) {
-                            feature.bringToFront();
-                        }
-                    }
-                    function resetHighlight(evt) {
-                        statesLayer.resetStyle(evt.target);
-                    }
-
                     function popUpFeature(feature, layer){
                         var popupText = feature.properties.name +"<br>";
                         layer.bindPopup(popupText);
@@ -41,15 +17,6 @@
                     function onEachFeature(feature, layer) {
                         console.log(feature);
                         popUpFeature(feature, layer);
-                        $featurecount++
-                        if ($featurecount == 1) {
-                            map.setView(new L.LatLng(40.737, -73.923), 8);
-                        }
-                        layer.on({
-                            mouseover:highlightFeature,
-                            mouseout:resetHighlight,
-                            click: zoomToFeature
-                        });
                     }
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
@@ -102,6 +69,7 @@
                         //@TODO add an extra geojsons key with every other one so people can select the others.
                         // load a tile layer
                         geojsonLayer.addTo(map);
+                        map.setView(geojsonLayer.getBounds().getCenter());
                         console.log('initializing leaflet 1.6.0')
                     }
                 })}}
