@@ -6,6 +6,18 @@
         attach: function(context, settings) {
             $('.strawberry-leaflet-item[data-iiif-infojson]').once('attache_leaflet')
                 .each(function (index, value) {
+
+
+                    function onEachFeature(feature, layer) {
+                        console.log(feature);
+                        var popupContent = "<p>GeoJSON " +
+                            feature.geometry.type + "</p>";
+
+                        if (feature.properties && feature.properties.popupContent) {
+                            popupContent += feature.properties.popupContent;
+                        }
+                        layer.bindPopup(popupContent);
+                    }
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     // Check if we got some data passed via Drupal settings.
@@ -16,18 +28,24 @@
                         // Defines our basic options for leaflet GEOJSON
 
                         // initialize the map
-                        var map = L.map(element_id).setView([42.35, -71.08], 13);
+                        var map = L.map(element_id);
+                        // Use current's user lat/long
+                        map.locate({setView: true, maxZoom: 8});
 
-                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']);
+                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{onEachFeature:onEachFeature});
+
+                        /* var latLon = L.latLng(40.737, -73.923);
+                        var bounds = latLon.toBounds(500); // 500 = metres
+                        map.panTo(latLon).fitBounds(bounds);
+                        map.setView(new L.LatLng(40.737, -73.923), 8); */
 
                         // load a tile layer
                         L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
                             {
                                 attribution: 'Tiles by <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
                                 maxZoom: 17,
-                                minZoom: 9
+                                minZoom: 2
                             }).addTo(map);
-
 
                         var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
                         var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);
