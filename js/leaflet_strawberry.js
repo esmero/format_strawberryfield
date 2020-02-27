@@ -13,7 +13,7 @@
                         var popupText = feature.properties.name +"<br>";
                         layer.bindPopup(popupText);
                     }
-                    var markerArray = [L.marker([40.1, -100])];
+                    var markerArray = [];
 
                     function onEachFeature(feature, layer) {
                         console.log(feature);
@@ -42,12 +42,6 @@
                             },
                         });
 
-                        /* var latLon = L.latLng(40.737, -73.923);
-                        var bounds = latLon.toBounds(500); // 500 = metres
-                        map.panTo(latLon).fitBounds(bounds);
-                        map.setView(new L.LatLng(40.737, -73.923), 8); */
-
-
 
                         // load a tile layer
                         L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
@@ -59,10 +53,12 @@
 
 
                         map.on('layeradd', function (e) {
-                            var geojsongroup = new L.featureGroup(markerArray);
-                            console.log(e.layer);
-                            map.setView(geojsongroup.getBounds().getCenter());
-                            map.fitBounds(geojsongroup.getBounds());
+                            if (markerArray.length > 0) {
+                                var geojsongroup = new L.featureGroup(markerArray);
+                                console.log(e.layer);
+                                //map.setView(geojsongroup.getBounds().getCenter(),8);
+                                map.fitBounds(geojsongroup.getBounds());
+                            }
                         });
 
 
