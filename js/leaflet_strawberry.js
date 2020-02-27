@@ -47,7 +47,7 @@
                             {
                                 attribution: 'Tiles by <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
                                 maxZoom: 17,
-                                minZoom: 4
+                                minZoom: 2
                             }).addTo(map);
 
 
