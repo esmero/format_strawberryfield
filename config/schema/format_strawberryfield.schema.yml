@@ -389,6 +389,18 @@ field.formatter.settings.strawberry_map_formatter:
       label: 'Max with for the Map. 0 to force 100% width'
     max_height:
       type: string
+    max_zoom:
+      type: integer
+      label: 'Max Zoom for the Map'
+    min_zoom:
+      type: integer
+      label: 'Min Zoom for the Map'
+    tilemap_url:
+      type: string
+      label: 'Tile Map URL'
+    tilemap_attribution:
+      type: string
+      label: 'Tile Map Attribution String'
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'

@@ -137,6 +137,8 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
   public static function defaultSettings() {
     return parent::defaultSettings() + [
         'json_key_source' => 'geographic_location',
+        'tilemap_url' => 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'tilemap_attribution' => '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
@@ -146,6 +148,8 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         'geojsonurl_json_key_source' => 'geojson',
         'max_width' => 720,
         'max_height' => 480,
+        'max_zoom' => 10,
+        'min_zoom' => 2,
       ];
   }
 
@@ -217,6 +221,20 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#title' => t('JSON Key or JMESPath search string that needs to exist and not be empty to render a map.'),
           '#description' => t('Leave empty to render always a map. If present and value is empty, Map will not be rendered'),
           '#default_value' => trim($this->getSetting('json_key_source')),
+        ],
+        'tilemap_url' => [
+          '#type' => 'url',
+          '#title' => t('Tile Map URL to use on this Map'),
+          '#description' => t('E.g https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+          '#default_value' => trim($this->getSetting('tilemap_url')),
+          '#required' => TRUE,
+        ],
+        'tilemap_attribution' => [
+          '#type' => 'textfield',
+          '#title' => t('Attribution HTML string for the tilemap.'),
+          '#description' => t('&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'),
+          '#default_value' => trim($this->getSetting('tilemap_attribution')),
+          '#required' => TRUE,
         ],
         'mediasource' => [
           '#type' => 'checkboxes',
@@ -312,6 +330,24 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
           '#required' => TRUE
+        ],
+        'min_zoom' => [
+          '#type' => 'number',
+          '#title' => $this->t('Minimun possible Zoom'),
+          '#default_value' => $this->getSetting('min_zoom'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 1,
+          '#max' => 18,
+        ],
+        'max_zoom' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum possible Zoom'),
+          '#default_value' => $this->getSetting('max_zoom'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 1,
+          '#max' => 18,
         ],
       ] + parent::settingsForm($form, $form_state);
     if (empty($options_for_mainsource)) {
@@ -568,6 +604,10 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
             $max_height,
             480
           );
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['maxzoom'] = $this->getSetting('max_zoom');
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['minzoom'] = $this->getSetting('min_zoom');
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_url'] = $this->getSetting('tilemap_url');
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_attribution'] = $this->getSetting('tilemap_attribution');
           $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/leaflet_strawberry';
           if (isset($item->_attributes)) {
             $elements[$delta] += ['#attributes' => []];

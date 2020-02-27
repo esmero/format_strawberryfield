@@ -40,14 +40,37 @@
                                 return L.marker (latlng);
                             },
                         });
+                        // The tilemap url in /{z}/{x}/{y}.png format. Can have a key after a ? if provided by the user.
+                        // Defaults, should never be needed, in case wants to get around of restricted forms?
+                        // See https://operations.osmfoundation.org/policies/tiles/ and consider contributing if you
+                        // are reading this.
+
+                        var $tilemap = {
+                            url:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+                        }
+                        var $minzoom = 2;
+                        var $maxzoom = 10;
+
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_url']) {
+                            $tilemap.url = drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_url'];
+                            $tilemap.attribution = drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_attribution'];
+                        }
+
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom']) {
+                            $minzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'];
+                        }
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom']) {
+                            $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'];
+                        }
 
 
                         // load a tile layer
-                        L.tileLayer('https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
+                        L.tileLayer($tilemap.url,
                             {
-                                attribution: 'Tiles by <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
-                                maxZoom: 17,
-                                minZoom: 2
+                                attribution: $tilemap.attribution,
+                                maxZoom: $maxzoom,
+                                minZoom: $minzoom
                             }).addTo(map);
 
 
