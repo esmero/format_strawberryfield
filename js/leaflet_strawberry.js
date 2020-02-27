@@ -66,7 +66,12 @@
                         // Does not work without HTTPS
                        //  map.locate({setView: true, maxZoom: 8});
 
-                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{onEachFeature:onEachFeature});
+                        var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
+                            onEachFeature: onEachFeature,
+                            pointToLayer: function (feature, latlng) {
+                                return L.marker(latlng);
+                            },
+                        });
 
                         /* var latLon = L.latLng(40.737, -73.923);
                         var bounds = latLon.toBounds(500); // 500 = metres
