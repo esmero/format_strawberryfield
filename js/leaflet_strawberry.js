@@ -59,8 +59,8 @@
 
                         map.on('layeradd', function (e) {
                             console.log(e.layer);
-                            //map.setView(geojsongroup.getBounds().getCenter());
-                            map.fitBounds(L.featureGroup(e.layer).getBounds());
+                            map.setView(geojsongroup.getBounds().getCenter());
+                            //map.fitBounds(L.featureGroup(e.layer).getBounds());
                         });
 
 
