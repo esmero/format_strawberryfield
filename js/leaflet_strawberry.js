@@ -72,9 +72,11 @@
                         if (Array.isArray($allgeojsons) && $allgeojsons.length && typeof($secondgeojson) != 'undefined') {
 
                             $allgeojsons.forEach(geojsonURL => {
-                                // TODO Provider should be passed by metadata at
-                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryleafletFormatter::viewElements
+                                // TODO Provider, rights, etc should be passed by metadata at
+                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMapFormatter
                                 // Deal with this for Beta3
+                                // Not a big issue if GeoJSON has that data. We can iterate over all Feature keys
+                                // And print them on the overlay?
                                 geojsonLayer.addUrl("geojsonURL");//we now have 2 layers
                             })
                         }
