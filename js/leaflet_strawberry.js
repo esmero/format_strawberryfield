@@ -27,8 +27,13 @@
                         $(this).width(drupalSettings.format_strawberryfield.leaflet[element_id]['width']);
                         // Defines our basic options for leaflet GEOJSON
 
+                        var $initialzoom = 5;
+
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] === 0) {
+                            $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'];
+                        }
                         // initialize the map
-                        var map = L.map(element_id).setView([40.1, -100], 4);
+                        var map = L.map(element_id).setView([40.1, -100], $initialzoom);
                         // Use current's user lat/long
                         // Does not work without HTTPS
                        //  map.locate({setView: true, maxZoom: 8});
@@ -49,7 +54,7 @@
                             url:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
                             attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
                         }
-                        var $minzoom = 2;
+                        var $minzoom = 0;
                         var $maxzoom = 10;
 
                         if (drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_url']) {
@@ -57,13 +62,12 @@
                             $tilemap.attribution = drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_attribution'];
                         }
 
-                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom']) {
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] === 0) {
                             $minzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'];
                         }
-                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom']) {
+                        if (drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] === 0) {
                             $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'];
                         }
-
 
                         // load a tile layer
                         L.tileLayer($tilemap.url,
@@ -73,12 +77,11 @@
                                 minZoom: $minzoom
                             }).addTo(map);
 
-
                         map.on('layeradd', function (e) {
                             if (markerArray.length > 0) {
                                 var geojsongroup = new L.featureGroup(markerArray);
                                 if (markerArray.length == 1) {
-                                    map.setView(geojsongroup.getBounds().getCenter(), 4);
+                                    map.setView(geojsongroup.getBounds().getCenter(), $initialzoom);
                                 }
                                 else {
                                     map.fitBounds(geojsongroup.getBounds());
@@ -86,7 +89,6 @@
 
                             }
                         });
-
 
                         var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
                         var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);

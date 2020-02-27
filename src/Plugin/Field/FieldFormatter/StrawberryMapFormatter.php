@@ -150,6 +150,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         'max_height' => 480,
         'max_zoom' => 10,
         'min_zoom' => 2,
+        'initial_zoom' => 5,
       ];
   }
 
@@ -332,14 +333,24 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#min' => 0,
           '#required' => TRUE
         ],
+        'initial_zoom' => [
+          '#type' => 'number',
+          '#title' => $this->t('Initial Zoom'),
+          '#description' => $this->t('Only applies when a single Point is in the map. When more fit to bounds apply.'),
+          '#default_value' => $this->getSetting('min_zoom'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 1,
+          '#max' => 22,
+        ],
         'min_zoom' => [
           '#type' => 'number',
           '#title' => $this->t('Minimum possible Zoom'),
           '#default_value' => $this->getSetting('min_zoom'),
           '#size' => 2,
           '#maxlength' => 2,
-          '#min' => 1,
-          '#max' => 8,
+          '#min' => 0,
+          '#max' => 22,
         ],
         'max_zoom' => [
           '#type' => 'number',
@@ -347,7 +358,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#default_value' => $this->getSetting('max_zoom'),
           '#size' => 2,
           '#maxlength' => 2,
-          '#min' => 1,
+          '#min' => 0,
           '#max' => 22,
         ],
       ] + parent::settingsForm($form, $form_state);
@@ -488,10 +499,11 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     }
 
     $summary[] = $this->t(
-      'Zoom Levels: Min(%min_zoom)/Max(%max_zoom)',
+      'Zoom Levels: Min(%min_zoom)|Max(%max_zoom)|Initial(%initial_zoom)',
       [
         '%min_zoom' => (int) $this->getSetting('min_zoom'),
         '%max_zoom' => $this->getSetting('max_zoom'),
+        '%initial_zoom' => $this->getSetting('initial_zoom'),
       ]
     );
 
@@ -620,6 +632,8 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           );
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['maxzoom'] = $this->getSetting('max_zoom');
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['minzoom'] = $this->getSetting('min_zoom');
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['initialzoom'] = $this->getSetting('initial_zoom');
+
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_url'] = $this->getSetting('tilemap_url');
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_attribution'] = $this->getSetting('tilemap_attribution');
           $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/leaflet_strawberry';
