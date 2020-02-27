@@ -30,7 +30,7 @@
                         var $initialzoom = 5;
 
                         if (drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] === 0) {
-                            $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'];
+                            $initialzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'];
                         }
                         // initialize the map
                         var map = L.map(element_id).setView([40.1, -100], $initialzoom);
