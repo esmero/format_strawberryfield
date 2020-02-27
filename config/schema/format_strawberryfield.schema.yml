@@ -369,7 +369,7 @@ field.formatter.settings.strawberry_map_formatter:
         metadataexposeentity:
           type: string
           label: 'If metadataexposeentity is being used'
-        geojsonturl:
+        geojsonurl:
           type: string
           label: 'If geojsonurl is being used'
     main_mediasource:
@@ -389,6 +389,9 @@ field.formatter.settings.strawberry_map_formatter:
       label: 'Max with for the Map. 0 to force 100% width'
     max_height:
       type: string
+    initial_zoom:
+      type: integer
+      label: 'Initial Zoom for the Map'
     max_zoom:
       type: integer
       label: 'Max Zoom for the Map'
