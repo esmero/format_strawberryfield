@@ -16,7 +16,6 @@
                     var markerArray = [];
 
                     function onEachFeature(feature, layer) {
-                        console.log(feature);
                         popUpFeature(feature, layer);
                     }
                     // Get the node uuid for this element
@@ -55,9 +54,13 @@
                         map.on('layeradd', function (e) {
                             if (markerArray.length > 0) {
                                 var geojsongroup = new L.featureGroup(markerArray);
-                                console.log(e.layer);
-                                //map.setView(geojsongroup.getBounds().getCenter(),8);
-                                map.fitBounds(geojsongroup.getBounds());
+                                if (markerArray.length == 1) {
+                                    map.setView(geojsongroup.getBounds().getCenter(), 4);
+                                }
+                                else {
+                                    map.fitBounds(geojsongroup.getBounds());
+                                }
+
                             }
                         });
 
