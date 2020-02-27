@@ -7,16 +7,49 @@
             $('.strawberry-leaflet-item[data-iiif-infojson]').once('attache_leaflet')
                 .each(function (index, value) {
 
+                    var $featurecount = 0;
+
+                    var style = {
+                        weight: 3,
+                        color: '#4b82bf',
+                        dashArray: '',
+                        fillOpacity: 0.8
+                    }
+
+                    function zoomToFeature(evt) {
+                        fitBounds(evt.target.getBounds());
+                    }
+                    function fitBounds(bounds){
+                        map.fitBounds(bounds);
+                    }
+                    function highlightFeature(evt) {
+                        var feature = evt.target;
+                        feature.setStyle(style);
+                        if (!L.Browser.ie && !L.Browser.opera) {
+                            feature.bringToFront();
+                        }
+                    }
+                    function resetHighlight(evt) {
+                        statesLayer.resetStyle(evt.target);
+                    }
+
+                    function popUpFeature(feature, layer){
+                        var popupText = feature.properties.name +"<br>";
+                        layer.bindPopup(popupText);
+                    }
 
                     function onEachFeature(feature, layer) {
                         console.log(feature);
-                        var popupContent = "<p>GeoJSON " +
-                            feature.geometry.type + "</p>";
-
-                        if (feature.properties && feature.properties.popupContent) {
-                            popupContent += feature.properties.popupContent;
+                        popUpFeature(feature, layer);
+                        $featurecount++
+                        if ($featurecount == 1) {
+                            map.setView(new L.LatLng(40.737, -73.923), 8);
                         }
-                        layer.bindPopup(popupContent);
+                        layer.on({
+                            mouseover:highlightFeature,
+                            mouseout:resetHighlight,
+                            click: zoomToFeature
+                        });
                     }
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
@@ -28,9 +61,10 @@
                         // Defines our basic options for leaflet GEOJSON
 
                         // initialize the map
-                        var map = L.map(element_id);
+                        var map = L.map(element_id).setView([40.1, -100], 4);
                         // Use current's user lat/long
-                        map.locate({setView: true, maxZoom: 8});
+                        // Does not work without HTTPS
+                       //  map.locate({setView: true, maxZoom: 8});
 
                         var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{onEachFeature:onEachFeature});
 
@@ -44,7 +78,7 @@
                             {
                                 attribution: 'Tiles by <a href="https://foundation.wikimedia.org/wiki/Maps_Terms_of_Use">Wikimedia</a>',
                                 maxZoom: 17,
-                                minZoom: 2
+                                minZoom: 4
                             }).addTo(map);
 
                         var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
