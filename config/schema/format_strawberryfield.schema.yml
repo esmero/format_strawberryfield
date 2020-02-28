@@ -271,7 +271,7 @@ field.formatter.settings.strawberry_pdf_formatter:
       label: 'First Page to display per PDF'
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
-  label: 'Specific Config for strawberry_pdf_formatter'
+  label: 'Specific Config for strawberry_mirador_formatter'
   mapping:
     iiif_base_url:
       type: string
@@ -343,6 +343,70 @@ format_strawberryfield.viewmodemapping_settings.mapping:
       type: integer
       label: 'Order in which this is evaluated'
 
+field.formatter.settings.strawberry_map_formatter:
+  type: mapping
+  label: 'Specific Config for strawberry_map_formatter'
+  mapping:
+    json_key_source:
+        type: string
+        label: 'JSON or JMESPATH that conditions rendering. If empty will always render'
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
+    metadataexposeentity:
+      type: string
+      label: 'Machine name of the exposed Metadata Config Entity endpoint'
+    mediasource:
+      type: mapping
+      label: 'Sources for GeoJSON URL'
+      mapping:
+        geojsonnodelist:
+          type: string
+          label: 'If geojsonnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        geojsonurl:
+          type: string
+          label: 'If geojsonurl is being used'
+    main_mediasource:
+      type: string
+      label: 'Primary GeoJSON Source used'
+    metadataexposeentity_source:
+      type: string
+      label: 'metadataexpose_entity machine name'
+    geojsonnodelist_json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing NODE ids or UUIDs from which to generate GeoJSON URLs'
+    geojsonurl_json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key containing GeoJSON URLs to display'
+    max_width:
+      type: string
+      label: 'Max with for the Map. 0 to force 100% width'
+    max_height:
+      type: string
+    initial_zoom:
+      type: integer
+      label: 'Initial Zoom for the Map'
+    max_zoom:
+      type: integer
+      label: 'Max Zoom for the Map'
+    min_zoom:
+      type: integer
+      label: 'Min Zoom for the Map'
+    tilemap_url:
+      type: string
+      label: 'Tile Map URL'
+    tilemap_attribution:
+      type: string
+      label: 'Tile Map Attribution String'
+    use_iiif_globals:
+      type: string
+      label: 'Whether to use global IIIF settings or not.'
 # Given any DS field plugin formatter key a type
 ds.field_plugin.*:
   type: mapping
