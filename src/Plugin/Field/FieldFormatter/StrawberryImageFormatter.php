@@ -264,12 +264,12 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   ];
 
                   // With Link
-                  if (boolval($this->getSetting('image_link')) === TRUE) {
+                  if (boolval($this->getSetting('image_link')) === TRUE && !$items->getEntity()->isNew()) {
                     $elements[$delta]['media_thumb' . $i] = [
                       '#type' => 'link',
                       '#title' => $image_render_array,
                       '#url' => $items->getEntity()->toUrl(),
-                      '#title' => $items->getEntity->label(),
+                      '#title' => $items->getEntity()->label(),
                       ];
                   }
                   else {
