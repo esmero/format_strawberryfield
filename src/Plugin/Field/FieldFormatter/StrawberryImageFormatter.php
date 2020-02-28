@@ -248,13 +248,14 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
 
                   $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
                   $elements[$delta]['media_thumb' . $i] = [
-                    '#theme' => 'image',
+                    '#theme' => 'image_formatter',
                     '#attributes' => [
                       'class' => ['field-iiif', 'image-iiif'],
                       'id' => 'thumb_' . $uniqueid,
-                      'src' => $iiifserverthumb,
-
                     ],
+                    '#item' => [
+                      'uri' => $iiifserverthumb,
+                      ],
                     '#alt' => $this->t(
                       'Thumbnail for @label',
                       ['@label' => $items->getEntity()->label()]
@@ -264,7 +265,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   ];
 
                   if (boolval($this->getSetting('image_link')) === TRUE) {
-                    $elements[$delta]['media_thumb' . $i]['#uri'] = $items->getEntity()->toUrl()->toString();
+                    $elements[$delta]['media_thumb' . $i]['#url'] = $items->getEntity()->toUrl()->toString();
                   }
 
                   if (isset($item->_attributes)) {
