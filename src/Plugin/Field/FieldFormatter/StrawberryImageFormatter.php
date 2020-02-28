@@ -264,7 +264,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   ];
 
                   if (boolval($this->getSetting('image_link')) === TRUE) {
-                    $elements[$delta]['media_thumb' . $i]['#uri'] = $items->getEntity()->toUrl();
+                    $elements[$delta]['media_thumb' . $i]['#uri'] = $items->getEntity()->toUrl()->toString();
                   }
 
                   if (isset($item->_attributes)) {
