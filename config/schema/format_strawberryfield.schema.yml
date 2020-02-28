@@ -55,13 +55,15 @@ field.formatter.settings.strawberry_image_formatter:
       type: string
       label: 'Whether to use global IIIF settings or not.'
     number_images:
-      type: integer
-    images_type:
+      type: string
+    image_type:
       type: string
     quality:
       type: string
     rotation:
       type: string
+    image_link:
+      type: boolean
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'

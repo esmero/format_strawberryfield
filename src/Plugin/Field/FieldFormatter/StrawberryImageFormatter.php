@@ -45,6 +45,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
+      'image_link' =>  TRUE,
     ];
   }
 
@@ -66,6 +67,11 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#size' => 2,
         '#maxlength' => 2,
         '#min' => 0,
+      ],
+      'image_link' => [
+        '#type' => 'checkbox',
+        '#title' => t('Link this image to the Full Node'),
+        '#default_value' => $this->getSetting('image_link'),
       ],
       'max_width' => [
         '#type' => 'number',
@@ -113,6 +119,9 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+    $summary[] = $this->t('Link to Node? %value', [
+      '%value' => boolval($this->getSetting('image_link')) === TRUE ? "Yes." : "No",
+    ]);
 
     return $summary;
   }
@@ -253,6 +262,11 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                     '#width' => $max_width,
                     '#height' => $max_height,
                   ];
+
+                  if (boolval($this->getSetting('image_link')) === TRUE) {
+                    $elements[$delta]['media_thumb' . $i]['#url'] = $items->getEntity()->toUrl();
+                  }
+
                   if (isset($item->_attributes)) {
                     $elements[$delta] += ['#attributes' => []];
                     $elements[$delta]['#attributes'] += $item->_attributes;
