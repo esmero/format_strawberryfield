@@ -269,6 +269,9 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                       '#type' => 'link',
                       '#title' => $image_render_array,
                       '#url' => $items->getEntity()->toUrl(),
+                      '#attributes' => [
+                        'alt' => $items->getEntity()->label()
+                        ]
                       ];
                   }
                   else {
