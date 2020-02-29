@@ -20,7 +20,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
  *
  * @FieldFormatter(
  *   id = "strawberry_image_formatter",
- *   label = @Translation("Strawberry Field Image Formatter for IIIF media"),
+ *   label = @Translation("Strawberry Field Simple Image Formatter using IIIF"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryImageFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -45,6 +45,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       'number_images' => 1,
       'quality' => 'default',
       'rotation' => '0',
+      'image_link' =>  TRUE,
     ];
   }
 
@@ -66,6 +67,11 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '#size' => 2,
         '#maxlength' => 2,
         '#min' => 0,
+      ],
+      'image_link' => [
+        '#type' => 'checkbox',
+        '#title' => t('Link this image to the Full Node'),
+        '#default_value' => $this->getSetting('image_link'),
       ],
       'max_width' => [
         '#type' => 'number',
@@ -113,6 +119,9 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+    $summary[] = $this->t('Link to Node? %value', [
+      '%value' => boolval($this->getSetting('image_link')) === TRUE ? "Yes." : "No",
+    ]);
 
     return $summary;
   }
@@ -238,7 +247,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   }
 
                   $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
-                  $elements[$delta]['media_thumb' . $i] = [
+                  $image_render_array = [
                     '#theme' => 'image',
                     '#attributes' => [
                       'class' => ['field-iiif', 'image-iiif'],
@@ -253,6 +262,22 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                     '#width' => $max_width,
                     '#height' => $max_height,
                   ];
+
+                  // With Link
+                  if (boolval($this->getSetting('image_link')) === TRUE && !$items->getEntity()->isNew()) {
+                    $elements[$delta]['media_thumb' . $i] = [
+                      '#type' => 'link',
+                      '#title' => $image_render_array,
+                      '#url' => $items->getEntity()->toUrl(),
+                      '#attributes' => [
+                        'alt' => $items->getEntity()->label()
+                        ]
+                      ];
+                  }
+                  else {
+                    $elements[$delta]['media_thumb' . $i] = $image_render_array;
+                  }
+
                   if (isset($item->_attributes)) {
                     $elements[$delta] += ['#attributes' => []];
                     $elements[$delta]['#attributes'] += $item->_attributes;
@@ -260,33 +285,20 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                     // formatter output and should not be rendered in the field template.
                     unset($item->_attributes);
                   }
-                  // @TODO deal with a lot of Media single strawberryfield
-                  // Idea would be to allow a setting that says, A) all same viewer(aggregate)
-                  // B) individual viewers for each?
-                  // C) only first one?
-                  // We will assign a group based on the UUID of the node containing this
-                  // to idenfity all the divs that we will create. And only first one will be the container in case of many?
-                  // so a jquery selector that uses that group as filter for a search.
-                  // Drupal JS settings get accumulated. So in a single search results site we will have for each
-                  // Formatter one passed. Reason we use 'innode' array using our $uniqueid
-                  // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                  $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
-                  $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 }
-
               }
               else {
                 // @TODO Deal with no access here
                 // Should we put a thumb? Just hide?
                 // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['media'.$i] = [
+                $elements[$delta]['media_thumb'.$i] = [
                   '#markup' => '<i class="fas fa-times-circle"></i>',
                   '#prefix' => '<span>',
                   '#suffix' => '</span>',
                 ];
               }
             } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media'.$i] = [
+              $elements[$delta]['media_thumb'.$i] = [
                 '#markup' => 'Non managed '.$mediaitem['url'],
                 '#prefix' => '<pre>',
                 '#suffix' => '</pre>',
