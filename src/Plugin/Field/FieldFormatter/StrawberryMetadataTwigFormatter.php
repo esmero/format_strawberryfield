@@ -158,7 +158,6 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
 
     return [
       'customtext' => [
-        '#type' => 'html',
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
       ],
       'metadatadisplayentity_id' => [
