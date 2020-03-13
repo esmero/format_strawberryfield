@@ -599,7 +599,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         if (!empty($main_geojsonurl)) {
 
           $groupid = 'iiif-' . $item->getName(
-            ) . '-' . $nodeuuid . '-' . $delta . '-media';
+            ) . '-' . $nodeuuid . '-' . $delta . '-map';
           $htmlid = $groupid;
 
           $elements[$delta]['media'] = [
