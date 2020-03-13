@@ -12,7 +12,9 @@
                     if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
 
                         $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
-                        $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+                        if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
+                            $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+                        }
                         // Defines our basic options for Mirador IIIF.
                         var $options = {
                             id: element_id,
