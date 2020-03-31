@@ -99,15 +99,21 @@ BookReader.prototype.parseSequence = function (sequenceId) {
 
     var tmpdata = [];
     jQuery.each(self.IIIFsequence.imagesList, function(index,image) {
+        var imageuri = null;
+        if (image.serviceUrl != null) {
+            imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
+        } else {
+            imageuri = image.imageUrl;
+        }
+
         tmpdata.push(
             {
                 width: image.width,
                 height: image.height,
-                uri: image.imageUrl + "/full/" + image.width + ",/0/default.jpg",
+                uri: imageuri,
                 pageNum: index+1,
-                infojson: image.imageUrl + "/info.json",
+                infojson: image.serviceUrl + "/info.json",
             });
-
     });
     self.options.data.push(tmpdata);
     delete self.jsonLd;
@@ -128,7 +134,6 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                         imageObj.canvasHeight = canvas.height;
 
                         if (!(/#xywh/).test(image.on)) {
-
                             imagesList.push(imageObj);
                         }
                     }
@@ -153,10 +158,20 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     }
 
     function getImageProperties(image) {
+        var serviceUrl = null;
+        if (image.hasOwnProperty('service') && isValidHttpUrl(image.service['@id'])) {
+            serviceUrl = image.service['@id'].replace(/\/$/, '');
+        }
+        else {
+            serviceUrl = null;
+        }
+
         var imageObj = {
             height:       image.height || 0,
             width:        image.width || 0,
-            imageUrl:     image.service['@id'].replace(/\/$/, ''),
+            imageUrl:     image['@id'],
+            imageGetArgument: getURLArgument(image['@id']),
+            serviceUrl:   serviceUrl,
         };
 
         imageObj.aspectRatio  = (imageObj.width / imageObj.height) || 1;
@@ -164,6 +179,31 @@ BookReader.prototype.parseSequence = function (sequenceId) {
         return imageObj;
     }
 
+    /* Check if a string can be converted into an URL object */
+    function isValidHttpUrl(string) {
+        let url;
+
+        try {
+            url = new URL(string);
+        } catch (_) {
+            return false;
+        }
+
+        return url.protocol === "http:" || url.protocol === "https:";
+    }
+
+    /* returns the search string */
+    function getURLArgument(string) {
+        let url;
+
+        try {
+            url = new URL(string);
+        } catch (_) {
+            return '';
+        }
+
+        return url.search
+    }
 
 };
 
