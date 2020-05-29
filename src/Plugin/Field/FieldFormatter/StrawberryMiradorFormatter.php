@@ -520,7 +520,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       if (!empty($main_manifesturl)) {
 
         $groupid = 'iiif-' . $item->getName(
-          ) . '-' . $nodeuuid . '-' . $delta . '-media';
+          ) . '-' . $nodeuuid . '-' . $delta . '-mirador';
         $htmlid = $groupid;
 
         $elements[$delta]['media'] = [
@@ -535,7 +535,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
               'container',
             ],
             'style' => "width:{$max_width_css}; height:{$max_height}px",
-            'width' => $max_width,
             'height' => $max_height,
           ],
         ];
