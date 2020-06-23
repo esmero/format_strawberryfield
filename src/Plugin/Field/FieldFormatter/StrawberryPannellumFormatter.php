@@ -352,6 +352,9 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   ];
                   // Let's check if the user provided in-metadata settings for the viewer
                   // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
+
+                  // @TODO. We can maybe have an option where $mediaitemkey is not set
+                  // And then have general settings for every image?
                   if (isset($jsondata[$setttings_key]) &&
                     isset($jsondata[$setttings_key][$this->pluginId]) &&
                     isset($jsondata[$setttings_key][$this->pluginId][$mediaitemkey]) &&
