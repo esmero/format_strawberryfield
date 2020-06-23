@@ -200,6 +200,8 @@ field.formatter.settings.strawberry_pannellum_formatter:
       type: string
     json_key_hotspots:
       type: string
+    json_key_settings:
+      type: string
     json_key_multiscene:
       type: string
     panorama_type:
