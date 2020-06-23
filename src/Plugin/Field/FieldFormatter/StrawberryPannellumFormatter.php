@@ -44,6 +44,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         'max_width' => 600,
         'max_height' => 400,
         'panorama_type' => 'equirectangular',
+        'json_key_settings' => 'as:formatter',
         'image_type' => 'jpg',
         'number_images' => 1,
         // todo: quality, rotation, and hotspotdebug not used but I put them in schema for now
@@ -79,6 +80,11 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
             'If found, JSON Key from where to fetch Media URLs will be used to load images from other Digital Object Panoramas'
           ),
           '#default_value' => $this->getSetting('json_key_multiscene'),
+        ],
+        'json_key_settings' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Pannellum Viewer Settings'),
+          '#default_value' => $this->getSetting('json_key_settings'),
         ],
         'number_images' => [
           '#type' => 'number',
@@ -169,6 +175,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $multiscene = trim($this->getSetting('json_key_multiscene'));
     $settings_hotspotdebug = $this->getSetting('hotSpotDebug');
     $settings_autoload = $this->getSetting('autoLoad');
+    $setttings_key = $this->getSetting('json_key_settings');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -233,7 +240,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         // Order Images based on a given 'sequence' key
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitem) {
+        foreach ($jsondata[$key] as $mediaitemkey => $mediaitem) {
           $i++;
           if ($i > $number_images) {
             break;
@@ -343,6 +350,23 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     'hotSpotDebug' => $settings_hotspotdebug,
                     'autoLoad' => $settings_autoload,
                   ];
+                  // Let's check if the user provided in-metadata settings for the viewer
+                  // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
+                  if (isset($jsondata[$setttings_key]) &&
+                    isset($jsondata[$setttings_key][$this->pluginId]) &&
+                    isset($jsondata[$setttings_key][$this->pluginId][$mediaitemkey]) &&
+                    isset($jsondata[$setttings_key][$this->pluginId][$mediaitemkey]['settings'])
+                    ) {
+                    // We only want a few settings here.
+                    // Question is do we allow everything pannellum can?
+                    // Or do we control this?
+                    $viewer_settings = $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'];
+                    $viewer_settings = array_merge($viewer_settings, $jsondata[$setttings_key][$this->pluginId][$mediaitemkey]['settings']);
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = $viewer_settings;
+                  }
+
+
+
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['width'] = $max_width_css;
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['height'] = max(
