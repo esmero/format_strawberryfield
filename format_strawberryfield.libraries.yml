@@ -185,3 +185,12 @@ leaflet_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
+
+replayweb:
+  version: 1.0
+  license:
+    name: AGPLv3
+    url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/replaywebpage@1.0.0/ui.js: { external: true, minified: true, preprocess: false}
