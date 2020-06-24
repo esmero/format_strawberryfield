@@ -87,6 +87,9 @@ function format_strawberryfield_theme() {
   ];
 }
 
+/**
+ * Implements hook__file_mimetype_mapping_alter().
+ */
 function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
   // Add relevant Repository Mimetypes missing from D8
   $mapping['extensions']['obj'] = 'obj_model_mimetype';
