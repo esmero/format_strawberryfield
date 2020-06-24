@@ -21,7 +21,7 @@ use Drupal\Core\Url;
  *
  * @FieldFormatter(
  *   id = "strawberry_warc_formatter",
- *   label = @Translation("Strawberry Warc Formatter using replay.web embeded player"),
+ *   label = @Translation("Strawberry Warc Formatter using replay.web embedded player"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryWarcFormatter",
  *   field_types = {
  *     "strawberryfield_field"
