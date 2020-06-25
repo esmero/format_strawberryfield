@@ -125,3 +125,10 @@ format_strawberryfield.replayweb:
     _controller: '\Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay'
   requirements:
     _permission: 'access content'
+format_strawberryfield.replayweb_index:
+  path: '/replay/index.html'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\JsWorkerController::serveindex'
+  requirements:
+    _permission: 'access content'
