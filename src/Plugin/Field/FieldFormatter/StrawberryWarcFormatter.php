@@ -39,10 +39,11 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
   public static function defaultSettings() {
     return
       parent::defaultSettings() + [
-      'json_key_source' => 'as:document',
-      'warcurl_json_key_source' => '',
-      'max_width' => 0,
-      'max_height' => 520,
+        'json_key_source' => 'as:document',
+        'json_key_starting_url' => 'web_url',
+        'warcurl_json_key_source' => '',
+        'max_width' => 0,
+        'max_height' => 520,
     ];
   }
 
@@ -53,8 +54,14 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
     return [
         'json_key_source' => [
           '#type' => 'textfield',
-          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#title' => t('JSON Key from where to fetch Media URLs (WARC files)'),
           '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE,
+        ],
+        'json_key_starting_url' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch the first loaded URL for a WARC file.'),
+          '#default_value' => $this->getSetting('json_key_starting_url'),
           '#required' => TRUE,
         ],
         'max_width' => [
@@ -78,6 +85,14 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
           '#min' => 0,
           '#required' => TRUE
         ],
+        'navbar' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Enable navbars and menus.'),
+          '#description' => $this->t('Check to display full navigation bar inside the replayweb widget.'),
+          '#required' => FALSE,
+          '#default_value' => $this->getSetting('navbar') ?  $this->getSetting('navbar') : TRUE,
+          ],
+
         'warcurl_json_key_source' => [
           '#type' => 'textfield',
           '#title' => t('JSON key containing a list or external Warc URLs. Leave empty to skip'),
@@ -120,9 +135,12 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $url_key = $this->getSetting('json_key_starting_url');
+    $navbar = $this->getSetting('navbar');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
-    $number_images =  $this->getSetting('number_images');
+    //@TODO allow more than one?
+    $number_warcs =  $this->getSetting('number_warcs');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
@@ -227,6 +245,30 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
                     'style' => "width:{$max_width_css}; height:{$max_height}px; display:block",
                    ]
                   ];
+
+                  if (isset($jsondata[$url_key])) {
+                    if (is_array($jsondata[$url_key]) &&
+                      isset($jsondata[$url_key][$i]) &&
+                      is_string($jsondata[$url_key][$i]) &&
+                      !empty(trim($jsondata[$url_key][$i]))
+                    ) {
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key][$i];
+
+                    } elseif (!is_array($jsondata[$url_key]) &&
+                      !empty(trim($jsondata[$url_key]))
+                    ){
+                      // This is if there is a single URL. WE assume its for all WARC files.
+                      // But let's be honest. We go for a single WARC file for now
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key];
+                    }
+
+                  } else {
+                    if (!$navbar) {
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['view'] = "pages";
+                    }
+                  }
+
+
                   $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/replayweb';
                   if (isset($item->_attributes)) {
                     $elements[$delta] += ['#attributes' => []];
