@@ -190,7 +190,13 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
           if ($i > 1) {
             break;
           }
-          if (isset($mediaitem['type']) && $mediaitem['dr:mimetype'] == 'application/warc') {
+          if (isset($mediaitem['type']) && (
+            $mediaitem['dr:mimetype'] == 'application/warc' ||
+            $mediaitem['dr:mimetype'] == 'application/zip' ||
+            $mediaitem['dr:mimetype'] == 'application/gzip' ||
+            $mediaitem['dr:mimetype'] == ' application/x-gzip'
+            )
+          ) {
             if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
               // @TODO we can refactor a lot here and move it to base methods
