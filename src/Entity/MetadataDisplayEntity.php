@@ -354,6 +354,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     if (!isset($context['data']) || !is_array($context['data']) || empty($context['data'])) {
       throw new InvalidArgumentException('Processing a Metadata Display requires a valid "data" structure to be passed');
     }
+    $context = $context + $this->getTwigDefaultContext();
     $twigtemplate = $this->get('twig')->getValue();
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
     // @TODO should we have a custom theme hint here?
@@ -377,6 +378,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // leaking that metadata/early rendering when using it in a Cacheable
     // response Controller.
     // @See \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController.
+
+    // Complement $context with default one
+    $context = $context + $this->getTwigDefaultContext();
     $twigtemplate = $this->get('twig')->getValue();
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
     $rendered = $this->twigEnvironment()->renderInline(
@@ -437,6 +441,23 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       }
     }
     return $variables;
+  }
+
+
+  /**
+   * Provides default Context so we can get common values
+   *
+   * @return array
+   */
+  private function getTwigDefaultContext() {
+
+    $context = [];
+    $context['is_front'] = \Drupal::service('path.matcher')->isFrontPage();
+    $context['language'] = \Drupal::languageManager()->getCurrentLanguage();
+    $user = \Drupal::currentUser();
+    $context['is_admin'] = $user->hasPermission('access administration pages');
+    $context['logged_in'] = $user->isAuthenticated();
+    return $context;
   }
 
 }
