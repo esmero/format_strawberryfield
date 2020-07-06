@@ -114,3 +114,21 @@ format_strawberryfield.view_mode_mapping_settings_form:
     _permission: 'access administration pages'
   options:
     _admin_route: TRUE
+
+# Direct File access for replayweb JS Worker
+# This file will be called by replayweb library and needs to exist in that exact path
+# Reason why we went for a controller. Just an overhead!
+format_strawberryfield.replayweb:
+  path: '/replay/sw.js'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay'
+  requirements:
+    _permission: 'access content'
+format_strawberryfield.replayweb_index:
+  path: '/replay/index.html'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\JsWorkerController::serveindex'
+  requirements:
+    _permission: 'access content'
