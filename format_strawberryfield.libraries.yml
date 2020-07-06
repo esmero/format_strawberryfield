@@ -194,4 +194,4 @@ replayweb:
     url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/replaywebpage@1.0.0/ui.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/replaywebpage@1.0.1/ui.js: { external: true, minified: true, preprocess: false}
