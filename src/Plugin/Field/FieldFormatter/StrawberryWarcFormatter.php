@@ -168,7 +168,7 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       /* Expected structure of an Media item inside JSON
-      "as:application": {
+      "as:document": {
          "urn:uuid:1170c27d-431e-46e2-b003-3fb51cfcd166": {
          "dr:fid": 66, // Drupal's FID
          "dr:for": "add_some_warc_files", // The webform element key that generated this one

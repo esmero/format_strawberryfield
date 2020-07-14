@@ -14,6 +14,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -54,46 +55,46 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE
-      ],
-      'number_images' => [
-        '#type' => 'number',
-        '#title' => $this->t('Number of images'),
-        '#default_value' => $this->getSetting('number_images'),
-        '#size' => 2,
-        '#maxlength' => 2,
-        '#min' => 0,
-      ],
-      'image_link' => [
-        '#type' => 'checkbox',
-        '#title' => t('Link this image to the Full Node'),
-        '#default_value' => $this->getSetting('image_link'),
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE,
+        ],
+        'number_images' => [
+          '#type' => 'number',
+          '#title' => $this->t('Number of images'),
+          '#default_value' => $this->getSetting('number_images'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 0,
+        ],
+        'image_link' => [
+          '#type' => 'checkbox',
+          '#title' => t('Link this image to the Full Node'),
+          '#default_value' => $this->getSetting('image_link'),
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE,
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE,
+        ]
+      ] + parent::settingsForm($form, $form_state);
   }
 
 
@@ -199,7 +200,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
                 $iiifidentifier = urlencode(
-                  file_uri_target($file->getFileUri())
+                  StreamWrapperManager::getTarget($file->getFileUri())
                 );
 
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
