@@ -100,7 +100,52 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     var tmpdata = [];
     jQuery.each(self.IIIFsequence.imagesList, function(index,image) {
         var imageuri = null;
+        console.log(image.serviceUrl +' called with argument'+  image.imageGetArgument);
+        var infojson = null;
+
+
+        // If serviceURL is null then we can not call infoJSON which also means, if width and height are not
+        // present, render will fail
+        // Options we have here
+        // If either width or height is missing, use canvas ratio, which will have to require if all fails then simply
+        // use the default 4:3 and log into console so the user/admin/webmaster knows this is happening
+        // Example of what can happen with Service Level 0 and no correct dimensions
+        /* aspectRatio: Infinity
+
+        canvasHeight: 4
+
+        canvasWidth: 3
+
+        height: 0
+
+        imageGetArgument: "?page=2"
+
+        imageUrl: "http://localhost:8183/iiif/2/65f%2Fapplication-williams-college-yearbook-01-d708c989-229b-4ba9-a547-ed2faf568e0f.pdf/full/full/0/default.jpg…"
+
+        serviceUrl: null
+
+        width: 800
+        */
+
+        if (image.width == 0 || image.width == null)  {
+            if ((image.canvasWidth != 0 && image.canvasWidth != null) &&
+                (image.canvasHeight != 0 && image.canvasHeight != null)
+            ) {
+                // We have a full ration
+                var aspectRatio  = (image.canvasWidth / image.canvasHeight) || 1;
+                image.width =  Math.round(image.height * aspectRatio);
+            } else {
+                console.log('canvas is incorrect and has no ratio for '+ image.imageUrl);
+                console.log('usign a fallback of 4:3, please correct your manifest');
+
+            }
+        }
+        // infojson will be empty if service URL is empty
+
+
+
         if (image.serviceUrl != null) {
+            infojson = image.serviceUrl + "/info.json";
             imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
         } else {
             imageuri = image.imageUrl;
@@ -112,10 +157,11 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                 height: image.height,
                 uri: imageuri,
                 pageNum: index+1,
-                infojson: image.serviceUrl + "/info.json",
+                infojson: infojson,
             });
     });
     self.options.data.push(tmpdata);
+    console.log(self.options.data);
     delete self.jsonLd;
 
     function getImagesList(sequence) {
@@ -291,28 +337,35 @@ BookReader.prototype.getRemoteInfoJson = function(index) {
     var remotedimensions = {};
 
     var infojsonurl = this.getPageProp(index, 'infojson');
+    if (infojsonurl == null) {
+        console.log('Service Level 0, Defaulting to fixed Dimensions ' + self.options.maxWidth + ' px')
+        console.log(this.getPageProp(index, 'width'));
+        console.log(this.getPageProp(index, 'height'));
+        remotedimensions.width = self.options.maxWidth;
+        remotedimensions.height = self.options.maxWidth;
+    } else {
+        jQuery.ajax({
+            url: infojsonurl.replace(/^\s+|\s+$/g, ''),
+            dataType: 'json',
+            async: false,
+            success: function (infojson) {
+                remotedimensions.width = infojson.width;
+                remotedimensions.height = infojson.height;
 
-    jQuery.ajax({
-        url: infojsonurl.replace(/^\s+|\s+$/g, ''),
-        dataType: 'json',
-        async: false,
-        success: function (infojson) {
-            remotedimensions.width = infojson.width;
-            remotedimensions.height = infojson.height;
+            },
 
-        },
-
-        error: function () {
-            console.log('Failed loading ' + infojsonurl);
-            // default to our only known number
-            // Chances whole manifest is wrong
-            console.log('Defaulting to fixed Dimensions ' + self.options.maxWidth + ' px')
-            remotedimensions.width = self.options.maxWidth;
-            remotedimensions.height = self.options.maxWidth;
-        }
+            error: function () {
+                console.log('Failed loading ' + infojsonurl);
+                // default to our only known number
+                // Chances whole manifest is wrong
+                console.log('Defaulting to fixed Dimensions ' + self.options.maxWidth + ' px')
+                remotedimensions.width = self.options.maxWidth;
+                remotedimensions.height = self.options.maxWidth;
+            }
 
 
-    });
+        });
+    }
 
     return remotedimensions;
 }
