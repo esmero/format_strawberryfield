@@ -132,7 +132,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                 console.log('usign a fallback of 3:4, please correct your manifest');
                 image.width = Math.round(image.height * 0.75);
             }
-        } else if (image.heigth == 0 || image.height == null) {
+        } else if (image.height == 0 || image.height == null) {
             if ((image.canvasWidth != 0 && image.canvasWidth != null) &&
                 (image.canvasHeight != 0 && image.canvasHeight != null)
             ) {
