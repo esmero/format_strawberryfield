@@ -100,7 +100,6 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     var tmpdata = [];
     jQuery.each(self.IIIFsequence.imagesList, function(index,image) {
         var imageuri = null;
-        console.log(image.serviceUrl + ' called with argument' + image.imageGetArgument);
         var infojson = null;
 
         // If serviceURL is null then we can not call infoJSON which also means, if width and height are not
