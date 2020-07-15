@@ -138,9 +138,9 @@ BookReader.prototype.parseSequence = function (sequenceId) {
             ) {
                 // We have a full ration
                 var aspectRatio = (image.canvasWidth / image.canvasHeight) || 0.75;
-                image.height = Math.round(image.width * aspectRatio);
+                image.height = Math.round(image.width / aspectRatio);
             } else {
-                image.height = Math.round(image.width * 0.75);
+                image.height = Math.round(image.width / 0.75);
                 console.log('canvas is incorrect and has no ratio for ' + image.imageUrl);
                 console.log('usign a fallback of 3:4, please correct your manifest');
             }
