@@ -165,7 +165,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
             });
     });
     self.options.data.push(tmpdata);
-    console.log(self.options.data);
+    
     delete self.jsonLd;
 
     function getImagesList(sequence) {
