@@ -12,7 +12,9 @@
                     if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
 
                         $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
-                        $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+                        if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
+                            $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+                        }
                         // Defines our basic options for Mirador IIIF.
                         var $options = {
                             id: element_id,
@@ -41,7 +43,7 @@
                         }
                         //@TODO add an extra Manifests key with every other one so people can select the others.
                         var miradorInstance = Mirador.viewer($options);
-                        console.log('initializing Mirador 3.0.0-beta.4')
+                        console.log('initializing Mirador 3.0.0-RC3')
                     }
                 })}}
 })(jQuery, Drupal, drupalSettings, window.Mirador);
