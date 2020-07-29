@@ -13,6 +13,7 @@ use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -192,9 +193,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
               }
               if ($this->checkAccess($file)) {
                 $iiifidentifier = urlencode(
-                  file_uri_target($file->getFileUri())
+                  StreamWrapperManager::getTarget($file->getFileUri())
                 );
-                //@TODO replace with  \Drupal::service('stream_wrapper_manager')->getTarget()
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
                   continue;
                 }

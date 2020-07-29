@@ -92,8 +92,13 @@ function format_strawberryfield_theme() {
  */
 function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
   // Add relevant Repository Mimetypes missing from D8
-  $mapping['extensions']['obj'] = 'obj_model_mimetype';
-  // @see https://www.iana.org/assignments/media-types/media-types.xhtml
   $mapping['mimetypes']['obj_model_mimetype'] = 'model/obj';
+  $mapping['mimetypes']['webarchive_mimetype'] = 'application/warc';
+  $mapping['extensions']['obj'] = 'obj_model_mimetype';
+  $mapping['extensions']['warc'] = 'webarchive_mimetype';
+  $mapping['extensions']['wacz'] = 'webarchive_mimetype';
+  $mapping['extensions']['warc.gz'] = 'webarchive_mimetype';
+  // @see https://www.iana.org/assignments/media-types/media-types.xhtml
+
 
 }

@@ -15,6 +15,7 @@ use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\file\FileInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -260,7 +261,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
                 $iiifidentifier = urlencode(
-                  file_uri_target($file->getFileUri())
+                  StreamWrapperManager::getTarget($file->getFileUri())
                 );
 
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {

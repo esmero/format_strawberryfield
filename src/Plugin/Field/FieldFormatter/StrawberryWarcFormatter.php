@@ -12,17 +12,17 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
-use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\Core\Url;
 
 /**
  * Simplistic Strawberry Field formatter.
  *
  * @FieldFormatter(
- *   id = "strawberry_image_formatter",
- *   label = @Translation("Strawberry Field Simple Image Formatter using IIIF"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryImageFormatter",
+ *   id = "strawberry_warc_formatter",
+ *   label = @Translation("Strawberry Warc Formatter using replay.web embedded player"),
+ *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryWarcFormatter",
  *   field_types = {
  *     "strawberryfield_field"
  *   },
@@ -31,7 +31,7 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  *   }
  * )
  */
-class StrawberryImageFormatter extends StrawberryBaseFormatter {
+class StrawberryWarcFormatter extends StrawberryBaseFormatter {
   
   /**
    * {@inheritdoc}
@@ -39,14 +39,11 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
   public static function defaultSettings() {
     return
       parent::defaultSettings() + [
-      'json_key_source' => 'as:image',
-      'max_width' => 180,
-      'max_height' => 0,
-      'image_type' => 'jpg',
-      'number_images' => 1,
-      'quality' => 'default',
-      'rotation' => '0',
-      'image_link' =>  TRUE,
+        'json_key_source' => 'as:document',
+        'json_key_starting_url' => 'web_url',
+        'warcurl_json_key_source' => '',
+        'max_width' => 0,
+        'max_height' => 520,
     ];
   }
 
@@ -57,32 +54,26 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
     return [
         'json_key_source' => [
           '#type' => 'textfield',
-          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#title' => t('JSON Key from where to fetch Media URLs (WARC files)'),
           '#default_value' => $this->getSetting('json_key_source'),
           '#required' => TRUE,
         ],
-        'number_images' => [
-          '#type' => 'number',
-          '#title' => $this->t('Number of images'),
-          '#default_value' => $this->getSetting('number_images'),
-          '#size' => 2,
-          '#maxlength' => 2,
-          '#min' => 0,
-        ],
-        'image_link' => [
-          '#type' => 'checkbox',
-          '#title' => t('Link this image to the Full Node'),
-          '#default_value' => $this->getSetting('image_link'),
+        'json_key_starting_url' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch the first loaded URL for a WARC file.'),
+          '#default_value' => $this->getSetting('json_key_starting_url'),
+          '#required' => TRUE,
         ],
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
           '#default_value' => $this->getSetting('max_width'),
           '#size' => 5,
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
-          '#required' => TRUE,
+          '#required' => TRUE
         ],
         'max_height' => [
           '#type' => 'number',
@@ -92,8 +83,21 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
-          '#required' => TRUE,
-        ]
+          '#required' => TRUE
+        ],
+        'navbar' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Enable navbars and menus.'),
+          '#description' => $this->t('Check to display full navigation bar inside the replayweb widget.'),
+          '#required' => FALSE,
+          '#default_value' => $this->getSetting('navbar') ?  $this->getSetting('navbar') : TRUE,
+          ],
+
+        'warcurl_json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON key containing a list or external Warc URLs. Leave empty to skip'),
+          '#default_value' => $this->getSetting('warcurl_json_key_source'),
+        ],
       ] + parent::settingsForm($form, $form_state);
   }
 
@@ -104,13 +108,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
   public function settingsSummary() {
     $summary = parent::settingsSummary();
     if ($this->getSetting('json_key_source')) {
-      $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
+      $summary[] = $this->t('WARC file fetched from JSON "%json_key_source" key', [
         '%json_key_source' => $this->getSetting('json_key_source'),
-      ]);
-    }
-    if ($this->getSetting('number_images')) {
-      $summary[] = $this->t('Number of images: "%number"', [
-        '%number' => $this->getSetting('number_images'),
       ]);
     }
     $summary[] = $this->t(
@@ -120,9 +119,11 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
-    $summary[] = $this->t('Link to Node? %value', [
-      '%value' => boolval($this->getSetting('image_link')) === TRUE ? "Yes." : "No",
-    ]);
+    if ($this->getSetting('warcurl_json_key_source')) {
+      $summary[] = $this->t('External WARC file URLs fetched from JSON "%json_key_source" key', [
+        '%json_key_source' => $this->getSetting('warcurl_json_key_source'),
+      ]);
+    }
 
     return $summary;
   }
@@ -134,9 +135,12 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
+    $url_key = $this->getSetting('json_key_starting_url');
+    $navbar = $this->getSetting('navbar');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
-    $number_images =  $this->getSetting('number_images');
+    //@TODO allow more than one?
+    $number_warcs =  $this->getSetting('number_warcs');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
@@ -164,28 +168,35 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       /* Expected structure of an Media item inside JSON
-      "as:image": {
-         "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-         "dr:fid": 32, // Drupal's FID
-         "dr:for": "add_some_master_images", // The webform element key that generated this one
-         "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
-         "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
-         "type": "Image",
+      "as:document": {
+         "urn:uuid:1170c27d-431e-46e2-b003-3fb51cfcd166": {
+         "dr:fid": 66, // Drupal's FID
+         "dr:for": "add_some_warc_files", // The webform element key that generated this one
+         "url": "s3:\/\/f23\/google.com-crawl-1999.warc",
+         "name": "Google Crawl we did back on 1999.warc",
+         "type": "Application",
+         "mimetype: "application/warc"
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
       $i = 0;
       if (isset($jsondata[$key])) {
-        // Order Images based on a given 'sequence' key
+        // Order Files based on a given 'sequence' key
         $ordersubkey = 'sequence';
+        // We are taking a single one here for now
         StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
         foreach ($jsondata[$key] as $mediaitem) {
           $i++;
-          if ($i > $number_images) {
+          if ($i > 1) {
             break;
           }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
+          if (isset($mediaitem['type']) && (
+            $mediaitem['dr:mimetype'] == 'application/warc' ||
+            $mediaitem['dr:mimetype'] == 'application/zip' ||
+            $mediaitem['dr:mimetype'] == 'application/gzip' ||
+            $mediaitem['dr:mimetype'] == ' application/x-gzip'
+            )
+          ) {
             if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
               // @TODO we can refactor a lot here and move it to base methods
@@ -199,86 +210,72 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
               // means we have a broken/missing media reference
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(
-                  StreamWrapperManager::getTarget($file->getFileUri())
-                );
+                $audiourl = $file->getFileUri();
+                // We assume here file could not be accessible publicly
+                $route_parameters = [
+                  'node' => $nodeid,
+                  'uuid' => $file->uuid(),
+                  'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
+                ];
+                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
 
-                if ($iiifidentifier == NULL || empty($iiifidentifier)) {
-                  continue;
-                  // @TODO add a default Thumbnail here.
-                }
                 $filecachetags = $file->getCacheTags();
                 //@TODO check this filecachetags and see if they make sense
 
-
                 $uniqueid =
-                  'iiif-'.$items->getName(
-                  ).'-'.$nodeuuid.'-'.$delta.'-image'.$i;
+                  'replayweb-' . $items->getName(
+                  ) . '-' . $nodeuuid . '-' . $delta . '-warc' . $i;
 
-                $cache_contexts = ['url.site', 'url.path', 'url.query_args','user.permissions'];
+                $cache_contexts = [
+                  'url.site',
+                  'url.path',
+                  'url.query_args',
+                  'user.permissions'
+                ];
                 // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
-                // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
+                $cache_tags = Cache::mergeTags(
+                  $filecachetags,
+                  $items->getEntity()->getCacheTags()
+                );
 
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
-                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
-
-                if (!$iiifsizes) {
-                  $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
-                    [
-                      '@url' => $iiifpublicinfojson,
-                      '@id' => $nodeid,
-                    ]);
-                  \Drupal::logger('format_strawberryfield')->warning($message);
-                  //continue; // Nothing can be done here?
-                }
-                else {
-                  //@see \template_preprocess_image for further theme_image() attributes.
-                  // Look. This one uses the public accesible base URL. That is how world works.
-                  if (($max_width == 0) && ($max_height == 0)) {
-                    $max_width = $iiifsizes[0]['width'];
-                    $max_height = $iiifsizes[0]['height'];
-                  }
-                  if (($max_width == 0) &&  ($max_height > 0)){
-                    $max_width = round($iiifsizes[0]['width']/$iiifsizes[0]['height'] * $max_height,0);
-
-                  }
-                  elseif (($max_width > 0) &&  ($max_height == 0)){
-                    $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
-                  }
-
-                  $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
-                  $image_render_array = [
-                    '#theme' => 'image',
-                    '#attributes' => [
-                      'class' => ['field-iiif', 'image-iiif'],
-                      'id' => 'thumb_' . $uniqueid,
-                      'src' => $iiifserverthumb,
-
+                // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
+                $elements[$delta]['warc_replayweb_' . $i] = [
+                  '#type' => 'html_tag',
+                  '#tag' => 'replay-web-page',
+                  '#cache' => [
+                    'tags' =>
+                      $cache_tags
                     ],
-                    '#alt' => $this->t(
-                      'Thumbnail for @label',
-                      ['@label' => $items->getEntity()->label()]
-                    ),
-                    '#width' => $max_width,
-                    '#height' => $max_height,
+                  '#attributes' => [
+                    'source' => $publicurl->toString(),
+                    'style' => "width:{$max_width_css}; height:{$max_height}px; display:block",
+                   ]
                   ];
 
-                  // With Link
-                  if (boolval($this->getSetting('image_link')) === TRUE && !$items->getEntity()->isNew()) {
-                    $elements[$delta]['media_thumb' . $i] = [
-                      '#type' => 'link',
-                      '#title' => $image_render_array,
-                      '#url' => $items->getEntity()->toUrl(),
-                      '#attributes' => [
-                        'alt' => $items->getEntity()->label()
-                        ]
-                      ];
-                  }
-                  else {
-                    $elements[$delta]['media_thumb' . $i] = $image_render_array;
+                  if (isset($jsondata[$url_key])) {
+                    if (is_array($jsondata[$url_key]) &&
+                      isset($jsondata[$url_key][$i]) &&
+                      is_string($jsondata[$url_key][$i]) &&
+                      !empty(trim($jsondata[$url_key][$i]))
+                    ) {
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key][$i];
+
+                    } elseif (!is_array($jsondata[$url_key]) &&
+                      !empty(trim($jsondata[$url_key]))
+                    ){
+                      // This is if there is a single URL. WE assume its for all WARC files.
+                      // But let's be honest. We go for a single WARC file for now
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key];
+                    }
+
+                  } else {
+                    if (!$navbar) {
+                      $elements[$delta]['warc_replayweb_' . $i]['#attributes']['view'] = "pages";
+                    }
                   }
 
+
+                  $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/replayweb';
                   if (isset($item->_attributes)) {
                     $elements[$delta] += ['#attributes' => []];
                     $elements[$delta]['#attributes'] += $item->_attributes;
@@ -298,13 +295,6 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
                   '#suffix' => '</span>',
                 ];
               }
-            } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media_thumb'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
-            }
 
           }
         }
@@ -314,6 +304,8 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         unset($elements[$delta]["#attributes"]);
       }
     }
+
     return $elements;
+
   }
 }
