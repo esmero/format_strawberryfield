@@ -93,7 +93,7 @@ format_strawberryfield.metadatadisplay_caster:
   requirements:
     format: .+
     _entity_access: 'node.view'
-    _entity_access: 'metadataexpose_entity.view'
+#    _entity_access: 'metadataexpose_entity.view'
 
 format_strawberryfield.iiif_admin_settings_form:
   path: '/admin/config/archipelago/iiif'
