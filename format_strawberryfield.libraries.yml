@@ -56,11 +56,13 @@ iiif_iabookreader_strawberry:
     js/iiif-iabookreader_collapse.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/jquery.ui
     - core/drupal
     - core/drupal.form
     - core/drupalSettings
     - core/drupal.debounce
+    - core/modernizr
     - format_strawberryfield/iiif_iabookreader
 pannellum:
   version: 2.5.6
@@ -77,6 +79,7 @@ iiif_pannellum_strawberry:
     js/iiif-pannellum_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
@@ -101,6 +104,7 @@ jsm_model_strawberry:
     js/jsm-model_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/jquery.ui
     - core/drupal
     - core/drupalSettings
@@ -122,6 +126,7 @@ pdfs_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/pdfs_mozilla
 
@@ -149,6 +154,7 @@ mirador_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
@@ -182,6 +188,7 @@ leaflet_strawberry:
     js/leaflet_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
