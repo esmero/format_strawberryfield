@@ -54,7 +54,7 @@
                     preserveViewport: true,
                     id: element_id,
                     sequenceMode: sequence,
-                    prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/images/",
+                    prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/",
                     tileSources: tiles,
                     showNavigator: true,
                     navigatorAutoFade:  true,

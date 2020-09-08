@@ -1,0 +1,5 @@
+services:
+  format_strawberryfield.twig.TwigExtension:
+    class: Drupal\format_strawberryfield\TwigExtension
+    tags:
+      - {name: twig.extension}
