@@ -18,14 +18,14 @@
                     var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
                     var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
                     var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
-                    console.log(annotations);
+
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
 
                     showthumbs = $(this).data("iiif-thumbnails");
                     if (!groupsinfojsons.hasOwnProperty(group)) {
                         groupsinfojsons[group] = [infojson];
-                        groupssettings[group]
+
                         groupssettings[group] = {
                             "default_width": default_width,
                             "default_height": default_height,
