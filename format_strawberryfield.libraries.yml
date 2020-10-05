@@ -8,6 +8,7 @@ iiif_openseadragon:
   header: true
   js:
     https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
+
 iiif_openseadragon_strawberry:
   version: 1.0
   js:
@@ -16,6 +17,8 @@ iiif_openseadragon_strawberry:
     - core/jquery
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/annotoriousopenseadragon
+
 iiif_iabookreader:
   remote: https://openlibrary.org/dev/docs/bookreader
   version: 4.15.0
@@ -171,8 +174,8 @@ leaflet_markercluster:
     https://unpkg.com/browse/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://unpkg.com/browse/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
-      https://unpkg.com/browse/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
 
 leaflet_core:
   version: 1.6.0
@@ -208,6 +211,7 @@ leaflet_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
+
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
 replayweb:
@@ -228,3 +232,38 @@ universalviewer:
   js:
     https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
     https://unpkg.com/@edsilv/utils@1.0.2/dist-umd/utils.js: { external: true, minified: true, preprocess: false}
+
+annotorious:
+  version: 2.1.2
+  license:
+    name: BSD-3 Clause
+    url: https://github.com/recogito/annotorious/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.css: { external: true }
+
+annotoriousopenseadragon:
+  version: 2.10
+  license:
+    name: BSD-3 Clause
+    url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.0/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.css: { external: true }
+
+w3cWebAnnotations_strawberry:
+  version: 1.0
+  js:
+    js/w3cWebAnnon_strawberry.js: { minified: false }
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/jquery.ui
+    - core/drupal
+    - core/drupalSettings
