@@ -10,6 +10,7 @@
             var groupssettings = {};
             var groupsid =  {};
             var showthumbs = false
+            var nodeuuid = null;
             $('.strawberry-media-item[data-iiif-infojson]').once('attache_osd')
                 .each(function (index, value) {
 
@@ -29,7 +30,8 @@
                         groupssettings[group] = {
                             "default_width": default_width,
                             "default_height": default_height,
-                            "webannotations" : false
+                            "webannotations" : false,
+                            "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id]
                         }
 
                         if (typeof annotations != "undefined" && annotations == true) {
@@ -49,7 +51,7 @@
                         $(this).height(0);
                         $(this).width(0);
                     }
-                    var nodeuuid = settings.format_strawberryfield.openseadragon.innode[element_id];
+
                 });
 
             $.each(groupsid, function (group, element_id)  {
@@ -92,11 +94,23 @@
                     annotorious[element_id] = OpenSeadragonAnnotorious(viewers[element_id], $config);
                     var $container = '<div class="format_strawberryfield_annotation_savebutton" title = "Save Annotations" style="background-color: transparent; border: none; top:-1em; margin: 0px; padding: 0px; position: relative; touch-action: none; display: inline-block;">';
                     var $savebutton = $($container + '<input type="button" value="Save Annotations" />' + '</div>');
-                    $savebutton.appendTo(  $('#'+element_id + '  div.openseadragon-container > div:nth-child(2) > div > div'));
+                    if (settings.user.uid > 0) {
+                        $savebutton.appendTo($('#' + element_id + '  div.openseadragon-container > div:nth-child(2) > div > div'));
+                    }
                     console.log(settings.user.uid);
                     // Attach handlers to listen to events
                     annotorious[element_id].on('createAnnotation', function(a) {
                         console.log(a);
+                        jQuery.ajax({
+                            url: '/do/'+ groupssettings[group].nodeuuid + '/crud/webannon',
+                            type: "POST",
+                            dataType: 'json',
+                            data: annotorious[element_id].getAnnotations(),
+                            success:  function(data){
+                                console.log('back!');
+                                console.log(data);
+                            }
+                        });
                         console.log( annotorious[element_id].getAnnotations());
                     });
                 }

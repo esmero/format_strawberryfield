@@ -10,3 +10,15 @@ delete metadatadisplay entity:
 administer metadatadisplay entity:
   title: 'Administer Metadata Display Template entity'
   restrict access: TRUE
+add strawberryfield webannotation:
+  title: 'Add W3C Web Annotations'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  restrict access: TRUE
+edit own strawberryfield webannotation:
+  title: 'Edit own W3C Web Annotations'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  restrict access: TRUE
+delete strawberryfield webannotation:
+  title: 'Delete W3C Web Annotations'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  restrict access: TRUE

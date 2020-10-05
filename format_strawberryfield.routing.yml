@@ -132,3 +132,20 @@ format_strawberryfield.replayweb_index:
     _controller: '\Drupal\format_strawberryfield\Controller\JsWorkerController::serveindex'
   requirements:
     _permission: 'access content'
+
+# Direct access to Metadata display processed json using Metadata Expose Config Entity.
+format_strawberryfield.process_webannotations:
+  path: '/do/{node}/crud/webannon'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::persist'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    _format: 'json'
+    _entity_access: 'node.update'
+    _permission: 'add strawberryfield webannotation'
