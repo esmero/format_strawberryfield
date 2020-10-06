@@ -5,6 +5,8 @@
  */
 use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\NodeInterface;
+use Drupal\Core\Form\FormStateInterface;
 /**
  * Implements hook_page_attachments().
  *
@@ -100,5 +102,51 @@ function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
   $mapping['extensions']['warc.gz'] = 'webarchive_mimetype';
   // @see https://www.iana.org/assignments/media-types/media-types.xhtml
 
+}
 
+/**
+ * Implements hook_ENTITY_TYPE_prepare_form() for node entities.
+ */
+function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operation, FormStateInterface $form_state) {
+  // Prepare defaults for the add/edit form.
+  //Because of Form Modes we can not only depend on "edit". But more likely on
+  if (($operation == 'delete' || $operation == 'quick_node_clone')) {
+    return;
+  }
+  $account = \Drupal::currentUser();
+  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) && $account->hasPermission('add strawberryfield webannotation')) {
+    foreach ($sbf_fields as $field_name) {
+      /* @var $field \Drupal\Core\Field\FieldItemInterface */
+      $field = $entity->get($field_name);
+      /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
+      $entity = $field->getEntity();
+      $entity_type_id = $entity->getEntityTypeId();
+      /** @var $field \Drupal\Core\Field\FieldItemList */
+      foreach ($field->getIterator() as $delta => $itemfield) {
+        /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
+        $fullvalues = $itemfield->provideDecoded(TRUE);
+        /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
+        $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
+        $annotation_values =  $tempstore->get($entity->uuid());
+        if (count($annotation_values)) {
+          if (!isset($fullvalues['ap:annotationCollection'])) {
+            $fullvalues['ap:annotationCollection'] = [];
+          }
+          $fullvalues['ap:annotationCollection'] =  array_merge_recursive($annotation_values, $fullvalues['ap:annotationCollection']);
+          $entity->{$field_name}[0]->setMainValueFromArray($fullvalues);
+          \Drupal::messenger()->addStatus(\Drupal::translation()->formatPlural(count($annotation_values),
+            'You have one pending WebAnnotation for this Digital Object. To persist Save the Object. ',
+            'You have %number unsaved WebAnnotation for this Digital Object.To persist Save the Object.',
+            ['%number' => count($annotation_values)]
+          ));
+          $form_state->set('hadAnnotations', TRUE);
+          break 2;
+        }
+        if (!is_array($fullvalues)) {
+          break;
+        }
+
+      }
+    }
+  }
 }

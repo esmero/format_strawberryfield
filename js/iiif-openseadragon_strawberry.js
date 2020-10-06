@@ -5,6 +5,7 @@
     Drupal.behaviors.format_strawberryfield_openseadragon_initiate = {
         attach: function (context, settings) {
             var viewers = [];
+            var current_openseadragon_tile = [];
             var annotorious = [];
             var groupsinfojsons =  {};
             var groupssettings = {};
@@ -19,10 +20,10 @@
                     var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
                     var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
                     var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
+                    var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
 
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
-
                     showthumbs = $(this).data("iiif-thumbnails");
                     if (!groupsinfojsons.hasOwnProperty(group)) {
                         groupsinfojsons[group] = [infojson];
@@ -31,7 +32,8 @@
                             "default_width": default_width,
                             "default_height": default_height,
                             "webannotations" : false,
-                            "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id]
+                            "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
+                            "file_uuid" : file_uuid
                         }
 
                         if (typeof annotations != "undefined" && annotations == true) {
@@ -62,6 +64,7 @@
                     sequence = true;
                     thumbs = showthumbs;
                 }
+                current_openseadragon_tile[element_id] = tiles[0];
                 viewers[element_id] = OpenSeadragon({
                     showRotationControl: true,
                     gestureSettingsTouch: {
@@ -80,7 +83,7 @@
                     showReferenceStrip: thumbs,
                     referenceStripScroll: 'horizontal',
                 });
-                if (typeof  groupssettings[group].webannotations != "undefined" && groupssettings[group].webannotations == true) {
+                if (typeof groupssettings[group].webannotations != "undefined" && groupssettings[group].webannotations == true) {
                     console.log("Attaching W3C Annotations");
                     var $readonly = true;
                     if (settings.user.uid != 0) {
@@ -97,21 +100,31 @@
                     if (settings.user.uid > 0) {
                         $savebutton.appendTo($('#' + element_id + '  div.openseadragon-container > div:nth-child(2) > div > div'));
                     }
+                    /* Acts on page change. We need to load new annotations when that happens! */
+                    viewers[element_id].addHandler("page", function (data) {
+                        console.log('current page is' +  data.page);
+                        console.log('source for that page is is ' + tiles[data.page]);
+                        current_openseadragon_tile = tiles[data.page];
+                        annotorious[element_id].setAnnotations([]);
+                    });
+                    console.log(settings.user);
                     console.log(settings.user.uid);
                     // Attach handlers to listen to events
                     annotorious[element_id].on('createAnnotation', function(a) {
+                        console.log(viewers[element_id].currentPage());
                         console.log(a);
                         jQuery.ajax({
                             url: '/do/'+ groupssettings[group].nodeuuid + '/crud/webannon',
                             type: "POST",
                             dataType: 'json',
-                            data: annotorious[element_id].getAnnotations(),
+                            data: {'data': annotorious[element_id].getAnnotations(), 'target_resource': current_openseadragon_tile },
                             success:  function(data){
                                 console.log('back!');
+                                console.log(element_id);
                                 console.log(data);
                             }
                         });
-                        console.log( annotorious[element_id].getAnnotations());
+                        console.log(annotorious[element_id].getAnnotations());
                     });
                 }
             });
