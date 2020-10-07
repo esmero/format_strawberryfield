@@ -14,6 +14,10 @@ add strawberryfield webannotation:
   title: 'Add W3C Web Annotations'
   description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
   restrict access: TRUE
+view strawberryfield webannotation:
+  title: 'View W3C Web Annotations'
+  description: 'This permission only applies if Entity (e.g) can also be seen by the user'
+  restrict access: TRUE
 edit own strawberryfield webannotation:
   title: 'Edit own W3C Web Annotations'
   description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'

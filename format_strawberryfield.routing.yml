@@ -133,12 +133,12 @@ format_strawberryfield.replayweb_index:
   requirements:
     _permission: 'access content'
 
-# Persist in temporary State/limbo any generated Webannotations.
-format_strawberryfield.process_webannotations:
-  path: '/do/{node}/crud/webannon'
-  methods: [POST]
+# Update in temporary State/limbo a generated Webannotation.
+format_strawberryfield.push_webannotation:
+  path: '/do/{node}/webannon/put'
+  methods: [PUT]
   defaults:
-    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::persistTemp'
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::putTemp'
   options:
     parameters:
       node:
@@ -149,10 +149,41 @@ format_strawberryfield.process_webannotations:
     _format: 'json'
     _entity_access: 'node.update'
     _permission: 'add strawberryfield webannotation'
-
-# Persist in a SBF any generated Webannotations.
+# Delete in temporary State/limbo a generated WebAnnotation.
+format_strawberryfield.delete_webannotation:
+  path: '/do/{node}/webannon/delete'
+  methods: [PUSH]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::deleteTemp'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    _format: 'json'
+    _entity_access: 'node.update'
+    _permission: 'add strawberryfield webannotation'
+# Persist in temporary State/limbo any generated WebAnnotations.
+format_strawberryfield.post_webannotation:
+  path: '/do/{node}/webannon/post'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::postTemp'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    _format: 'json'
+    _entity_access: 'node.update'
+    _permission: 'add strawberryfield webannotation'
+# Persist in a SBF any generated WebAnnotations.
 format_strawberryfield.save_webannotations:
-  path: '/do/{node}/crud/webannon'
+  path: '/do/{node}/webannon/save'
   methods: [POST]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::persist'
@@ -169,10 +200,10 @@ format_strawberryfield.save_webannotations:
 
 # Persist in a SBF any generated Webannotations.
 format_strawberryfield.get_webannotations:
-  path: '/do/{node}/crud/webannon/{target}'
+  path: '/do/{node}/webannon/read'
   methods: [GET]
   defaults:
-    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::persist'
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::read'
   options:
     parameters:
       node:
@@ -180,7 +211,6 @@ format_strawberryfield.get_webannotations:
       resource_type:
         type: 'ado'
   requirements:
-    target: .+
     _format: 'json'
-    _entity_access: 'node.update'
-    _permission: 'add strawberryfield webannotation'
+    _entity_access: 'node.view'
+    _permission: 'view strawberryfield webannotation'

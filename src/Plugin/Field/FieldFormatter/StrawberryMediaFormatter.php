@@ -14,6 +14,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
+use Drupal\Core\Url;
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -255,7 +257,29 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid']  = $file->uuid();
+                // Used to keep annotations around during edit.
+                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname,$delta, $nodeuuid);
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean)$webannotations;
+                if ($this->currentUser) {
+                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+                } else {
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
+                }
+
+                // We only set this if/and only if/ we have annotations loaded
+                if (($webannotations) && !empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+                  $keystoreid = $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+                  $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
+                  // First check if there is something there already? (many reloads, we want to live version)
+                  if (empty($tempstore->get($keystoreid))) {
+                    $tempstore->set(
+                      $keystoreid,
+                      $jsondata['ap:annotationCollection']
+                    );
+                  }
+                }
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
                   $max_height,
                   480
