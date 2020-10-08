@@ -11,6 +11,7 @@ use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Drupal\Core\Cache\CacheableJsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -374,6 +375,16 @@ class WebAnnotationController extends ControllerBase {
   public function read(Request $request,
     ContentEntityInterface $node
   ) {
+
+    // WE do not want cache here
+    // But starting to think Anonymous users should not use the tempStore at all.
+    $build = [
+      '#cache' => [
+        'max-age' => 0,
+      ],
+    ];
+
+
     $return = [];
     // GET Argument (
     $target = $this->requestStack->getCurrentRequest()->query->get('target_resource');
@@ -407,8 +418,11 @@ class WebAnnotationController extends ControllerBase {
         "Wrong request"
       );
     }
+    $response = new CacheableJsonResponse($return);
+    $response->addCacheableDependency($build);
+    $response->addCacheableDependency($node);
 
-    return new JsonResponse($return);
+    return $response;
   }
   /**
    * Gives us a key name used by the webforms and widgets.
