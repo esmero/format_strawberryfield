@@ -171,7 +171,7 @@ leaflet_markercluster:
     url: https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENCE.txt
     gpl-compatible: true
   js:
-    https://unpkg.com/browse/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
+    https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
   css:
     component:
       https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
