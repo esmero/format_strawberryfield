@@ -258,6 +258,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid']  = $file->uuid();
                 // Used to keep annotations around during edit.
+                // Note: Since View modes are cached, if no change to the NODE this will be served from a cache! mmm.
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname,$delta, $nodeuuid);
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean)$webannotations;
                 if ($this->currentUser) {
@@ -269,16 +270,11 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 }
 
                 // We only set this if/and only if/ we have annotations loaded
+                // This also never runs if cached. So after deletion we better call the controller!
+
                 if (($webannotations) && !empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
                   $keystoreid = $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
-                  $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
-                  // First check if there is something there already? (many reloads, we want to live version)
-                  if (empty($tempstore->get($keystoreid))) {
-                    $tempstore->set(
-                      $keystoreid,
-                      $jsondata['ap:annotationCollection']
-                    );
-                  }
+                  WebAnnotationController::primeKeyStore($items[$delta]);
                 }
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
                   $max_height,

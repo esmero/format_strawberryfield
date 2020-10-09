@@ -388,6 +388,25 @@ class WebAnnotationController extends ControllerBase {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
         // It would have set initial values so we do not need to read/iterate everytime
         $existingannotations = $this->tempStore->get($keystoreid);
+
+        if ($existingannotations == null) {
+          foreach ($sbf_fields as $field_name) {
+            /* @var $field \Drupal\Core\Field\FieldItemInterface */
+            $field = $node->get($field_name);
+            /** @var $field \Drupal\Core\Field\FieldItemList */
+            foreach ($field->getIterator() as $delta => $itemfield) {
+              $potentialkeystoreid = static::getTempStoreKeyName(
+                $field_name,
+                $delta,
+                $node->uuid()
+              );
+              if ($potentialkeystoreid == $keystoreid) {
+                $existingannotations = static::primeKeyStore($itemfield, $keystoreid);
+                break 2;
+              }
+            }
+          }
+        }
         $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
       }
       catch (\Drupal\Core\TempStore\TempStoreException $exception) {
@@ -497,7 +516,9 @@ class WebAnnotationController extends ControllerBase {
               $node->uuid()
             );
             try {
-              $tempstore->delete(trim($keystoreid));
+              $tempstore->delete($keystoreid);
+              // Sets stored settings back.
+              static::primeKeyStore($itemfield, $keystoreid);
             } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
               $response->addCommand(
                 new ReplaceCommand(
@@ -513,8 +534,9 @@ class WebAnnotationController extends ControllerBase {
       else {
         return $response;
       }
+      // Needed so aLl is restored from storage
       $node = node::load($node->id());
-      error_log('node should have been reloaded ');
+
       $response->addCommand(new RemoveCommand('#edit-annotations'));
     }
     return $response;
@@ -541,4 +563,29 @@ class WebAnnotationController extends ControllerBase {
     );
     return sha1(implode('-', $unique_seed));
   }
+
+  /**
+   * Primes the Web Annotation KeyStore with saved values.
+   *
+   * @param \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $itemfield
+   * @param null $keystoreid
+   */
+  public static function primeKeyStore(StrawberryFieldItem $itemfield,  $keystoreid = NULL) {
+    if ($keystoreid == NULL && strlen(trim($keystoreid)) == 0) {
+      return NULL;
+    }
+    $jsondata = $itemfield->provideDecoded(TRUE);
+    $tempstore = \Drupal::service('tempstore.private')->get(
+      'webannotation'
+    );
+    if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+      $tempstore->set($keystoreid, $jsondata['ap:annotationCollection']);
+      return $jsondata['ap:annotationCollection'];
+    }
+    else {
+      $tempstore->set($keystoreid, []);
+      return [];
+    }
+  }
+
 }

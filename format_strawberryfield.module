@@ -46,11 +46,20 @@ function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface 
   if ($form_state->get('hadAnnotations')) {
     $node = $form_state->getFormObject()->getEntity();
     $count = $form_state->get('hadAnnotations');
+
     $form['annotations'] = [
       '#type' => 'fieldset',
       '#weigth ' => -1000,
-      '#title' => 'Unsaved Web Annotations',
+      '#title' => t('Unsaved Web Annotations'),
     ];
+    $form['annotations']['container'] = [
+      '#type' => 'container',
+      '#markup' =>  \Drupal::translation()->formatPlural($count,
+        'You have one unsaved Annotation/Modification to an Annotation for this Digital Object',
+        'You have @count unsaved Annotation/Modification for this Digital Object'
+      )
+    ];
+
     $form['annotations']['markup'] = [
       '#type' => 'markup',
       '#markup' => 'To persist them <em>save</em> the Object or continue editing by going back to <em>View</em>. '
