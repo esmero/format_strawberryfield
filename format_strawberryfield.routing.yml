@@ -152,7 +152,7 @@ format_strawberryfield.push_webannotation:
 # Delete in temporary State/limbo a generated WebAnnotation.
 format_strawberryfield.delete_webannotation:
   path: '/do/{node}/webannon/delete'
-  methods: [PUSH]
+  methods: [DELETE]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::deleteTemp'
   options:
@@ -214,3 +214,20 @@ format_strawberryfield.get_webannotations:
     _format: 'json'
     _entity_access: 'node.view'
     _permission: 'view strawberryfield webannotation'
+
+# Persist in a SBF any generated Webannotations.
+format_strawberryfield.deletetmp_webannotations:
+  path: '/do/{node}/webannon/deletetmp'
+  methods: [POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::deleteKeyStore'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    _format: 'json'
+    _entity_access: 'node.update'
+    _permission: 'add strawberryfield webannotation'

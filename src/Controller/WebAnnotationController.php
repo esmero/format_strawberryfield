@@ -18,6 +18,11 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\RemoveCommand;
+use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
 
 class WebAnnotationController extends ControllerBase {
 
@@ -106,8 +111,8 @@ class WebAnnotationController extends ControllerBase {
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    *   A Node as argument
    *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A cacheable response.
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   A simple JSON response.
    */
   public function persist(Request $request,
     ContentEntityInterface $node
@@ -161,8 +166,8 @@ class WebAnnotationController extends ControllerBase {
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    *   A Node as argument
    *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A cacheable response.
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   A simple JSON response.
    */
   public function putTemp(Request $request,
     ContentEntityInterface $node
@@ -187,10 +192,6 @@ class WebAnnotationController extends ControllerBase {
           if (isset($existingannotations[$target])) {
             foreach ($existingannotations[$target] as $key => $existingannotation) {
               if (($existingannotation['id'] == $annotation['id'])) {
-                error_log('found!');
-                error_log(var_export($existingannotation,true));
-                error_log('to be replace with!');
-                error_log(var_export($annotation,true));
                 $existingannotations[$target][$key] = $annotation;
                 $persisted = TRUE;
                 break;
@@ -202,10 +203,7 @@ class WebAnnotationController extends ControllerBase {
               );
             } // means it was new
           }
-          error_log('putting into '.$keystoreid);
-          error_log('for into '.$target);
-          error_log(var_export($existingannotations,true));
-          $this->tempStore->set($keystoreid, $existingannotations);
+           $this->tempStore->set($keystoreid, $existingannotations);
         }
         else {
           throw new BadRequestHttpException(
@@ -238,8 +236,8 @@ class WebAnnotationController extends ControllerBase {
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    *   A Node as argument
    *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A cacheable response.
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   A simple JSON response.
    */
   public function postTemp(Request $request,
     ContentEntityInterface $node
@@ -252,11 +250,9 @@ class WebAnnotationController extends ControllerBase {
         $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
         $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
         $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
-
         $data = [
           'success' => true
         ];
-
         try {
           $persisted = FALSE;
           if (isset($annotation['id'])) {
@@ -271,9 +267,7 @@ class WebAnnotationController extends ControllerBase {
               }
             }
           }
-          error_log('adding new into'.$keystoreid);
-          error_log('for into '.$target);
-          error_log(var_export($annotation, true));
+
           $existingannotations[$target][] = $annotation;
           $this->tempStore->set($keystoreid, $existingannotations);
           }
@@ -299,57 +293,45 @@ class WebAnnotationController extends ControllerBase {
   }
 
   /**
-   * Persist temp Controller Method (POST).
+   * Delete temp Controller Method (POST).
    *
    * @param \Symfony\Component\HttpFoundation\Request
    *   The Full HTTPD Resquest
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    *   A Node as argument
+   * @param string $keystoreid
+   *  The keystore id to delete
    *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
+   * @return AjaxResponse
    *   A cacheable response.
    */
-  public function deleteTemp(Request $request,
-    ContentEntityInterface $node
-  ) {
+  public function deleteKeyStore(Request $request, ContentEntityInterface $node) {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
-
-      // We are getting which field originate the annotations from AJAX.
-
-      $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
-      $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
-      $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
-
-      $data = [
-        'success' => true
-      ];
-
-      try {
-        if (isset($annotation['id'])) {
-          $existingannotations = $this->tempStore->get($keystoreid);
-          $existingannotations = is_array($existingannotations) ? $existingannotations : [];
-          if (isset($existingannotations[$target])) {
-            foreach ($existingannotations[$target] as $key => &$existingannotation) {
-              if (($existingannotation['id'] == $annotation['id'])) {
-                unset($existingannotation[$key]);
-                break;
-              }
-            }
-          }
-          $this->tempStore->set($keystoreid, $existingannotations);
-        }
-        else {
-          throw new BadRequestHttpException(
-            "The Annotation has no unique id!"
+      $response = new AjaxResponse();
+      foreach ($sbf_fields as $field_name) {
+        /* @var $field \Drupal\Core\Field\FieldItemInterface */
+        $field = $node->get($field_name);
+        /** @var $field \Drupal\Core\Field\FieldItemList */
+        foreach ($field->getIterator() as $delta => $itemfield) {
+          $keystoreid = static::getTempStoreKeyName(
+            $field_name,
+            $delta,
+            $node->uuid()
           );
+          try {
+            $this->tempStore->delete(trim($keystoreid));
+          } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+            $response->addCommand(
+              new ReplaceCommand(
+                '#edit-webannotations > div',
+                'Something went awfully wrong and we could not discard your Annotation. Please try again.'
+              )
+            );
+            return $response;
+          }
         }
-      }
-      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
-        $data = [
-          'success' => false
-        ];
       }
     }
     else {
@@ -358,7 +340,8 @@ class WebAnnotationController extends ControllerBase {
       );
     }
 
-    return new JsonResponse($data);
+    $response->addCommand(new RemoveCommand('#edit-webannotations'));
+    return $response;
   }
 
   /**
@@ -424,6 +407,123 @@ class WebAnnotationController extends ControllerBase {
 
     return $response;
   }
+
+  /**
+   * Persist temp Controller Method (POST).
+   *
+   * @param \Symfony\Component\HttpFoundation\Request
+   *   The Full HTTPD Resquest
+   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   *   A Node as argument
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse;
+   *   A cacheable response.
+   */
+  public function deleteTemp(Request $request,
+    ContentEntityInterface $node
+  ) {
+    if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
+      $node
+    )) {
+
+      // We are getting which field originate the annotations from AJAX.
+      $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
+      $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
+      $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
+
+      $data = [
+        'success' => true
+      ];
+      try {
+        if (isset($annotation['id'])) {
+          $existingannotations = $this->tempStore->get($keystoreid);
+          $existingannotations = is_array($existingannotations) ? $existingannotations : [];
+          if (isset($existingannotations[$target])) {
+            foreach ($existingannotations[$target] as $key => &$existingannotation) {
+              if (($existingannotation['id'] == $annotation['id'])) {
+                unset($existingannotation[$key]);
+                break;
+              }
+            }
+          }
+          $this->tempStore->set($keystoreid, $existingannotations);
+        }
+        else {
+          throw new BadRequestHttpException(
+            "The Annotation has no unique id!"
+          );
+        }
+      }
+      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+        $data = [
+          'success' => false
+        ];
+      }
+    }
+    else {
+      throw new BadRequestHttpException(
+        "This Content can not bear Web Annotations!"
+      );
+    }
+
+    return new JsonResponse($data);
+  }
+
+  /*
+   * Delete temp Controller Method (POST).
+   *
+
+   */
+  public static function deleteKeyStoreAjaxCallback(array &$form, FormStateInterface $form_state) {
+    // Ok, this has a lot of Static loading of services instead of Injected dependency
+    // But AJAX callbacks are sadly static! Gosh, sorry good coding practices avatars
+    $response = new AjaxResponse();
+    if ($form_state->get('hadAnnotations')) {
+      $node = $form_state->getFormObject()->getEntity();
+      $tempstore = \Drupal::service('tempstore.private')->get(
+        'webannotation'
+      );
+      if ($sbf_fields = \Drupal::service('strawberryfield.utility')
+        ->bearsStrawberryfield($node)) {
+
+        foreach ($sbf_fields as $field_name) {
+          /* @var $field \Drupal\Core\Field\FieldItemInterface */
+          $field = $node->get($field_name);
+          /** @var $field \Drupal\Core\Field\FieldItemList */
+          foreach ($field->getIterator() as $delta => $itemfield) {
+            $keystoreid = static::getTempStoreKeyName(
+              $field_name,
+              $delta,
+              $node->uuid()
+            );
+            try {
+              $tempstore->delete(trim($keystoreid));
+            } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+              $response->addCommand(
+                new ReplaceCommand(
+                  '#edit-webannotations > div',
+                  'Something went awfully wrong and we could not discard your Annotation. Please try again.'
+                )
+              );
+              return $response;
+            }
+          }
+        }
+      }
+      else {
+        return $response;
+      }
+      $node = node::load($node->id());
+      error_log('node should have been reloaded ');
+      $response->addCommand(new RemoveCommand('#edit-annotations'));
+    }
+    return $response;
+  }
+
+
+
+
+
   /**
    * Gives us a key name used by the webforms and widgets.
    *
