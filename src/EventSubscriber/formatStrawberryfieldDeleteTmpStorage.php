@@ -98,7 +98,7 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
     /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
 
     $tempstore = $this->tempStoreFactory->get('webannotation');
-    error_log($entity->uuid());
+
     foreach ($sbf_fields as $field_name) {
       /* @var $field \Drupal\Core\Field\FieldItemInterface */
       $field = $entity->get($field_name);
@@ -107,20 +107,14 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
       $fieldname = $field->getName();
       foreach ($field->getIterator() as $delta => $itemfield) {
         $keyid = $this->getTempStoreKeyName($fieldname, $delta, $entity->uuid());
-
+        // We do not say "saved" here because some clever person could change,
+        // enrich, add, reprocesses or even clean annotations during ingest.
+        // So not really that just passed along
+        $this->messenger->addStatus('Your Annotations were processed');
         $tempstore->delete($keyid);
       }
     }
-    $allmessages = $this->messenger->messagesByType(\Drupal\Core\Messenger\MessengerInterface::TYPE_STATUS);
-    $this->messenger->deleteByType(\Drupal\Core\Messenger\MessengerInterface::TYPE_STATUS);
-    // I can not imagine a more stupid way of avoiding double message
-    // but also can find a smarter
-    //@TODO make the message a constant
-    foreach($allmessages as $message) {
-      if ($message->__toString() != 'You have unsaved Annotation for this Digital Object. To persist them Save the Object.') {
-        $this->messenger->addStatus($message);
-      }
-    }
+
     $event->setProcessedBy($current_class, true);
   }
 
