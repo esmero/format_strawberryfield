@@ -58,6 +58,7 @@ iiif_iabookreader_strawberry:
     js/iiif-iabookreader_strawberry.js: {minified: false, weight: -6}
     js/plugin.iiif-iabookreader_strawberry.js: {minified: false, weight: -8}
     js/iiif-iabookreader_collapse.js: {minified: false}
+    js/iiif-openseadragon_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/jquery.once
