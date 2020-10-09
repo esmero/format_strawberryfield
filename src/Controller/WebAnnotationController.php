@@ -517,8 +517,8 @@ class WebAnnotationController extends ControllerBase {
             );
             try {
               $tempstore->delete($keystoreid);
-              // Sets stored settings back.
-              static::primeKeyStore($itemfield, $keystoreid);
+              // Do NOT SET stored settings back.
+              // BECAUSE WE HAVE NOT RELOADED OUR NODE from storage yet OK?
             } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
               $response->addCommand(
                 new ReplaceCommand(
@@ -534,7 +534,7 @@ class WebAnnotationController extends ControllerBase {
       else {
         return $response;
       }
-      // Needed so aLl is restored from storage
+      // Needed so all is restored from storage
       $node = node::load($node->id());
 
       $response->addCommand(new RemoveCommand('#edit-annotations'));
