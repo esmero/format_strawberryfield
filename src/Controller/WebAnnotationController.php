@@ -21,8 +21,10 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Ajax\RedirectCommand;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\node\Entity\Node;
+use Drupal\Core\Url;
 
 class WebAnnotationController extends ControllerBase {
 
@@ -458,11 +460,18 @@ class WebAnnotationController extends ControllerBase {
           $existingannotations = $this->tempStore->get($keystoreid);
           $existingannotations = is_array($existingannotations) ? $existingannotations : [];
           if (isset($existingannotations[$target])) {
-            foreach ($existingannotations[$target] as $key => &$existingannotation) {
+            foreach ($existingannotations[$target] as $key => $existingannotation) {
               if (($existingannotation['id'] == $annotation['id'])) {
-                unset($existingannotation[$key]);
+                unset($existingannotations[$target][$key]);
                 break;
               }
+            }
+            // Make sure we reorder them so they stay as indexed arrays
+            if (empty(!$existingannotations[$target])) {
+                $existingannotations[$target] = array_values($existingannotations[$target]);
+            } else {
+                //If empty totally remove
+                unset($existingannotations[$target]);
             }
           }
           $this->tempStore->set($keystoreid, $existingannotations);
@@ -523,7 +532,7 @@ class WebAnnotationController extends ControllerBase {
               $response->addCommand(
                 new ReplaceCommand(
                   '#edit-webannotations > div',
-                  'Something went awfully wrong and we could not discard your Annotation. Please try again.'
+                  'So Sorry Something went awfully wrong and we could not discard your Annotation. Please try again or reload.'
                 )
               );
               return $response;
@@ -536,8 +545,10 @@ class WebAnnotationController extends ControllerBase {
       }
       // Needed so all is restored from storage
       $node = node::load($node->id());
-
+      $destination_url = Url::fromRoute('entity.node.edit_form', ['node' => $node->id()]);
+      $redirect_command = new RedirectCommand($destination_url->toString());
       $response->addCommand(new RemoveCommand('#edit-annotations'));
+      $response->addCommand($redirect_command);
     }
     return $response;
   }

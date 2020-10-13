@@ -190,6 +190,7 @@
                                 'keystoreid': groupssettings[group].keystoreid,
                             },
                             success:  function(data){
+                                console.log('Created');
                                 console.log(data);
                             }
                         });
@@ -210,6 +211,7 @@
                                 'keystoreid': groupssettings[group].keystoreid,
                             },
                             success:  function(data){
+                                console.log('Updated');
                                 console.log(data);
                             }
                         });
@@ -227,6 +229,7 @@
                                 'keystoreid': groupssettings[group].keystoreid,
                             },
                             success:  function(data){
+                                console.log('Deleted');
                                 console.log(data);
                             }
                         });
