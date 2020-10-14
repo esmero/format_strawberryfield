@@ -197,6 +197,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
           (isset($fullvalues['ap:annotationCollection']) && $annotation_values != $fullvalues['ap:annotationCollection']) ||
           (count($annotation_values) && !isset($fullvalues['ap:annotationCollection']))) {
           // Super handy! Potential for the future: JSON UNDO!!
+          $fullvalues['ap:annotationCollection'] = isset($fullvalues['ap:annotationCollection']) ? $fullvalues['ap:annotationCollection'] : [];
           $r = new JsonDiff(
             $fullvalues['ap:annotationCollection'],
             $annotation_values,
