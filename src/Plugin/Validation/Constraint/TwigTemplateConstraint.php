@@ -21,4 +21,5 @@ use Symfony\Component\Validator\Constraint;
 class TwigTemplateConstraint extends Constraint{
   public $message = 'Value is not a valid Twig template.';
   public $useTwigMessage = false;
+  public $TwigTemplateLogicalName = 'MetadataDisplayEntity';
 }

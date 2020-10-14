@@ -43,7 +43,7 @@
                         }
                         //@TODO add an extra Manifests key with every other one so people can select the others.
                         var miradorInstance = Mirador.viewer($options);
-                        console.log('initializing Mirador 3.0.0-RC3')
+                        console.log('initializing Mirador 3.0.0-RC5')
                     }
                 })}}
 })(jQuery, Drupal, drupalSettings, window.Mirador);

@@ -1,0 +1,10 @@
+services:
+  format_strawberryfield.twig.TwigExtension:
+    class: Drupal\format_strawberryfield\TwigExtension
+    tags:
+      - {name: twig.extension}
+  format_strawberryfield.deletetmpstorage_subscriber:
+    class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldDeleteTmpStorage
+    tags:
+      - {name: event_subscriber}
+    arguments: ['@string_translation', '@messenger', '@logger.factory', '@tempstore.private']
