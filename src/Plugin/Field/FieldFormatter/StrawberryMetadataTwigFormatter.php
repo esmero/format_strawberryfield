@@ -277,15 +277,28 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
           StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         }
+        $context = [
+            'data' => $jsondata,
+            'node' => $items->getEntity(),
+            'iiif_server' => $this->getIiifUrls()['public'],
+          ];
+        $original_context = $context;
+
+        // Allow other modules to provide extra Context!
+        // Call modules that implement the hook, and let them add items.
+        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
+        // In case someone decided to wipe the original context?
+        // We bring it back!
+        $context = $context + $original_context;
+
 
         $templaterenderelement = [
           '#type' => 'inline_template',
           '#template' => $twigtemplate,
-          '#context' => [
-            'data' => $jsondata,
-            'node' => $items->getEntity(),
-            'iiif_server' => $this->getIiifUrls()['public'],
-          ],
+          '#context' => $context,
+          '#cache' => [
+             'tags' => $metadatadisplayentity->getCacheTags()
+          ]
         ];
 
         if ($usemetadatalabel){
