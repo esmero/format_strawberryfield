@@ -237,6 +237,7 @@ class MetadataExposeDisplayController extends ControllerBase {
           case 'text/text':
           case 'text/turtle':
           case 'text/html':
+          case 'text/csv':
             $response = new CacheableResponse(
               $cacheabledata,
               200,

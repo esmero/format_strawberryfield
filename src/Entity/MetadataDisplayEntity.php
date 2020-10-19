@@ -334,6 +334,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           'application/xml' => 'XML',
           'text/text' => 'TEXT',
           'text/turtle' => 'RDF/TURTLE',
+          'text/csv' => 'CSV'
         ],
       ])
       ->setRequired(TRUE)
