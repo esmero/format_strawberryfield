@@ -107,10 +107,6 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
       $fieldname = $field->getName();
       foreach ($field->getIterator() as $delta => $itemfield) {
         $keyid = $this->getTempStoreKeyName($fieldname, $delta, $entity->uuid());
-        // We do not say "saved" here because some clever person could change,
-        // enrich, add, reprocesses or even clean annotations during ingest.
-        // So not really that just passed along
-        $this->messenger->addStatus('Your Annotations were processed');
         $tempstore->delete($keyid);
       }
     }
