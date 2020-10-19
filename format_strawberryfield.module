@@ -167,7 +167,7 @@ function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
  */
 function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operation, FormStateInterface $form_state) {
   // Prepare defaults for the add/edit form.
-  //Because of Form Modes we can not only depend on "edit". But more likely on
+  // Because of Form Modes we can not only depend on "edit". But more likely on
 
   if (($operation == 'delete' || $operation == 'quick_node_clone' || $entity->isNew())) {
     return;
