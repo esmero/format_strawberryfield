@@ -47,6 +47,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       'quality' => 'default',
       'rotation' => '0',
       'image_link' =>  TRUE,
+      'webannotations' => FALSE,
     ];
   }
 

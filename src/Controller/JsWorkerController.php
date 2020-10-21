@@ -20,9 +20,9 @@ class JsWorkerController extends ControllerBase {
    */
   public function servereplay() {
     $response = new Response(
-      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@1.0.1/sw.js");'
+      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@1.0.2/sw.js");'
     );
-    // Alternative https://unpkg.com/replaywebpage@1.0.0/sw.js
+    // Alternative https://unpkg.com/replaywebpage@1.0.2/sw.js
     $response->headers->set('Content-Type', 'text/javascript');
     return $response;
   }

@@ -271,7 +271,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('view', TRUE)
       ->setRequired(TRUE)
       ->addConstraint('NotBlank')
-      ->addConstraint('TwigTemplateConstraint', ['useTwigMessage' => FALSE]);
+      ->addConstraint('TwigTemplateConstraint', ['useTwigMessage' => FALSE, 'TwigTemplateLogicalName' => 'MetadataDisplayEntity']);
 
     // Owner field of the Metadata Display Entity.
     // Entity reference field, holds the reference to the user object.
@@ -334,6 +334,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           'application/xml' => 'XML',
           'text/text' => 'TEXT',
           'text/turtle' => 'RDF/TURTLE',
+          'text/csv' => 'CSV'
         ],
       ])
       ->setRequired(TRUE)

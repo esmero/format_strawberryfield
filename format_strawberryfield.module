@@ -3,34 +3,94 @@
  * @file
  * Contains formater_strawberryfield.module.
  */
+
+use Drupal\Component\Serialization\Json;
 use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Url;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
+use Drupal\node\NodeInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Swaggest\JsonDiff\JsonDiff;
 /**
  * Implements hook_page_attachments().
  *
  * Adds the iiif_openseadragon js library.
  */
 function format_strawberryfield_page_attachments(array &$page) {
-    /*if (!\Drupal::currentUser()->hasPermission('access search')) {
-        return;
-    @TODO discuss if we need to limit viewers to a particular role?
-    Could be nice to allow annotations as a drop replacement
-    of the same viewer dependant on the rol
-    }*/
+  /*if (!\Drupal::currentUser()->hasPermission('access search')) {
+      return;
+  @TODO discuss if we need to limit viewers to a particular role?
+  Could be nice to allow annotations as a drop replacement
+  of the same viewer dependant on the rol
+  }*/
 
-    // Remove IIIF on admin routes, why make peoples life more complicated
-    /* if (\Drupal::service('router.admin_context')->isAdminRoute()) {
-        return;
-    }*/
-    $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
-    $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
-    $page['#attached']['library'][] = 'format_strawberryfield/pannellum';
-    $page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
-    $page['#attached']['library'][] = 'core/jquery';
-    $page['#attached']['library'][] = 'core/drupal.dialog.ajax';
-    $page['#attached']['library'][] = 'core/drupal.ajax';
+  // Remove IIIF on admin routes, why make peoples life more complicated
+  /* if (\Drupal::service('router.admin_context')->isAdminRoute()) {
+      return;
+  }*/
+  $page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
+  $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
+  $page['#attached']['library'][] = 'format_strawberryfield/pannellum';
+  $page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
+  $page['#attached']['library'][] = 'core/jquery';
+  $page['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  $page['#attached']['library'][] = 'core/drupal.ajax';
 
 }
+
+function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface $form_state) {
+
+  // Deal with Possible Addded Annotations.
+
+  if ($form_state->get('hadAnnotations')) {
+    $node = $form_state->getFormObject()->getEntity();
+    $count = $form_state->get('hadAnnotations');
+
+    $form['annotations'] = [
+      '#type' => 'fieldset',
+      '#weigth ' => -1000,
+      '#title' => t('Unsaved Web Annotations'),
+    ];
+    $form['annotations']['container'] = [
+      '#type' => 'container',
+      '#markup' =>  \Drupal::translation()->formatPlural($count,
+        'You have one unsaved Annotation/Modification to an Annotation for this Digital Object',
+        'You have @count unsaved Annotation/Modification for this Digital Object'
+      )
+    ];
+
+    $form['annotations']['markup'] = [
+      '#type' => 'markup',
+      '#markup' => 'To persist them <em>save</em> the Object or continue editing by going back to <em>View</em>. '
+    ];
+    $form['annotations']['markup2'] = [
+      '#type' => 'markup',
+      '#markup' => 'Pressing <em>Discard</em> will keep the original ones untouched and will reload this page.'
+    ];
+    // We may had the need to reload the page since we are overriding the SBF
+    // field value on format_strawberryfield_node_prepare_form
+    // @TODO maybe someone has a better idea on how to avoid/force reloading?
+    // The simples way really is to redirect the user back here.
+
+    $form['annotations']['discard'] = [
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#type' => 'button',
+      '#value' => t('Discard'),
+      '#ajax' => [
+        'callback' => 'Drupal\format_strawberryfield\Controller\WebAnnotationController::deleteKeyStoreAjaxCallback',
+        'event' => 'click',
+        'progress' => [
+          'type' => 'throbber',
+          'message' => 'Restoring original Web Annotations ',
+        ],
+      ]
+    ];
+  }
+}
+
+
 
 function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
   if ($entity->getEntityTypeId() == 'node' && $view_mode == 'full') {
@@ -54,7 +114,7 @@ function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterf
     }
     if (!empty($adotype)) {
       $config = \drupal::config(
-      'format_strawberryfield.viewmodemapping_settings'
+        'format_strawberryfield.viewmodemapping_settings'
       );
       $viewmodemappings = $config->get('type_to_viewmode');
       $viewmodemappings = !empty($viewmodemappings) ? (array) $viewmodemappings : [];
@@ -100,5 +160,64 @@ function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
   $mapping['extensions']['warc.gz'] = 'webarchive_mimetype';
   // @see https://www.iana.org/assignments/media-types/media-types.xhtml
 
+}
 
+/**
+ * Implements hook_ENTITY_TYPE_prepare_form() for node entities.
+ */
+function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operation, FormStateInterface $form_state) {
+  // Prepare defaults for the add/edit form.
+  // Because of Form Modes we can not only depend on "edit". But more likely on
+
+  if (($operation == 'delete' || $operation == 'quick_node_clone' || $entity->isNew())) {
+    return;
+  }
+
+  $account = \Drupal::currentUser();
+  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) && $account->hasPermission('add strawberryfield webannotation')) {
+    foreach ($sbf_fields as $field_name) {
+      /* @var $field \Drupal\Core\Field\FieldItemInterface */
+      $field = $entity->get($field_name);
+      /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
+      foreach ($field->getIterator() as $delta => $itemfield) {
+        /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
+        $fullvalues = $itemfield->provideDecoded(TRUE);
+        /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
+        $tempstore = \Drupal::service('tempstore.private')->get(
+          'webannotation'
+        );
+        $keystoreid = WebAnnotationController::getTempStoreKeyName(
+          $field_name,
+          $delta,
+          $entity->uuid()
+        );
+        $annotation_values = $tempstore->get($keystoreid);
+        $annotation_values = is_array($annotation_values) ? $annotation_values : [];
+        if (count($annotation_values) &&
+          (isset($fullvalues['ap:annotationCollection']) && $annotation_values != $fullvalues['ap:annotationCollection']) ||
+          (count($annotation_values) && !isset($fullvalues['ap:annotationCollection']))) {
+          // Super handy! Potential for the future: JSON UNDO!!
+          $fullvalues['ap:annotationCollection'] = isset($fullvalues['ap:annotationCollection']) ? $fullvalues['ap:annotationCollection'] : [];
+          $r = new JsonDiff(
+            $fullvalues['ap:annotationCollection'],
+            $annotation_values,
+            JsonDiff::REARRANGE_ARRAYS + JsonDiff::SKIP_JSON_MERGE_PATCH
+          );
+          // We just keep track of the changes. If none! Then we do not set
+          // the formstate flag.
+          if ($r->getDiffCnt() > 0 ) {
+            $fullvalues['ap:annotationCollection'] = $annotation_values;
+            $entity->{$field_name}[0]->setMainValueFromArray($fullvalues);
+            $form_state->set('hadAnnotations', $r->getDiffCnt());
+          }
+          break 2;
+
+        }
+        if (!is_array($fullvalues)) {
+          break;
+        }
+
+      }
+    }
+  }
 }
