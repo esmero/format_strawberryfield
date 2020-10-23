@@ -23,11 +23,10 @@
                     var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
                     var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
                     var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
+                    var annotations_tool = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_tool'];
                     var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
                     var keystoreid = drupalSettings.format_strawberryfield.openseadragon[element_id]['keystoreid'];
                     current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
-                    console.log(current_user);
-
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
                     showthumbs = $(this).data("iiif-thumbnails");
@@ -38,6 +37,7 @@
                             "default_width": default_width,
                             "default_height": default_height,
                             "webannotations" : false,
+                            "annotations_tool": annotations_tool,
                             "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
                             "file_uuid" : file_uuid,
                             "keystoreid" : keystoreid
@@ -106,7 +106,8 @@
                         "readOnly":$readonly
                     }
 
-                    annotorious[element_id] = OpenSeadragonAnnotorious(viewers[element_id], $config);
+                    annotorious[element_id] = window.OpenSeadragon.Annotorious(viewers[element_id], $config);
+                    annotorious[element_id].setDrawingTool(groupssettings[group].annotations_tool);
                     annotorious_annotations[element_id] = [];
                     annotorious_current_tile[element_id] = 0;
 
@@ -239,7 +240,7 @@
             });
         }
     };
-})(jQuery, Drupal, OpenSeadragon.Annotorious, drupalSettings);
+})(jQuery, Drupal, window.OpenSeadragon.Annotorious, drupalSettings);
 
 // override getTileUrl
 OpenSeadragon.IIIFTileSource.prototype.getTileUrl = function( level, x, y ){

@@ -42,6 +42,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       'max_width' => 720,
       'max_height' => 480,
       'webannotations' => FALSE,
+      'webannotations_tool' => 'polygon',
       'thumbnails' => TRUE,
     ];
   }
@@ -66,6 +67,24 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
           '#title' => t('Enable loading/editing of W3C webAnnotations.'),
           '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
           '#default_value' => $this->getSetting('webannotations'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations',
+          ],
+        ],
+        'webannotations_tool' => [
+          '#type' => 'select',
+          '#options' => [
+            'rect' => 'Rectangle',
+            'polygon' => 'Polygon'
+          ],
+          '#title' => t('What tool to enable'),
+          '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
+          '#default_value' => $this->getSetting('webannotations_tool'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ]
         ],
         'json_key_source' => [
           '#type' => 'textfield',
@@ -148,6 +167,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $grouped = $this->getSetting('iiif_group');
     $thumbnails = $this->getSetting('thumbnails');
     $webannotations = $this->getSetting('webannotations');
+    $webannotations_tool = $this->getSetting('webannotations_tool');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -261,6 +281,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 // Note: Since View modes are cached, if no change to the NODE this will be served from a cache! mmm.
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname,$delta, $nodeuuid);
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean)$webannotations;
+                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
                 if ($this->currentUser) {
                    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
