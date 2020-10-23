@@ -50,7 +50,7 @@ function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface 
     $form['annotations'] = [
       '#type' => 'fieldset',
       '#weigth ' => -1000,
-      '#title' => t('Unsaved Web Annotations'),
+      '#title' => t('Unsaved Web Annotation Changes'),
     ];
     $form['annotations']['container'] = [
       '#type' => 'container',
@@ -192,10 +192,22 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
           $entity->uuid()
         );
         $annotation_values = $tempstore->get($keystoreid);
+        // If not present escape the loop. Needs to be EXACT NULL
+        if ($annotation_values === NULL) {
+          break 2;
+        }
         $annotation_values = is_array($annotation_values) ? $annotation_values : [];
-        if (count($annotation_values) &&
-          (isset($fullvalues['ap:annotationCollection']) && $annotation_values != $fullvalues['ap:annotationCollection']) ||
-          (count($annotation_values) && !isset($fullvalues['ap:annotationCollection']))) {
+        // This covers:
+        /*
+         * We got more than 0 annotations from Cache and we also have saved ones and both are not equal OR (UPDATE)
+         * We got more than 0 annotations from Cache and we have no saved nor the supporting structure to save (NEW)
+         * None from Cache (but cache exists) and we also have saved ones (REMOVE ALL)
+         */
+        if (
+          (count($annotation_values) && isset($fullvalues['ap:annotationCollection']) && $annotation_values != $fullvalues['ap:annotationCollection']) ||
+          (count($annotation_values) && !isset($fullvalues['ap:annotationCollection'])) ||
+          (count($annotation_values) == 0 && isset($fullvalues['ap:annotationCollection']))
+        ) {
           // Super handy! Potential for the future: JSON UNDO!!
           $fullvalues['ap:annotationCollection'] = isset($fullvalues['ap:annotationCollection']) ? $fullvalues['ap:annotationCollection'] : [];
           $r = new JsonDiff(
