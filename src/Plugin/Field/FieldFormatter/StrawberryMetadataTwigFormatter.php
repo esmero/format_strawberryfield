@@ -259,9 +259,6 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       }
 
       try {
-        $twigtemplate = $metadatadisplayentity->get('twig')->getValue();
-        $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value']: "{{ field.label }}";
-
         //  $markup = $environment->renderInline($element['#template'], $element['#context']);
         // @TODO So we can generate two type of outputs here,
         // A) HTML visible (like smart metadata displays)
@@ -290,16 +287,8 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         // In case someone decided to wipe the original context?
         // We bring it back!
         $context = $context + $original_context;
+        $templaterenderelement = $metadatadisplayentity->processHtml($context);
 
-
-        $templaterenderelement = [
-          '#type' => 'inline_template',
-          '#template' => $twigtemplate,
-          '#context' => $context,
-          '#cache' => [
-             'tags' => $metadatadisplayentity->getCacheTags()
-          ]
-        ];
 
         if ($usemetadatalabel){
           $elements[$delta]['container'] = [
@@ -349,25 +338,4 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       $value
     );
   }
-
-
-  /**
-   * Use to process a Template directly.
-   *
-   * @param string $twigtemplate
-   * @param array $context
-   * @param boolean $removeHTML
-   *
-   * @return \Drupal\Core\Render\Markup
-   */
-  protected function twig_process(string $twigtemplate, array $context = [], $removeHTML = FALSE ) {
-    $build = [
-      '#type' => 'inline_template',
-      '#template' => $twigtemplate,
-      '#context' => $context,
-    ];
-
-    return \Drupal::service('renderer')->renderPlain($build);
-  }
-
 }
