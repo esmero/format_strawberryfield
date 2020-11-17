@@ -168,6 +168,9 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set("Content-Length", $size);
         $response->prepare($request);
         $response->setCallback(function () use ($uri) {
+            // We may want to force Garbage Collection here
+            // Even if globally available...
+            gc_enable();
             $stream = fopen($uri, 'r');
             // While the stream is still open
             while (!feof($stream)) {
