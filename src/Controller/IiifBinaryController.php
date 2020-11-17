@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield\Controller;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -14,6 +15,7 @@ use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * A IIIF Wrapper Controller for non public files.
@@ -69,22 +71,23 @@ class IiifBinaryController extends ControllerBase {
   /**
    * Serves the AV File.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   * @param Request $request
+   * @param \Drupal\Core\Entity\ContentEntityInterface $node
    * @param string $uuid
    * @param string $format
    *
-   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function servefile(ContentEntityInterface $node, string $uuid, string $format = 'default.jpg') {
+  public function servefile(Request $request, ContentEntityInterface $node, string $uuid, string $format = 'default.jpg') {
     //@TODO check if format passed matches file type. If not abort.
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
 
       foreach ($sbf_fields as $field_name) {
-        /* @var $field StrawberryFieldItem */
+        /* @var $field StrawberryFieldItem[] */
         $field = $node->get($field_name);
         $found = NULL;
         $fileentityarray = $this->entityTypeManager
@@ -112,6 +115,7 @@ class IiifBinaryController extends ControllerBase {
         $files = $node->get('field_file_drop')->getValue();
         foreach($files as $offset => $fileinfo) {
           if ($fileinfo['target_id'] == $fileentity->id()) {
+            /* @var $found \Drupal\file\Entity\File */
             $found = $fileentity;
             break;
           }
@@ -125,60 +129,74 @@ class IiifBinaryController extends ControllerBase {
         );
       }
 
-      $uri = $found->getFileUri();
-      $filename = $found->getFilename();
+      $stream = $request->query->get('stream');
+      $uri = $found->getFileUri(); // The source URL
+      $filename = $found->getFilename(); // The filename...
 
-      $response = new BinaryFileResponse($uri);
-      $response->setContentDisposition(
-        ResponseHeaderBag::DISPOSITION_INLINE,
-        $filename
-      );
-      // @TODO Download? New route or argument? Argument wins.
-      /*$response->setContentDisposition(
-        ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-        $filename
-      );
-      // Inline*/
+      $mime = $found->getMimeType(); // We may want the actual mime from metadata?
+      // Let's check!
+      // Note: we are not touching the metadata here.
+      $etag = md5($found->uuid());
+      /** @var $field \Drupal\Core\Field\FieldItemList */
+      foreach ($field->getIterator() as $delta => $itemfield) {
+        /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
+        $flatvalues = (array) $itemfield->provideFlatten();
 
+        if (isset($flatvalues['urn:uuid:' . $found->uuid()]["checksum"])) {
+          $etag = $flatvalues['urn:uuid:' . $found->uuid()]["checksum"];
+          break;
+        }
+      }
 
-      return $response;
+      $size = $found->getSize(); // Bytes
+      $createdtime = $found->getCreatedTime(); // last modified makes little sense?
+
+      if ($stream) {
+        $response = new StreamedResponse();
+        $response->headers->set("Content-Type", $mime);
+        $response->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $createdtime)." GMT");
+        // Let's set this as a weak ETAG. Why? If e.g NGINX is delivering via GZIP
+        // Firefox and others will assume its weak and will in response request
+        // it as weak not matching afterwards.
+        $response->setETag($etag, TRUE);
+        if(in_array($etag, $request->getETags()) || $request->headers->get('If-Modified-Since') === gmdate("D, d M Y H:i:s", $createdtime)." GMT" ){
+          $response->setPublic();
+          $response->setStatusCode(304);
+          return $response;
+        }
+
+        $response->headers->set("Content-Length", $size);
+        $response->prepare($request);
+        $response->setCallback(function () use ($uri) {
+            $stream = fopen($uri, 'r');
+            // While the stream is still open
+            while (!feof($stream)) {
+              // Read 1,024 bytes from the stream
+              echo fread($stream, 1024);
+            }
+            // Be sure to close the stream resource when you're done with it
+            fclose($stream);
+        });
+
+        return $response;
+      }
+      else {
+
+        $response = new BinaryFileResponse($uri);
+        $response->setETag($etag, TRUE);
+        $response->prepare($request);
+        $response->setContentDisposition(
+          ResponseHeaderBag::DISPOSITION_INLINE,
+          $filename
+        );
+        return $response;
+      }
     }
     else {
       throw new NotFoundHttpException(
         "This Content does not bear files we can serve via IIIF "
       );
     }
-    //@TODO for beta3, explore caching here.
-    /*
-           $sLastModified = filemtime($sFileName);
-           $sEtag = md5_file($sFileName);
-
-           $sFileSize = filesize($sFileName);
-           $aInfo = getimagesize($sFileName);
-
-           if(in_array($sEtag, $oRequest->getETags()) || $oRequest->headers->get('If-Modified-Since') === gmdate("D, d M Y H:i:s", $sLastModified)." GMT" ){
-               $oResponse->headers->set("Content-Type", $aInfo['mime']);
-               $oResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
-               $oResponse->setETag($sEtag);
-               $oResponse->setPublic();
-               $oResponse->setStatusCode(304);
-
-               return $oResponse;
-           }
-
-           $oStreamResponse = new StreamedResponse();
-           $oStreamResponse->headers->set("Content-Type", $aInfo['mime']);
-           $oStreamResponse->headers->set("Content-Length", $sFileSize);
-           $oStreamResponse->headers->set("ETag", $sEtag);
-           $oStreamResponse->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $sLastModified)." GMT");
-
-           $oStreamResponse->setCallback(function() use ($sFileName) {
-               readfile($sFileName);
-           });
-
-           return $oStreamResponse;
-       }
-    */
   }
 
   /**
