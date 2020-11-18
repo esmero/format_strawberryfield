@@ -150,8 +150,8 @@ class IiifBinaryController extends ControllerBase {
 
       $size = $found->getSize(); // Bytes
       $createdtime = $found->getCreatedTime(); // last modified makes little sense?
-
-      if ($stream) {
+      // If client is asking for a range streaming won't help.
+      if ($stream || ($size > 209715200 && !$request->headers->has('Range'))) {
         $response = new StreamedResponse();
         $response->headers->set("Content-Type", $mime);
         $response->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $createdtime)." GMT");
@@ -170,10 +170,16 @@ class IiifBinaryController extends ControllerBase {
         $response->setCallback(function () use ($uri) {
             // We may want to force Garbage Collection here
             // Even if globally available...
+            $i = 0;
             gc_enable();
             $stream = fopen($uri, 'r');
             // While the stream is still open
             while (!feof($stream)) {
+              $i++;
+              if ($i == 10000) {
+                gc_collect_cycles();
+                $i = 0;
+              }
               // Read 1,024 bytes from the stream
               echo fread($stream, 1024);
             }
