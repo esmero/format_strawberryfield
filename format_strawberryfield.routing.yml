@@ -52,7 +52,7 @@ format_strawberryfield.metadatadisplay_settings:
 # Direct File access for SBF managed files.
 format_strawberryfield.iiifbinary:
   path: '/do/{node}/iiif/{uuid}/full/full/0/{format}'
-  methods: [GET]
+  methods: [GET,HEAD]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\IiifBinaryController::servefile'
   options:

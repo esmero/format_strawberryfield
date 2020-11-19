@@ -93,6 +93,7 @@ av_strawberry:
   css:
     component:
       css/htmlaudiovideo.css: {}
+
 jsm_modeler:
   version: 0.45
   js:
@@ -164,6 +165,17 @@ mirador_strawberry:
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
 
+uv_strawberry:
+  version: 1.0
+  js:
+    js/uv_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings
+    - format_strawberryfield/universalviewer
+
 leaflet_markercluster:
   version: 1.4.1
   remote: https://github.com/Leaflet/Leaflet.markercluster
@@ -216,13 +228,13 @@ leaflet_strawberry:
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
 replayweb:
-  version: 1.2.0
+  version: 1.3.0
   license:
     name: AGPLv3
     url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/replaywebpage@1.2.0/ui.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/replaywebpage@1.3.0/ui.js: { external: true, minified: true, preprocess: false}
 
 universalviewer:
   version: 4.0.0-pre.49
@@ -233,6 +245,7 @@ universalviewer:
   js:
     https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
     https://unpkg.com/@edsilv/utils@1.0.2/dist-umd/utils.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
 
 annotorious:
   version: 2.1.2
