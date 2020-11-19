@@ -279,10 +279,15 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid']  = $file->uuid();
                 // Used to keep annotations around during edit.
                 // Note: Since View modes are cached, if no change to the NODE this will be served from a cache! mmm.
-                if ($this->currentUser->hasPermission('view strawberryfield webannotation')) {
+                if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname, $delta, $nodeuuid);
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+                  // This also never runs if cached. So after deletion we better call the controller!
+                  if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+                    $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+                    WebAnnotationController::primeKeyStore($items[$delta]);
+                  }
                 }
                 if ($this->currentUser) {
                    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
@@ -292,13 +297,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
                 }
 
-                // We only set this if/and only if/ we have annotations loaded
-                // This also never runs if cached. So after deletion we better call the controller!
 
-                if (($webannotations) && !empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
-                  $keystoreid = $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
-                  WebAnnotationController::primeKeyStore($items[$delta]);
-                }
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
                   $max_height,
                   480
