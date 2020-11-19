@@ -168,8 +168,9 @@ class IiifBinaryController extends ControllerBase {
 
       // If client is asking for a range streaming won't help.
       // We should be able to decide when to stream, always based on Size
-      // And contraints.
-      if ($stream) {
+      // And constraints.
+
+      if ($stream && !$request->headers->has('Range') || !$request->headers->has('Range') && $size > (memory_get_usage(TRUE)/2)) {
         $response = new StreamedResponse();
         $response->headers->set("Content-Type", $mime);
         $response->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $createdtime)." GMT");
@@ -199,7 +200,7 @@ class IiifBinaryController extends ControllerBase {
                 $i = 0;
               }
               // Read 1,024 bytes from the stream
-              echo fread($stream, 1024);
+              echo fread($stream, 8192);
             }
             // Be sure to close the stream resource when you're done with it
             fclose($stream);
