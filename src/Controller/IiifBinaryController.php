@@ -10,12 +10,15 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\format_strawberryfield\Component\HttpFoundation\RangedRemoteFileRespone;
 
 /**
  * A IIIF Wrapper Controller for non public files.
@@ -76,7 +79,7 @@ class IiifBinaryController extends ControllerBase {
    * @param string $uuid
    * @param string $format
    *
-   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse
+   * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse|\Symfony\Component\HttpFoundation\Response | RangedRemoteFileRespone
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
@@ -150,8 +153,23 @@ class IiifBinaryController extends ControllerBase {
 
       $size = $found->getSize(); // Bytes
       $createdtime = $found->getCreatedTime(); // last modified makes little sense?
+      if ($request->getMethod() == 'HEAD') {
+        $response = new \Symfony\Component\HttpFoundation\Response;
+        $response->headers->set('Content-Type', $mime);
+        $response->headers->set('Last-Modified', gmdate("D, d M Y H:i:s", $createdtime)." GMT");
+        $response->headers->set('Content-Length', $size);
+        $response->setETag($etag, TRUE);
+        return $response;
+      }
+
+      $stream_wrapper_manager = \Drupal::service('stream_wrapper_manager');
+      $wrapper = $stream_wrapper_manager->getViaUri($uri);
+
+
       // If client is asking for a range streaming won't help.
-      if ($stream || ($size > 209715200 && !$request->headers->has('Range'))) {
+      // We should be able to decide when to stream, always based on Size
+      // And contraints.
+      if ($stream) {
         $response = new StreamedResponse();
         $response->headers->set("Content-Type", $mime);
         $response->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $createdtime)." GMT");
@@ -190,8 +208,15 @@ class IiifBinaryController extends ControllerBase {
         return $response;
       }
       else {
+        // TODO we need to check if ranges are actually valid
+        // Before attempting this
+        //
+        if ($request->headers->has('Range')) {
+          $response = new RangedRemoteFileRespone($uri);
+        } else {
+          $response = new BinaryFileResponse($uri);
+        }
 
-        $response = new BinaryFileResponse($uri);
         $response->setETag($etag, TRUE);
         $response->prepare($request);
         $response->setContentDisposition(
