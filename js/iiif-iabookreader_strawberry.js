@@ -25,7 +25,7 @@
                             iiifmanifest: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifest'],
                             iiifdefaultsequence: null, //If null given will use the first sequence found.
                             maxWidth: 800,
-                            imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.15.0/BookReader/images/',
+                            imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
                         };
                         console.log('initializing IABookreader')
                         var br = new BookReader(options);
