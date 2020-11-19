@@ -158,6 +158,9 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set('Content-Type', $mime);
         $response->headers->set('Last-Modified', gmdate("D, d M Y H:i:s", $createdtime)." GMT");
         $response->headers->set('Content-Length', $size);
+        if ($request->headers->has('Range')) {
+          $response->setStatusCode(206);
+        }
         $response->setETag($etag, TRUE);
         return $response;
       }
