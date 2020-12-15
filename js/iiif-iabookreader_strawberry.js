@@ -8,8 +8,13 @@
                 .each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
+                    var server = window.location.origin + '/';
                     var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
                     var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
+                    var node_uuid = drupalSettings.format_strawberryfield.iabookreader[element_id]['nodeuuid'];
+                    if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]['server']) != 'undefined') {
+                      var server = drupalSettings.format_strawberryfield.iabookreader[element_id]['server'];
+                    }
 
                     // Check if we got some data passed via Drupal settings.
                     if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]) != 'undefined') {
@@ -26,6 +31,10 @@
                             iiifdefaultsequence: null, //If null given will use the first sequence found.
                             maxWidth: 800,
                             imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
+                            server: server,
+                            bookId: node_uuid,
+                            enableSearch: true,
+                            searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
                         };
                         console.log('initializing IABookreader')
                         var br = new BookReader(options);
