@@ -478,13 +478,11 @@ BookReader.prototype.search =  (function(super_) {
 
         searchInsideResults.matches.forEach(function(match,index,array) {
           match.par[0].boxes.forEach(function(box,index,array) {
-            var pageindex = self.getPageIndex(box.page);
+            var pageindex = self.leafNumToIndex(array[index].page);
             array[index].l = Math.round(box.l * self.getPageWidth(pageindex));
             array[index].t = Math.round(box.t * self.getPageHeight(pageindex));
             array[index].r = Math.round(box.r * self.getPageWidth(pageindex));
             array[index].b = Math.round(box.b * self.getPageHeight(pageindex));
-            // DO NOT ASK ME WHY! WHO STARTS PAGES (LEAVES) with a 0? THIS FOLKS!
-            array[index].page = pageindex;
           })
           });
         hasCustomSuccess
