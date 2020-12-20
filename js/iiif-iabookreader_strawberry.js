@@ -35,6 +35,7 @@
                             bookId: node_uuid,
                             enableSearch: true,
                             searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+			    padding: 11,
                         };
                         console.log('initializing IABookreader')
                         var br = new BookReader(options);
