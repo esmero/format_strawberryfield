@@ -32,7 +32,7 @@ use Drupal\Core\Url;
  * )
  */
 class StrawberryWarcFormatter extends StrawberryBaseFormatter {
-  
+
   /**
    * {@inheritdoc}
    */
@@ -192,9 +192,11 @@ class StrawberryWarcFormatter extends StrawberryBaseFormatter {
           }
           if (isset($mediaitem['type']) && (
             $mediaitem['dr:mimetype'] == 'application/warc' ||
+            $mediaitem['dr:mimetype'] == 'application/wacz' ||
             $mediaitem['dr:mimetype'] == 'application/zip' ||
             $mediaitem['dr:mimetype'] == 'application/gzip' ||
-            $mediaitem['dr:mimetype'] == ' application/x-gzip'
+            $mediaitem['dr:mimetype'] == 'application/vnd.datapackage+zip' ||
+            $mediaitem['dr:mimetype'] == 'application/x-gzip'
             )
           ) {
             if (isset($mediaitem['dr:fid'])) {
