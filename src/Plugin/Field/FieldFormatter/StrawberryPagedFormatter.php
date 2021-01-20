@@ -435,10 +435,11 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('metadatadisplayentity_source')) {
-      $entity = $this->entityTypeManager->getStorage(
+      /* @var $metadatadisplayentity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
+      $metadatadisplayentity = $this->entityTypeManager->getStorage(
         'metadatadisplay_entity'
       )->load($this->getSetting('metadatadisplayentity_source'));
-      if ($entity) {
+      if ($metadatadisplayentity) {
 
         // Quickly sort the pages. We assume user will use the as:image key
         // Since the actual generation happens via a twig template.
@@ -452,12 +453,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           'node' => $item->getEntity(),
           'iiif_server' => $this->getIiifUrls()['public'],
         ];
-        $twigtemplate = $entity->get('twig')->getValue();
-        $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ field.label }}";
-        $manifestrenderelement = $this->twig_process(
-          $twigtemplate,
-          $context
-        );
+        $original_context = $context;
+        // Allow other modules to provide extra Context!
+        // Call modules that implement the hook, and let them add items.
+        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
+        // In case someone decided to wipe the original context?
+        // We bring it back!
+        $context = $context + $original_context;
+        $manifestrenderelement = $metadatadisplayentity->renderNative($context);
 
         $manifest = $manifestrenderelement->jsonSerialize();
         $groupid = 'iiif-' . $item->getName(
@@ -567,29 +570,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       }
     }
     return $element;
-  }
-
-  /**
-   * Use to process a Template directly.
-   *
-   * @param string $twigtemplate
-   * @param array $context
-   * @param boolean $removeHTML
-   *
-   * @return \Drupal\Core\Render\Markup
-   */
-  protected function twig_process(
-    string $twigtemplate,
-    array $context = []
-  ) {
-
-    $build = [
-      '#type' => 'inline_template',
-      '#template' => $twigtemplate,
-      '#context' => $context,
-    ];
-
-    return \Drupal::service('renderer')->renderPlain($build);
   }
 
 }

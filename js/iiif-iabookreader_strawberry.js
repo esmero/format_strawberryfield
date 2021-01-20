@@ -8,8 +8,13 @@
                 .each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
+                    var server = window.location.origin + '/';
                     var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
                     var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
+                    var node_uuid = drupalSettings.format_strawberryfield.iabookreader[element_id]['nodeuuid'];
+                    if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]['server']) != 'undefined') {
+                      var server = drupalSettings.format_strawberryfield.iabookreader[element_id]['server'];
+                    }
 
                     // Check if we got some data passed via Drupal settings.
                     if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]) != 'undefined') {
@@ -25,7 +30,12 @@
                             iiifmanifest: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifest'],
                             iiifdefaultsequence: null, //If null given will use the first sequence found.
                             maxWidth: 800,
-                            imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/images/',
+                            imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
+                            server: server,
+                            bookId: node_uuid,
+                            enableSearch: true,
+                            searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+			    padding: 11,
                         };
                         console.log('initializing IABookreader')
                         var br = new BookReader(options);
@@ -127,7 +137,9 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
 
   if (1 == this.mode) {
     var index = this.currentIndex();
-    var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json");
+    //OLD//var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json");
+    //var tilesourceUri = this.getPageProp(index, 'infojson');
+    var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(index, 1, 0));
     var dosd = $(osd_common.replace(/\[ID\]/g, "osd_s").replace('[TS]', tilesourceUri));
     jViewpageDiv.html(dosd);
   } else if (3 == this.mode) {
@@ -138,7 +150,9 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
 
     // is left page blank?
     if (typeof this.getPageURI(indices[0], 1, 0) != 'undefined') {
-			var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json");
+      //OLD//var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json");
+      //var tilesourceUri_left = this.getPageProp(indices[0], 'infojson');
+      var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[0], 1, 0));
       var osd_left = osd_common.replace(/\[ID\]/g, "osd_l").replace('[TS]', tilesourceUri_left);
 		} else {
       var osd_left = '<div id=osd_l allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
@@ -147,7 +161,9 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
 
     // is right page blank?
     if (typeof this.getPageURI(indices[1], 1, 0) != 'undefined') {
-			var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json");
+      //OLD//var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json");
+      //var tilesourceUri_right = this.getPageProp(indices[1], 'infojson');
+      var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[1], 1, 0));
       var osd_right = osd_common.replace(/\[ID\]/g, "osd_r").replace('[TS]', tilesourceUri_right);
 		} else {
       var osd_right = '<div id=osd_r allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
@@ -162,3 +178,13 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
 
   }
 };
+/* returns the search string */
+function getURLArgument(string) {
+  let url;
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return '';
+  }
+  return url.search
+}

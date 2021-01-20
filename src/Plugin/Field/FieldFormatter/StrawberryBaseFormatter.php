@@ -8,6 +8,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -23,6 +24,12 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $iiifConfig;
+  /**
+   * The Current User
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+
+  protected $currentUser;
 
   /**
    * StrawberryBaseFormatter Constructor.
@@ -44,6 +51,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *   The definition of the field to which the formatter is associated.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The ConfigFactory Container Interface.
+   * @param \Drupal\Core\Session\AccountProxyInterface|null $current_user
    */
   public function __construct(
     $plugin_id,
@@ -53,7 +61,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $label,
     string $view_mode,
     array $third_party_settings,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $config_factory,
+    AccountProxyInterface $current_user = NULL
   ) {
     parent::__construct(
       $plugin_id,
@@ -65,6 +74,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $third_party_settings
     );
     $this->iiifConfig = $config_factory->get('format_strawberryfield.iiif_settings');
+    $this->currentUser = $current_user;
   }
 
   /**
@@ -79,7 +89,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $configuration['label'],
       $configuration['view_mode'],
       $configuration['third_party_settings'],
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('current_user')
     );
   }
 

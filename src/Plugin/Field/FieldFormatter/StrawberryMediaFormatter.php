@@ -14,6 +14,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
+use Drupal\Core\Url;
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -39,6 +41,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       'json_key_source' => 'as:image',
       'max_width' => 720,
       'max_height' => 480,
+      'webannotations' => FALSE,
+      'webannotations_tool' => 'polygon',
       'thumbnails' => TRUE,
     ];
   }
@@ -48,44 +52,68 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
   public function settingsForm(array $form, FormStateInterface $form_state) {
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     return [
-      'iiif_group' => [
-        '#type' => 'checkbox',
-        '#title' => t('Group all Media files in a single viewer?'),
-        '#default_value' => $this->getSetting('iiif_group'),
-      ],
-      'thumbnails' => [
-        '#type' => 'checkbox',
-        '#title' => t('Show a thumbnail reference bar.'),
-        '#default_value' => $this->getSetting('thumbnails'),
-      ],
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#description' => $this->t('Use 0 to force 100% width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'iiif_group' => [
+          '#type' => 'checkbox',
+          '#title' => t('Group all Media files in a single viewer?'),
+          '#default_value' => $this->getSetting('iiif_group'),
+        ],
+        'thumbnails' => [
+          '#type' => 'checkbox',
+          '#title' => t('Show a thumbnail reference bar.'),
+          '#default_value' => $this->getSetting('thumbnails'),
+        ],
+        'webannotations' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable loading/editing of W3C webAnnotations.'),
+          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
+          '#default_value' => $this->getSetting('webannotations'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations',
+          ],
+        ],
+        'webannotations_tool' => [
+          '#type' => 'select',
+          '#options' => [
+            'rect' => 'Rectangle',
+            'polygon' => 'Polygon'
+          ],
+          '#title' => t('What tool to enable'),
+          '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
+          '#default_value' => $this->getSetting('webannotations_tool'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ]
+        ],
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -98,6 +126,11 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     if ($this->getSetting('iiif_group')) {
       $summary[] = $this->t('Use a single Viewer for multiple media: %iiif_group', [
         '%iiif_group' => $this->getSetting('iiif_group'),
+      ]);
+    }
+    if ($this->getSetting('webannotations')) {
+      $summary[] = $this->t('Enable W3C WebAnnotations: %webannotations', [
+        '%webannotations' => $this->getSetting('webannotations'),
       ]);
     }
     if ($this->getSetting('thumbnails')) {
@@ -133,6 +166,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $max_height = $this->getSetting('max_height');
     $grouped = $this->getSetting('iiif_group');
     $thumbnails = $this->getSetting('thumbnails');
+    $webannotations = $this->getSetting('webannotations');
+    $webannotations_tool = $this->getSetting('webannotations_tool');
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -241,6 +276,28 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
+                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid']  = $file->uuid();
+                // Used to keep annotations around during edit.
+                // Note: Since View modes are cached, if no change to the NODE this will be served from a cache! mmm.
+                if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname, $delta, $nodeuuid);
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+                  // This also never runs if cached. So after deletion we better call the controller!
+                  if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+                    $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+                    WebAnnotationController::primeKeyStore($items[$delta]);
+                  }
+                }
+                if ($this->currentUser) {
+                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+                } else {
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
+                }
+
+
                 $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
                   $max_height,
                   480

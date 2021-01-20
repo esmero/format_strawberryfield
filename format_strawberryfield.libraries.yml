@@ -1,13 +1,14 @@
 iiif_openseadragon:
   remote: http://openseadragon.github.io
-  version: 2.4
+  version: 2.4.2
   license:
     name: NewBSD
     url: http://openseadragon.github.io/license/
     gpl-compatible: false
   header: true
   js:
-    https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
+
 iiif_openseadragon_strawberry:
   version: 1.0
   js:
@@ -16,31 +17,34 @@ iiif_openseadragon_strawberry:
     - core/jquery
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/annotoriousopenseadragon
+
 iiif_iabookreader:
   remote: https://openlibrary.org/dev/docs/bookreader
-  version: 4.2
+  version: 4.21.0
   license:
     name: GNU Affero General Public License v3.0
-    url: https://github.com/internetarchive/bookreader/blob/4.2.0/LICENSE
+    url: https://github.com/internetarchive/bookreader/blob/4.21.0/LICENSE
     gpl-compatible: true
   header: true
   css:
     component:
       css/iabookreader.css: {}
-      https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/BookReader.css: { external: true}
+      https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/BookReader.css: { external: true}
   js:
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
     https://cdn.jsdelivr.net/npm/jquery.dragscrollable@1.0.0/dragscrollable.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery-colorbox@1.6.4/jquery.colorbox.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/jquery.mmenu.all.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/addons/navbars/jquery.mmenu.navbars.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/dragscrollable-br.js: { external: true, minified: false, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/BookReader.js: { external: true, minified: false, preprocess: false,  weight: -9}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.url.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.resume.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.2.0/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/jquery-ui-1.12.0.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/dragscrollable-br.js: { external: true, minified: false, preprocess: false}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/BookReader.js: { external: true, minified: false, preprocess: false,  weight: -9}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.url.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.resume.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
     - core/jquery
     - core/jquery.ui
@@ -54,13 +58,16 @@ iiif_iabookreader_strawberry:
     js/iiif-iabookreader_strawberry.js: {minified: false, weight: -6}
     js/plugin.iiif-iabookreader_strawberry.js: {minified: false, weight: -8}
     js/iiif-iabookreader_collapse.js: {minified: false}
+    js/iiif-openseadragon_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/jquery.ui
     - core/drupal
     - core/drupal.form
     - core/drupalSettings
     - core/drupal.debounce
+    - core/modernizr
     - format_strawberryfield/iiif_iabookreader
 pannellum:
   version: 2.5.6
@@ -77,6 +84,7 @@ iiif_pannellum_strawberry:
     js/iiif-pannellum_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
@@ -85,6 +93,7 @@ av_strawberry:
   css:
     component:
       css/htmlaudiovideo.css: {}
+
 jsm_modeler:
   version: 0.45
   js:
@@ -101,6 +110,7 @@ jsm_model_strawberry:
     js/jsm-model_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/jquery.ui
     - core/drupal
     - core/drupalSettings
@@ -122,22 +132,23 @@ pdfs_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/pdfs_mozilla
 
 mirador_projectmirador:
-  version: 3.0.0-rc.3
+  version: 3.0.0
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/mirador@3.0.0-rc.3/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/mirador@3.0.0/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_font:
- css:
-   base:
-     'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
+  css:
+    base:
+      'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
 
 mirador_strawberry:
   version: 1.0
@@ -149,9 +160,35 @@ mirador_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
+
+uv_strawberry:
+  version: 1.0
+  js:
+    js/uv_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings
+    - format_strawberryfield/universalviewer
+
+leaflet_markercluster:
+  version: 1.4.1
+  remote: https://github.com/Leaflet/Leaflet.markercluster
+  license:
+    name: MIT
+    url: https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENCE.txt
+    gpl-compatible: true
+  js:
+    https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
 
 leaflet_core:
   version: 1.6.0
@@ -175,6 +212,7 @@ leaflet_ajax:
     https://cdn.jsdelivr.net/npm/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - format_strawberryfield/leaflet_core
+    - format_strawberryfield/leaflet_markercluster
 
 leaflet_strawberry:
   version: 1.0
@@ -182,16 +220,64 @@ leaflet_strawberry:
     js/leaflet_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
+
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
 replayweb:
-  version: 1.0
+  version: 1.3.1
   license:
     name: AGPLv3
     url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/replaywebpage@1.0.1/ui.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/replaywebpage@1.3.1/ui.js: { external: true, minified: true, preprocess: false}
+
+universalviewer:
+  version: 4.0.0-pre.49
+  license:
+    name: MIT
+    url: hhttps://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/LICENSE.txt
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
+    https://unpkg.com/@edsilv/utils@1.0.2/dist-umd/utils.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
+
+annotorious:
+  version: 2.1.2
+  license:
+    name: BSD-3 Clause
+    url: https://github.com/recogito/annotorious/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.css: { external: true }
+
+annotoriousopenseadragon:
+  version: 2.1.2
+  license:
+    name: BSD-3 Clause
+    url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/annotorious.min.css: { external: true }
+
+w3cWebAnnotations_strawberry:
+  version: 1.0
+  js:
+    js/w3cWebAnnon_strawberry.js: { minified: false }
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/jquery.ui
+    - core/drupal
+    - core/drupalSettings

@@ -12,7 +12,6 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class JsWorkerController extends ControllerBase {
 
-
   /**
    * Serves 'statically' the replay web JS Worker file.
    *
@@ -20,15 +19,15 @@ class JsWorkerController extends ControllerBase {
    */
   public function servereplay() {
     $response = new Response(
-      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@1.0.1/sw.js");'
+      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@1.3.1/sw.js");'
     );
-    // Alternative https://unpkg.com/replaywebpage@1.0.0/sw.js
+    // Alternative https://unpkg.com/replaywebpage@1.3.1/sw.js
     $response->headers->set('Content-Type', 'text/javascript');
     return $response;
   }
 
   /**
-   * Serves 'statically' Index to avoid failure while worker is warmin up.
+   * Serves 'statically' Index to avoid failure while worker is warming up.
    *
    * @return \Symfony\Component\HttpFoundation\Response
    */
@@ -54,6 +53,4 @@ EOD;
     return $response;
 
   }
-
-
 }

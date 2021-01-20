@@ -1,5 +1,7 @@
 <?php
 
+
+
 namespace Drupal\format_strawberryfield\Entity;
 
 use Twig\Node\ModuleNode;
@@ -10,6 +12,8 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Drupal\user\UserInterface;
 use Twig\Source;
 
@@ -271,7 +275,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('view', TRUE)
       ->setRequired(TRUE)
       ->addConstraint('NotBlank')
-      ->addConstraint('TwigTemplateConstraint', ['useTwigMessage' => FALSE]);
+      ->addConstraint('TwigTemplateConstraint', ['useTwigMessage' => FALSE, 'TwigTemplateLogicalName' => 'MetadataDisplayEntity']);
 
     // Owner field of the Metadata Display Entity.
     // Entity reference field, holds the reference to the user object.
@@ -334,6 +338,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           'application/xml' => 'XML',
           'text/text' => 'TEXT',
           'text/turtle' => 'RDF/TURTLE',
+          'text/csv' => 'CSV'
         ],
       ])
       ->setRequired(TRUE)
@@ -362,6 +367,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       '#type' => 'inline_template',
       '#template' => $twigtemplate,
       '#context' => $context,
+      '#cache' => [
+        'tags' => $this->getCacheTags()
+      ]
     ];
     return $templaterenderelement;
   }
@@ -450,8 +458,20 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    */
   private function getTwigDefaultContext() {
-
     $context = [];
+    $context['datafixed'] = [];
+    foreach($this->getFieldDefinitions() as $field) {
+      /* @var FieldDefinitionInterface $field */
+      // If someone bundled this entity with a strawberryfield_field push the data
+      // Into context
+      if ($field->getType() == 'strawberryfield_field') {
+        foreach ($this->get($field->getName()) as $item) {
+          /* @var $item StrawberryFieldItem */
+          $context['datafixed'] = $context['datafixed'] + $item->provideDecoded(FALSE);
+        }
+      }
+    }
+
     $context['is_front'] = \Drupal::service('path.matcher')->isFrontPage();
     $context['language'] = \Drupal::languageManager()->getCurrentLanguage();
     $user = \Drupal::currentUser();
