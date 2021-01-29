@@ -236,7 +236,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         case 'metadatadisplayentity':
           $entity = NULL;
           if ($this->getSetting('metadatadisplayentity_source')) {
-            $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_source'));
+            $entity = $this->entityTypeManager
+              ->getStorage('metadatadisplay_entity')
+              ->load($this->getSetting('metadatadisplayentity_source'));
             $label = $entity->toLink()->getText();
             $summary[] = $this->t('Pages processed by the "%manifesturl_source" Metadata Data Display template',
               [
@@ -428,15 +430,17 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           unset($item->_attributes);
         }
         $element['media']['#attributes']['data-iiif-infojson'] = '';
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifest'] = json_decode($manifest);
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = $max_width_css;
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 520);
-        // While Bookreader has a way to enable/disable search via the "enableSearch"
-        // parameter, it doesn't work properly at the moment and we have opened an
-        // issue to fix it, meanwhile it's hidden via jQuery.
-        // @see https://github.com/internetarchive/bookreader/pull/613
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['enableSearchArchipelago'] = $this->searchEnabled($item);
+        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
+          'nodeuuid' => $nodeuuid,
+          'manifest' => json_decode($manifest),
+          'width' => $max_width_css,
+          'height' => max($max_height, 520),
+          // While Bookreader has a way to enable/disable search via the "enableSearch"
+          // parameter, it doesn't work properly at the moment and we have opened an
+          // issue to fix it, meanwhile it's hidden via jQuery.
+          // @see https://github.com/internetarchive/bookreader/pull/613
+          'enableSearchArchipelago' => $this->searchEnabled($item),
+        ];
       }
     }
 
@@ -493,12 +497,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             unset($item->_attributes);
           }
           $element['media']['#attributes']['data-iiif-infojson'] = '';
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['nodeuuid'] = $nodeuuid;
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['manifesturl'] = $manifest_url;
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['width'] = $max_width_css;
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['height'] = max($max_height, 520);
-          // @see self::processElementforMetadatadisplays()
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]['enableSearchArchipelago'] = $this->searchEnabled($item);
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
+            'nodeuuid' => $nodeuuid,
+            'manifesturl' => $manifest_url,
+            'width' => $max_width_css,
+            'height' => max($max_height, 520),
+            // @see self::processElementforMetadatadisplays()
+            'enableSearchArchipelago' => $this->searchEnabled($item),
+          ];
         }
       }
     }
