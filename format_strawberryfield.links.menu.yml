@@ -6,7 +6,7 @@ entity.metadatadisplay_entity.collection:
   parent: system.admin_content
   weight: 10
 format_strawberryfield.admin.structure.settings:
-  title: Metadata display Settings
+  title: Metadata display settings
   description: 'Configure Metadata Display entity'
   route_name:  format_strawberryfield.metadatadisplay_settings
   parent: system.admin_structure

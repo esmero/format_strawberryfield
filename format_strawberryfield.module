@@ -192,7 +192,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
           $entity->uuid()
         );
         $annotation_values = $tempstore->get($keystoreid);
-        // If not present escape the loop. Needs to be EXACT NULL
+        // If not present escape the loop. Needs to be EXACT NULL.
         if ($annotation_values === NULL) {
           break 2;
         }
@@ -217,7 +217,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
           );
           // We just keep track of the changes. If none! Then we do not set
           // the formstate flag.
-          if ($r->getDiffCnt() > 0 ) {
+          if ($r->getDiffCnt() > 0) {
             $fullvalues['ap:annotationCollection'] = $annotation_values;
             $entity->{$field_name}[0]->setMainValueFromArray($fullvalues);
             $form_state->set('hadAnnotations', $r->getDiffCnt());
@@ -230,6 +230,27 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
         }
 
       }
+    }
+  }
+}
+
+/**
+ * Implements hook_css_alter().
+ */
+function format_strawberryfield_css_alter(&$css) {
+  // Remove the stable.theme's off-canvas CSS reset for metadata display edit
+  // routes, otherwise CodeMirror doesn't display properly.
+  // @TODO Reevaluate for Drupal 9.
+  // @see https://www.drupal.org/project/drupal/issues/2826722
+
+  if (\Drupal::routeMatch()->getRouteName() !== 'entity.metadatadisplay_entity.edit_form') {
+    return;
+  }
+  foreach ($css as $key => $item) {
+    // @see 'core/misc/dialog/off-canvas
+    // @see core/themes/stable/css/core/dialog/off-canvas
+    if (strpos($key, '/off-canvas.') !== FALSE) {
+      unset($css[$key]);
     }
   }
 }
