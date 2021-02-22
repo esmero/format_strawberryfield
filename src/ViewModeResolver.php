@@ -20,12 +20,12 @@ class ViewModeResolver implements ViewModeResolverInterface {
   /**
    * The config factory service.
    *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $configFactory;
 
   /**
-   * The Strawberry Field Utility Service
+   * The Strawberry Field Utility Service.
    *
    * @var \Drupal\strawberryfield\StrawberryfieldUtilityService
    */
@@ -37,7 +37,7 @@ class ViewModeResolver implements ViewModeResolverInterface {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service
-   *   The SBF utility Service
+   *   The SBF utility Service.
    */
   public function __construct(StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service, ConfigFactoryInterface $config_factory) {
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
@@ -48,8 +48,8 @@ class ViewModeResolver implements ViewModeResolverInterface {
    * {@inheritdoc}
    */
   public function getCandidates(ContentEntityInterface $entity) {
-    if ($ado_types = $this->getADOTypes($entity)) {
-      $view_modes = array_filter($this->getSortedMappings(), function($mapping) use ($ado_types) {
+    if ($ado_types = $this->getAdoTypes($entity)) {
+      $view_modes = array_filter($this->getSortedMappings(), function ($mapping) use ($ado_types) {
         return ($mapping['active'] == TRUE) && in_array($mapping['jsontype'], $ado_types);
       });
       return $view_modes;
@@ -62,7 +62,7 @@ class ViewModeResolver implements ViewModeResolverInterface {
    * {@inheritdoc}
    */
   public function get(ContentEntityInterface $entity) {
-    $ado_types = $this->getADOTypes($entity);
+    $ado_types = $this->getAdoTypes($entity);
     if (!empty($ado_types)) {
       foreach ($this->getSortedMappings() as $mapping) {
         if (($mapping['active'] == TRUE) && in_array($mapping['jsontype'], $ado_types)) {
@@ -81,11 +81,11 @@ class ViewModeResolver implements ViewModeResolverInterface {
    *   The content entity.
    *
    * @return array
-   *  Array of ado types.
+   *   Array of ado types.
    *
    * @throws \Exception
    */
-  protected function getADOTypes(ContentEntityInterface $entity) {
+  protected function getAdoTypes(ContentEntityInterface $entity) {
     $cache_id = 'format_strawberry:view_mode_adotypes:' . $entity->id();
     $cached = $this->cacheGet($cache_id);
     if ($cached) {
@@ -109,7 +109,12 @@ class ViewModeResolver implements ViewModeResolverInterface {
       }
     }
 
-    $this->cacheSet($cache_id, $ado_types, CacheBackendInterface::CACHE_PERMANENT, Cache::mergeTags($entity->getCacheTags(), [$cache_id]));
+    // Cache tags need to depend on the entity itself, the new $cache_id but
+    // also the ones from config.
+    // @TODO: Change this for Drupal 9 as mergeTags will accept more arguments.
+    // @see https://www.drupal.org/node/3125498
+    $config = $this->configFactory->get('format_strawberryfield.viewmodemapping_settings');
+    $this->cacheSet($cache_id, $ado_types, CacheBackendInterface::CACHE_PERMANENT, Cache::mergeTags(Cache::mergeTags($entity->getCacheTags(), $config->getCacheTags()), [$cache_id]));
     return $ado_types;
   }
 
@@ -128,4 +133,3 @@ class ViewModeResolver implements ViewModeResolverInterface {
   }
 
 }
-
