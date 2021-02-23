@@ -201,10 +201,29 @@ class MetadataDisplayForm extends ContentEntityForm {
         }
       }
     }
+
+    $output = [];
+    $output['json'] = [
+      '#type' => 'details',
+      '#title' => t('JSON Data'),
+      '#open' => false,
+    ];
+    $output['json']['data'] = [
+      '#type' => 'codemirror',
+      '#rows' => 60,
+      '#value' => json_encode($context['data'], JSON_PRETTY_PRINT),
+      '#codemirror' => [
+        'lineNumbers' => FALSE,
+        'toolbar' => FALSE,
+        'readOnly' => TRUE,
+        'mode' => 'application/json',
+      ],
+    ];
+
     // Ensure we're using the twig from user's input instead of the entity's
     // default.
     $entity->set('twig', $input['twig'][0]);
-    $output = [
+    $output['preview'] = [
       '#type' => 'codemirror',
       '#rows' => 60,
       '#value' => $entity->renderNative($context),
