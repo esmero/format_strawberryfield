@@ -4,14 +4,11 @@
  * Contains formater_strawberryfield.module.
  */
 
-use Drupal\Component\Serialization\Json;
-use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Url;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Swaggest\JsonDiff\JsonDiff;
+
 /**
  * Implements hook_page_attachments().
  *
@@ -36,15 +33,14 @@ function format_strawberryfield_page_attachments(array &$page) {
   $page['#attached']['library'][] = 'core/jquery';
   $page['#attached']['library'][] = 'core/drupal.dialog.ajax';
   $page['#attached']['library'][] = 'core/drupal.ajax';
-
 }
 
+/**
+ * Implements hook_form_FORM_ID_alter() for node_form.
+ */
 function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface $form_state) {
-
   // Deal with Possible Addded Annotations.
-
   if ($form_state->get('hadAnnotations')) {
-    $node = $form_state->getFormObject()->getEntity();
     $count = $form_state->get('hadAnnotations');
 
     $form['annotations'] = [
@@ -90,47 +86,22 @@ function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface 
   }
 }
 
-
-
-function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
-  if ($entity->getEntityTypeId() == 'node' && $view_mode == 'full') {
-    $adotype = [];
-    $original_view_mode = $view_mode;
-    /* @var \Drupal\Core\Config\ImmutableConfig $config */
-    if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
-      foreach ($sbf_fields as $field_name) {
-        /* @var $field StrawberryFieldItem */
-        $field = $entity->get($field_name);
-        if (!$field->isEmpty()) {
-          foreach ($field->getIterator() as $delta => $itemfield) {
-            /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
-            $flatvalues = (array) $itemfield->provideFlatten();
-            if (isset($flatvalues['type'])) {
-              $adotype = array_merge($adotype, (array) $flatvalues['type']);
-            }
-          }
-        }
-      }
-    }
-    if (!empty($adotype)) {
-      $config = \drupal::config(
-        'format_strawberryfield.viewmodemapping_settings'
-      );
-      $viewmodemappings = $config->get('type_to_viewmode');
-      $viewmodemappings = !empty($viewmodemappings) ? (array) $viewmodemappings : [];
-      usort($viewmodemappings, ['\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm', 'sortSettings']);
-
-      foreach ($viewmodemappings as $viewmodemapping) {
-        if (($viewmodemapping['active'] == TRUE) && in_array($viewmodemapping['jsontype'],$adotype)) {
-          $view_mode = $viewmodemapping['view_mode'];
-          break;
-        }
-      }
-    }
-    // To be determined if we want to be dependat on ds module or not
-    // if so we really want to act on this alter and not the general one.
-    /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
+/**
+ * Implements hook_entity_view_mode_alter().
+ */
+function format_strawberryfield_entity_view_mode_alter(&$view_mode, Drupal\Core\Entity\EntityInterface $entity, $context) {
+  if ($entity->getEntityTypeId() != 'node') {
+    return;
   }
+  if ($view_mode != 'full') {
+    return;
+  }
+  $view_mode = \Drupal::service('format_strawberryfield.view_mode_resolver')->get($entity);
+
+  // To be determined if we want to be dependat on ds module or not
+  // if so we really want to act on this alter and not the general one.
+  /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
+
 }
 
 /**
@@ -174,7 +145,8 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
   }
 
   $account = \Drupal::currentUser();
-  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) && $account->hasPermission('add strawberryfield webannotation')) {
+  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) &&
+    $account->hasPermission('add strawberryfield webannotation')) {
     foreach ($sbf_fields as $field_name) {
       /* @var $field \Drupal\Core\Field\FieldItemInterface */
       $field = $entity->get($field_name);
@@ -183,9 +155,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
         /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
         $fullvalues = $itemfield->provideDecoded(TRUE);
         /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
-        $tempstore = \Drupal::service('tempstore.private')->get(
-          'webannotation'
-        );
+        $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
         $keystoreid = WebAnnotationController::getTempStoreKeyName(
           $field_name,
           $delta,

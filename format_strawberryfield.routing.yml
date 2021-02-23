@@ -231,3 +231,18 @@ format_strawberryfield.deletetmp_webannotations:
     _format: 'json'
     _entity_access: 'node.update'
     _permission: 'add strawberryfield webannotation'
+
+# Display settings for each ADO
+format_strawberryfield.display_settings:
+  path: '/node/{node}/{bundle}/display-settings/{view_mode_name}'
+  defaults:
+    _entity_form: 'entity_view_display.edit'
+    _title: 'Display settings'
+    entity_type_id: 'node'
+  requirements:
+    _entity_access: 'node.update'
+  options:
+    _node_operation_route: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
