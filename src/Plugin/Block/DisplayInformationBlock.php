@@ -110,7 +110,7 @@ class DisplayInformationBlock extends BlockBase implements ContainerFactoryPlugi
       $build['info']['disclaimer'] = [
         '#type' => 'html_tag',
         '#tag' => 'div',
-        '#value' => $this->t('<strong>Warning</strong>: Changes on a View Mode will affect every ADO(Node) that is using it.'),
+        '#value' => $this->t('<strong>Info</strong>: Changes on a View Mode will affect every ADO(Node) that is using it.'),
       ];
 
       if (empty($view_modes)) {
