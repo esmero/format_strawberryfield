@@ -77,12 +77,20 @@ class DisplayInformationBlock extends BlockBase implements ContainerFactoryPlugi
     $build = [];
 
     /** @var \Drupal\node\NodeInterface $node */
-    if ($node = $this->getContextValue('node')) {
+    $node = $this->getContextValue('node');
+    // Ensure that we don't throw ugly errors when displaying this block out of
+    // context, for example, on the node create page, there *is* node context
+    // but it is not saved yet, so we can't display any relevant information for
+    // the view modes.
+    if (!$node->isNew()) {
       $view_modes = $this->viewModeResolver->getCandidates($node);
+      if (empty($view_modes)) {
+        return $build;
+      }
       $selected_view_mode = array_shift($view_modes);
       $build['info'] = [
         '#type' => 'details',
-        '#title' => 'Display information',
+        '#title' => $this->t('Display information'),
         '#open' => TRUE,
       ];
 
