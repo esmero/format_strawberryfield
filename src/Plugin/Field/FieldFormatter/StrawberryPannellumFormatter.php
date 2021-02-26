@@ -8,12 +8,11 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\Annotation\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Cache\Cache;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
-use Drupal\file\FileInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 
@@ -65,7 +64,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           '#type' => 'textfield',
           '#title' => t('JSON Key from where to fetch Media URLs'),
           '#default_value' => $this->getSetting('json_key_source'),
-          '#required' => TRUE
+          '#required' => TRUE,
         ],
         'json_key_hotspots' => [
           '#type' => 'textfield',
@@ -104,7 +103,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
-          '#required' => TRUE
+          '#required' => TRUE,
         ],
         'max_height' => [
           '#type' => 'number',
@@ -114,7 +113,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
-          '#required' => TRUE
+          '#required' => TRUE,
         ],
         'autoLoad' => [
           '#type' => 'checkbox',
@@ -166,7 +165,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
     $number_images = $this->getSetting('number_images');
     /* @var \Drupal\file\FileInterface[] $files */
@@ -176,7 +175,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $multiscene = trim($this->getSetting('json_key_multiscene'));
     $settings_hotspotdebug = $this->getSetting('hotSpotDebug');
     $settings_autoload = $this->getSetting('autoLoad');
-    $setttings_key = $this->getSetting('json_key_settings');
+    $settings_key = $this->getSetting('json_key_settings');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -201,6 +200,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
             '@field' => $items->getName(),
           ]
         );
+        \Drupal::logger('format_strawberryfield')->warning($message);
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
 
@@ -260,33 +260,16 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
               // means we have a broken/missing media reference
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(
-                  StreamWrapperManager::getTarget($file->getFileUri())
-                );
+                $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
 
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
                   continue;
                   // @TODO add a default Thumbnail here.
                 }
-                $filecachetags = $file->getCacheTags();
-                //@TODO check this filecachetags and see if they make sense
 
-                $uniqueid =
-                  'iiif-' . $items->getName(
-                  ) . '-' . $nodeuuid . '-' . $delta . '-panorama' . $i;
+                $uniqueid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-panorama' . $i;
                 $htmlid = $uniqueid;
 
-                $cache_contexts = [
-                  'url.site',
-                  'url.path',
-                  'url.query_args',
-                  'user.permissions',
-                ];
-                // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags(
-                  $filecachetags,
-                  $items->getEntity()->getCacheTags()
-                );
                 // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
                 $iiifpublicinfojson = $iiifhelper->getPublicInfoJson(
                   $iiifidentifier
@@ -305,35 +288,47 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   //continue; // Nothing can be done here?
                 }
                 else {
-                  //@see \template_preprocess_image for further theme_image() attributes.
-                  // Look. This one uses the public accessible base URL.
-                  // That is how world works.
+                  // Give it the minimum in case things go wrong.
+                  // Why 256Mbytes? Compression (if source is JPEG to be scaled can take way more)
+                  $iiifsizes = array_reverse($iiifsizes);
+                  foreach ($iiifsizes as $iiifsize) {
+                    $max_iiif_sizes = $iiifsize;
+                    if (round($iiifsize['height'] * $iiifsize['width'] * 16 / 8 / 1024 / 1024) <= 256) {
+                      break;
+                    }
+                  }
+
                   if (($max_width == 0) && ($max_height == 0)) {
-                    $max_width = $iiifsizes[0]['width'];
-                    $max_height = $iiifsizes[0]['height'];
+                    $max_height = $max_iiif_sizes['height'];
+                    $max_width = $max_iiif_sizes['width'];
                   }
                   if (($max_width == 0) && ($max_height > 0)) {
                     $max_width = round(
-                      $iiifsizes[0]['width'] / $iiifsizes[0]['height'] * $max_height,
+                      $max_iiif_sizes['width'] / $max_iiif_sizes['height'] * $max_height,
                       0
                     );
+                    // Overide $max_width_css in this only case
+                    // But we allow 100% since Panellum will accomodate for the actual distortion
+                    $max_width_css = $max_width_css == '100%' ? $max_width_css : $max_width . 'px';
                   }
                   elseif (($max_width > 0) && ($max_height == 0)) {
                     $max_height = round(
-                      $iiifsizes[0]['height'] / $iiifsizes[0]['width'] * $max_width,
+                      $max_iiif_sizes['height'] / $max_iiif_sizes['width'] * $max_width,
                       0
                     );
                   }
                   // Pannellum recommends max 4096 pixel width images for WebGl. Lets use that as max.
-                  $max_width_source = ($iiifsizes[0]['width'] > 4096) ? '4096,' : 'max';
-
-                  $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source}/0/default.jpg";
+                  $max_width_source_comp = ($max_iiif_sizes['width'] >= 32768) ? '32768,' : $max_iiif_sizes['width'] . ',';
+                  $max_width_source_mob = ($max_iiif_sizes['width'] >= 4096) ? '4096,' : $max_iiif_sizes['width'] . ',';
+                  $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_comp}/0/default.jpg";
+                  $iiifserverimg_mobile = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_mob}/0/default.jpg";
                   $elements[$delta]['panorama' . $i] = [
                     '#type' => 'container',
                     '#attributes' => [
                       'class' => ['field-iiif', 'strawberry-panorama-item'],
                       'id' => $htmlid,
                       'data-iiif-image' => $iiifserverimg,
+                      'data-iiif-image-mobile' => $iiifserverimg_mobile,
                       'data-iiif-image-width' => $max_width_css,
                       'data-iiif-image-height' => max(
                         $max_height,
@@ -356,19 +351,24 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
 
                   // @TODO. We can maybe have an option where $mediaitemkey is not set
                   // And then have general settings for every image?
-                  if (isset($jsondata[$setttings_key]) &&
-                    isset($jsondata[$setttings_key][$this->pluginId]) &&
-                    isset($jsondata[$setttings_key][$this->pluginId][$mediaitemkey]) &&
-                    isset($jsondata[$setttings_key][$this->pluginId][$mediaitemkey]['settings'])
-                    ) {
+                  if (isset($jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings'])) {
                     // We only want a few settings here.
                     // Question is do we allow everything pannellum can?
                     // Or do we control this?
+                    // @see https://pannellum.org/documentation/reference/
+                    /*
+                    const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
+                    const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
+                    const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
+                    const $maxYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxYaw;
+                    const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
+                    const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
+                    const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
+                     */
                     $viewer_settings = $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'];
-                    $viewer_settings = array_merge($viewer_settings, $jsondata[$setttings_key][$this->pluginId][$mediaitemkey]['settings']);
+                    $viewer_settings = array_merge($viewer_settings, $jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings']);
                     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = $viewer_settings;
                   }
-
 
 
                   $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
@@ -445,21 +445,20 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
    *
    * @param array $jsondata_scene
    * @param string $fieldname
+   * @param int $ownnodeid
+   *
+   * @return array
    */
-  public function processMultiScene(
-    array $jsondata_scene,
-    string $fieldname,
-    int $ownnodeid
-  ) {
+  public function processMultiScene(array $jsondata_scene, string $fieldname, int $ownnodeid) {
     // We need to check if there are many or a single one first.
-
+    $allscenes = [];
     if (isset($jsondata_scene['scene'])) {
       // Means its a unique scene.
-      $scenes[] = $jsondata_scene;
+      $allscenes[] = $jsondata_scene;
     }
     else {
       foreach ($jsondata_scene as $scene) {
-        $scenes[] = $scene;
+        $allscenes[] = $scene;
       }
     }
     // Now we have a common structure
@@ -472,7 +471,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $full_tour = new \stdClass();
     $single_scene_details = new \stdClass();
     $panorama_id = NULL;
-    foreach ($scenes as $key => $scenes) {
+    foreach ($allscenes as $key => $scenes) {
       // Now this is sweet, We will assume that the user wants same specs as this
       // Formatter (makes sense!).
       if (isset($scenes["scene"])) {
@@ -554,15 +553,6 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       $reusedarray["#attached"]["drupalSettings"]["format_strawberryfield"]["pannellum"][$panorama_id]["tour"] = $full_tour;
     }
     return $reusedarray;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
   }
 
 }

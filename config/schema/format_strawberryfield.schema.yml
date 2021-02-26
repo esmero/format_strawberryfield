@@ -33,6 +33,9 @@ field.formatter.settings.strawberry_audio_formatter:
       type: string
     number_media:
       type: integer
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
@@ -66,6 +69,9 @@ field.formatter.settings.strawberry_image_formatter:
       type: string
     image_link:
       type: boolean
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
@@ -100,6 +106,9 @@ field.formatter.settings.strawberry_media_formatter:
     number_images:
       type: integer
       label: 'Number of images'
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
   label: 'Specific Config for strawberry_3d_formatter'
@@ -123,7 +132,9 @@ field.formatter.settings.strawberry_3d_formatter:
     number_models:
       type: integer
       label: 'Number of 3D Models to load from JSON'
-
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -181,6 +192,9 @@ field.formatter.settings.strawberry_paged_formatter:
       type: string
     manifesturl_source:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pannellum_formatter'
@@ -222,6 +236,9 @@ field.formatter.settings.strawberry_pannellum_formatter:
     number_images:
       type: integer
       label: "Number of Images"
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
@@ -250,6 +267,9 @@ field.formatter.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 field.formatter.settings.strawberry_pdf_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
@@ -280,6 +300,10 @@ field.formatter.settings.strawberry_pdf_formatter:
     initial_page:
       type: integer
       label: 'First Page to display per PDF'
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_mirador_formatter'
@@ -355,6 +379,9 @@ field.formatter.settings.strawberry_warc_formatter:
       label: 'Whether to use global IIIF settings or not.'
     json_key_starting_url:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
 
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
@@ -455,3 +482,21 @@ ds.field_plugin.*:
     formatter:
       type: field.formatter.settings.[%parent.%parent.formatter]
       label: "Formatter settings for a generic ds.field plugin"
+
+# Reusable JMESPath Config schema for File dependant Formatters
+format_strawberryfield.jmespath_config.mapping:
+  type: mapping
+  label: 'JMESPath Config to be used in Formatters using direct access to Files'
+  mapping:
+    use_jmespath:
+      type: boolean
+      label: 'Whether to use JMESPath Expression to Filter Files'
+    fallback_jmespath:
+      type: boolean
+      label: 'Whether to use the base defaults in case JMESPath Expression returns null or not'
+    jmespath_filter:
+      type: string
+      label: 'A JMESPath filter expression'
+    jmespath_alternative_filter:
+      type: string
+      label: 'An alternative JMESPath filter expression'

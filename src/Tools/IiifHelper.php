@@ -93,13 +93,19 @@ class IiifHelper {
    */
   public function getImageSizes($id) {
     $remoteInfoJson = $this->getRemoteInfoJson($id);
+    $sizes = [];
     if (empty($remoteInfoJson)) {
-      return [];
+      return $sizes;
     }
+    // This could be optional in other IIIF Server implementations.
     if (isset($remoteInfoJson['sizes'])) {
-      return $remoteInfoJson['sizes'];
+      $sizes = $remoteInfoJson['sizes'];
     }
-    return [];
+    // Adds at the end the full size
+    if (isset($remoteInfoJson['width']) && isset($remoteInfoJson['height'])) {
+      $sizes[] = ['width' => $remoteInfoJson['width'], 'height' => $remoteInfoJson['height']];
+    }
+    return $sizes;
   }
 
 
