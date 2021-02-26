@@ -233,8 +233,6 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                 // yet.
                 // @see https://github.com/esmero/format_strawberry/issues/1
 
-                //@ TODO recheck cache tags here, since we are not really using
-                // the file itself.
                 $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
 
                 $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
@@ -253,6 +251,11 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
                     'style' => "width:{$max_width_css}; height:{$max_height}px",
+                  ],
+                  //@ TODO recheck cache tags here, since we are not really using
+                  // the file itself.
+                  '#cache' => [
+                    'tags' => $file->getCacheTags(),
                   ],
                 ];
                 if (isset($item->_attributes)) {
@@ -291,7 +294,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
                   // This also never runs if cached. So after deletion we better
                   // call the controller!
                   if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
-                    WebAnnotationController::primeKeyStore($items[$delta]);
+                    $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+                    WebAnnotationController::primeKeyStore($items[$delta], $keystoreid);
                   }
                 }
                 if ($this->currentUser) {
