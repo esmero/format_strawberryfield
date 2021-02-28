@@ -58,7 +58,7 @@ class WebAnnotationController extends ControllerBase {
   protected $mimeTypeGuesser;
 
   /**
-   * MetadataExposeDisplayController constructor.
+   * WebAnnotationController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
    *   The Symfony Request Stack.

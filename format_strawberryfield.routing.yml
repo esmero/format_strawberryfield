@@ -45,7 +45,7 @@ format_strawberryfield.metadatadisplay_settings:
   path: 'admin/structure/metadatadisplay_entity_settings'
   defaults:
     _form: '\Drupal\format_strawberryfield\Form\MetadataDisplaySettingsForm'
-    _title: 'Metadata Display Settings'
+    _title: 'Metadata display settings'
   requirements:
     _permission: 'administer metadatadisplay entity'
 
@@ -231,3 +231,18 @@ format_strawberryfield.deletetmp_webannotations:
     _format: 'json'
     _entity_access: 'node.update'
     _permission: 'add strawberryfield webannotation'
+
+# Display settings for each ADO
+format_strawberryfield.display_settings:
+  path: '/node/{node}/{bundle}/display-settings/{view_mode_name}'
+  defaults:
+    _entity_form: 'entity_view_display.edit'
+    _title: 'Display settings'
+    entity_type_id: 'node'
+  requirements:
+    _entity_access: 'node.update'
+  options:
+    _node_operation_route: TRUE
+    parameters:
+      node:
+        type: 'entity:node'

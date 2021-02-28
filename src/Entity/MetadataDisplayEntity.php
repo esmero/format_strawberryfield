@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace Drupal\format_strawberryfield\Entity;
 
 use Twig\Node\ModuleNode;
@@ -12,8 +10,6 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
-use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Drupal\user\UserInterface;
 use Twig\Source;
 
@@ -135,7 +131,6 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
   // Implements methods defined by EntityChangedInterface.
   use EntityChangedTrait;
-
 
   /**
    * Calculated Twig vars used by this template.
@@ -338,7 +333,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           'application/xml' => 'XML',
           'text/text' => 'TEXT',
           'text/turtle' => 'RDF/TURTLE',
-          'text/csv' => 'CSV'
+          'text/csv' => 'CSV',
         ],
       ])
       ->setRequired(TRUE)
@@ -368,8 +363,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       '#template' => $twigtemplate,
       '#context' => $context,
       '#cache' => [
-        'tags' => $this->getCacheTags()
-      ]
+        'tags' => $this->getCacheTags(),
+      ],
     ];
     return $templaterenderelement;
   }
@@ -385,9 +380,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // Metadata. If That happens, the render pipeline will complain about us
     // leaking that metadata/early rendering when using it in a Cacheable
     // response Controller.
-    // @See \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController.
-
-    // Complement $context with default one
+    // @See \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController()
+    // Complement $context with default one.
     $context = $context + $this->getTwigDefaultContext();
     $twigtemplate = $this->get('twig')->getValue();
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
@@ -451,22 +445,22 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     return $variables;
   }
 
-
   /**
-   * Provides default Context so we can get common values
+   * Provides default Context so we can get common values.
    *
    * @return array
+   *   Array of the default context.
    */
   private function getTwigDefaultContext() {
     $context = [];
     $context['datafixed'] = [];
-    foreach($this->getFieldDefinitions() as $field) {
-      /* @var FieldDefinitionInterface $field */
-      // If someone bundled this entity with a strawberryfield_field push the data
-      // Into context
+    foreach ($this->getFieldDefinitions() as $field) {
+      /** @var \Drupal\Core\Field\FieldDefinitionInterface $field */
+      // If someone bundled this entity with a strawberryfield_field push the
+      // data into context.
       if ($field->getType() == 'strawberryfield_field') {
         foreach ($this->get($field->getName()) as $item) {
-          /* @var $item StrawberryFieldItem */
+          /** @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $item */
           $context['datafixed'] = $context['datafixed'] + $item->provideDecoded(FALSE);
         }
       }

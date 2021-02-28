@@ -4,45 +4,44 @@
 
     Drupal.behaviors.format_strawberryfield_iabookreader_initiate = {
         attach: function(context, settings) {
-            $('.strawberry-iabook-item[data-iiif-infojson]').once('attache_iab')
-                .each(function (index, value) {
-                    // Get the node uuid for this element
-                    var element_id = $(this).attr("id");
-                    var server = window.location.origin + '/';
-                    var default_width = drupalSettings.format_strawberryfield.iabookreader[element_id]['width'];
-                    var default_height = drupalSettings.format_strawberryfield.iabookreader[element_id]['height'];
-                    var node_uuid = drupalSettings.format_strawberryfield.iabookreader[element_id]['nodeuuid'];
-                    if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]['server']) != 'undefined') {
-                      var server = drupalSettings.format_strawberryfield.iabookreader[element_id]['server'];
-                    }
+            $('.strawberry-iabook-item[data-iiif-infojson]').once('attache_iab').each(function (index, value) {
+              // Get the node uuid for this element
+              var element_id = $(this).attr("id");
+              var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
+              var server = window.location.origin + '/';
 
-                    // Check if we got some data passed via Drupal settings.
-                    if (typeof(drupalSettings.format_strawberryfield.iabookreader[element_id]) != 'undefined') {
+              // Check if we got some data passed via Drupal settings.
+              if (typeof(strawberrySettings) != 'undefined') {
+                var node_uuid = strawberrySettings['nodeuuid'];
+                if (typeof(strawberrySettings['server']) != 'undefined') {
+                  server = strawberrySettings['server'];
+                }
+                $(this).height(strawberrySettings.height);
+                $(this).css("width", strawberrySettings.width);
 
-                        $(this).height(default_height);
-                        $(this).css("width",default_width);
+                // Defines our basic options for IIIF.
+                var options = {
+                  ui: 'full', // embed, full (responsive)
+                  el: '#' + element_id,
+                  iiifmanifesturl: strawberrySettings['manifesturl'],
+                  iiifmanifest: strawberrySettings['manifest'],
+                  iiifdefaultsequence: null, //If null given will use the first sequence found.
+                  maxWidth: 800,
+                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
+                  server: server,
+                  bookId: node_uuid,
+                  enableSearch: true,
+                  searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+                  padding: 11,
+                };
+                var br = new BookReader(options);
+                br.init();
 
-                        // Defines our basic options for IIIF.
-                        var options = {
-                            ui: 'full', // embed, full (responsive)
-                            el: '#' + element_id,
-                            iiifmanifesturl: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifesturl'],
-                            iiifmanifest: drupalSettings.format_strawberryfield.iabookreader[element_id]['manifest'],
-                            iiifdefaultsequence: null, //If null given will use the first sequence found.
-                            maxWidth: 800,
-                            imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
-                            server: server,
-                            bookId: node_uuid,
-                            enableSearch: true,
-                            searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
-			    padding: 11,
-                        };
-                        console.log('initializing IABookreader')
-                        var br = new BookReader(options);
-                        br.init();
-                    }
-
-                })}}
+                if (strawberrySettings.enableSearchArchipelago === false) {
+                  $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+                }
+              }
+          })}}
 })(jQuery, Drupal, drupalSettings);
 
 // override setupTooltips()

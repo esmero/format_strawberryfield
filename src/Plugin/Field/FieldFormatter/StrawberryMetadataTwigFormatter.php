@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: dpino
@@ -9,11 +10,8 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -21,10 +19,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Twig_Error_Syntax;
-use Twig_Environment;
-use Twig_Error_Runtime;
-use Twig_Loader_Array;
 
 /**
  * Twig based Strawberry Field formatter.
@@ -43,14 +37,12 @@ use Twig_Loader_Array;
  */
 class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
-
   /**
    * The current user.
    *
    * @var \Drupal\Core\Session\AccountInterface
    */
   protected $currentUser;
-
 
   /**
    * The entity manager.
@@ -60,12 +52,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
   protected $entityTypeManager;
 
   /**
+   * The Twig environment.
+   *
    * @var \Drupal\Core\Template\TwigEnvironment
    */
   protected $twig;
 
   /**
-   * Constructs a FormatterBase object.
+   * StrawberryMetadataTwigFormatter constructor.
    *
    * @param string $plugin_id
    *   The plugin_id for the formatter.
@@ -80,37 +74,21 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    * @param string $view_mode
    *   The view mode.
    * @param array $third_party_settings
-   *   Any third party settings.
-   */
-  /**
-   * StrawberryMetadataTwigFormatter constructor.
-   *
-   * @param string $plugin_id
-   *   The plugin_id for the formatter.
-   * @param $plugin_definition
-   *   The plugin implementation definition.
-   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
-   *   The definition of the field to which the formatter is associated.
-   * @param array $settings
-   * @param string $label
-   *   The formatter settings.
-   * @param $view_mode
-   *   The view mode.
-   * @param array
-   *   Any third party settings.
+   *   Any third party settings settings.
    * @param \Drupal\Core\Session\AccountInterface $current_user
-   *   The current User
+   *   The current User.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The Entity Type manager
+   *   The Entity Type manager.
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
-   *   The Loaded twig Environment
+   *   The Loaded twig Environment.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The Config factory.
    */
   public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
     $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
-
   }
 
   /**
@@ -132,8 +110,6 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
 
     );
   }
-
-
 
   /**
    * {@inheritdoc}
@@ -187,7 +163,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         '#title' => t('Use also the Metadata Display Name as label?'),
         '#description' => t('If enabled we will also generate a collapsible container around the display for you.'),
         '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
-      ]
+      ],
     ];
   }
 
@@ -195,7 +171,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    // Get the metadata template's label for display in the summary
+    // Get the metadata template's label for display in the summary.
     $entity_label = NULL;
     if ($this->getSetting('metadatadisplayentity_id')) {
       $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
@@ -204,7 +180,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       }
     }
 
-    // Build the summary
+    // Build the summary.
     $summary = [];
     $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
     $summary[] = $this->t('Selected: %template', [
@@ -213,19 +189,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     return $summary;
   }
 
-
   /**
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $label = $this->getSetting('label');
-    $specs = $this->getSetting('specs');
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_id = $this->getSetting('metadatadisplayentity_id');
-    $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
 
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -236,7 +207,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       if (empty($metadatadisplayentity_id)) {
         continue;
       }
-      /* @var \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity; */
+      /** @var \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity $metadatadisplayentity */
       $metadatadisplayentity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
       if ($metadatadisplayentity == NULL) {
         continue;
@@ -244,22 +215,21 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
 
       $jsondata = json_decode($item->value, TRUE);
 
-      // Probably good idea to strip our own keys here
+      // Probably good idea to strip our own keys here.
       // @TODO remove private access to keys
 
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        $message= $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
+        $message = $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
           [
             '@id' => $nodeid,
             '@field' => $items->getName(),
           ]);
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        return $elements[$delta] = ['#markup' => $message];
       }
 
       try {
-        //  $markup = $environment->renderInline($element['#template'], $element['#context']);
         // @TODO So we can generate two type of outputs here,
         // A) HTML visible (like smart metadata displays)
         // B) Downloadable formats.
@@ -275,10 +245,10 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         }
         $context = [
-            'data' => $jsondata,
-            'node' => $items->getEntity(),
-            'iiif_server' => $this->getIiifUrls()['public'],
-          ];
+          'data' => $jsondata,
+          'node' => $items->getEntity(),
+          'iiif_server' => $this->getIiifUrls()['public'],
+        ];
         $original_context = $context;
 
         // Allow other modules to provide extra Context!
@@ -289,12 +259,11 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         $context = $context + $original_context;
         $templaterenderelement = $metadatadisplayentity->processHtml($context);
 
-
-        if ($usemetadatalabel){
+        if ($usemetadatalabel) {
           $elements[$delta]['container'] = [
             '#type' => 'details',
             '#title' => $metadatadisplayentity->toLink()->getText(),
-            '#open' => FALSE, // Controls the HTML5 'open' attribute. Defaults to FALSE.
+            '#open' => FALSE,
             'content' => $templaterenderelement,
           ];
         }
@@ -302,40 +271,28 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           $elements[$delta]['content'] = $templaterenderelement;
         }
 
-      } catch (\Exception $e) {
+      }
+      catch (\Exception $e) {
         // Render each element as markup.
         $elements[$delta] = [
           '#markup' => json_encode(
             json_decode($item->value, TRUE),
             JSON_PRETTY_PRINT
           ),
-
         ];
-
       }
-
     }
+
     return $elements;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function view(FieldItemListInterface $items, $langcode = NULL) {
-
-    $elements = parent::view($items, $langcode);
-    return $elements;
-  }
-
-
   public function setSetting($key, $value) {
-    /** @var \Drupal\Core\Template\TwigEnvironment $environment */
-    $environment = \Drupal::service('twig');
-    $environment->invalidate();
+    $this->twig->invalidate();
 
-    return parent::setSetting(
-      $key,
-      $value
-    );
+    return parent::setSetting($key, $value);
   }
+
 }

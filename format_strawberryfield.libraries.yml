@@ -281,3 +281,13 @@ w3cWebAnnotations_strawberry:
     - core/jquery.ui
     - core/drupal
     - core/drupalSettings
+
+code_mirror_autosave:
+  version: 1.0
+  js:
+    js/code_mirror_autosave.js: { minified: false }
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - codemirror_editor/editor
