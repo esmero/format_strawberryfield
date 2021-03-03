@@ -8,6 +8,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
@@ -18,17 +19,44 @@ use Drupal\Core\Access\AccessResult;
  */
 abstract class StrawberryBaseFormatter extends FormatterBase implements ContainerFactoryPluginInterface {
 
+  /* Expected structure of an Media item inside JSON
+  "as:images": {
+     "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
+     "dr:fid": 32, // Drupal's FID
+     "dr:for": "add_some_master_images", // The webform element key that generated this one
+     "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
+     "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
+     "type": "Image",
+     "sequence" : 1,
+     "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
+     }
+  }*/
+
+  /* Expected structure of an Document item inside JSON
+  "as:documents" :  {
+     "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf": {
+     "dr:fid": 32, // Drupal's FID
+     "dr:for": "add_some_pdf_files", // The webform element key that generated this one
+     "url": "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
+     "name": "new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
+     "type": "Document",
+     "numberOfPages": 200,
+     "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
+     }
+  */
+
   /**
    * The Config for getting default IIIF settings.
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $iiifConfig;
-  /**
-   * The Current User
-   * @var \Drupal\Core\Session\AccountProxyInterface
-   */
 
+  /**
+   * The current user.
+   *
+   * @var \Drupal\Core\Session\AccountInterface
+   */
   protected $currentUser;
 
   /**
@@ -53,26 +81,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *   The ConfigFactory Container Interface.
    * @param \Drupal\Core\Session\AccountProxyInterface|null $current_user
    */
-  public function __construct(
-    $plugin_id,
-    $plugin_definition,
-    FieldDefinitionInterface $field_definition,
-    array $settings,
-    $label,
-    string $view_mode,
-    array $third_party_settings,
-    ConfigFactoryInterface $config_factory,
-    AccountProxyInterface $current_user = NULL
-  ) {
-    parent::__construct(
-      $plugin_id,
-      $plugin_definition,
-      $field_definition,
-      $settings,
-      $label,
-      $view_mode,
-      $third_party_settings
-    );
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, string $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user = NULL) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
     $this->iiifConfig = $config_factory->get('format_strawberryfield.iiif_settings');
     $this->currentUser = $current_user;
   }

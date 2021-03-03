@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: dpino
@@ -10,8 +11,6 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Component\Utility\UrlHelper;
@@ -155,13 +154,11 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
 
     $number_media =  $this->getSetting('number_media');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
+    // Fixing the key to extract while coding to 'Media'.
     $key = $this->getSetting('json_key_source');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
     //@TODO posterframe is not being used. Make it used.
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -179,7 +176,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
             '@id' => $nodeid,
             '@field' => $items->getName(),
           ]);
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        return $elements[$delta] = ['#markup' => $message];
       }
       /* Expected structure of an Video item inside JSON
       @see https://www.w3.org/TR/webvtt1/#introduction-metadata for tracks
@@ -229,7 +226,6 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
               // means we have a broken/missing media reference
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
-                $audiourl = $file->getFileUri();
                 // We assume here file could not be accessible publicly
                 $route_parameters = [
                   'node' => $nodeid,
@@ -245,17 +241,6 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
                   'av-' . $items->getName(
                   ) . '-' . $nodeuuid . '-' . $delta . '-video' . $i;
 
-                $cache_contexts = [
-                  'url.site',
-                  'url.path',
-                  'url.query_args',
-                  'user.permissions'
-                ];
-                // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags(
-                  $filecachetags,
-                  $items->getEntity()->getCacheTags()
-                );
                 // We will use HTML5 Video tag because Audio Tag does not allow Tracks with Subtitles
                 // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
                 $elements[$delta]['video_hmtl5_' . $i] = [
@@ -282,9 +267,20 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
                       '#attributes' => [
                         'src' => $publicurl->toString(),
                         'type' => $file->getMimeType(),
-                      ]
-                    ]
-                  ]
+                      ],
+                    ],
+                  ],
+                  '#cache' => [
+                    // @ see https://www.drupal.org/files/issues/2517030-125.patch
+                    'tags' => Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags()),
+                    'contexts' => [
+                      'url.site',
+                      'url.path',
+                      'url.query_args',
+                      'user.permissions',
+                    ],
+                  ],
+
                   //@TODO add tracks from structure,
                   // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryAudioFormatter::processTracksElement
                 ];

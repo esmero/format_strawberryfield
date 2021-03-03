@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: dpino
@@ -35,16 +36,15 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return
-      parent::defaultSettings() + [
-        'json_key_source' => 'as:document',
-        'max_width' => '100%',
-        'max_height' => 0,
-        'initial_page' => 1,
-        'number_pages' => 1,
-        'quality' => 'default',
-        'rotation' => '0',
-      ];
+    return parent::defaultSettings() + [
+      'json_key_source' => 'as:document',
+      'max_width' => '100%',
+      'max_height' => 0,
+      'initial_page' => 1,
+      'number_pages' => 1,
+      'quality' => 'default',
+      'rotation' => '0',
+    ];
   }
 
   /**
@@ -222,7 +222,6 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
               // we should inform to logs and continue
               // Also check if user has access and the mimeType is of an PDF.
               if ($this->checkAccess($file) && $file->getMimeType() == 'application/pdf') {
-                $documenturl = $file->getFileUri();
                 // We assume here file could not be accessible publicly
                 $route_parameters = [
                   'node' => $nodeid,
@@ -230,9 +229,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
                   'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
                 ];
                 $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
-                $uniqueid =
-                  'pdf-' . $items->getName(
-                  ) . '-' . $nodeuuid . '-' . $delta . '-document' . $i;
+                $uniqueid = 'pdf-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-document' . $i;
 
                 //@TODO make a select component that is ajax driven.
                 // If we have more than a single Document, simply rebuild and reload the given $delta instead of rendering
@@ -250,9 +247,6 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
                 } else {
                   $css_style = "width:{$max_width_css}; height:{$max_height}px";
                 }
-
-
-
 
                 $elements[$delta]['pdf' . $i] = [
                   '#type' => 'html_tag',
@@ -307,4 +301,5 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
     }
     return $elements;
   }
+
 }

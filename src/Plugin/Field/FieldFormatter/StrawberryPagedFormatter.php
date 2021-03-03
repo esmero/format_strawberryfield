@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: dpino
@@ -8,6 +9,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -17,6 +19,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\Core\Field\FieldDefinitionInterface;
@@ -40,13 +43,6 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 class StrawberryPagedFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  protected $currentUser;
-
-  /**
    * The entity manager.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
@@ -54,6 +50,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
   protected $entityTypeManager;
 
   /**
+   * The Twig environment.
+   *
    * @var \Drupal\Core\Template\TwigEnvironment
    */
   protected $twig;
@@ -82,17 +80,16 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @param array
    *   Any third party settings.
    * @param \Drupal\Core\Session\AccountInterface $current_user
-   *   The current User
+   *   The current User.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The Entity Type manager
+   *   The Entity Type manager.
    * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
-   *   The Loaded twig Environment
+   *   The Loaded twig Environment.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service
    *   The SBF Utility Service.
    */
   public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
-    $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
     $this->strawberryFieldUtility = $strawberryfield_utility_service;
@@ -125,7 +122,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     return parent::defaultSettings() + [
       'iiif_group' => TRUE,
       'mediasource' => 'json_key',
-      'json_key_source' => 'as:image',
+      'json_key_source' => 'as:document',
       'metadatadisplayentity_source' => NULL,
       'manifesturl_source' => 'iiifmanifest',
       'max_width' => 720,
@@ -137,7 +134,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
-    //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
+    // @TODO document that 2 base urls are just needed when developing
+    // (localhost syndrom).
     $entity = NULL;
     if ($this->getSetting('metadatadisplayentity_source')) {
       $entity = $this->entityTypeManager
@@ -196,7 +194,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
-        '#required' => TRUE
+        '#required' => TRUE,
       ],
       'max_height' => [
         '#type' => 'number',
@@ -206,7 +204,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         '#maxlength' => 5,
         '#field_suffix' => $this->t('pixels'),
         '#min' => 0,
-        '#required' => TRUE
+        '#required' => TRUE,
       ],
     ] + parent::settingsForm($form, $form_state);
   }
@@ -226,6 +224,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             ]
           );
           break;
+
         case 'manifesturl':
           $summary[] = $this->t('Pages fetched from a IIIF Manifest url at  "%manifesturl_source" key',
             [
@@ -233,6 +232,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             ]
           );
           break;
+
         case 'metadatadisplayentity':
           $entity = NULL;
           if ($this->getSetting('metadatadisplayentity_source')) {
@@ -247,6 +247,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             );
           }
           break;
+
         default:
           $summary[] = $this->t('This formatter still needs to be setup');
 
@@ -269,8 +270,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $pagestrategy = $this->getSetting('mediasource');
-    // Fixing the key to extract while coding to 'Media'
-
+    // Fixing the key to extract while coding to 'Media'.
+    $key = $this->getSetting('json_key_source');
     // This little one is a bit different to the Open Seadragon viewer.
     // Needs to deal with as type:Image and as type Document
     // Since people can setup this to a key we will handle both.
@@ -280,10 +281,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     // For type:Document we will use number of pages as default
     // But also allow a Table of Content if such structure exists.
     // We also allow a Twig template / Media Display to be used
-    // To generate an on the Fly Manifest. We coded our JS to read from manifests
+    // To generate an on the Fly Manifest. We coded our JS to read from
+    // manifests.
     // Finally we allow also an Manifest URL to be passed.
-
-    /* @var \Drupal\Core\Field\FieldItemInterface $item */
+    /** @var \Drupal\Core\Field\FieldItemInterface[] $items */
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()
         ->getFieldStorageDefinition()
@@ -292,60 +293,45 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       if (empty($value)) {
         continue;
       }
-      /* @var array $jsondata */
       $jsondata = json_decode($item->value, TRUE);
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        $message = $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
+          [
+            '@id' => $items->getEntity()->id(),
+            '@field' => $items->getName(),
+          ]);
+        return $elements[$delta] = ['#markup' => $message];
       }
-      // A rendered Manifest.
-      switch ($pagestrategy) {
-        case 'manifesturl':
-          $elements[$delta] = $this->processElementforManifestURL(
-            $delta,
-            $jsondata,
-            $item
-          );
-          break;
-        case 'metadatadisplayentity':
-          $elements[$delta] = $this->processElementforMetadatadisplays(
-            $delta,
-            $jsondata,
-            $item
-          );
-          break;
+      foreach ($jsondata[$key] as $mediaitem) {
+        $file = $this->getFile($mediaitem, 'Document');
+        // A rendered Manifest.
+        switch ($pagestrategy) {
+          case 'manifesturl':
+            $elements[$delta] = $this->processElementforManifestURL($delta, $jsondata, $item);
+            break;
+
+          case 'metadatadisplayentity':
+            $elements[$delta] = $this->processElementforMetadatadisplays($delta, $jsondata, $item);
+            break;
+        }
+
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
+
+        $file_cache_tags = !empty($file) ? $file->getCacheTags() : [];
+        $elements[$delta]['#cache'] = [
+          // @ see https://www.drupal.org/files/issues/2517030-125.patch
+          'tags' => Cache::mergeTags($file_cache_tags, $items->getEntity()->getCacheTags()),
+          'contexts' => [
+            'url.site',
+            'url.path',
+            'url.query_args',
+            'user.permissions',
+          ],
+        ];
       }
-
-      /* Expected structure of an Media item inside JSON
-      "as:images": {
-         "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-         "dr:fid": 32, // Drupal's FID
-         "dr:for": "add_some_master_images", // The webform element key that generated this one
-         "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
-         "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
-         "type": "Image",
-         "sequence" : 1,
-         "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
-         }
-      }*/
-
-      /* Expected structure of an Document item inside JSON
-
-      "as:documents" :  {
-         "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf": {
-         "dr:fid": 32, // Drupal's FID
-         "dr:for": "add_some_pdf_files", // The webform element key that generated this one
-         "url": "s3:\/\/f23\/new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
-         "name": "new-metadata-en-document-58455d91acf7290275c1cab77531b7f561a11a84.pdf",
-         "type": "Document",
-         "numberOfPages": 200,
-         "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
-         }
-      */
-
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     }
     return $elements;
   }
@@ -367,12 +353,11 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function processElementforMetadatadisplays($delta, array $jsondata, FieldItemInterface $item) {
-    $delta = $delta ?? 0;
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
 
     if ($this->getSetting('metadatadisplayentity_source')) {
@@ -384,10 +369,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       if ($metadatadisplayentity) {
         // Quickly sort the pages. We assume user will use the as:image key
         // Since the actual generation happens via a twig template.
-        // @TODO add a config option for this key too.
-        $mainkey = 'as:image';
         $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence($jsondata, $this->getSetting('json_key_source'), $ordersubkey);
 
         $context = [
           'data' => $jsondata,
@@ -402,11 +385,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // We bring it back!
         $context = $context + $original_context;
         $manifestrenderelement = $metadatadisplayentity->renderNative($context);
-
         $manifest = $manifestrenderelement->jsonSerialize();
-        $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-        $htmlid = $groupid;
-
+        $htmlid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
         $element['media'] = [
           '#type' => 'container',
           '#default_value' => $htmlid,
@@ -435,9 +415,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           'manifest' => json_decode($manifest),
           'width' => $max_width_css,
           'height' => max($max_height, 520),
-          // While Bookreader has a way to enable/disable search via the "enableSearch"
-          // parameter, it doesn't work properly at the moment and we have opened an
-          // issue to fix it, meanwhile it's hidden via jQuery.
+          // While Bookreader has a way to enable/disable search via the
+          // "enableSearch" parameter, it doesn't work properly at the moment
+          // and we have opened an issue to fix it, meanwhile it's hidden via
+          // jQuery.
           // @see https://github.com/internetarchive/bookreader/pull/613
           'enableSearchArchipelago' => $this->searchEnabled($item),
         ];
@@ -459,21 +440,18 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function processElementforManifestURL($delta, array $jsondata, FieldItemInterface $item) {
-    $delta = $delta ?? 0;
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
-
     if ($this->getSetting('manifesturl_source')) {
       $manifest_url_key = $this->getSetting('manifesturl_source');
       if ($jsondata[$manifest_url_key]) {
         $manifest_url = $jsondata[$manifest_url_key];
         if (UrlHelper::isValid($manifest_url, TRUE)) {
-          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-          $htmlid = $groupid;
+          $htmlid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
           $element['media'] = [
             '#type' => 'container',
             '#default_value' => $htmlid,
@@ -493,7 +471,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             $element += ['#attributes' => []];
             $element['#attributes'] += $item->_attributes;
             // Unset field item attributes since they have been included in the
-            // formatter output and should not be rendered in the field template.
+            // formatter output and should not be rendered in field template.
             unset($item->_attributes);
           }
           $element['media']['#attributes']['data-iiif-infojson'] = '';
@@ -515,10 +493,41 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * Returns whether the entity is indexed in Solr and processed by OCR.
    *
    * @return bool
-   *  TRUE if the entity is found processed, FALSE otherwise
+   *   TRUE if the entity is found processed, FALSE otherwise
    */
   protected function searchEnabled(FieldItemInterface $item): bool {
     return $this->strawberryFieldUtility->getCountByProcessorInSolr($item->getEntity(), 'ocr') > 0;
+  }
+
+  /**
+   * Gets the file from the json data mediaitem.
+   *
+   * @param array $mediaitem
+   *   Array of mediaitem data.
+   * @param string $type
+   *   Relevant type for the formatter.
+   *
+   * @return \Drupal\file\FileInterface|bool
+   *   File if found, FALSE otherwise,
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function getFile(array $mediaitem, string $type) {
+    if (isset($mediaitem['type']) && $mediaitem['type'] == $type) {
+      if (isset($mediaitem['dr:fid'])) {
+        // @TODO check if loading the entity is really needed to check access.
+        // @TODO we can refactor a lot here and move it to base methods
+        $file = OcflHelper::resolvetoFIDtoURI($mediaitem['dr:fid']);
+        if (!$file) {
+          return false;
+        }
+        if ($this->checkAccess($file)) {
+          return $file;
+        }
+      }
+    }
+    return false;
   }
 
 }
