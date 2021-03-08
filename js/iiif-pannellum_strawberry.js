@@ -53,6 +53,14 @@
             });
           }
 
+          // Check what is the max canvas size this Browser/WebGL impl. allows before committing to doom the navigator.
+          var canvas = document.createElement('canvas'); // or reuse the existing
+          var gl = canvas.getContext('webgl');
+          if (gl) {
+            console.log('Max webGL texture size is' +
+              gl.getParameter(gl.MAX_TEXTURE_SIZE));
+          }
+
           const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
           const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
           const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
