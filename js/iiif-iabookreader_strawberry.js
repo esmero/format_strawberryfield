@@ -36,9 +36,21 @@
                 };
                 var br = new BookReader(options);
                 br.init();
+                // Check if Book has or not OCR using Ajax callback
+                $.ajax({
+                  type: 'GET',
+                  url: '/do/' + node_uuid + '/flavorcount/ocr/',
+                  success: function (data) {
+                    {
+                      if (data.count == 0) {
+                        $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+                      }
+                    }
+                  }
+                });
 
                 if (strawberrySettings.enableSearchArchipelago === false) {
-                  $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+
                 }
               }
           })}}

@@ -240,7 +240,7 @@ universalviewer:
   version: 4.0.0-pre.49
   license:
     name: MIT
-    url: hhttps://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/LICENSE.txt
+    url: https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/LICENSE.txt
     gpl-compatible: true
   js:
     https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
@@ -291,3 +291,21 @@ code_mirror_autosave:
     - core/drupal
     - core/drupalSettings
     - codemirror_editor/editor
+
+lozad:
+  version: 1.16.0
+  license:
+    name: MIT
+    url: https://github.com/ApoorvSaxena/lozad.js/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js: { external: true, minified: true, preprocess: false }
+
+lazyload_strawberry:
+  version: 1.0
+  js:
+    js/lazyload_strawberry.js: { minified: false }
+  dependencies:
+    - format_strawberryfield/lozad
+    - core/jquery
+    - core/drupal

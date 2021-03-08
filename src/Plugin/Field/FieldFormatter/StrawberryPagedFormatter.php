@@ -439,7 +439,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           // parameter, it doesn't work properly at the moment and we have opened an
           // issue to fix it, meanwhile it's hidden via jQuery.
           // @see https://github.com/internetarchive/bookreader/pull/613
-          'enableSearchArchipelago' => $this->searchEnabled($item),
         ];
       }
     }
@@ -503,7 +502,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'width' => $max_width_css,
             'height' => max($max_height, 520),
             // @see self::processElementforMetadatadisplays()
-            'enableSearchArchipelago' => $this->searchEnabled($item),
           ];
         }
       }
