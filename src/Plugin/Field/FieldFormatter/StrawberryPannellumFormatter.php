@@ -21,8 +21,9 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  *
  * @FieldFormatter(
  *   id = "strawberry_pannellum_formatter",
- *   label = @Translation("Strawberry Field Panorama Formatter using Pannellum and IIIF"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPannellumFormatter",
+ *   label = @Translation("Strawberry Field Panorama Formatter using Pannellum
+ *   and IIIF"), class =
+ *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPannellumFormatter",
  *   field_types = {
  *     "strawberryfield_field"
  *   },
@@ -293,7 +294,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   $iiifsizes = array_reverse($iiifsizes);
                   foreach ($iiifsizes as $iiifsize) {
                     $max_iiif_sizes = $iiifsize;
-                    if (round($iiifsize['height'] * $iiifsize['width'] * 16 / 8 / 1024 / 1024) <= 256) {
+                    // 16 bits, 3 Channels. If PNG it should be 4 channels.
+                    if (round($iiifsize['height'] * $iiifsize['width'] * 16 * 3 / 8 / 1024 / 1024) <= 256) {
                       break;
                     }
                   }
@@ -318,7 +320,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     );
                   }
                   // Pannellum recommends max 4096 pixel width images for WebGl. Lets use that as max.
-                  $max_width_source_comp = ($max_iiif_sizes['width'] >= 32768) ? '32768,' : $max_iiif_sizes['width'] . ',';
+                  // Standard webGL Max is 16384 but Modern OSX with newer Intel reports double.
+                  $max_width_source_comp = ($max_iiif_sizes['width'] >= 16384) ? '16384,' : $max_iiif_sizes['width'] . ',';
                   $max_width_source_mob = ($max_iiif_sizes['width'] >= 4096) ? '4096,' : $max_iiif_sizes['width'] . ',';
                   $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_comp}/0/default.jpg";
                   $iiifserverimg_mobile = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_mob}/0/default.jpg";

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: dpino
@@ -16,6 +17,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\Core\Url;
+
 /**
  * Simplistic Strawberry Field formatter.
  *
@@ -32,6 +34,7 @@ use Drupal\Core\Url;
  * )
  */
 class StrawberryMediaFormatter extends StrawberryBaseFormatter {
+
   /**
    * {@inheritdoc}
    */
@@ -46,74 +49,75 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       'thumbnails' => TRUE,
     ];
   }
+
   /**
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     return [
-        'iiif_group' => [
-          '#type' => 'checkbox',
-          '#title' => t('Group all Media files in a single viewer?'),
-          '#default_value' => $this->getSetting('iiif_group'),
+      'iiif_group' => [
+        '#type' => 'checkbox',
+        '#title' => t('Group all Media files in a single viewer?'),
+        '#default_value' => $this->getSetting('iiif_group'),
+      ],
+      'thumbnails' => [
+        '#type' => 'checkbox',
+        '#title' => t('Show a thumbnail reference bar.'),
+        '#default_value' => $this->getSetting('thumbnails'),
+      ],
+      'webannotations' => [
+        '#type' => 'checkbox',
+        '#title' => t('Enable loading/editing of W3C webAnnotations.'),
+        '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
+        '#default_value' => $this->getSetting('webannotations'),
+        '#attributes' => [
+          'data-formatter-selector' => 'webannotations',
         ],
-        'thumbnails' => [
-          '#type' => 'checkbox',
-          '#title' => t('Show a thumbnail reference bar.'),
-          '#default_value' => $this->getSetting('thumbnails'),
+      ],
+      'webannotations_tool' => [
+        '#type' => 'select',
+        '#options' => [
+          'rect' => 'Rectangle',
+          'polygon' => 'Polygon',
         ],
-        'webannotations' => [
-          '#type' => 'checkbox',
-          '#title' => t('Enable loading/editing of W3C webAnnotations.'),
-          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
-          '#default_value' => $this->getSetting('webannotations'),
-          '#attributes' => [
-            'data-formatter-selector' => 'webannotations',
+        '#title' => t('What tool to enable'),
+        '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
+        '#default_value' => $this->getSetting('webannotations_tool'),
+        '#states' => [
+          'visible' => [
+            ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
           ],
         ],
-        'webannotations_tool' => [
-          '#type' => 'select',
-          '#options' => [
-            'rect' => 'Rectangle',
-            'polygon' => 'Polygon'
-          ],
-          '#title' => t('What tool to enable'),
-          '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
-          '#default_value' => $this->getSetting('webannotations_tool'),
-          '#states' => [
-            'visible' => [
-              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
-            ],
-          ]
-        ],
-        'json_key_source' => [
-          '#type' => 'textfield',
-          '#title' => t('JSON Key from where to fetch Media URLs'),
-          '#default_value' => $this->getSetting('json_key_source'),
-          '#required' => TRUE
-        ],
-        'max_width' => [
-          '#type' => 'number',
-          '#title' => $this->t('Maximum width'),
-          '#description' => $this->t('Use 0 to force 100% width'),
-          '#default_value' => $this->getSetting('max_width'),
-          '#size' => 5,
-          '#maxlength' => 5,
-          '#field_suffix' => $this->t('pixels'),
-          '#min' => 0,
-          '#required' => TRUE
-        ],
-        'max_height' => [
-          '#type' => 'number',
-          '#title' => $this->t('Maximum height'),
-          '#default_value' => $this->getSetting('max_height'),
-          '#size' => 5,
-          '#maxlength' => 5,
-          '#field_suffix' => $this->t('pixels'),
-          '#min' => 0,
-          '#required' => TRUE
-        ],
-      ] + parent::settingsForm($form, $form_state);
+      ],
+      'json_key_source' => [
+        '#type' => 'textfield',
+        '#title' => t('JSON Key from where to fetch Media URLs'),
+        '#default_value' => $this->getSetting('json_key_source'),
+        '#required' => TRUE,
+      ],
+      'max_width' => [
+        '#type' => 'number',
+        '#title' => $this->t('Maximum width'),
+        '#description' => $this->t('Use 0 to force 100% width'),
+        '#default_value' => $this->getSetting('max_width'),
+        '#size' => 5,
+        '#maxlength' => 5,
+        '#field_suffix' => $this->t('pixels'),
+        '#min' => 0,
+        '#required' => TRUE,
+      ],
+      'max_height' => [
+        '#type' => 'number',
+        '#title' => $this->t('Maximum height'),
+        '#default_value' => $this->getSetting('max_height'),
+        '#size' => 5,
+        '#maxlength' => 5,
+        '#field_suffix' => $this->t('pixels'),
+        '#min' => 0,
+        '#required' => TRUE,
+      ],
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -151,10 +155,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       ]
     );
 
-
     return $summary;
   }
-
 
   /**
    * {@inheritdoc}
@@ -162,7 +164,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
     $grouped = $this->getSetting('iiif_group');
     $thumbnails = $this->getSetting('thumbnails');
@@ -170,11 +172,10 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $webannotations_tool = $this->getSetting('webannotations_tool');
 
     /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
+    // Fixing the key to extract while coding to 'Media'.
     $key = $this->getSetting('json_key_source');
 
     $nodeuuid = $items->getEntity()->uuid();
-    $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
 
     foreach ($items as $delta => $item) {
@@ -206,7 +207,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
 
       if (isset($jsondata[$key])) {
-        // Order Images based on a given 'sequence' key
+        // Order Images based on a given 'sequence' key.
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
         $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
@@ -215,97 +216,103 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
             if (isset($mediaitem['dr:fid'])) {
               // @TODO check if loading the entity is really needed to check access.
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
+              $file = OcflHelper::resolvetoFIDtoURI($mediaitem['dr:fid']);
 
-              //@TODO if no media key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
+              //@TODO if no media key to file loading was possible means we have
+              // a broken/missing media reference we should inform to logs and
+              // continue.
               if (!$file) {
                 continue;
-
               }
               if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(
-                  StreamWrapperManager::getTarget($file->getFileUri())
-                );
+                $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
                 if ($iiifidentifier == NULL || empty($iiifidentifier)) {
                   continue;
                 }
-                // ImageToolKit use the $file->getFileUri(), we don't want that yet
+                // ImageToolKit use the $file->getFileUri(), we don't want that
+                // yet.
                 // @see https://github.com/esmero/format_strawberry/issues/1
 
-                //@ TODO recheck cache tags here, since we are not really using the file itself.
-                $filecachetags = $file->getCacheTags();
                 $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
 
-                $groupid = 'iiif-'.$items->getName(
-                  ).'-'.$nodeuuid.'-'.$delta.'-media';
-                $uniqueid =  $groupid.$i;
+                $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+                $uniqueid = $groupid . $i;
 
-                $elements[$delta]['media'.$i] = [
+                $elements[$delta]['media' . $i] = [
                   '#type' => 'container',
                   '#default_value' => $uniqueid,
                   '#attributes' => [
                     'id' => $uniqueid,
-                    'class' => ['strawberry-media-item','field-iiif','container'],
+                    'class' => [
+                      'strawberry-media-item',
+                      'field-iiif',
+                    ],
                     'data-iiif-infojson' => $iiifpublicinfojson,
                     'data-iiif-group' => $grouped ? $groupid : $uniqueid,
                     'data-iiif-thumbnails' => $thumbnails,
                     'style' => "width:{$max_width_css}; height:{$max_height}px",
                   ],
+                  //@ TODO recheck cache tags here, since we are not really using
+                  // the file itself.
+                  '#cache' => [
+                    'tags' => $file->getCacheTags(),
+                  ],
                 ];
                 if (isset($item->_attributes)) {
                   $elements[$delta] += ['#attributes' => []];
                   $elements[$delta]['#attributes'] += $item->_attributes;
-                  // Unset field item attributes since they have been included in the
-                  // formatter output and should not be rendered in the field template.
+                  // Unset field item attributes since they have been included
+                  // in the formatter output and should not be rendered in the
+                  // field template.
                   unset($item->_attributes);
                 }
                 // @TODO deal with a lot of Media single strawberryfield
-                // Idea would be to allow a setting that says, A) all same viewer(aggregate)
+                // Idea would be to allow a setting that says, A) all same
+                // viewer(aggregate)
                 // B) individual viewers for each?
                 // C) only first one?
-                // We will assign a group based on the UUID of the node containing this
-                // to idenfity all the divs that we will create. And only first one will be the container in case of many?
-                // so a jquery selector that uses that group as filter for a search.
-                // Drupal JS settings get accumulated. So in a single search results site we will have for each
-                // Formatter one passed. Reason we use 'innode' array key using our $uniqueid
+                // We will assign a group based on the UUID of the node
+                // containing this to idenfity all the divs that we will create.
+                // And only first one will be the container in case of many? so
+                // a jquery selector that uses that group as filter for a
+                // search.
+                // Drupal JS settings get accumulated. So in a single search
+                // results site we will have for each Formatter one passed.
+                // Reason we use 'innode' array key using our $uniqueid
                 // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                $elements[$delta]['media'.$i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid']  = $file->uuid();
+                $elements[$delta]['media' . $i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
+                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
+                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
+                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();
                 // Used to keep annotations around during edit.
-                // Note: Since View modes are cached, if no change to the NODE this will be served from a cache! mmm.
+                // Note: Since View modes are cached, if no change to the NODE
+                // this will be served from a cache! mmm.
                 if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname, $delta, $nodeuuid);
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
-                  // This also never runs if cached. So after deletion we better call the controller!
+                  // This also never runs if cached. So after deletion we better
+                  // call the controller!
                   if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
                     $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
-                    WebAnnotationController::primeKeyStore($items[$delta]);
+                    WebAnnotationController::primeKeyStore($items[$delta], $keystoreid);
                   }
                 }
                 if ($this->currentUser) {
-                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
-                } else {
+                }
+                else {
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
                   $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
                 }
 
-
-                $elements[$delta]['media'.$i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max(
-                  $max_height,
-                  480
-                );
+                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
               }
-            } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
+            }
+            elseif (isset($mediaitem['url'])) {
+              $elements[$delta]['media' . $i] = [
+                '#markup' => 'Non managed ' . $mediaitem['url'],
                 '#prefix' => '<pre>',
                 '#suffix' => '</pre>',
               ];
@@ -315,14 +322,15 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
         }
       }
       else {
-         $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
+        $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
       }
-      // Get rid of empty #attributes key to avoid render error
-      if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
+      // Get rid of empty #attributes key to avoid render error.
+      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
         unset($elements[$delta]["#attributes"]);
       }
     }
 
     return $elements;
   }
+
 }

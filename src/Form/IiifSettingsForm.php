@@ -56,12 +56,12 @@ class IiifSettingsForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('format_strawberryfield.iiif_settings');
     $form['info'] = [
-      '#markup' => $this->t('This IIIF Server configuration URLs are used as defaults for field formatters using IIIF, but can be overriden on a one by one basis when setting up your formatters for each Display Mode.'),
+      '#markup' => $this->t('This IIIF Server configuration URLs are used as defaults for field formatters using IIIF, but can be overridden on a one by one basis when setting up your formatters for each Display Mode.'),
       ];
 
     $form['pub_server_url'] = [
       '#type' => 'url',
-      '#title' => $this->t('Base URL of your IIIF Media Server public accesible from the Outside World.'),
+      '#title' => $this->t('Base URL of your IIIF Media Server public accessible from the Outside World.'),
       '#description' => $this->t('Please provide a publicly accessible IIIF server URL. This URL will be used for AJAX and JS calls. Trailing Slashes will be removed.'),
       '#default_value' => !empty($config->get('pub_server_url')) ? $config->get('pub_server_url') : 'http://localhost:8183/iiif/2',
       '#required' => TRUE
@@ -70,7 +70,7 @@ class IiifSettingsForm extends ConfigFormBase {
     $form['int_server_url'] = [
       '#type' => 'url',
       '#title' => $this->t('Base URL of your IIIF Media Server accesible from inside this Webserver.'),
-      '#description' => $this->t('Please provide Internal IIIF server URL. This URL will be used by Internal Server calls and needs to be locally accesible by your server, e.g 127.0.0.1 or an local Docker alias. Trailing Slashes will be removed.'),
+      '#description' => $this->t('Please provide Internal IIIF server URL. This URL will be used by Internal Server calls and needs to be locally accessible by your server, e.g 127.0.0.1 or an local Docker alias. Trailing Slashes will be removed.'),
       '#default_value' => !empty($config->get('int_server_url')) ? $config->get('int_server_url') : 'http://esmero-cantaloupe:8182/iiif/2',
       '#required' => TRUE
     ];
