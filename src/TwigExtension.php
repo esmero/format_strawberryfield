@@ -44,44 +44,40 @@ class TwigExtension extends \Twig_Extension {
    *   An array of entity objects or NULL if no entity with label exists.
    */
   public function load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $limit = 1, $langcode = NULL): ?array {
-    $database = \Drupal::database();
+    $label = \Drupal::database()->escapeLike($label);
     switch($entity_type) {
       case 'node':
-        $query = $database->select('node_field_data', 'n')
-          ->addField('n', 'nid', 'id')
-          ->condition('n.title', $database->escapeLike($label), 'LIKE')
+        $query = \Drupal::entityQuery('node')
+          ->condition('title', $label, 'LIKE')
           ->range(0,$limit);
         if($bundle_identifier) {
-          $query->condition('n.type', $bundle_identifier);
+          $query->condition('type', $bundle_identifier);
         }
-        $ids = $query->execute()->fetchCol();
+        $ids = $query->execute();
         break;
       case 'taxonomy_term':
-        $query = $database->select('taxonomy_term_field_data', 't')
-          ->addField('t', 'tid', 'id')
-          ->condition('t.name', $database->escapeLike($label), 'LIKE')
+        $query = \Drupal::entityQuery('taxonomy_term')
+          ->condition('name', $label, 'LIKE')
           ->range(0,$limit);
         if($bundle_identifier) {
-          $query->condition('t.vid', $bundle_identifier);
+          $query->condition('vid', $bundle_identifier);
         }
-        $ids = $query->execute()->fetchCol();
+        $ids = $query->execute();
         break;
       case 'group':
-        $query = $database->select('groups_field_data', 'g')
-          ->addField('g', 'id', 'id')
-          ->condition('g.label', $database->escapeLike($label), 'LIKE')
+        $query = \Drupal::entityQuery('group')
+          ->condition('label', $label, 'LIKE')
           ->range(0,$limit);
         if($bundle_identifier) {
-          $query->condition('g.type', $bundle_identifier);
+          $query->condition('type', $bundle_identifier);
         }
-        $ids = $query->execute()->fetchCol();
+        $ids = $query->execute();
         break;
       case 'user':
-        $query = $database->select('users_field_data', 'u')
-          ->addField('u', 'uid', 'id')
-          ->condition('u.name', $database->escapeLike($label), 'LIKE')
+        $query = \Drupal::entityQuery('user')
+          ->condition('name', $label, 'LIKE')
           ->range(0,$limit);
-        $ids = $query->execute()->fetchCol();
+        $ids = $query->execute();
         break;
     }
 
