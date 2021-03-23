@@ -25,7 +25,7 @@ class TwigExtension extends \Twig_Extension {
   }
 
   /**
-   * Returns entity objects with matching title/name/label in the specified language context.
+   * Returns render arrays of entities with matching title/name/label in the specified view mode and language context.
    *
    * Supported entity types are node, taxonomy_term, group, and user.
    *
@@ -45,13 +45,12 @@ class TwigExtension extends \Twig_Extension {
    *   (optional) For which language the entity should be rendered, defaults to
    *   the current content language.
    *
-   * @return null|[Drupal\Core\Entity\EntityInterface]
-   *   An array of entity objects or NULL if no entity with label exists.
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
-   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @return null|array
+   *   An array of render arrays for the entities found, or NULL if the entity does not exist.
    */
   public function load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $view_mode = 'default', $check_access = TRUE, $limit = 1, $langcode = NULL): ?array {
     $label = \Drupal::database()->escapeLike($label);
+    /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
     switch($entity_type) {
       case 'node':
         $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
