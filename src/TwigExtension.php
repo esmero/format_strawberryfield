@@ -38,9 +38,9 @@ class TwigExtension extends \Twig_Extension {
    * @param  string  $view_mode
    *   The view mode for the render array that should be returned for each entity.
    * @param  bool  $check_access
-   *
+   *   Whether to check for entity access permission (default TRUE).
    * @param  int  $limit
-   *   Restrict to number of results.
+   *   Restrict to number of results. Capped at no more than 100.
    * @param  null  $langcode
    *   (optional) For which language the entity should be rendered, defaults to
    *   the current content language.
@@ -50,6 +50,7 @@ class TwigExtension extends \Twig_Extension {
    */
   public function load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $view_mode = 'default', $check_access = TRUE, $limit = 1, $langcode = NULL): ?array {
     $label = \Drupal::database()->escapeLike($label);
+    $limit = min($limit, 100);
     /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
     switch($entity_type) {
       case 'node':
