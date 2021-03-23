@@ -1,6 +1,7 @@
 <?php
 namespace Drupal\format_strawberryfield;
 use Twig\TwigTest;
+use Drupal\twig_tweak\TwigExtension as TwigTweakExtension;
 
 /**
  * Class TwigExtension.
@@ -34,7 +35,11 @@ class TwigExtension extends \Twig_Extension {
    *   The entity type.
    * @param  string  $bundle_identifier
    *   The entity bundle (may be empty)
-   * @param  numeric  $limit
+   * @param  string  $view_mode
+   *   The view mode for the render array that should be returned for each entity.
+   * @param  bool  $check_access
+   *
+   * @param  int  $limit
    *   Restrict to number of results.
    * @param  null  $langcode
    *   (optional) For which language the entity should be rendered, defaults to
@@ -42,13 +47,16 @@ class TwigExtension extends \Twig_Extension {
    *
    * @return null|[Drupal\Core\Entity\EntityInterface]
    *   An array of entity objects or NULL if no entity with label exists.
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $limit = 1, $langcode = NULL): ?array {
+  public function load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $view_mode = 'default', $check_access = TRUE, $limit = 1, $langcode = NULL): ?array {
     $label = \Drupal::database()->escapeLike($label);
     switch($entity_type) {
       case 'node':
-        $query = \Drupal::entityQuery('node')
-          ->condition('title', $label, 'LIKE')
+        $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
+        $query->condition('title', $label, 'LIKE')
+          ->accessCheck($check_access)
           ->range(0,$limit);
         if($bundle_identifier) {
           $query->condition('type', $bundle_identifier);
@@ -56,8 +64,9 @@ class TwigExtension extends \Twig_Extension {
         $ids = $query->execute();
         break;
       case 'taxonomy_term':
-        $query = \Drupal::entityQuery('taxonomy_term')
-          ->condition('name', $label, 'LIKE')
+        $query = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->getQuery();
+        $query->condition('name', $label, 'LIKE')
+          ->accessCheck($check_access)
           ->range(0,$limit);
         if($bundle_identifier) {
           $query->condition('vid', $bundle_identifier);
@@ -65,8 +74,9 @@ class TwigExtension extends \Twig_Extension {
         $ids = $query->execute();
         break;
       case 'group':
-        $query = \Drupal::entityQuery('group')
-          ->condition('label', $label, 'LIKE')
+        $query = \Drupal::entityTypeManager()->getStorage('group')->getQuery();
+        $query->condition('label', $label, 'LIKE')
+          ->accessCheck($check_access)
           ->range(0,$limit);
         if($bundle_identifier) {
           $query->condition('type', $bundle_identifier);
@@ -74,26 +84,21 @@ class TwigExtension extends \Twig_Extension {
         $ids = $query->execute();
         break;
       case 'user':
-        $query = \Drupal::entityQuery('user')
-          ->condition('name', $label, 'LIKE')
+        $query = \Drupal::entityTypeManager()->getStorage('user')->getQuery();
+        $query->condition('name', $label, 'LIKE')
+          ->accessCheck($check_access)
           ->range(0,$limit);
         $ids = $query->execute();
         break;
     }
 
     if(!empty($ids)) {
-      $entities = $this->getEntityTypeManager()->getStorage($entity_type)->loadMultiple($ids);
-      if (empty($entities)) {
-        return NULL;
+      $entities = [];
+      $twig_tweak = new TwigTweakExtension();
+      foreach($ids as $id) {
+        $entities[$id] = $twig_tweak->drupalEntity($entity_type, $id, $view_mode, $langcode);
       }
-
-      // Get the entities in the specified context language.
-      $entityRepository = $this->getEntityRepository();
-      $translated_entities = [];
-      foreach($entities as $entity) {
-        $translated_entities[$entity->id()] = $entityRepository->getTranslationFromContext($entity, $langcode);
-      }
-      return $translated_entities;
+      return $entities;
     }
 
     return NULL;
