@@ -1,7 +1,8 @@
 <?php
 namespace Drupal\format_strawberryfield;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Cache\CacheableMetadata;
 use Twig\TwigTest;
-use Drupal\twig_tweak\TwigExtension as TwigTweakExtension;
 
 /**
  * Class TwigExtension.
@@ -25,7 +26,7 @@ class TwigExtension extends \Twig_Extension {
   }
 
   /**
-   * Returns render arrays of entities with matching title/name/label in the specified view mode and language context.
+   * Returns entity ids of entities with matching title/name/label.
    *
    * Supported entity types are node, taxonomy_term, group, and user.
    *
@@ -35,8 +36,6 @@ class TwigExtension extends \Twig_Extension {
    *   The entity type.
    * @param  string  $bundle_identifier
    *   The entity bundle (may be empty)
-   * @param  string  $view_mode
-   *   The view mode for the render array that should be returned for each entity.
    * @param  bool  $check_access
    *   Whether to check for entity access permission (default TRUE).
    * @param  int  $limit
@@ -48,7 +47,7 @@ class TwigExtension extends \Twig_Extension {
    * @return null|array
    *   An array of render arrays for the entities found, or NULL if the entity does not exist.
    */
-  public function format_strawberryfield_load_entities_by_label(string $label, string $entity_type, string $bundle_identifier = '', $view_mode = 'default', $check_access = TRUE, $limit = 1, $langcode = NULL): ?array {
+  public function sbf_entity_ids_by_label(string $label, string $entity_type, string $bundle_identifier = '', $check_access = TRUE, $limit = 1, $langcode = NULL): ?array {
     $label = \Drupal::database()->escapeLike($label);
     $limit = min($limit, 100);
     /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
@@ -93,6 +92,7 @@ class TwigExtension extends \Twig_Extension {
           break;
       }
     }
+
     catch(\Exception $exception) {
       $responseMessage = $exception->getMessage();
       $message = $this->t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
@@ -109,34 +109,9 @@ class TwigExtension extends \Twig_Extension {
     }
 
     if(!empty($ids)) {
-      try {
-        $entities = [];
-        $twig_tweak = new TwigTweakExtension();
-        foreach ($ids as $id) {
-          $entities[$id] = $twig_tweak->drupalEntity($entity_type, $id,
-            $view_mode, $langcode);
-        }
-        return $entities;
-      }
-      catch(\Exception $exception) {
-        $responseMessage = $exception->getMessage();
-        $message = $this->t('@exception_type thrown in @file:@line while attempting to render @entity_type with id @id using Drupal\twig_tweak\TwigExtension::drupalEntity. Message: @response',
-          [
-            '@exception_type' => get_class($exception),
-            '@file' => $exception->getFile(),
-            '@line' => $exception->getLine(),
-            '@entity_type' => $entity_type,
-            '@id' => $id,
-            '@response' => $responseMessage
-          ]);
-        \Drupal::logger('format_strawberryfield')->warning($message);
-        return NULL;
-
-      }
+      return $ids;
     }
-
     return NULL;
-
   }
 
 }
