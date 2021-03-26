@@ -1,7 +1,7 @@
 <?php
+
 namespace Drupal\format_strawberryfield;
-use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Cache\CacheableMetadata;
+
 use Twig\TwigTest;
 
 /**
@@ -11,17 +11,21 @@ use Twig\TwigTest;
  */
 class TwigExtension extends \Twig_Extension {
 
-  public function getTests(): array
-  {
+  public function getTests(): array {
     return [
       new TwigTest('instanceof', [$this, 'is_instanceof']),
     ];
   }
 
-  public function is_instanceof($value, string $type): bool
-  {
-    return ('null' === $type && null === $value)
-      || (\function_exists($func = 'is_'.$type) && $func($value))
+  /**
+   * @param $value
+   * @param  string  $type
+   *
+   * @return bool
+   */
+  public function is_instanceof($value, string $type): bool {
+    return ('null' === $type && NULL === $value)
+      || (\function_exists($func = 'is_' . $type) && $func($value))
       || $value instanceof $type;
   }
 
@@ -30,8 +34,9 @@ class TwigExtension extends \Twig_Extension {
    */
   public function getFunctions() {
     return [
-        new \Twig_SimpleFunction('sbf_entity_ids_by_label', [$this, 'entityIdsByLabel']),
-      ];
+      new \Twig_SimpleFunction('sbf_entity_ids_by_label',
+        [$this, 'entityIdsByLabel']),
+    ];
   }
 
   /**
@@ -49,7 +54,8 @@ class TwigExtension extends \Twig_Extension {
    *   Restrict to number of results. Capped at no more than 100.
    *
    * @return null|array
-   *   An array of render arrays for the entities found, or NULL if the entity does not exist.
+   *   An array of render arrays for the entities found, or NULL if the entity
+   *   does not exist.
    */
   public function entityIdsByLabel(
     string $label,
