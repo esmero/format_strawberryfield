@@ -42,12 +42,11 @@ class TwigExtension extends \Twig_Extension {
   /**
    * Returns entity ids of entities with matching title/name/label.
    *
-   * Supported entity types are node, taxonomy_term, group, and user.
-   *
    * @param  string  $label
    *   The entity label that we're looking for
    * @param  string  $entity_type
    *   The entity type.
+   *   Supported entity types are node, taxonomy_term, group, and user.
    * @param  string  $bundle_identifier
    *   The entity bundle (may be empty)
    * @param  int  $limit
@@ -75,7 +74,7 @@ class TwigExtension extends \Twig_Extension {
       $limit = min($limit, 100);
       /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
       try {
-        $query = \Drupal::entityTypeManager()->getStorage('node')->getQuery();
+        $query = \Drupal::entityTypeManager()->getStorage($entity_type)->getQuery();
         $query->condition($label_field, $label);
         $query->range(0, $limit);
         if ($bundle_identifier && $bundle_field) {
@@ -84,7 +83,6 @@ class TwigExtension extends \Twig_Extension {
         $ids = $query->execute();
 
       } catch (\Exception $exception) {
-        $responseMessage = $exception->getMessage();
         $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
           [
             '@exception_type' => get_class($exception),
@@ -92,7 +90,7 @@ class TwigExtension extends \Twig_Extension {
             '@line' => $exception->getLine(),
             '@entity_type' => $entity_type,
             '@label' => $label,
-            '@response' => $responseMessage,
+            '@response' => $exception->getMessage(),
           ]);
         \Drupal::logger('format_strawberryfield')->warning($message);
         return NULL;
