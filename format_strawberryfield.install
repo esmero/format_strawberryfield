@@ -2,35 +2,46 @@
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Config\Entity\ConfigEntityType;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Database\Database;
 /**
-* Add 'mime type' field to 'metadata display' entities.
-*/
+ * Install Entity and add 'mime type' field to 'metadata display' entities.
+ */
 function format_strawberryfield_update_8001() {
-// Add mimetype field definition to \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity
-//@see https://www.drupal.org/node/2554097
-$storage_definition = BaseFieldDefinition::create('list_string')
-  ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
-  ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
-  ->setSettings(array(
-    'default_value' => 'text/html',
-    'max_length' => 64,
-    'cardinality' => 1,
-    'allowed_values' => [
-      'text/html' => 'HTML',
-      'application/json' => 'JSON',
-      'application/ld+json' => 'JSON-LD',
-      'application/xml' => 'XML',
-      'text/text' => 'TEXT',
-      'text/turtle' => 'RDF/TURTLE'
-    ],
-  ))
-  ->setRequired(TRUE)
-  ->setDisplayOptions('view', [
-    'region' => 'hidden',
-  ])
-  ->setDisplayConfigurable('view', TRUE)
-  ->setDisplayConfigurable('form', TRUE)
-  ->addConstraint('NotBlank');
+
+  $schema = Database::getConnection()->schema();
+  // Always start by testing if the entity is already deployed.
+  if (!$schema->tableExists('metadatadisplay_entity')) {
+    \Drupal::entityTypeManager()->clearCachedDefinitions();
+    \Drupal::entityDefinitionUpdateManager()
+        ->installEntityType(\Drupal::entityTypeManager()->getDefinition('metadatadisplay_entity'));
+  }
+
+  // Add mimetype field definition to \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity
+  //@see https://www.drupal.org/node/2554097
+  $storage_definition = BaseFieldDefinition::create('list_string')
+    ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
+    ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
+    ->setSettings(array(
+      'default_value' => 'text/html',
+      'max_length' => 64,
+      'cardinality' => 1,
+      'allowed_values' => [
+        'text/html' => 'HTML',
+        'application/json' => 'JSON',
+        'application/ld+json' => 'JSON-LD',
+        'application/xml' => 'XML',
+        'text/text' => 'TEXT',
+        'text/turtle' => 'RDF/TURTLE',
+        'text/csv' => 'CSV',
+      ],
+    ))
+    ->setRequired(TRUE)
+    ->setDisplayOptions('view', [
+      'region' => 'hidden',
+    ])
+    ->setDisplayConfigurable('view', TRUE)
+    ->setDisplayConfigurable('form', TRUE)
+    ->addConstraint('NotBlank');
 
   \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('mimetype', 'metadatadisplay_entity', 'format_strawberryfield', $storage_definition);
 }
