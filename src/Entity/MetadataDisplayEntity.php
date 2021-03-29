@@ -375,7 +375,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
   public function renderNative(array $context) {
     // Note about this method
     // Symfony/Drupal render pipeline uses something named Render Context
-    // Twig templates, while being proccesed & depending on what is being used.
+    // Twig templates, while being processed & depending on what is being used.
     // Inside them (e.g URL, etc) can generated Cacheable/Bubbleable
     // Metadata. If That happens, the render pipeline will complain about us
     // leaking that metadata/early rendering when using it in a Cacheable
