@@ -335,7 +335,7 @@ class MetadataDisplayForm extends ContentEntityForm {
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
-          $message = $exception->getRawMessage() . ' at line' . $exception->getTemplateLine();
+          $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
         }
         else {
           $message = $exception->getMessage();
