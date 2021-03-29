@@ -42,19 +42,18 @@ class TwigExtension extends \Twig_Extension {
   /**
    * Returns entity ids of entities with matching title/name/label.
    *
-   * @param  string  $label
+   * @param string $label
    *   The entity label that we're looking for
-   * @param  string  $entity_type
+   * @param string $entity_type
    *   The entity type.
    *   Supported entity types are node, taxonomy_term, group, and user.
-   * @param  string  $bundle_identifier
+   * @param string $bundle_identifier
    *   The entity bundle (may be empty)
-   * @param  int  $limit
+   * @param int $limit
    *   Restrict to number of results. Capped at no more than 100.
    *
    * @return null|array
-   *   An array of render arrays for the entities found, or NULL if the entity
-   *   does not exist.
+   *   An array of Entity IDs for the entities found, or NULL if no match.
    */
   public function entityIdsByLabel(
     string $label,
@@ -68,21 +67,25 @@ class TwigExtension extends \Twig_Extension {
       'group' => ['label', 'type'],
       'user' => ['name', NULL],
     ];
+    $limit = (int) $limit;
+    $entity_type = trim($entity_type);
+    $bundle_identifier = trim($bundle_identifier);
     $label_field = $fields[$entity_type][0] ?? NULL;
     if ($label_field) {
       $bundle_field = $fields[$entity_type][1] ?? NULL;
-      $limit = min($limit, 100);
-      /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
+      $limit = min((int) $limit, 100);
+      $label = trim($label);
       try {
+        /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
         $query = \Drupal::entityTypeManager()->getStorage($entity_type)->getQuery();
         $query->condition($label_field, $label);
-        $query->range(0, $limit);
         if ($bundle_identifier && $bundle_field) {
           $query->condition($bundle_field, $bundle_identifier);
         }
+        $query->range(0, $limit);
         $ids = $query->execute();
-
-      } catch (\Exception $exception) {
+      }
+      catch (\Exception $exception) {
         $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
           [
             '@exception_type' => get_class($exception),
@@ -102,5 +105,4 @@ class TwigExtension extends \Twig_Extension {
     }
     return NULL;
   }
-
 }
