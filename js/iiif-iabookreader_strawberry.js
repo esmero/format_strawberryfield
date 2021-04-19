@@ -49,9 +49,6 @@
                   }
                 });
 
-                if (strawberrySettings.enableSearchArchipelago === false) {
-
-                }
               }
           })}}
 })(jQuery, Drupal, drupalSettings);
