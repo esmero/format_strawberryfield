@@ -117,7 +117,7 @@
             ) {
               $.each(drupalSettings.format_strawberryfield.pannellum[element_id].hotspots, function (id, hotspotdata) {
                 // Also add Popups for Standalone Panoramas if they have an URL.
-                if (hotspotdata.hasOwnProperty('URL')) {
+                if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
                   if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
                     hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
                   }
@@ -165,7 +165,7 @@
                 // Add Model Window Behaviour to hotSpots with Links
                 if (data.hasOwnProperty('hotSpots')) {
                   $.each(data.hotSpots, function (hotspotid, hotspotdata) {
-                    if (hotspotdata.hasOwnProperty('URL')) {
+                    if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
                       if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
                         hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
                       }
