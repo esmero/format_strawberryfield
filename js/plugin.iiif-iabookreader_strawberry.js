@@ -46,12 +46,6 @@ BookReader.prototype.init = (function(super_) {
   return function (options) {
     this.loadManifest();
     super_.call(this, options);
-    if (this.options.enableSearch && this.options.initialSearchTerm) {
-      this.search(
-        this.options.initialSearchTerm,
-        { goToFirstResult: this.goToFirstResult, suppressFragmentChange: true }
-      );
-    }
   };
 })(BookReader.prototype.init);
 
@@ -475,7 +469,6 @@ BookReader.prototype.search =  (function(super_) {
         if (null == searchInsideResults) return;
 
         var searchInsideResultsScale = {};
-
         searchInsideResults.matches.forEach(function(match,index,array) {
           match.par[0].boxes.forEach(function(box,index,array) {
             var pageindex = self.leafNumToIndex(array[index].page);

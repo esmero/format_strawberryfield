@@ -17,19 +17,60 @@
 
   function FormatStrawberryfieldhotspotPopUp(event, url) {
     if (url !== null) {
-      var $myDialog = $('<div class="format-strawberryfield-hotspot-dialog"></div>').appendTo('body');
-      var ajaxObject = Drupal.ajax({
-        url: url,
-        dialogType: 'modal',
-        dialog: {width: '800px'},
-        progress: {
-          type: 'fullscreen',
-          message: Drupal.t('Please wait...')
+      let fullscreenelement = document.fullscreenElement || document.mozFullScreen || document.webkitFullscreenElement || document.msFullscreenElement;
+      if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+        var open = confirm(Drupal.t('Confirm to open URL ' + url + ' in a new Window'));
+        if (open == true) {
+          window.open(url, '_blank');
+        } else {
+          if (typeof (fullscreenelement) != 'undefined') {
+            event.preventDefault();
+            // Let's delay the back to Fullscreen to give the cancel some time to return
+            setTimeout(function () {
+              var $fse = document.querySelector('#' + fullscreenelement.id);
+              try {
+                if ($fse.requestFullscreen) {
+                  $fse.requestFullscreen();
+                } else if ($fse.mozRequestFullScreen) {
+                  $fse.mozRequestFullScreen();
+                } else if ($fse.msRequestFullscreen) {
+                  $fse.msRequestFullscreen();
+                } else {
+                  document.webkitCancelFullScreen();
+                  $fse.webkitRequestFullScreen();
+                }
+              } catch (event) {
+                // Fullscreen doesn't work
+              }
+              // Add tasks to do
+            }, 100);
+
+            return false;
+          }
         }
-      });
-      ajaxObject.execute();
-      event.preventDefault();
+      }
+      else {
+        var ajaxObject = Drupal.ajax({
+          url: url,
+          dialogType: 'modal',
+          dialog: {width: '800px'},
+          progress: {
+            type: 'fullscreen',
+            message: Drupal.t('Please wait...')
+          }
+        });
+        if (typeof (fullscreenelement) != 'undefined') {
+          try {
+            document.webkitCancelFullScreen();
+          }
+          catch (event) {
+            // Fullscreen doesn't work
+          }
+        }
+        ajaxObject.execute();
+      }
     }
+    event.preventDefault();
   }
 
 
@@ -77,6 +118,12 @@
               $.each(drupalSettings.format_strawberryfield.pannellum[element_id].hotspots, function (id, hotspotdata) {
                 // Also add Popups for Standalone Panoramas if they have an URL.
                 if (hotspotdata.hasOwnProperty('URL')) {
+                  if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
+                    hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
+                  }
+                  else {
+                    hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
+                  }
                   hotspotdata.clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
                   hotspotdata.clickHandlerArgs = hotspotdata.URL;
                 }
@@ -119,12 +166,16 @@
                 if (data.hasOwnProperty('hotSpots')) {
                   $.each(data.hotSpots, function (hotspotid, hotspotdata) {
                     if (hotspotdata.hasOwnProperty('URL')) {
+                      if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
+                        hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
+                      }
+                      else {
+                        hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
+                      }
                       drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
                       drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerArgs = hotspotdata.URL;
                     }
-
                   });
-
                 }
               });
               var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
