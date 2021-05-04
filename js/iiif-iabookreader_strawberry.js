@@ -32,6 +32,11 @@
                   bookId: node_uuid,
                   enableSearch: true,
                   searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+                  plugins: {
+                    textSelection: {
+                      singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
+                    },
+                  },
                   padding: 11,
                 };
                 var br = new BookReader(options);
