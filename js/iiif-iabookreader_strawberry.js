@@ -9,7 +9,6 @@
               var element_id = $(this).attr("id");
               var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
               var server = window.location.origin + '/';
-
               // Check if we got some data passed via Drupal settings.
               if (typeof(strawberrySettings) != 'undefined') {
                 var node_uuid = strawberrySettings['nodeuuid'];
@@ -18,6 +17,10 @@
                 }
                 $(this).height(strawberrySettings.height);
                 $(this).css("width", strawberrySettings.width);
+                // Get settings with false/true if ADO has some flavor OCR in Solr
+                // this is checked into Apge Formatter
+                var has_ocr = strawberrySettings['has_ocr'];
+                console.log(has_ocr);
 
                 // Defines our basic options for IIIF.
                 var options = {
@@ -34,6 +37,7 @@
                   searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
                   plugins: {
                     textSelection: {
+                      enabled: has_ocr,
                       singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
                     },
                   },
@@ -41,19 +45,10 @@
                 };
                 var br = new BookReader(options);
                 br.init();
-                // Check if Book has or not OCR using Ajax callback
-                $.ajax({
-                  type: 'GET',
-                  url: '/do/' + node_uuid + '/flavorcount/ocr/',
-                  success: function (data) {
-                    {
-                      if (data.count == 0) {
-                        $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
-                      }
-                    }
-                  }
-                });
-
+                // Hide search box if no ocr flavor
+                if (!has_ocr) {
+                  $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+                }
               }
           })}}
 })(jQuery, Drupal, drupalSettings);
