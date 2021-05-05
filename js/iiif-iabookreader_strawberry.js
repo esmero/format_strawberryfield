@@ -27,7 +27,7 @@
                   iiifmanifest: strawberrySettings['manifest'],
                   iiifdefaultsequence: null, //If null given will use the first sequence found.
                   maxWidth: 800,
-                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
+                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
                   server: server,
                   bookId: node_uuid,
                   enableSearch: true,
@@ -49,9 +49,6 @@
                   }
                 });
 
-                if (strawberrySettings.enableSearchArchipelago === false) {
-
-                }
               }
           })}}
 })(jQuery, Drupal, drupalSettings);
