@@ -371,7 +371,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
-    $has_ocr = $this->searchEnabled($item);
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
@@ -433,7 +432,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $element['media']['#attributes']['data-iiif-infojson'] = '';
         $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
           'nodeuuid' => $nodeuuid,
-          'has_ocr' => $has_ocr,
           'manifest' => json_decode($manifest),
           'width' => $max_width_css,
           'height' => max($max_height, 520),
@@ -464,7 +462,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
-    $has_ocr = $this->searchEnabled($item);
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
@@ -501,7 +498,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           $element['media']['#attributes']['data-iiif-infojson'] = '';
           $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
             'nodeuuid' => $nodeuuid,
-            'has_ocr'=> $has_ocr,
             'manifesturl' => $manifest_url,
             'width' => $max_width_css,
             'height' => max($max_height, 520),

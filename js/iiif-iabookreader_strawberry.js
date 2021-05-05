@@ -17,10 +17,6 @@
                 }
                 $(this).height(strawberrySettings.height);
                 $(this).css("width", strawberrySettings.width);
-                // Get settings with false/true if ADO has some flavor OCR in Solr
-                // this is checked into Apge Formatter
-                var has_ocr = strawberrySettings['has_ocr'];
-                console.log(has_ocr);
 
                 // Defines our basic options for IIIF.
                 var options = {
@@ -30,14 +26,14 @@
                   iiifmanifest: strawberrySettings['manifest'],
                   iiifdefaultsequence: null, //If null given will use the first sequence found.
                   maxWidth: 800,
-                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/images/',
+                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
                   server: server,
                   bookId: node_uuid,
                   enableSearch: true,
                   searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
                   plugins: {
                     textSelection: {
-                      enabled: has_ocr,
+                      enabled: true,
                       singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
                     },
                   },
@@ -45,10 +41,19 @@
                 };
                 var br = new BookReader(options);
                 br.init();
-                // Hide search box if no ocr flavor
-                if (!has_ocr) {
-                  $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
-                }
+                // Check if Book has or not OCR using Ajax callback
+                $.ajax({
+                  type: 'GET',
+                  url: '/do/' + node_uuid + '/flavorcount/ocr/',
+                  success: function (data) {
+                    {
+                      if (data.count == 0) {
+                        $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+                      }
+                    }
+                  }
+                });
+
               }
           })}}
 })(jQuery, Drupal, drupalSettings);

@@ -21,31 +21,31 @@ iiif_openseadragon_strawberry:
 
 iiif_iabookreader:
   remote: https://openlibrary.org/dev/docs/bookreader
-  version: 4.21.0
+  version: 4.40.3
   license:
     name: GNU Affero General Public License v3.0
-    url: https://github.com/internetarchive/bookreader/blob/4.21.0/LICENSE
+    url: https://github.com/internetarchive/bookreader/blob/4.40.3/LICENSE
     gpl-compatible: true
   header: true
   css:
     component:
       css/iabookreader.css: {}
-      https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/BookReader.css: { external: true}
+      https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/BookReader.css: { external: true}
   js:
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
     https://cdn.jsdelivr.net/npm/jquery.dragscrollable@1.0.0/dragscrollable.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery-colorbox@1.6.4/jquery.colorbox.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/jquery.mmenu.all.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/addons/navbars/jquery.mmenu.navbars.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/jquery-ui-1.12.0.min.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/dragscrollable-br.js: { external: true, minified: false, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/BookReader.js: { external: true, minified: false, preprocess: false,  weight: -9}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.url.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.resume.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.21.0/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/jquery-ui-1.12.0.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/dragscrollable-br.js: { external: true, minified: false, preprocess: false}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/BookReader.js: { external: true, minified: false, preprocess: false,  weight: -9}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.url.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.resume.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
     - core/jquery
     - core/jquery.ui
