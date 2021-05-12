@@ -42,15 +42,17 @@ class TwigExtension extends \Twig_Extension {
   /**
    * Returns entity ids of entities with matching title/name/label.
    *
-   * @param string $label
+   * @param  string  $label
    *   The entity label that we're looking for
-   * @param string $entity_type
+   * @param  string  $entity_type
    *   The entity type.
    *   Supported entity types are node, taxonomy_term, group, and user.
-   * @param string $bundle_identifier
+   * @param  string  $bundle_identifier
    *   The entity bundle (may be empty)
-   * @param int $limit
+   * @param  int  $limit
    *   Restrict to number of results. Capped at no more than 100.
+   * @param  bool  $fail_to_id
+   *   Should we check if an unmatched label value is actually an entity id?
    *
    * @return null|array
    *   An array of Entity IDs for the entities found, or NULL if no match.
@@ -59,7 +61,8 @@ class TwigExtension extends \Twig_Extension {
     string $label,
     string $entity_type,
     string $bundle_identifier = '',
-    $limit = 1
+    $limit = 1,
+    $fail_to_id = TRUE
   ): ?array {
     $fields = [
       'node' => ['title', 'type'],
@@ -86,23 +89,51 @@ class TwigExtension extends \Twig_Extension {
         $ids = $query->execute();
       }
       catch (\Exception $exception) {
-        $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
-          [
-            '@exception_type' => get_class($exception),
-            '@file' => $exception->getFile(),
-            '@line' => $exception->getLine(),
-            '@entity_type' => $entity_type,
-            '@label' => $label,
-            '@response' => $exception->getMessage(),
-          ]);
-        \Drupal::logger('format_strawberryfield')->warning($message);
-        return NULL;
+        return $this->catchException($exception, $entity_type, $label);
       }
 
       if (!empty($ids)) {
         return $ids;
       }
+
+      // If the value provided did not match the label of an entity, see if it
+      // may actually be an entity id. If so, just return that entity id in an array.
+      else if ($fail_to_id && is_numeric($label)) {
+        try {
+          $entity = \Drupal::entityTypeManager()->getStorage($entity_type)->load($label);
+          if($entity) {
+            return [$label];
+          }
+        }
+        catch (\Exception $exception) {
+          return $this->catchException($exception, $entity_type, $label);
+        }
+
+      }
+
     }
     return NULL;
   }
+
+  /**
+   * @param  \Exception  $exception
+   * @param $entity_type
+   * @param $label
+   *
+   * @return null
+   */
+  private function catchException(\Exception $exception, $entity_type, $label) {
+    $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
+      [
+        '@exception_type' => get_class($exception),
+        '@file' => $exception->getFile(),
+        '@line' => $exception->getLine(),
+        '@entity_type' => $entity_type,
+        '@label' => $label,
+        '@response' => $exception->getMessage(),
+      ]);
+    \Drupal::logger('format_strawberryfield')->warning($message);
+    return NULL;
+  }
+
 }
