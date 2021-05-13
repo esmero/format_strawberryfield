@@ -8,6 +8,11 @@ services:
     tags:
       - {name: event_subscriber}
     arguments: ['@string_translation', '@messenger', '@logger.factory', '@tempstore.private']
+  format_strawberryfield.invalidatemetadatacache_subscriber:
+    class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldInvalidateMetadataCaches
+    tags:
+      - { name: event_subscriber }
+    arguments: [ '@string_translation', '@messenger', '@logger.factory' ]
   format_strawberryfield.view_mode_resolver:
     class: Drupal\format_strawberryfield\ViewModeResolver
     arguments: ['@strawberryfield.utility', '@config.factory']
