@@ -132,7 +132,6 @@ class TwigExtension extends \Twig_Extension {
    *    - An array
    */
   public function sbfJsonDecode($value) {
-    error_log(var_export($value, true));
     if ($value instanceof Markup) {
       $value = (string) $value;
     }
