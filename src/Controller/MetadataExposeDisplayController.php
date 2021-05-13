@@ -257,6 +257,9 @@ class MetadataExposeDisplayController extends ControllerBase {
           $response->addCacheableDependency($node);
           $response->addCacheableDependency($metadatadisplay_entity);
           $response->addCacheableDependency($metadataexposeconfig_entity);
+          $metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
+          $response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
+          $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
         }
         return $response;
 
