@@ -2,7 +2,10 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Twig\Markup;
 use Twig\TwigTest;
+use Twig\TwigFilter;
+use Twig\TwigFunction;
 
 /**
  * Class TwigExtension.
@@ -34,8 +37,17 @@ class TwigExtension extends \Twig_Extension {
    */
   public function getFunctions() {
     return [
-      new \Twig_SimpleFunction('sbf_entity_ids_by_label',
+      new TwigFunction('sbf_entity_ids_by_label',
         [$this, 'entityIdsByLabel']),
+    ];
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function getFilters() {
+    return [
+      new TwigFilter('sbf_json_decode', [$this, 'sbfJsonDecode'])
     ];
   }
 
@@ -105,4 +117,33 @@ class TwigExtension extends \Twig_Extension {
     }
     return NULL;
   }
+
+  /**
+   * JSON Decodes a string.
+   *
+   * To make this function safe we define a 64 max depth, always associative
+   * array and fail on non Valid UTF8. No user provided Bit Masks are allowed
+   *
+   * @param mixed $value the value to decode
+   *
+   * @return mixed The JSON decoded value
+   *    - NULL if failure, not the right type (e.g Iterable) or if NULL
+   *    - TRUE/FALSE
+   *    - An array
+   */
+  public function sbfJsonDecode($value) {
+    if ($value instanceof Markup) {
+      $value = (string) $value;
+    }
+    elseif (\is_iterable($value)) {
+      // Do not fail, return an empty array;
+      return NULL;
+    }
+    try {
+      return json_decode($value, TRUE, 64, JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
+    } catch (\Exception $exception) {
+      return NULL;
+    }
+  }
+
 }
