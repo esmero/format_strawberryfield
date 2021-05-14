@@ -9,7 +9,6 @@
               var element_id = $(this).attr("id");
               var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
               var server = window.location.origin + '/';
-
               // Check if we got some data passed via Drupal settings.
               if (typeof(strawberrySettings) != 'undefined') {
                 var node_uuid = strawberrySettings['nodeuuid'];
@@ -19,29 +18,40 @@
                 $(this).height(strawberrySettings.height);
                 $(this).css("width", strawberrySettings.width);
 
-                // Defines our basic options for IIIF.
-                var options = {
-                  ui: 'full', // embed, full (responsive)
-                  el: '#' + element_id,
-                  iiifmanifesturl: strawberrySettings['manifesturl'],
-                  iiifmanifest: strawberrySettings['manifest'],
-                  iiifdefaultsequence: null, //If null given will use the first sequence found.
-                  maxWidth: 800,
-                  imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
-                  server: server,
-                  bookId: node_uuid,
-                  enableSearch: true,
-                  searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
-                  padding: 11,
-                };
-                var br = new BookReader(options);
-                br.init();
+
+                var manifesturl = strawberrySettings['manifesturl'];
+                var manifest = strawberrySettings['manifest'];
+
+
                 // Check if Book has or not OCR using Ajax callback
                 $.ajax({
                   type: 'GET',
                   url: '/do/' + node_uuid + '/flavorcount/ocr/',
                   success: function (data) {
                     {
+                      // Defines our basic options for IIIF.
+                      var options = {
+                        ui: 'full', // embed, full (responsive)
+                        el: '#' + element_id,
+                        iiifmanifesturl: manifesturl,
+                        iiifmanifest: manifest,
+                        iiifdefaultsequence: null, //If null given will use the first sequence found.
+                        maxWidth: 800,
+                        imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
+                        server: server,
+                        bookId: node_uuid,
+                        enableSearch: true,
+                        searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+                        plugins: {
+                          textSelection: {
+                            enabled: (data.count == 0 ? false : true),
+                            singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
+                          },
+                        },
+                        padding: 11,
+                      };
+                      var br = new BookReader(options);
+                      br.init();
                       if (data.count == 0) {
                         $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
                       }
