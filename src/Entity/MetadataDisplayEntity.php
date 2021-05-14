@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Entity;
 
+use Drupal\Core\Cache\Cache;
 use Twig\Node\ModuleNode;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
@@ -358,14 +359,26 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $twigtemplate = $this->get('twig')->getValue();
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
     // @TODO should we have a custom theme hint here?
+    $node = $context['node'] ?? NULL;
+    $nodeid = $node instanceof  \Drupal\Core\Entity\FieldableEntityInterface ? $node->id() : NULL;
+    if ($nodeid) {
+      $cache_tags = Cache::mergeTags(
+        $this->getCacheTags(),
+        ['node_metadatadisplay:'. $nodeid]
+      );
+    }
+    else {
+      $cache_tags = $this->getCacheTags();
+    }
     $templaterenderelement = [
       '#type' => 'inline_template',
       '#template' => $twigtemplate,
       '#context' => $context,
       '#cache' => [
-        'tags' => $this->getCacheTags(),
+        'tags' => $cache_tags
       ],
     ];
+
     return $templaterenderelement;
   }
 

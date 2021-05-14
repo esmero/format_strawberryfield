@@ -46,6 +46,7 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
+
   dependencies:
     - core/jquery
     - core/jquery.ui

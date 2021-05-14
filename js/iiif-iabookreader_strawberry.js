@@ -18,6 +18,7 @@
                 $(this).height(strawberrySettings.height);
                 $(this).css("width", strawberrySettings.width);
 
+
                 var manifesturl = strawberrySettings['manifesturl'];
                 var manifest = strawberrySettings['manifest'];
 
