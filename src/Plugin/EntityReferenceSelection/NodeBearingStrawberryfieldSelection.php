@@ -28,7 +28,7 @@ class NodeBearingStrawberryfieldSelection extends NodeSelection {
   protected function buildEntityQuery($match = NULL, $match_operator = 'CONTAINS') {
 
     $query = parent::buildEntityQuery($match, $match_operator);
-    $handler_settings = $this->configuration['handler_settings'];
+    $handler_settings = $this->configuration['handler_settings'] ?? [];
     if (!isset($handler_settings['filter'])) {
       return $query;
     }
