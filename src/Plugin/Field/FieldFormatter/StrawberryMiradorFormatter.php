@@ -532,7 +532,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
               'strawberry-mirador-item',
               'MiradorViewer',
               'field-iiif',
-              'container',
             ],
             'style' => "width:{$max_width_css}; height:{$max_height}px",
             'height' => $max_height,
