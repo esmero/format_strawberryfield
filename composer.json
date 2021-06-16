@@ -16,6 +16,8 @@
         "ml/json-ld": "^1.2",
         "mtdowling/jmespath.php":"^2.5",
         "strawberryfield/strawberryfield":"dev-1.0.0-RC2",
+        "league/html-to-markdown":"^5.0.0",
+        "erusev/parsedown": "^1.7",
         "drupal/webform": "^5.23 || ^6.0",
         "ext-json": "*"
     }
