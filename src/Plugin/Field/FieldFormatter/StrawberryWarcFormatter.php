@@ -241,6 +241,8 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
                 '#attributes' => [
                   'id' => $uniqueid,
                   'source' => $publicurl->toString(),
+                  'replaybase' => "/replay/",
+                  'deeplink' => "true",
                   'style' => "width:{$max_width_css}; height:{$max_height}px; display:block",
                 ],
               ];

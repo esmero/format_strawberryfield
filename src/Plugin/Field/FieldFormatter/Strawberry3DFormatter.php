@@ -111,7 +111,6 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         ]
       );
 
-
     return $summary;
   }
 
