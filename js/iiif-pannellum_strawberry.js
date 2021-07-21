@@ -178,6 +178,8 @@
                   });
                 }
               });
+             // Add Autoload property for global Tour Viewer
+              drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad); 
               var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
             }
             FormatStrawberryfieldPanoramas.panoramas.set(element_id, new FormatStrawberryfieldPanoramas(viewer));
