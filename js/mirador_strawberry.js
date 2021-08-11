@@ -42,8 +42,24 @@
                             $options.manifests = $manifests;
                         }
                         //@TODO add an extra Manifests key with every other one so people can select the others.
-                        var miradorInstance = Mirador.viewer($options);
+                        const miradorInstance = Mirador.viewer($options);
                         console.log('initializing Mirador 3.1.1')
+                        // Work around https://github.com/ProjectMirador/mirador/issues/3486
+                        const mirador_window = document.getElementById(element_id);
+                        var observer = new MutationObserver(function(mutations) {
+                            let mirador_videos = document.querySelectorAll(".mirador-viewer video source");
+                            if (mirador_videos.length) {
+                                mutations.forEach(function (mutation) {
+                                    if ((mutation.target.localName == "video") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                                        mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                                    }
+                                });
+                            }
+                        });
+                        observer.observe(mirador_window, {
+                            childList: true,
+                            subtree: true,
+                        });
                     }
                 })}}
 })(jQuery, Drupal, drupalSettings, window.Mirador);
