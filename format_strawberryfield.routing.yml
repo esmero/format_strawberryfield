@@ -241,6 +241,7 @@ format_strawberryfield.display_settings:
     entity_type_id: 'node'
   requirements:
     _entity_access: 'node.update'
+    _permission: 'administer node display'
   options:
     _node_operation_route: TRUE
     parameters:

@@ -56,8 +56,15 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
   public function getRouteParameters(RouteMatchInterface $route_match) {
     $params = parent::getRouteParameters($route_match);
     $node = $route_match->getParameter('node');
+    // Users can override the Viewer manually (if DS is enabled)
     if ($node instanceof NodeInterface) {
-      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(),'view_mode_name' => $this->viewModeResolver->get($node)];
+      if ($node->hasField('ds_switch') && !empty($node->ds_switch->value)) {
+        $viewmode = $node->ds_switch->value;
+      }
+      else {
+        $viewmode = $this->viewModeResolver->get($node);
+      }
+      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(),'view_mode_name' => $viewmode];
     }
     return $params;
   }

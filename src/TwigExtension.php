@@ -6,6 +6,7 @@ use Twig\Markup;
 use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use League\HTMLToMarkdown\HtmlConverter;
 
 /**
  * Class TwigExtension.
@@ -22,7 +23,7 @@ class TwigExtension extends \Twig_Extension {
 
   /**
    * @param $value
-   * @param  string  $type
+   * @param string $type
    *
    * @return bool
    */
@@ -47,7 +48,11 @@ class TwigExtension extends \Twig_Extension {
    */
   public function getFilters() {
     return [
-      new TwigFilter('sbf_json_decode', [$this, 'sbfJsonDecode'])
+      new TwigFilter('sbf_json_decode', [$this, 'sbfJsonDecode']),
+      new TwigFilter('markdown_2_html', [$this, 'markdownToHtml'],
+        ['is_safe' => ['all']]),
+      new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
+        ['is_safe' => ['all']]),
     ];
   }
 
@@ -89,15 +94,16 @@ class TwigExtension extends \Twig_Extension {
       $label = trim($label);
       try {
         /** @var \Drupal\Core\Entity\Query\QueryInterface $query */
-        $query = \Drupal::entityTypeManager()->getStorage($entity_type)->getQuery();
+        $query = \Drupal::entityTypeManager()
+          ->getStorage($entity_type)
+          ->getQuery();
         $query->condition($label_field, $label);
         if ($bundle_identifier && $bundle_field) {
           $query->condition($bundle_field, $bundle_identifier);
         }
         $query->range(0, $limit);
         $ids = $query->execute();
-      }
-      catch (\Exception $exception) {
+      } catch (\Exception $exception) {
         $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
           [
             '@exception_type' => get_class($exception),
@@ -140,10 +146,70 @@ class TwigExtension extends \Twig_Extension {
       return NULL;
     }
     try {
-      return json_decode($value, TRUE, 64, JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
+      return json_decode($value, TRUE, 64,
+        JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
     } catch (\Exception $exception) {
       return NULL;
     }
   }
+
+
+  /**
+   * Converts HTML to Markdown.
+   *
+   * @param $body
+   * @param array $options
+   *
+   * @return string
+   */
+  public function htmlToMarkdown($body, array $options = []): string {
+    static $converters;
+
+    if (!class_exists(HtmlConverter::class)) {
+      throw new \LogicException('You cannot use the "html_2_markdown" filter as league/html-to-markdown is not installed; try running "composer require league/html-to-markdown".');
+    }
+    if (empty($body)) {
+      return '';
+    }
+    if (!is_string($body)) {
+      return '';
+    }
+
+    $options = $options + [
+        'hard_break' => TRUE,
+        'strip_tags' => TRUE,
+        'remove_nodes' => 'head style',
+      ];
+
+    if (!isset($converters[$key = serialize($options)])) {
+      $converters[$key] = new HtmlConverter($options);
+    }
+
+    return $converters[$key]->convert($body);
+  }
+
+  /**
+   * Converts Markdown to HTML.
+   *
+   * @param mixed $body
+   *
+   * @return string|null
+   */
+  public function markdownToHtml($body): string {
+    if (!class_exists(\Parsedown::class)) {
+      throw new \LogicException('You cannot use the "markdown_2_html" filter as erusev/parsedown is not installed; try running "composer require erusev/parsedown".');
+    }
+    if (empty($body)) {
+      return '';
+    }
+    if (!is_string($body)) {
+      return '';
+    }
+
+    $Parsedown = new \Parsedown();
+    $Parsedown->setSafeMode(TRUE);
+    return $Parsedown->text($body);
+  }
+
 
 }
