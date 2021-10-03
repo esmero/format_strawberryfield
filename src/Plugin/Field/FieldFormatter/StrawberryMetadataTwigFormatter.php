@@ -118,7 +118,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     return parent::defaultSettings() + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
-      'metadatadisplayentity_id' => NULL,
+      'metadatadisplayentity_uuid' => NULL,
       'metadatadisplayentity_uselabel' => TRUE,
     ];
   }
@@ -128,16 +128,17 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $entity = NULL;
-    if ($this->getSetting('metadatadisplayentity_id')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $entity = reset($entities);
     }
 
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
       ],
-      'metadatadisplayentity_id' => [
-        '#type' => 'entity_autocomplete',
+      'metadatadisplayentity_uuid' => [
+        '#type' => 'sbf_entity_autocomplete_uuid',
         '#title' => $this->t('Choose your metadata template (Start typing! Autocomplete.)'),
         '#target_type' => 'metadatadisplay_entity',
         '#description' => 'Metadata template name',
@@ -173,8 +174,9 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
   public function settingsSummary() {
     // Get the metadata template's label for display in the summary.
     $entity_label = NULL;
-    if ($this->getSetting('metadatadisplayentity_id')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $entity = reset($entities);
       if ($entity) {
         $entity_label = $entity->label();
       }
@@ -195,7 +197,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
-    $metadatadisplayentity_id = $this->getSetting('metadatadisplayentity_id');
+    $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
     $nodeid = $items->getEntity()->id();
 
     foreach ($items as $delta => $item) {
@@ -204,11 +206,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       if (empty($value)) {
         continue;
       }
-      if (empty($metadatadisplayentity_id)) {
+      if (empty($metadatadisplayentity_uuid)) {
         continue;
       }
+
+
+      $metadatadisplayentities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       /** @var \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity $metadatadisplayentity */
-      $metadatadisplayentity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+      $metadatadisplayentity = reset($metadatadisplayentities);
       if ($metadatadisplayentity == NULL) {
         continue;
       }

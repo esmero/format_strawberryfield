@@ -6,6 +6,8 @@
 
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\node\NodeInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\Display\EntityDisplayInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Swaggest\JsonDiff\JsonDiff;
 
@@ -222,6 +224,123 @@ function format_strawberryfield_css_alter(&$css) {
     // @see core/themes/stable/css/core/dialog/off-canvas
     if (strpos($key, '/off-canvas.') !== FALSE) {
       unset($css[$key]);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_contextual_links_alter().
+ *
+ * Converts one Metadata Display Entity Contextual Link with metadata to multiple
+ * Links with propert Titles.
+ *
+ */
+function format_strawberryfield_contextual_links_alter(array &$links, $group, array $route_parameters) {
+
+  if ($group == 'metadatadisplay_entity') {
+    $entities = [];
+    $other_entities = [];
+    $entities[] = $route_parameters['metadatadisplay_entity'] ?? NULL;
+    if (isset($links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids']) &&
+      is_array($links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids'])) {
+      $other_entities = $links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids'];
+    }
+    $combined_entities = array_unique(array_merge($entities, $other_entities));
+    $metadata_display_entities = \Drupal::entityTypeManager()
+      ->getStorage('metadatadisplay_entity')
+      ->loadMultiple($combined_entities);
+    $weight = 0;
+    foreach ($metadata_display_entities as $entity) {
+      $weight++;
+      $links['metadatadisplay.page_edit.' . $entity->id()] = $links['metadatadisplay.page_edit'];
+      $links['metadatadisplay.page_edit.' . $entity->id()]['route_parameters']['metadatadisplay_entity'] = $entity->id();
+      $links['metadatadisplay.page_edit.' . $entity->id()]['title'] = t('Edit Metadatadata Display: @label',
+        ['@label' => $entity->label()]);
+      $links['metadatadisplay.page_edit.' . $entity->id()]['weight'] = $weight;
+    }
+    // After building new link entries Delete the original One.
+    unset($links['metadatadisplay.page_edit']);
+  }
+}
+
+
+/**
+ * Implements hook_ENTITY_TYPE_view_alter().
+ */
+function format_strawberryfield_node_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
+  // Empty. Issue is if this hook does not exist, the broader one fail;
+}
+
+/**
+ * Implements hook_entity_view_alter().
+ */
+function format_strawberryfield_entity_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
+
+  if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
+    $display_array = $display->toArray();
+    // First we get main field/that has a SBF
+    foreach ($sbf_fields as $sbf_field_name) {
+      if (isset($display_array['content'][$sbf_field_name]['settings']['metadatadisplayentity_uuid'])) {
+        $uuid = $display_array['content'][$sbf_field_name]['settings']['metadatadisplayentity_uuid'];
+        $entities = \Drupal::entityTypeManager()
+          ->getStorage('metadatadisplay_entity')
+          ->loadByProperties(['uuid' => $uuid]);
+        $entity = reset($entities);
+        if ($entity) {
+          $build['#contextual_links']['metadatadisplay_entity'] = [
+            'route_parameters' => ['metadatadisplay_entity' => $entity->id()],
+          ];
+        }
+      }
+    }
+    // Now we deal with in memory DS copy fields
+    if (isset($display_array['third_party_settings']['ds']['fields'])) {
+      foreach ($display_array['third_party_settings']['ds']['fields'] as $candidate_field) {
+        // The list of formatters (static here, we may want to make this a method in a service
+        // or add a Field Formatter annotation in the future?) that use metadatadisplay_entities
+        if (in_array($candidate_field['formatter'],
+          [
+            'strawberry_metadata_formatter',
+            'strawberry_mirador_formatter',
+            'strawberry_paged_formatter',
+            'strawberry_map_formatter'
+          ])) {
+          $uuid = $candidate_field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL;
+          if ($uuid) {
+            $entities = \Drupal::entityTypeManager()
+              ->getStorage('metadatadisplay_entity')
+              ->loadByProperties(['uuid' => $uuid]);
+            $entity = reset($entities);
+            if ($entity) {
+              if (isset($build['#contextual_links']['metadatadisplay_entity'])) {
+                $build['#contextual_links']['metadatadisplay_entity']['metadata']['metadatadisplay_entity_ids'][] = (int) $entity->id();
+              }
+              else {
+                $build['#contextual_links']['metadatadisplay_entity'] = [
+                  'route_parameters' => ['metadatadisplay_entity' => (int) $entity->id()],
+                ];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * We push our hooks to the end so we have all DS processed data available.
+
+ */
+function format_strawberryfield_module_implements_alter(&$implementations, $hook) {
+  if (($hook == 'entity_view_alter') || ($hook == 'node_view_alter')) {
+    $group = $implementations['format_strawberryfield'] ?? NULL;
+    if ($group !== NULL) {
+      unset($implementations['format_strawberryfield']);
+      $implementations['format_strawberryfield'] = $group;
     }
   }
 }

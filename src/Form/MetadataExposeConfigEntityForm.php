@@ -50,12 +50,6 @@ class MetadataExposeConfigEntityForm extends EntityForm {
     /* @var MetadataExposeConfigEntity $metadataconfig */
     $metadataconfig = $this->entity;
 
-    $entity = NULL;
-
-    if ($metadataconfig->getTargetEntityTypes()) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')
-        ->load($metadataconfig->getProcessorEntityId());
-    }
     $bundles = $this->entityTypeBundleInfo->getBundleInfo('node');
     $nodebundleoptions = [];
     foreach ($bundles as $id => $definition) {
@@ -106,6 +100,21 @@ class MetadataExposeConfigEntityForm extends EntityForm {
 
     return $form;
   }
+
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Remove button and internal Form API values from submitted values.
+    $form_state->cleanValues();
+    $processor_entity_id =  $form_state->getValue('processor_entity_id', NULL);
+    $this->entity = $this->buildEntity($form, $form_state);
+    if ($processor_entity_id) {
+      $metadatadisplayentity = $this->entityTypeManager->getStorage('metadatadisplay_entity')
+        ->load($processor_entity_id);
+      if ($metadatadisplayentity) {
+        $this->entity->setMetadatadisplayentityUuid($metadatadisplayentity->uuid());
+      }
+    }
+  }
+
 
   /**
    * {@inheritdoc}

@@ -16,3 +16,4 @@
 src/Plugin/Field/FieldType/IIIFlinkItem.php
 .idea/format_strawberryfield.iml
 .idea/codeStyles/Project.xml
+.DS_Store

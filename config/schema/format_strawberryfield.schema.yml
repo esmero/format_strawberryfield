@@ -135,6 +135,12 @@ field.formatter.settings.strawberry_3d_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of 3D Model Upload location JSON keys to filter 3D Models against'
+    uv_texture_json_key_source:
+      type: string
+      label: 'Comma separated list of UV Textures Upload location JSON keys to filter 3D Models against'
 field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -159,7 +165,7 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     specs:
       type: string
-    metadatadisplayentity_id:
+    metadatadisplayentity_uuid:
       type: string
     metadatadisplayentity_uselabel:
       type: string
@@ -188,7 +194,7 @@ field.formatter.settings.strawberry_paged_formatter:
       label: 'Whether to use global IIIF settings or not.'
     mediasource:
       type: string
-    metadatadisplayentity_source:
+    metadatadisplayentity_uuid:
       type: string
     manifesturl_source:
       type: string
@@ -314,9 +320,6 @@ field.formatter.settings.strawberry_mirador_formatter:
     iiif_base_url_internal:
       type: string
       label: 'Custom internal IIIF Server URL'
-    metadataexposeentity:
-      type: string
-      label: 'Machine name of the exposed Metadata Config Entity endpoint'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'

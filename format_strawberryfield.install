@@ -76,3 +76,141 @@ function format_strawberryfield_update_8701() {
     ],
   ]));
 }
+
+/**
+ * Implements hook_update_N().
+ *
+ * Updates Formatters, Exposed metadata and Views to load metadatadisplay entities via UUID.
+ *
+ */
+function format_strawberryfield_update_8702() {
+  $config_factory = \Drupal::configFactory();
+  // Find all views configs.
+  foreach ($config_factory->listAll('views.view.') as $view_config_name) {
+    $needs_saving = FALSE;
+    $view = $config_factory->getEditable($view_config_name);
+    // Go through each display on each view.
+    $displays = $view->get('display');
+    foreach ($displays as $display_name => &$display) {
+      if (isset($display['display_options']['fields'])) {
+        foreach ($display['display_options']['fields'] as &$field) {
+          $metadatadisplayentity_id = $field['settings']['metadatadisplayentity_id'] ?? NULL;
+          $metadatadisplayentity_id = is_scalar($metadatadisplayentity_id) ? $metadatadisplayentity_id : NULL;
+          if ($metadatadisplayentity_id) {
+            $metadata_display_entitiy = \Drupal::entityTypeManager()
+              ->getStorage('metadatadisplay_entity')
+              ->load($metadatadisplayentity_id);
+            if ($metadata_display_entitiy) {
+              $uuid = $metadata_display_entitiy->uuid();
+              $field['settings']['metadatadisplayentity_uuid'] = $uuid;
+              unset($field['settings']['metadatadisplayentity_id']);
+              $needs_saving = TRUE;
+            }
+          }
+        }
+      }
+    }
+    if ($needs_saving) {
+      $view->set('display', $displays);
+      $view->save(TRUE);
+    }
+  }
+
+  // Entity view display configs for nodes.
+  foreach ($config_factory->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
+    $entity_view = $config_factory->getEditable($entity_view_display_config);
+    // We need to load the ones that contain a metadata display id as number
+    // $data['content']['fieldname'][type] = strawberry_metadata_formatter
+    $data = $entity_view->getRawData();
+    $needs_saving = FALSE;
+    if (isset($data['third_party_settings']['ds']['fields'])) {
+      foreach ($data['third_party_settings']['ds']['fields'] as &$field) {
+        $metadatadisplayentity_id = $field['settings']['formatter']['metadatadisplayentity_id'] ?? NULL;
+        $metadatadisplayentity_id = is_scalar($metadatadisplayentity_id) ? $metadatadisplayentity_id : NULL;
+        if ($metadatadisplayentity_id) {
+          $metadata_display_entitiy = \Drupal::entityTypeManager()
+            ->getStorage('metadatadisplay_entity')
+            ->load($metadatadisplayentity_id);
+          if ($metadata_display_entitiy) {
+            $uuid = $metadata_display_entitiy->uuid();
+            $field['settings']['formatter']['metadatadisplayentity_uuid'] = $uuid;
+            unset($field['settings']['formatter']['metadatadisplayentity_id']);
+            $needs_saving = TRUE;
+          }
+        }
+        else {
+          $metadatadisplayentity_source = $field['settings']['formatter']['metadatadisplayentity_id'] ?? NULL;
+          $metadatadisplayentity_source = is_scalar($metadatadisplayentity_source) ? $metadatadisplayentity_source : NULL;
+          if ($metadatadisplayentity_source) {
+            $metadata_display_entitiy = \Drupal::entityTypeManager()
+              ->getStorage('metadatadisplay_entity')
+              ->load($metadatadisplayentity_source);
+            if ($metadata_display_entitiy) {
+              $uuid = $metadata_display_entitiy->uuid();
+              $field['settings']['formatter']['metadatadisplayentity_uuid'] = $uuid;
+              unset($field['settings']['formatter']['metadatadisplayentity_source']);
+              $needs_saving = TRUE;
+            }
+          }
+        }
+      }
+    }
+    if (isset($data['content'])) {
+      foreach ($data['content'] as &$realfield) {
+        $metadatadisplayentity_id = $realfield['settings']['metadatadisplayentity_id'] ?? NULL;
+        $metadatadisplayentity_id = is_scalar($metadatadisplayentity_id) ? $metadatadisplayentity_id : NULL;
+        if ($metadatadisplayentity_id) {
+          $metadata_display_entitiy = \Drupal::entityTypeManager()
+            ->getStorage('metadatadisplay_entity')
+            ->load($metadatadisplayentity_id);
+          if ($metadata_display_entitiy) {
+            $uuid = $metadata_display_entitiy->uuid();
+            $realfield['settings']['metadatadisplayentity_uuid'] = $uuid;
+            unset($realfield['settings']['metadatadisplayentity_id']);
+            $needs_saving = TRUE;
+          }
+        }
+        else {
+          $metadatadisplayentity_source = $field['settings']['formatter']['metadatadisplayentity_id'] ?? NULL;
+          $metadatadisplayentity_source = is_scalar($metadatadisplayentity_source) ? $metadatadisplayentity_source : NULL;
+          if ($metadatadisplayentity_source) {
+            $metadata_display_entitiy = \Drupal::entityTypeManager()
+              ->getStorage('metadatadisplay_entity')
+              ->load($metadatadisplayentity_source);
+            if ($metadata_display_entitiy) {
+              $uuid = $metadata_display_entitiy->uuid();
+              $field['settings']['formatter']['metadatadisplayentity_uuid'] = $uuid;
+              unset($field['settings']['formatter']['metadatadisplayentity_source']);
+              $needs_saving = TRUE;
+            }
+          }
+        }
+      }
+    }
+    if ($needs_saving) {
+      $entity_view->setData($data);
+      $entity_view->save(TRUE);
+    }
+  }
+  // Now exposed metadata endpoints.
+  $metadataexpose_entities = \Drupal::entityTypeManager()->getStorage('metadataexpose_entity')->loadMultiple();
+  foreach ($metadataexpose_entities as $metadataexpose_entity) {
+    $metadatadisplayentity_id = $metadataexpose_entity->processor_entity_id ?? NULL;
+    if ($metadatadisplayentity_id) {
+      $metadatadisplayentity = \Drupal::entityTypeManager()
+        ->getStorage('metadatadisplay_entity')
+        ->load($metadatadisplayentity_id);
+      if ($metadatadisplayentity) {
+        $uuid = $metadatadisplayentity->uuid();
+        $metadataexpose_entity->setMetadatadisplayentityUuid($uuid);
+        $metadataexpose_entity->set('metadatadisplayentity_uuid', $uuid);
+        $metadataexpose_entity->set('processor_entity_id', NULL);
+        // To be deprecated afterwards.
+        $metadataexpose_entity->processor_entity_id = NULL;
+        $metadataexpose_entity->save(TRUE);
+      }
+    }
+  }
+  $message = "All Metadata Display Entities in Configurations updated to use UUIDs";
+  return $message;
+}
