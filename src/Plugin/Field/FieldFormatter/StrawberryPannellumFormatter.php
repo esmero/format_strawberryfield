@@ -482,7 +482,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         // Don't allow circular references
         if ($nid != $ownnodeid) {
           // @TODO inject-it as we do in the other formatters.
-          $node = \Drupal::service('entity.manager')->getStorage('node')->load(
+          $node = \Drupal::service('entity_type.manager')->getStorage('node')->load(
             $nid
           );
           if (!$node) {
