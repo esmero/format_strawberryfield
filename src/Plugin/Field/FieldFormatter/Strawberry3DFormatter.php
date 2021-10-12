@@ -9,6 +9,7 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
@@ -40,6 +41,9 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       'max_width' => 600,
       'max_height' => 400,
       'number_models' => 1,
+        'upload_json_key_source' => NULL,
+        'uv_texture_json_key_source' => NULL,
+
     ];
   }
 
@@ -48,42 +52,57 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE
-      ],
-      'number_models' => [
-        '#type' => 'number',
-        '#title' => $this->t('Number of 3D Models'),
-        '#default_value' => $this->getSetting('number_models'),
-        '#size' => 2,
-        '#maxlength' => 2,
-        '#min' => 0,
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#description' => $this->t('Use 0 to force 100% width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#description' => t('An Archipelago managed "as:mediatype". For 3D models its always "as:model"'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE
+        ],
+        'upload_json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('Comma separated list of JSON Keys where media was upload to (e.g the Webform Key for the 3D Model Upload element: "model").'),
+          '#description' => t('Leave empty to not filter against the media upload JSON Key'),
+          '#default_value' => $this->getSetting('upload_json_key_source'),
+          '#required' => FALSE
+        ],
+        'uv_texture_json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key where UV texture(s) was(were) uploaded to (e.g Webform Key for the Upload element: "uvtexture").'),
+          '#description' => t('Leave empty if you want the viewer to try to use any Square Image as UV texture independently of where it was uploaded to'),
+          '#default_value' => $this->getSetting('uv_texture_json_key_source'),
+          '#required' => FALSE
+        ],
+        'number_models' => [
+          '#type' => 'number',
+          '#title' => $this->t('Number of 3D Models'),
+          '#default_value' => $this->getSetting('number_models'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 0,
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -114,7 +133,6 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     return $summary;
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -123,18 +141,15 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     // Because canvases can not be dynamic. But we can make them scale with JS?
-    $max_width = empty($max_width) || $max_width == 0 ? 720 : $max_width ;
+    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width ;
     $max_height = $this->getSetting('max_height');
     $number_models =  $this->getSetting('number_models');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -184,11 +199,43 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
               if (!$file) {
                 continue;
               }
+
+
               //@TODO if no media key to file loading was possible
               // means we have a broken/missing media reference
               // we should inform to logs and continue
               if ($this->checkAccess($file)) {
-                $audiourl = $file->getFileUri();
+                $imagefile = NULL;
+                $publicimageurl = NULL;
+                foreach ($jsondata['as:image'] as $imageitem) {
+                  // let's check if there is at least one image and its square (UVs will always be)
+                  if (isset($imageitem['dr:fid']) &&
+                    isset($imageitem['flv:exif']['ImageWidth']) &&
+                    isset($imageitem['flv:exif']['ImageHeight']) &&
+                    $imageitem['flv:exif']['ImageHeight'] == $imageitem['flv:exif']['ImageWidth']
+                  ) {
+                    $imagefile = OcflHelper::resolvetoFIDtoURI(
+                      $imageitem['dr:fid']
+                    );
+                    if (!$imagefile) {
+                      continue;
+                    }
+                  }
+                }
+
+
+                if ($imagefile && $this->checkAccess($imagefile)) {
+                  $iiifidentifier = urlencode(
+                    StreamWrapperManager::getTarget($imagefile->getFileUri())
+                  );
+
+                  if (!empty($iiifidentifier)) {
+                    $publicimageurl = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/full/0/default.jpg";
+                    // @TODO add a default Thumbnail here.
+                  }
+                }
+
+
                 // We assume here file could not be accessible publicly
                 $route_parameters = [
                   'node' => $nodeid,
@@ -217,10 +264,10 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
                       'class' => ['field-iiif', 'strawberry-3d-item'],
                       'id' => $htmlid,
                       'data-iiif-model' => $publicurl->toString(),
+                      'data-iiif-texture' => $publicimageurl,
                       'data-iiif-image-width' => $max_width,
                       'data-iiif-image-height' => $max_height,
                       'height' => $max_height,
-                      'width' => $max_width,
                       'style' => "width:{$max_width_css}; height:{$max_height}px"
                      ],
                     '#title' => $this->t(
@@ -228,6 +275,9 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
                       ['@label' => $items->getEntity()->label()]
                     )
                   ];
+                  if ($max_width) {
+                    $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
+                  }
                   // Lets add hotspots
                   $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_model_strawberry';
 

@@ -205,7 +205,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
 
-      if (!empty($multiscene) && isset($jsondata[$multiscene]) && count(
+      if (!empty($multiscene) && isset($jsondata[$multiscene]) && is_array($jsondata[$multiscene]) && count(
           $jsondata[$multiscene]
         )) {
         // We assume that any other Entity will contain Data in the same fieldname

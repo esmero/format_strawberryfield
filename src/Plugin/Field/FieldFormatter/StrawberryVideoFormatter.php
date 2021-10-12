@@ -33,7 +33,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
  *   }
  * )
  */
-class StrawberryVideoFormatter extends StrawberryBaseFormatter {
+class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
   /**
    * {@inheritdoc}
    */
@@ -62,6 +62,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
       'number_media' => [
         '#type' => 'number',
         '#title' => $this->t('Number of Video files'),
+        '#description' => $this->t('Use 0 to show all Videos'),
         '#default_value' => $this->getSetting('number_media'),
         '#size' => 2,
         '#maxlength' => 2,
@@ -161,7 +162,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
+
     //@TODO posterframe is not being used. Make it used.
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -205,14 +206,15 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
 			  ]
 		   }}}
       */
+      $jsondatafiltered = $this->filterMediaByJMESPath($jsondata, $key);
       $i = 0;
-      if (isset($jsondata[$key])) {
+
         // Order Video based on a given 'sequence' key
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitem) {
+        foreach ($jsondatafiltered as $mediaitem) {
           $i++;
-          if ($i > (int) $number_media) {
+          if ($i > (int) $number_media && $number_media != 0) {
             break;
           }
           if (isset($mediaitem['type']) && $mediaitem['type'] == 'Video') {
@@ -317,7 +319,7 @@ class StrawberryVideoFormatter extends StrawberryBaseFormatter {
 
           }
         }
-      }
+
       // Get rid of empty #attributes key to avoid render error
       if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
         unset($elements[$delta]["#attributes"]);
