@@ -344,3 +344,24 @@ function format_strawberryfield_module_implements_alter(&$implementations, $hook
     }
   }
 }
+
+/**
+ * Implements hook_cron().
+ */
+function format_strawberryfield_cron() {
+  $now = \Drupal::requestStack()->getCurrentRequest()->server->get('REQUEST_TIME');
+  $timesincerun = $now - \Drupal::state()->get('system.cron_last');
+  if ($timesincerun/60/60/24 > 7) {
+    \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:all_embargo']);
+  }
+  else {
+    $dayssince = ceil($timesincerun/60/60/24);
+    $current_time = time();
+    for ($i = 0; $i < $dayssince; $i++) {
+      $date_to_invalidate =  date('Y-m-d', $current_time - 60 * 60 * 24 * $i);
+      \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:embargo:'.$date_to_invalidate]);
+    }
+  }
+
+}
+

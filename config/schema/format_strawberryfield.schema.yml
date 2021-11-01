@@ -9,6 +9,23 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Internal IIIF server URL'
 
+format_strawberryfield.embargo_settings:
+  type: config_object
+  label: 'Archipelago Metadata Driven Embargo configurations'
+  mapping:
+    date_until_json_key:
+      type: string
+      label: 'Which JSON key will contain a Date to lift the embargo'
+      default: date_embargoed_until
+    ip_json_key:
+      type: string
+      label: 'Which JSON key will contain a string with IP addresses that are allowed to see this Object'
+      default: ip_embargoed
+    enabled:
+      type: boolean
+      label: 'If Embargo is Globally enabled'
+      default: false
+
 field.formatter.settings.strawberry_audio_formatter:
   type: mapping
   label: 'Specific config for strawberry_audio_formatter'
@@ -36,7 +53,12 @@ field.formatter.settings.strawberry_audio_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
-
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Audio and Subtitle Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Audio and Subtitle Upload JSON keys to filter against'
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
@@ -72,6 +94,12 @@ field.formatter.settings.strawberry_image_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
@@ -109,6 +137,12 @@ field.formatter.settings.strawberry_media_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
   label: 'Specific Config for strawberry_3d_formatter'
@@ -137,10 +171,10 @@ field.formatter.settings.strawberry_3d_formatter:
       label: 'JMESPath filter expression settings'
     upload_json_key_source:
       type: string
-      label: 'Comma separated list of 3D Model Upload location JSON keys to filter 3D Models against'
-    uv_texture_json_key_source:
+      label: 'Comma separated list of 3D Model, UV textures and MTL Upload JSON keys to filter against'
+    embargo_json_key_source:
       type: string
-      label: 'Comma separated list of UV Textures Upload location JSON keys to filter 3D Models against'
+      label: 'When embargoed, comma separated list of 3D Model, UV textures and MTL Upload JSON keys to filter against'
 field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -201,6 +235,13 @@ field.formatter.settings.strawberry_paged_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pannellum_formatter'
@@ -245,6 +286,13 @@ field.formatter.settings.strawberry_pannellum_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image Panorama Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Panorama Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
@@ -276,6 +324,13 @@ field.formatter.settings.strawberry_video_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Video and Subtitle Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Video and Subtitle Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_pdf_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
@@ -309,6 +364,12 @@ field.formatter.settings.strawberry_pdf_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of PDF Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
 
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
@@ -385,6 +446,12 @@ field.formatter.settings.strawberry_warc_formatter:
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of WebArchive packages Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of WebArchive packages Upload JSON keys to filter against'
 
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:

@@ -16,6 +16,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
@@ -38,13 +39,6 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
  * )
  */
 class StrawberryPagedFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
-
-  /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  protected $currentUser;
 
   /**
    * The entity manager.
@@ -79,8 +73,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    *   The formatter settings.
    * @param $view_mode
    *   The view mode.
-   * @param array
-   *   Any third party settings.
+   * @param array $third_party_settings
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    * @param \Drupal\Core\Session\AccountInterface $current_user
    *   The current User
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -89,10 +83,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    *   The Loaded twig Environment
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service
    *   The SBF Utility Service.
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
-    $this->currentUser = $current_user;
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service,  EmbargoResolverInterface $embargo_resolver) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory, $embargo_resolver, $current_user);
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
     $this->strawberryFieldUtility = $strawberryfield_utility_service;
@@ -114,7 +108,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       $container->get('current_user'),
       $container->get('entity_type.manager'),
       $container->get('twig'),
-      $container->get('strawberryfield.utility')
+      $container->get('strawberryfield.utility'),
+      $container->get('format_strawberryfield.embargo_resolver')
+
     );
   }
 

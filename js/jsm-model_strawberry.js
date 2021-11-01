@@ -125,7 +125,7 @@
                                         $(".sbf-preloader").fadeOut('slow');
                                         viewer.EnableDraw(true);
                                         viewer.FitInWindow();
-                                        let bbox = viewer.GetFilteredBoundingBox();
+                                        //let bbox = viewer.GetFilteredBoundingBox();
                                         viewer.Draw();
                                         $( window ).resize(function() {
                                             resizeCanvas();

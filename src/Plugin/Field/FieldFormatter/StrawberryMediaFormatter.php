@@ -10,6 +10,7 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\file\FileInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -163,20 +164,10 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
-    $max_height = $this->getSetting('max_height');
-    $grouped = $this->getSetting('iiif_group');
-    $thumbnails = $this->getSetting('thumbnails');
-    $webannotations = $this->getSetting('webannotations');
-    $webannotations_tool = $this->getSetting('webannotations_tool');
-
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'.
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source' )) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
     $key = $this->getSetting('json_key_source');
-
-    $nodeuuid = $items->getEntity()->uuid();
-    $fieldname = $items->getName();
 
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -202,126 +193,11 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      $i = 0;
       // We need to load main Library on each page for views to see it.
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
-
-      if (isset($jsondata[$key])) {
-        // Order Images based on a given 'sequence' key.
-        $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
-        foreach ($jsondata[$key] as $mediaitem) {
-          $i++;
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              $file = OcflHelper::resolvetoFIDtoURI($mediaitem['dr:fid']);
-
-              //@TODO if no media key to file loading was possible means we have
-              // a broken/missing media reference we should inform to logs and
-              // continue.
-              if (!$file) {
-                continue;
-              }
-              if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
-                if ($iiifidentifier == NULL || empty($iiifidentifier)) {
-                  continue;
-                }
-                // ImageToolKit use the $file->getFileUri(), we don't want that
-                // yet.
-                // @see https://github.com/esmero/format_strawberry/issues/1
-
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
-
-                $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-                $uniqueid = $groupid . $i;
-
-                $elements[$delta]['media' . $i] = [
-                  '#type' => 'container',
-                  '#default_value' => $uniqueid,
-                  '#attributes' => [
-                    'id' => $uniqueid,
-                    'class' => [
-                      'strawberry-media-item',
-                      'field-iiif',
-                    ],
-                    'data-iiif-infojson' => $iiifpublicinfojson,
-                    'data-iiif-group' => $grouped ? $groupid : $uniqueid,
-                    'data-iiif-thumbnails' => $thumbnails,
-                    'style' => "width:{$max_width_css}; height:{$max_height}px",
-                  ],
-                  //@ TODO recheck cache tags here, since we are not really using
-                  // the file itself.
-                  '#cache' => [
-                    'tags' => $file->getCacheTags(),
-                  ],
-                ];
-                if (isset($item->_attributes)) {
-                  $elements[$delta] += ['#attributes' => []];
-                  $elements[$delta]['#attributes'] += $item->_attributes;
-                  // Unset field item attributes since they have been included
-                  // in the formatter output and should not be rendered in the
-                  // field template.
-                  unset($item->_attributes);
-                }
-                // @TODO deal with a lot of Media single strawberryfield
-                // Idea would be to allow a setting that says, A) all same
-                // viewer(aggregate)
-                // B) individual viewers for each?
-                // C) only first one?
-                // We will assign a group based on the UUID of the node
-                // containing this to idenfity all the divs that we will create.
-                // And only first one will be the container in case of many? so
-                // a jquery selector that uses that group as filter for a
-                // search.
-                // Drupal JS settings get accumulated. So in a single search
-                // results site we will have for each Formatter one passed.
-                // Reason we use 'innode' array key using our $uniqueid
-                // @TODO probably better to use uuid() or the node id() instead of $uniqueid
-                $elements[$delta]['media' . $i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
-                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
-                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
-                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();
-                // Used to keep annotations around during edit.
-                // Note: Since View modes are cached, if no change to the NODE
-                // this will be served from a cache! mmm.
-                if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($fieldname, $delta, $nodeuuid);
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
-                  // This also never runs if cached. So after deletion we better
-                  // call the controller!
-                  if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
-                    $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
-                    WebAnnotationController::primeKeyStore($items[$delta], $keystoreid);
-                  }
-                }
-                if ($this->currentUser) {
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
-                }
-                else {
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
-                  $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
-                }
-
-                $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
-              }
-            }
-            elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media' . $i] = [
-                '#markup' => 'Non managed ' . $mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
-            }
-
-          }
-        }
-      }
-      else {
+      $ordersubkey = 'sequence';
+      $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements, TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys);
+      if (empty($elements[$delta])) {
         $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
       }
       // Get rid of empty #attributes key to avoid render error.
@@ -329,8 +205,104 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
         unset($elements[$delta]["#attributes"]);
       }
     }
-
     return $elements;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata) {
+
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
+    $max_height = $this->getSetting('max_height');
+    $grouped = $this->getSetting('iiif_group');
+    $thumbnails = $this->getSetting('thumbnails');
+    $webannotations = $this->getSetting('webannotations');
+    $webannotations_tool = $this->getSetting('webannotations_tool');
+    $nodeuuid = $items->getEntity()->uuid();
+
+    $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
+    if ($iiifidentifier == NULL || empty($iiifidentifier)) {
+      return;
+    }
+
+    $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
+
+    $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+    $uniqueid = $groupid . $i;
+
+    $elements[$delta]['media' . $i] = [
+      '#type' => 'container',
+      '#default_value' => $uniqueid,
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => [
+          'strawberry-media-item',
+          'field-iiif',
+        ],
+        'data-iiif-infojson' => $iiifpublicinfojson,
+        'data-iiif-group' => $grouped ? $groupid : $uniqueid,
+        'data-iiif-thumbnails' => $thumbnails ? "true" : "false",
+        'style' => "width:{$max_width_css}; height:{$max_height}px",
+      ],
+      //@ TODO recheck cache tags here, since we are not really using
+      // the file itself.
+      '#cache' => [
+        'tags' => $file->getCacheTags(),
+      ],
+    ];
+
+    if (isset($item->_attributes)) {
+      $elements[$delta] += ['#attributes' => []];
+      $elements[$delta]['#attributes'] += $item->_attributes;
+      // Unset field item attributes since they have been included
+      // in the formatter output and should not be rendered in the
+      // field template.
+      unset($item->_attributes);
+    }
+    // @TODO deal with a lot of Media single strawberryfield
+    // Idea would be to allow a setting that says, A) all same
+    // viewer(aggregate)
+    // B) individual viewers for each?
+    // C) only first one?
+    // We will assign a group based on the UUID of the node
+    // containing this to idenfity all the divs that we will create.
+    // And only first one will be the container in case of many? so
+    // a jquery selector that uses that group as filter for a
+    // search.
+    // Drupal JS settings get accumulated. So in a single search
+    // results site we will have for each Formatter one passed.
+    // Reason we use 'innode' array key using our $uniqueid
+    // @TODO probably better to use uuid() or the node id() instead of $uniqueid
+    $elements[$delta]['media' . $i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();
+    // Used to keep annotations around during edit.
+    // Note: Since View modes are cached, if no change to the NODE
+    // this will be served from a cache! mmm.
+    if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($items->getName(), $delta, $nodeuuid);
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+      // This also never runs if cached. So after deletion we better
+      // call the controller!
+      if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+        $keystoreid = $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+        WebAnnotationController::primeKeyStore($items[$delta], $keystoreid);
+      }
+    }
+    if ($this->currentUser) {
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+    }
+    else {
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
+    }
+
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
   }
 
 }
