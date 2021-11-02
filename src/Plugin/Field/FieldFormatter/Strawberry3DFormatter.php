@@ -126,6 +126,13 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+
+
     $number_media = $this->getSetting('number_models');
     $key = $this->getSetting('json_key_source');
 
@@ -144,7 +151,6 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       if ($json_error != JSON_ERROR_NONE) {
         return $elements[$delta] = ['#markup' => $this->t('Sorry, we had issues processing this metadata')];
       }
-
       /* Expected structure of an Model item inside JSON
       "as:model": {
          "urn:uuid:someuuid": {
@@ -173,8 +179,11 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       else {
         $embargoed = $embargo_info;
       }
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys_string;
+      }
 
-      if (!$embargoed) {
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
         $ordersubkey = 'sequence';
         $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
           TRUE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
@@ -224,13 +233,6 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         unset($item->_attributes);
       }
     }
-    /*
-     *
-     *  'contexts' => [
-          'ip',
-        ],
-     */
-
 
     $elements['#cache'] = [
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
@@ -306,6 +308,5 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       if ($max_width) {
         $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
       }
-      //['format_strawberryfield:embargo:'.$date_to_invalidate]
     }
 }
