@@ -393,7 +393,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
               // and also returns the key of this file inside the as:structure
               // In case i need to find quickly in some other place its
               // Technical metadata
-              $media[$mediaitem['dr:for']][] = [
+              $media[$mediaitem['dr:for']][$i] = [
                 'file' =>  $file,
                 'media_id' => $id,
               ];
@@ -408,7 +408,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
     return $media;
   }
-
 
   /**
    * Generates the actual Render array entry for a given File.
@@ -440,7 +439,6 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
 
     $uniqueid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-
     $elements[$delta]['media' . $i] = [
       '#type' => 'container',
       '#default_value' => $uniqueid,
