@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield\Controller;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\StreamWrapper\StreamWrapperInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -164,10 +165,10 @@ class IiifBinaryController extends ControllerBase {
         $response->setETag($etag, TRUE);
         return $response;
       }
-
+      /** @var \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $stream_wrapper_manager */
       $stream_wrapper_manager = \Drupal::service('stream_wrapper_manager');
+      /** @var \Drupal\Core\StreamWrapper\StreamWrapperInterface|bool $wrapper */
       $wrapper = $stream_wrapper_manager->getViaUri($uri);
-
 
       // If client is asking for a range streaming won't help.
       // We should be able to decide when to stream, always based on Size
@@ -213,11 +214,28 @@ class IiifBinaryController extends ControllerBase {
       }
       else {
         // TODO we need to check if ranges are actually valid
-        // Before attempting this
-        //
-        if ($request->headers->has('Range')) {
+        // Before attempting this? Client should know.
+
+        // Work aroud. Private/Public served files
+        // Won't be able to use my RangedRemoteFileRespone
+        // So check if the wrapper serves locally
+        $scheme = $stream_wrapper_manager->getScheme($uri);
+        if (isset($stream_wrapper_manager->getWrappers(
+            StreamWrapperInterface::LOCAL)[$scheme]
+        )) {
+          $is_local = TRUE;
+        }
+        else {
+          $is_local = FALSE;
+        }
+
+        if ($request->headers->has('Range') && !$is_local) {
+          // S3 or remote storage needs this. Common Archipelago
+          // Deployment use case.
           $response = new RangedRemoteFileRespone($uri);
         } else {
+          // Should be able to handle ranged?
+          // see https://github.com/symfony/symfony/pull/38516/files
           $response = new BinaryFileResponse($uri);
         }
 
