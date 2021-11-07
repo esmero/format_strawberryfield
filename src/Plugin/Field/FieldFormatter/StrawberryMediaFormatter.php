@@ -9,6 +9,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\file\FileInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
@@ -164,19 +165,26 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source' )) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+    $upload_keys = array_map('trim', $upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
     $key = $this->getSetting('json_key_source');
 
     foreach ($items as $delta => $item) {
-      $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
+      $main_property = $item->getFieldDefinition()
+        ->getFieldStorageDefinition()
+        ->getMainPropertyName();
       $value = $item->{$main_property};
       if (empty($value)) {
         continue;
       }
 
-      $jsondata = json_decode($item->value, true);
+      $jsondata = json_decode($item->value, TRUE);
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
@@ -193,18 +201,49 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      // We need to load main Library on each page for views to see it.
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
-      $ordersubkey = 'sequence';
-      $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements, TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys);
-      if (empty($elements[$delta])) {
-        $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
+        ->uuid(), $jsondata);
+      // Check embargo
+      $embargo_context = [];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
       }
-      // Get rid of empty #attributes key to avoid render error.
-      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
-        unset($elements[$delta]["#attributes"]);
+      else {
+        $embargoed = $embargo_info;
+      }
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys_string;
+      }
+
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+
+
+        // We need to load main Library on each page for views to see it.
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
+        $ordersubkey = 'sequence';
+        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+          TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys);
+        if (empty($elements[$delta])) {
+          $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
+        }
+        // Get rid of empty #attributes key to avoid render error.
+        if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
+          unset($elements[$delta]["#attributes"]);
+        }
       }
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
 
@@ -304,5 +343,4 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
   }
-
 }

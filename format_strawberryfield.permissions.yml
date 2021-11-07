@@ -12,22 +12,22 @@ administer metadatadisplay entity:
   restrict access: TRUE
 add strawberryfield webannotation:
   title: 'Add W3C Web Annotations'
-  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted.'
   restrict access: TRUE
 view strawberryfield webannotation:
   title: 'View W3C Web Annotations'
-  description: 'This permission only applies if Entity (e.g) can also be seen by the user'
+  description: 'This permission only applies if Entity (e.g) can also be seen by the user.'
   restrict access: TRUE
 edit own strawberryfield webannotation:
   title: 'Edit own W3C Web Annotations'
-  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted.'
   restrict access: TRUE
 delete strawberryfield webannotation:
   title: 'Delete W3C Web Annotations'
-  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted'
+  description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted.'
   restrict access: TRUE
 see strawberryfield embargoed ados:
   title: 'See Embargoed object metadata and assets'
-  description: 'If an Object is embargoed this permission will allow any role with this assigned to bypass it'
-  warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled'
+  description: 'If an Object is embargoed this permission will allow any role with this assigned to bypass it.'
+  warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled.'
   restrict access: TRUE

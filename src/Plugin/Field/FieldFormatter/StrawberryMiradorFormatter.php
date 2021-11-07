@@ -415,8 +415,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       ]
     );
 
-
-
     return array_merge($summary, parent::settingsSummary());
   }
 

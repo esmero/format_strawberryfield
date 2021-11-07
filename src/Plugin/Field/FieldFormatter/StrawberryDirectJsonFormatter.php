@@ -2,7 +2,11 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
@@ -164,6 +168,55 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
         ]));
       }
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function fetchMediaFromJsonWithFilter(int $delta, FieldItemListInterface $items, array &$elements, bool $generate_element, array $jsondata, string $mediatype, string $key, string $ordersubkey, int $number_media, array $upload_keys, array $extra_conditions = []) {
+    // This implementation is different than the parent one in the sense
+    // That it uses also a jmespath option.
+    $media = [];
+    $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
+    $jmespath_settings = $this->getSetting('jmespath');
+    $use_jmespath = isset($jmespath_settings['use_jmespath']) ? $jmespath_settings['use_jmespath'] : FALSE;
+    if ($use_jmespath) {
+      $fallback_jmespath = isset($jmespath_settings['fallback_jmespath']) ? $jmespath_settings['fallback_jmespath'] : FALSE;
+      $jmespath_filter = isset($jmespath_settings['jmespath_filter']) ? $jmespath_settings['jmespath_filter'] : NULL;
+      $jmespath_alternative_filter = isset($jmespath_settings['jmespath_alternative_filter']) ? $jmespath_settings['jmespath_alternative_filter'] : NULL;
+      try {
+        $searchresult = StrawberryfieldJsonHelper::searchJson(
+          $jmespath_filter, $jsondata
+        );
+        if (empty($searchresult) && !empty($jmespath_alternative_filter)) {
+          $searchresult = StrawberryfieldJsonHelper::searchJson(
+            $jmespath_alternative_filter, $jsondata
+          );
+        }
+        if (empty($searchresult) && $fallback_jmespath) {
+          if (isset($key) && isset($jsondata[$key])) {
+            // We are taking a single one here for now
+            $searchresult = $jsondata[$key];
+          }
+          else {
+            $searchresult = [];
+          }
+        }
+        // We clear the json data to avoid other
+        // keys to be considered by the parent method.
+        unset($jsondata);
+        $jsondata[$key] = $searchresult;
+      }
+      catch (\Exception $exception) {
+        $this->messenger()
+          ->addWarning($this->t('We could not fetch Media for this ADO. Your JMESPath settings may need to be adjusted.'));
+        return $media;
+      }
+    }
+    $media = parent::fetchMediaFromJsonWithFilter($delta, $items, $elements,
+      $generate_element, $jsondata, $mediatype, $key, $ordersubkey, $number_media,
+      $upload_keys, $extra_conditions);
+    return $media;
   }
 
   /**

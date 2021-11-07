@@ -124,7 +124,6 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
 
-    $elements = [];
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
@@ -224,8 +223,8 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
             5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
             */
           if (count($vtt)) {
-            // Yep, redundant but we have no longer this
-            //and i need to add 30px (uff) to the top.
+            // Yep, redundant but we have no longer these settings here
+            // and i need to add 30px (uff) to the top.
 
             if  ($max_height = $this->getSetting('max_height') <= 90) {
               $max_width = $this->getSetting('max_width');
@@ -363,60 +362,8 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
         'tags' => $file->getCacheTags(),
       ]
     ];
-    if ($max_width) {
-      $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
-    }
+
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
   }
 
-
-
-
-
-  protected function processTracksElement(array $media_elements = [], array $mediaitem) {
-    if (isset($mediaitem['tracks']) && is_array($mediaitem['tracks'])) {
-      foreach ($mediaitem['tracks'] as $trackid => $track) {
-        $vtt_url = NULL;
-        if (isset($track['url'])) {
-          if (UrlHelper::isExternal($track['url'])) {
-            $vtt_url = $track['url'];
-          }
-          elseif (isset($track['dr:fid'])) {
-            $file = OcflHelper::resolvetoFIDtoURI(
-              $track['dr:fid']
-            );
-            if (!$file) {
-              continue;
-            }
-            if ($this->checkAccess($file)) {
-              $vtt_url = $file->getFileUri();
-            }
-          }
-        }
-
-        if ($vtt_url) {
-          $media_element["track_{$trackid}"] = [
-            '#type' => 'html_tag',
-            '#tag' => 'track',
-            '#attributes' => [
-              'src' => $vtt_url,
-              'type' => isset($track['type']) ? $track['type'] : 'subtitles' ,
-              'label' => isset($track['label']) ? $track['label'] : $this->t('Subtitle Track'),
-              'srclang' =>  isset($track['subtitleLanguage']) ? $track['subtitleLanguage']  : 'en'
-            ]
-          ];
-          if ($trackid == 1) {
-            $media_element["track_{$trackid}"]['#attributes']['default'] = NULL;
-          }
-        }
-        else {
-          //@TODO if no media key to file loading was possible
-          // means we have a broken/missing media reference
-          // we should inform to logs and continue
-          //@TODO add a common, base method to deal with this
-        }
-      }
-    }
-    return $media_element;
-  }
 }

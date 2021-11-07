@@ -126,12 +126,11 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+    $upload_keys = array_map('trim', $upload_keys);
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
-
-
 
     $number_media = $this->getSetting('number_models');
     $key = $this->getSetting('json_key_source');

@@ -393,6 +393,28 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
 
+        $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+        $embargo_context = [];
+        // This one is for the Twig template
+        // We do not need the IP here. No use of showing the IP at all?
+        $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+        $embargo_tags = [];
+        if (is_array($embargo_info)) {
+          $embargoed = $embargo_info[0];
+          $context_embargo['data_embargo']['embargoed'] = $embargoed;
+
+          $embargo_tags[] = 'format_strawberryfield:all_embargo';
+          if ($embargo_info[1]) {
+            $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+            $context_embargo['data_embargo']['until'] = $embargo_info[1];
+          }
+          if ($embargo_info[2]) {
+            $embargo_context[] = 'ip';
+          }
+        }
+        else {
+          $context_embargo['data_embargo']['embargoed'] = $embargo_info;
+        }
         $context = [
           'data' => $jsondata,
           'node' => $item->getEntity(),
@@ -405,6 +427,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // In case someone decided to wipe the original context?
         // We bring it back!
         $context = $context + $original_context;
+
         $manifestrenderelement = $metadatadisplayentity->renderNative($context);
 
         $manifest = $manifestrenderelement->jsonSerialize();
