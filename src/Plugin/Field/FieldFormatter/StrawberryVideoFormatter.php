@@ -331,9 +331,9 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
   protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata) {
 
     $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
@@ -374,7 +374,7 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
           'class' => ['field-av', 'video-av'],
           'id' => 'video_' . $uniqueid,
           'controls' => TRUE,
-          'style' => "width:{$max_width_css}; height:{$max_height}px",
+          'style' => "width:{$max_width_css}; height:{$max_height_css}px",
         ],
         '#alt' => $this->t(
           'Audio for @label',

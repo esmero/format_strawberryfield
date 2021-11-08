@@ -220,7 +220,7 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
   }
 
   /**
-   * Filters an array against another array with same keys and values
+   * Filters an array against a JMESPATH query.
    *
    * @param array $source
    * @param null $key

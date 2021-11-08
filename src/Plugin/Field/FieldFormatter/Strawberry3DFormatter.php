@@ -58,11 +58,11 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         ],
         'number_models' => [
           '#type' => 'number',
-          '#title' => $this->t('Number of 3D Models'),
+          '#title' => $this->t('Number of 3D Models. This Formatter currently permits only one.'),
           '#default_value' => $this->getSetting('number_models'),
           '#size' => 2,
           '#maxlength' => 2,
-          '#min' => 0,
+          '#min' => 1,
           '#max' => 1,
         ],
         'max_width' => [
@@ -131,6 +131,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+    $publicimageurl = NULL;
 
     $number_media = $this->getSetting('number_models');
     $key = $this->getSetting('json_key_source');
@@ -205,10 +206,13 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
               );
               if (!empty($iiifidentifier)) {
                 $publicimageurl = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/full/0/default.jpg";
+                break 2;
               }
             }
           }
-          // Add the texture.
+
+          // Add the texture
+          // Its always the same.
           foreach ($elements[$delta] as &$element) {
             if (isset($element['#attributes'])) {
               $element['#attributes']['data-iiif-texture'] = $publicimageurl;
