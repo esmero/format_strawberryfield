@@ -66,6 +66,29 @@
                             return context.getImageData (0, 0, width, height);
                         };
 
+                        JSM.GetStringBufferFromURL = function (url, callbacks)
+                        {
+                            var request = new XMLHttpRequest ();
+                            request.open ('GET', url, true);
+                            request.responseType = 'text';
+
+                            request.onload = function () {
+                                var stringBuffer = request.response;
+                                if (stringBuffer && callbacks.onReady) {
+                                    callbacks.onReady (stringBuffer);
+                                }
+                            };
+
+                            request.onerror = function () {
+                                if (callbacks.onError) {
+                                    callbacks.onError ();
+                                }
+                            };
+
+                            request.send (null);
+                        };
+
+
                         JSM.ConvertURLListToJsonData(urlList, {
                             onError: function () {
                                 console.log('Could not convert file' + element_id);
@@ -81,6 +104,7 @@
                                 jsonData.materials[0].textureHeight = 1.0;
 
                                 var viewer = new JSM.ThreeViewer();
+                                viewer.RemoveMeshes ();
 
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);
