@@ -393,7 +393,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
 
-        $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+        $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
         $embargo_context = [];
         // This one is for the Twig template
         // We do not need the IP here. No use of showing the IP at all?
