@@ -151,14 +151,8 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
-    /* $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
-    $max_height = $this->getSetting('max_height');
-    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px'; */
 
     $elements = [];
-
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
@@ -240,90 +234,94 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
       }
 
       if (!$embargoed || !empty($embargo_upload_keys_string)) {
-          $ordersubkey = 'sequence';
-          // This fetchMediaFromJsonWithFilter impl. has JMESPATH filtering.
-          $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
-            TRUE, $jsondata, 'Video', $key, $ordersubkey, $number_media,
-            $upload_keys, []);
-          if (count($media)) {
-            $conditions[] = [
-              'source' => ['dr:mimetype'],
-              'condition' => 'text/vtt',
-            ];
-            // WE call the parent here since we do not want/nor have a JMESPATH
-            // For the vtt.
-            $vtt = parent::fetchMediaFromJsonWithFilter($delta, $items,
-              $elements,
-              FALSE, $jsondata, 'Text', 'as:text', $ordersubkey, $number_media,
-              $upload_keys, $conditions);
-            /* This may be a bit more complex, possible situations
-              1.- NO vtt, all good
-              2.- One Media, multiple vtt, all good
-              3.- Multiple media, single vtt (all good?)
-              4.- Multiple media, multiple vtt. But there is a single media per upload_key and vtt share the upload key
-              5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
-              */
-            if (count($vtt)) {
-              // Yep, redundant but we have no longer these settings here
-              // and i need to add 30px (uff) to the top.
+        $ordersubkey = 'sequence';
+        // This fetchMediaFromJsonWithFilter impl. has JMESPATH filtering.
+        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+          TRUE, $jsondata, 'Video', $key, $ordersubkey, $number_media,
+          $upload_keys, []);
+        if (count($media)) {
+          $conditions[] = [
+            'source' => ['dr:mimetype'],
+            'condition' => 'text/vtt',
+          ];
+          // WE call the parent here since we do not want/nor have a JMESPATH
+          // For the vtt.
+          $vtt = parent::fetchMediaFromJsonWithFilter($delta, $items,
+            $elements,
+            FALSE, $jsondata, 'Text', 'as:text', $ordersubkey, $number_media,
+            $upload_keys, $conditions);
+          /* This may be a bit more complex, possible situations
+            1.- NO vtt, all good
+            2.- One Media, multiple vtt, all good
+            3.- Multiple media, single vtt (all good?)
+            4.- Multiple media, multiple vtt. But there is a single media per upload_key and vtt share the upload key
+            5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
+            */
+          if (count($vtt)) {
+            // Yep, redundant but we have no longer these settings here
+            // and i need to add 30px (uff) to the top.
 
-              if  ($max_height = $this->getSetting('max_height') <= 90) {
-                $max_width = $this->getSetting('max_width');
-                $max_height = 90;
-                $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-              }
+            if  ($max_height = $this->getSetting('max_height') <= 90) {
+              $max_width = $this->getSetting('max_width');
+              $max_height = 90;
+              $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
+            }
 
-              foreach ($media as $drforkey => $media_item) {
-                if (isset($vtt[$drforkey])) {
-                  foreach ($media_item as $key => $media_entry) {
-                    $elements[$delta]['video_hmtl5_' . $key]['video']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height}px";
-                    foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
-                      $route_parameters = [
-                        'node' => $nodeid,
-                        'uuid' => $vtt_item['file']->uuid(),
-                        'format' => 'default.' . pathinfo($vtt_item['file']->getFilename(),
-                            PATHINFO_EXTENSION)
-                      ];
-                      $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
-                        $route_parameters);
-                      //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
-                      // tracks need at least 30px more up. Wonder if we should add those here
-                      // Or document it as min: 90px height?
-                      $elements[$delta]['video_hmtl5_' . $key]['video']['track' . $vtt_key] = [
-                        '#type' => 'html_tag',
-                        '#tag' => 'track',
-                        '#attributes' => [
-                          'label' => $this->t('Transcript ' . $current_language),
-                          'kind' => 'subtitles',
-                          'srclang' => $current_language,
-                          'src' => $publicurl->toString(),
-                          'default' => TRUE
-                        ]
-                      ];
-                    }
+            foreach ($media as $drforkey => $media_item) {
+              if (isset($vtt[$drforkey])) {
+                foreach ($media_item as $key => $media_entry) {
+                  $elements[$delta]['video_hmtl5_' . $key]['video']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height}px";
+                  foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
+                    $route_parameters = [
+                      'node' => $nodeid,
+                      'uuid' => $vtt_item['file']->uuid(),
+                      'format' => 'default.' . pathinfo($vtt_item['file']->getFilename(),
+                          PATHINFO_EXTENSION)
+                    ];
+                    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+                      $route_parameters);
+                    //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
+                    // tracks need at least 30px more up. Wonder if we should add those here
+                    // Or document it as min: 90px height?
+                    $elements[$delta]['video_hmtl5_' . $key]['video']['track' . $vtt_key] = [
+                      '#type' => 'html_tag',
+                      '#tag' => 'track',
+                      '#attributes' => [
+                        'label' => $this->t('Transcript ' . $current_language),
+                        'kind' => 'subtitles',
+                        'srclang' => $current_language,
+                        'src' => $publicurl->toString(),
+                        'default' => TRUE
+                      ]
+                    ];
                   }
                 }
               }
             }
           }
-
-          if (empty($elements[$delta])) {
-            $elements[$delta] = [
-              '#markup' => '<i class="fas fa-times-circle"></i>',
-              '#prefix' => '<span>',
-              '#suffix' => '</span>',
-            ];
-          }
-
-          if (isset($item->_attributes)) {
-            $elements[$delta] += ['#attributes' => []];
-            $elements[$delta]['#attributes'] += $item->_attributes;
-            // Unset field item attributes since they have been included in the
-            // formatter output and should not be rendered in the field template.
-            unset($item->_attributes);
-          }
         }
+
+        if (empty($elements[$delta])) {
+          $elements[$delta] = [
+            '#markup' => '<i class="fas fa-times-circle"></i>',
+            '#prefix' => '<span>',
+            '#suffix' => '</span>',
+          ];
+        }
+
+        if (isset($item->_attributes)) {
+          $elements[$delta] += ['#attributes' => []];
+          $elements[$delta]['#attributes'] += $item->_attributes;
+          // Unset field item attributes since they have been included in the
+          // formatter output and should not be rendered in the field template.
+          unset($item->_attributes);
+        }
+      }
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
 
@@ -338,8 +336,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $max_height = $this->getSetting('max_height');
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $imagefile = NULL;
-    $publicimageurl = NULL;
     $fieldname = $items->getName();
 
     // We assume here file could not be accessible publicly
@@ -400,5 +396,4 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     ];
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
   }
-
 }
