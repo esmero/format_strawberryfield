@@ -21,6 +21,7 @@
                     var sourceurl = $(value).data('iiif-model');
                     var textureurl = $(value).data('iiif-texture');
                     var materialurl = $(value).data('iiif-material');
+                    const ado_title = $(value).data('ado-title');
                     var textureurls_for_mtl = $(value).data('iiif-filename2texture');
                     var browser_supported = JSM.IsWebGLEnabled() && JSM.IsFileApiEnabled();
 
@@ -129,12 +130,14 @@
                                         }
 
                                         $(".sbf-preloader").fadeOut('slow');
-                                        function downloadBase64File(fileName) {
-                                            const downloadLink = document.createElement('a');
+                                        function downloadBase64File() {
+                                            let downloadLink = document.createElement('a');
                                             downloadLink.textContent = 'Download Screenshot';
                                             canvasDom.parent().prepend(downloadLink);
                                             downloadLink.target = '_self';
-                                            downloadLink.download = fileName;
+                                            // will be given dynamically on click
+                                            downloadLink.href = '#';
+                                            downloadLink.download = ado_title + '.png';
                                             downloadLink.onclick = function() {
                                                 viewer.Draw();
                                                 downloadLink.href = viewer.renderer.domElement.toDataURL('image/jpg');
@@ -143,9 +146,8 @@
 
                                         viewer.EnableDraw(true);
                                         viewer.FitInWindow();
-                                        //let bbox = viewer.GetFilteredBoundingBox();
                                         viewer.Draw();
-                                        downloadBase64File(viewer);
+                                        downloadBase64File();
                                         $( window ).resize(function() {
                                             resizeCanvas();
                                             viewer.FitInWindow();

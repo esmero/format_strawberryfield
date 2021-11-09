@@ -351,6 +351,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
           'data-iiif-texture' => $publicimageurl,
           'data-iiif-image-width' => $max_width,
           'data-iiif-image-height' => $max_height,
+          'data-ado-title' => substr($items->getEntity()->label(),0,16) . '...',
           'height' => $max_height,
           'style' => "width:{$max_width_css}; height:{$max_height}px"
         ],
