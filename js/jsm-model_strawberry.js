@@ -11,6 +11,7 @@
                     // Check if we got some data passed via Drupal settings.
                     var canvas = value;
                     var canvasDom = $(value);
+
                     var viewerSettings = {
                         cameraEyePosition: [-2.0, -1.5, 1.0],
                         cameraCenterPosition: [0.0, 0.0, 0.0],
@@ -75,44 +76,6 @@
                             return context.getImageData (0, 0, width, height);
                         };
 
-                        JSM.ImportFileList.GetFileName = function (fullFileName)
-                        {
-                            var splitted = fullFileName.split ('/');
-                            if (splitted.length == 1) {
-                                splitted = fullFileName.split ('\\');
-                            }
-                            if (splitted.length === 0) {
-                                return '';
-                            }
-                            var fileName = splitted[splitted.length - 1];
-                            return decodeURI (fileName);
-                        };
-
-
-
-
-                        JSM.GetStringBufferFromURL = function (url, callbacks)
-                        {
-                            var request = new XMLHttpRequest ();
-                            request.open ('GET', url, true);
-                            request.responseType = 'text';
-
-                            request.onload = function () {
-                                var stringBuffer = request.response;
-                                if (stringBuffer && callbacks.onReady) {
-                                    callbacks.onReady (stringBuffer);
-                                }
-                            };
-
-                            request.onerror = function () {
-                                if (callbacks.onError) {
-                                    callbacks.onError ();
-                                }
-                            };
-
-                            request.send (null);
-                        };
-
 
                         JSM.ConvertURLListToJsonData(urlList, {
                             onError: function () {
@@ -123,10 +86,13 @@
                             onReady: function (fileNames, jsonData) {
                                 console.log('Loaded Materials');
                                 console.log(jsonData.materials);
-                                // add a texture?
-                                jsonData.materials[0].texture  = textureurl;
-                                jsonData.materials[0].textureWidth = 1.0;
-                                jsonData.materials[0].textureHeight = 1.0;
+                                // add a texture only if present.
+                                // Will never be the case if an MTL was loaded.
+                                if (textureurl !== null) {
+                                    jsonData.materials[0].texture = textureurl;
+                                    jsonData.materials[0].textureWidth = 1.0;
+                                    jsonData.materials[0].textureHeight = 1.0;
+                                }
 
                                 var viewer = new JSM.ThreeViewer();
 
@@ -136,15 +102,12 @@
                                     return;
                                 }
 
-                                /* This depends on the actual Mesh dimensions.
-                                viewer.navigation.SetNearDistanceLimit(0.2);
-                                viewer.navigation.SetFarDistanceLimit(2.0);
-                                 */
-
                                 var currentMeshIndex = 0;
                                 var environment = {
                                     onStart: function (/*taskCount, meshes*/) {
                                         viewer.EnableDraw(false);
+                                        viewer.navigation.SetNearDistanceLimit (0.5);
+                                        viewer.navigation.SetFarDistanceLimit (20.0);
                                     },
                                     onProgress: function (currentTask, meshes) {
                                         while (currentMeshIndex < meshes.length) {
@@ -165,16 +128,24 @@
                                             }
                                         }
 
-
-
-
-
-                                        console.log(viewer.renderer.domElement.toDataURL( 'image/png' ), 'screenshot');
                                         $(".sbf-preloader").fadeOut('slow');
+                                        function downloadBase64File(fileName) {
+                                            const downloadLink = document.createElement('a');
+                                            downloadLink.textContent = 'Download Screenshot';
+                                            canvasDom.parent().prepend(downloadLink);
+                                            downloadLink.target = '_self';
+                                            downloadLink.download = fileName;
+                                            downloadLink.onclick = function() {
+                                                viewer.Draw();
+                                                downloadLink.href = viewer.renderer.domElement.toDataURL('image/jpg');
+                                            };
+                                        }
+
                                         viewer.EnableDraw(true);
                                         viewer.FitInWindow();
                                         //let bbox = viewer.GetFilteredBoundingBox();
                                         viewer.Draw();
+                                        downloadBase64File(viewer);
                                         $( window ).resize(function() {
                                             resizeCanvas();
                                             viewer.FitInWindow();
