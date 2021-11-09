@@ -19,6 +19,8 @@
                     };
                     var sourceurl = $(value).data('iiif-model');
                     var textureurl = $(value).data('iiif-texture');
+                    var materialurl = $(value).data('iiif-material');
+                    var textureurls_for_mtl = $(value).data('iiif-filename2texture');
                     var browser_supported = JSM.IsWebGLEnabled() && JSM.IsFileApiEnabled();
 
                     // Ajusts width to what ever is smallest.
@@ -43,6 +45,13 @@
                         if (textureurl != null) {
                             urlList.push(textureurl);
                         }
+                        if (materialurl != null) {
+                            urlList.push(materialurl);
+                        }
+
+                        if (textureurls_for_mtl != null) {
+                            urlList = urlList.concat(textureurls_for_mtl.split('|'));
+                        }
                         // This is in case we have material, textures, etc in the same URL.
                         //@TODO allow people to select default materials
                         var $div = $("<div>", {id: "jsm-preloader", "class": "sbf-preloader"});
@@ -65,6 +74,22 @@
                             context.drawImage (image, 0, 0, width, height);
                             return context.getImageData (0, 0, width, height);
                         };
+
+                        JSM.ImportFileList.GetFileName = function (fullFileName)
+                        {
+                            var splitted = fullFileName.split ('/');
+                            if (splitted.length == 1) {
+                                splitted = fullFileName.split ('\\');
+                            }
+                            if (splitted.length === 0) {
+                                return '';
+                            }
+                            var fileName = splitted[splitted.length - 1];
+                            return decodeURI (fileName);
+                        };
+
+
+
 
                         JSM.GetStringBufferFromURL = function (url, callbacks)
                         {
@@ -104,7 +129,6 @@
                                 jsonData.materials[0].textureHeight = 1.0;
 
                                 var viewer = new JSM.ThreeViewer();
-                                viewer.RemoveMeshes ();
 
                                 if (!viewer.Start(canvas, viewerSettings)) {
                                     console.log('Error initializing JSM Viewer' + element_id);

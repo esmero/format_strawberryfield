@@ -131,7 +131,13 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+    $public_iiif_image_url = NULL;
     $publicimageurl = NULL;
+    // List of all images that are square keyed by they original filenames
+    // Used to map back MTL textures into remote URLS at the JS level
+    $publicimageurls = [];
+    $publicmtlurl = NULL;
+    $nodeid = $items->getEntity()->id();
 
     $number_media = $this->getSetting('number_models');
     $key = $this->getSetting('json_key_source');
@@ -185,11 +191,47 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
 
       if (!$embargoed || !empty($embargo_upload_keys_string)) {
         $ordersubkey = 'sequence';
+        $conditions_model[] = [
+          'source' => ['dr:mimetype'],
+          'condition' => 'model/mtl',
+          'comp' => '!==',
+        ];
         $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
           TRUE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
-          $upload_keys, []);
-        // Now get me all images
+          $upload_keys, $conditions_model);
+
         if (count($media)) {
+          // Now get me materials
+          $conditions_mtl[] = [
+            'source' => ['dr:mimetype'],
+            'condition' => 'model/mtl',
+            'comp' => '===',
+          ];
+
+          $mtls = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+            FALSE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
+            $upload_keys, $conditions_mtl);
+
+          if (count($mtls)) {
+            foreach ($mtls as $uploadkey => $mtl_in_key) {
+              foreach ($mtl_in_key as $mtl) {
+                $route_parameters = [
+                  'node' => $nodeid,
+                  'uuid' => $mtl['file']->uuid(),
+                  'format' => $mtl['file_name'],
+                ];
+                $publicmtlurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+                  $route_parameters)->toString();
+              }
+            }
+            foreach ($elements[$delta] as &$element) {
+              if (isset($element['#attributes'])) {
+                $element['#attributes']['data-iiif-material'] = $publicmtlurl ?? 'null';
+              }
+            }
+          }
+
+          // Now get me all images.
           $conditions[] = [
             'source' => ['flv:exif', 'ImageHeight'],
             'condition' => ['flv:exif', 'ImageWidth'],
@@ -201,25 +243,38 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
             $conditions);
           foreach ($images as $uploadkey => $images_in_key) {
             foreach ($images_in_key as $image) {
-              $iiifidentifier = urlencode(
-                StreamWrapperManager::getTarget($image['file']->getFileUri())
-              );
-              if (!empty($iiifidentifier)) {
-                $publicimageurl = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/full/0/default.jpg";
-                break 2;
+              if (count($mtls)) {
+                $route_parameters = [
+                  'node' => $nodeid,
+                  'uuid' => $image['file']->uuid(),
+                  'format' => $image['file_name'],
+                ];
+                $publicimageurls[] = Url::fromRoute('format_strawberryfield.iiifbinary',
+                  $route_parameters)->toString();
+              }
+              else {
+                $iiifidentifier = urlencode(
+                  StreamWrapperManager::getTarget($image['file']->getFileUri())
+                );
+                if ($iiifidentifier) {
+                  $publicimageurl = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/full/0/default.jpg";
+                  break 2;
+                }
               }
             }
           }
-
+        }
           // Add the texture
           // Its always the same.
-          foreach ($elements[$delta] as &$element) {
+
+        foreach ($elements[$delta] as &$element) {
             if (isset($element['#attributes'])) {
-              $element['#attributes']['data-iiif-texture'] = $publicimageurl;
+              $element['#attributes']['data-iiif-texture'] = $publicimageurl ?? 'null';
+              $element['#attributes']['data-iiif-filename2texture'] = implode('|', $publicimageurls);
             }
           }
         }
-      }
+
       if (empty($elements[$delta])) {
         $elements[$delta] = [
           '#markup' => '<i class="fas fa-times-circle"></i>',
@@ -236,6 +291,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         unset($item->_attributes);
       }
     }
+
 
     $elements['#cache'] = [
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
