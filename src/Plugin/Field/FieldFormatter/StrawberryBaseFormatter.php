@@ -352,12 +352,13 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       foreach ($jsondata[$key] as $id => $mediaitem) {
         if (isset($mediaitem['type']) && $mediaitem['type'] == $mediatype) {
           if ((!empty($mediaitem['dr:fid']) && !empty($mediaitem['dr:for'])) && (empty($upload_keys) || in_array($mediaitem['dr:for'], $upload_keys))) {
-            // This is a bit complex but the idea is that we can pass a value or an array as a source for a contition
+            // This is a bit complex but the idea is that we can pass a value or an array as a source for a condition
             // and a value or an array as the condition itself.
             // if the condition itself is also an array we assume (blindly here) that the check is against another key in the same
             // Technical metadata instead of an actual value.
             // Only simple way. So again, to check against a fixed value pass a value, to check agains another
             // Array (compare two keys) then please pass an array.
+            // We can also pass an assertion (comparison operator like !==)
             foreach($extra_conditions as $condition) {
               if (isset($condition['source']) && isset($condition['condition'])) {
                 if (is_array($condition['condition'])) {
@@ -366,10 +367,14 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
                 else {
                   $condition_value = $condition['condition'];
                 }
-                if (is_array($condition['source']) && (NestedArray::getValue($mediaitem, $condition['source']) !== $condition_value)) {
+                $op = "===";
+                if (isset($condition['comp'])) {
+                  $op = $condition['comp'] ?? $op;
+                }
+                if (is_array($condition['source']) && !($this->varComp(NestedArray::getValue($mediaitem, $condition['source']), $op, $condition_value))) {
                   continue 2;
                 }
-                elseif (!is_array($condition['source']) && isset($mediaitem[$condition['source']]) && $mediaitem[$condition['source']] !== $condition_value) {
+                elseif (!is_array($condition['source']) && isset($mediaitem[$condition['source']]) && !($this->varComp($mediaitem[$condition['source']], $op, $condition_value))) {
                   continue 2;
                 }
               }
@@ -396,6 +401,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
               $media[$mediaitem['dr:for']][$i] = [
                 'file' =>  $file,
                 'media_id' => $id,
+                'file_name' => $mediaitem['name'],
               ];
               $i++;
               if ($i > (int) $number_media && !empty($number_media)) {
@@ -465,6 +471,25 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
   }
 
-
+  /**
+   * @param $var1
+   * @param mixed $op
+   * @param mixed $var2
+   *
+   * @return bool
+   */
+  protected function varComp($var1, string $op, $var2) {
+    switch ($op) {
+      case "==": return $var1 == $var2;
+      case "!=": return $var1 != $var2;
+      case "!==": return $var1 !== $var2;
+      case ">=": return $var1 >= $var2;
+      case "<=": return $var1 <= $var2;
+      case ">": return $var1 >  $var2;
+      case "<": return $var1 <  $var2;
+      case "===": return $var1 ===  $var2;
+      default: return true;
+    }
+  }
 
 }
