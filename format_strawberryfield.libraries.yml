@@ -248,28 +248,28 @@ universalviewer:
     https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
 
 annotorious:
-  version: 2.1.2
+  version: 2.5.10
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.css: { external: true }
 
 annotoriousopenseadragon:
-  version: 2.1.2
+  version: 2.5.10
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.15/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.15/dist/annotorious.min.css: { external: true }
 
 w3cWebAnnotations_strawberry:
   version: 1.0
