@@ -132,12 +132,13 @@
                                         $(".sbf-preloader").fadeOut('slow');
                                         function downloadBase64File() {
                                             let downloadLink = document.createElement('a');
+                                            downloadLink.className = 'btn btn-secondary';
                                             downloadLink.textContent = 'Download Screenshot';
                                             canvasDom.parent().prepend(downloadLink);
                                             downloadLink.target = '_self';
                                             // will be given dynamically on click
                                             downloadLink.href = '#';
-                                            downloadLink.download = ado_title + '.png';
+                                            downloadLink.download = ado_title + '.jpg';
                                             downloadLink.onclick = function() {
                                                 viewer.Draw();
                                                 downloadLink.href = viewer.renderer.domElement.toDataURL('image/jpg');
