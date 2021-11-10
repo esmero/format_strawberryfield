@@ -600,11 +600,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       if (isset($scenes["scene"])) {
         $nid = $scenes["scene"];
         // Don't allow circular references
-        if ($nid != $ownnodeid) {
-          // @TODO inject-it as we do in the other formatters.
-          $node = $this->entityTypeManager->getStorage('node')->load(
-            $nid
-          );
+        if ($nid != $ownnodeid)
+          $node = $this->entityTypeManager->getStorage('node')->load($nid);
           if (!$node) {
             continue;
           }
