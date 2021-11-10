@@ -11,6 +11,8 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\Annotation\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\file\FileInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Url;
@@ -345,7 +347,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
   /**
    * {@inheritdoc}
    */
-  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata) {
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
     // Empty for now since we kept the inline logic (too complex to refactor).
     return [];
   }

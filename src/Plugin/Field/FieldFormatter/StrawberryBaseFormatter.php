@@ -392,7 +392,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
             // we should inform to logs and continue
             if ($this->checkAccess($file)) {
               if ($generate_element) {
-                $this->generateElementForItem($delta, $items, $file, $iiifhelper, $i, $elements, $jsondata);
+                $this->generateElementForItem($delta, $items, $file,
+                  $iiifhelper, $i, $elements, $jsondata, $mediaitem);
               }
               // This allows us to group by $mediaitem['dr:for']. // e.g images
               // and also returns the key of this file inside the as:structure
@@ -401,7 +402,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
               $media[$mediaitem['dr:for']][$i] = [
                 'file' =>  $file,
                 'media_id' => $id,
-                'file_name' => $mediaitem['name'],
+                'file_name' => $mediaitem['name'] ?? $file->getFilename(),
               ];
               $i++;
               if ($i > (int) $number_media && !empty($number_media)) {
@@ -428,10 +429,12 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *
    * This is a stub method and each formatter needs to implements its own
    * Render array generation. For a working example see
+   * @param array $mediaitem
+   *
    * @see \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
    */
-  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata) {
-    // WARNING. THIS is a stub method. Please implement the appropiate render
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+    // WARNING. THIS is a stub method. Please implement the correct render
     // Array based on the needs of your own Formatter when
     // extending this base class.
     $max_width = $this->getSetting('max_width');

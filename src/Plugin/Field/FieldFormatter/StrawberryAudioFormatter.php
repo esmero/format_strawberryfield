@@ -134,7 +134,7 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
-    $number_media = $this->getSetting('number_media') ?? 1;
+    $number_media = $this->getSetting('number_media') ?? 0;
     $key = $this->getSetting('json_key_source');
 
     foreach ($items as $delta => $item) {
@@ -294,7 +294,7 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
    */
-  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata) {
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
 
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';

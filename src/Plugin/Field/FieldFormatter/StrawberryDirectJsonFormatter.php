@@ -2,11 +2,9 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
