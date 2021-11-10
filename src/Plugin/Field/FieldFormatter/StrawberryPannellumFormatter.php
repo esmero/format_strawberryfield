@@ -9,13 +9,19 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\Annotation\FieldFormatter;
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -35,6 +41,80 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  */
 class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
 
+  /**
+   * The entity manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+
+  /**
+   * StrawberryMiradorFormatter constructor.
+   *
+   * @param $plugin_id
+   * @param $plugin_definition
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   * @param array $settings
+   * @param $label
+   * @param $view_mode
+   * @param array $third_party_settings
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   * @param \Drupal\Core\Session\AccountInterface $current_user
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
+   */
+  public function __construct(
+    $plugin_id,
+    $plugin_definition,
+    FieldDefinitionInterface $field_definition,
+    array $settings,
+    $label,
+    $view_mode,
+    array $third_party_settings,
+    ConfigFactoryInterface $config_factory,
+    AccountInterface $current_user,
+    EntityTypeManagerInterface $entity_type_manager,
+    EmbargoResolverInterface $embargo_resolver
+  ) {
+    parent::__construct(
+      $plugin_id,
+      $plugin_definition,
+      $field_definition,
+      $settings,
+      $label,
+      $view_mode,
+      $third_party_settings,
+      $config_factory,
+      $embargo_resolver,
+      $current_user
+    );
+    $this->entityTypeManager = $entity_type_manager;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(
+    ContainerInterface $container,
+    array $configuration,
+    $plugin_id,
+    $plugin_definition
+  ) {
+    return new static(
+      $plugin_id,
+      $plugin_definition,
+      $configuration['field_definition'],
+      $configuration['settings'],
+      $configuration['label'],
+      $configuration['view_mode'],
+      $configuration['third_party_settings'],
+      $container->get('config.factory'),
+      $container->get('current_user'),
+      $container->get('entity_type.manager'),
+      $container->get('format_strawberryfield.embargo_resolver')
+    );
+  }
   /**
    * {@inheritdoc}
    */
@@ -522,7 +602,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         // Don't allow circular references
         if ($nid != $ownnodeid) {
           // @TODO inject-it as we do in the other formatters.
-          $node = \Drupal::service('entity.manager')->getStorage('node')->load(
+          $node = $this->entityTypeManager->getStorage('node')->load(
             $nid
           );
           if (!$node) {
@@ -560,6 +640,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     $single_scene_details->yaw = (int) $scenes['yaw'];
                   }
                   $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
                   $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                   // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
                   $single_scenes->{"$nid"} = clone $single_scene_details;
@@ -580,6 +661,9 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     $single_scene_details->yaw = (int) $scenes['yaw'];
                   }
                   $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  // Adds the mobile version which on the JS will replace the normal panorama if
+                  // we are on mobile mode.
+                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
                   $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                   $single_scenes->{"$nid"} = clone $single_scene_details;
                 }
