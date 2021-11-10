@@ -47,7 +47,7 @@ class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
   public function buildHeader() {
     $header['id'] = $this->t('Metadata Endpoint Config Display ID');
     $header['label'] = $this->t('Label');
-    $header['url'] = $this->t('URL access point');
+    $header['url'] = $this->t('Example URL access point');
     $header['active'] = $this->t('Is active ?');
     return $header + parent::buildHeader();
   }
@@ -95,8 +95,9 @@ class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
     $extension = NULL;
 
     try {
-      $responsetypefield = $entity->getMetadataDisplayEntity()->get('mimetype');
-      $responsetype = $responsetypefield->first()->getValue();
+      $metadata_display_entity = $entity->getMetadataDisplayEntity();
+      $responsetypefield = $metadata_display_entity ? $metadata_display_entity->get('mimetype') : NULL;
+      $responsetype = $responsetypefield ? $responsetypefield->first()->getValue() : NULL;
       // We can have a LogicException or a Data One, both extend different
       // classes, so better catch any.
     }

@@ -228,13 +228,13 @@ leaflet_strawberry:
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
 replayweb:
-  version: 1.4.3
+  version: 1.5.5
   license:
     name: AGPLv3
     url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/replaywebpage@1.4.3/ui.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/replaywebpage@1.5.5/ui.js: { external: true, minified: true, preprocess: false}
 
 universalviewer:
   version: 4.0.0-pre.49
@@ -248,28 +248,28 @@ universalviewer:
     https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
 
 annotorious:
-  version: 2.1.2
+  version: 2.5.10
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.1.2/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.css: { external: true }
 
 annotoriousopenseadragon:
-  version: 2.1.2
+  version: 2.5.10
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.15/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.1.2/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.15/dist/annotorious.min.css: { external: true }
 
 w3cWebAnnotations_strawberry:
   version: 1.0

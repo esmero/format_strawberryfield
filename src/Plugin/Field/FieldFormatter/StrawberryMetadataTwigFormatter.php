@@ -15,6 +15,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
@@ -36,13 +37,6 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  * )
  */
 class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
-
-  /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  protected $currentUser;
 
   /**
    * The entity manager.
@@ -83,10 +77,10 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    *   The Loaded twig Environment.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The Config factory.
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
-    $this->currentUser = $current_user;
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory,  EmbargoResolverInterface $embargo_resolver) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory, $embargo_resolver, $current_user);
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
   }
@@ -106,7 +100,8 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       $container->get('current_user'),
       $container->get('entity_type.manager'),
       $container->get('twig'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('format_strawberryfield.embargo_resolver')
 
     );
   }
@@ -118,7 +113,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     return parent::defaultSettings() + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
-      'metadatadisplayentity_id' => NULL,
+      'metadatadisplayentity_uuid' => NULL,
       'metadatadisplayentity_uselabel' => TRUE,
     ];
   }
@@ -128,16 +123,17 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $entity = NULL;
-    if ($this->getSetting('metadatadisplayentity_id')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $entity = reset($entities);
     }
 
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
       ],
-      'metadatadisplayentity_id' => [
-        '#type' => 'entity_autocomplete',
+      'metadatadisplayentity_uuid' => [
+        '#type' => 'sbf_entity_autocomplete_uuid',
         '#title' => $this->t('Choose your metadata template (Start typing! Autocomplete.)'),
         '#target_type' => 'metadatadisplay_entity',
         '#description' => 'Metadata template name',
@@ -173,8 +169,9 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
   public function settingsSummary() {
     // Get the metadata template's label for display in the summary.
     $entity_label = NULL;
-    if ($this->getSetting('metadatadisplayentity_id')) {
-      $entity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $entity = reset($entities);
       if ($entity) {
         $entity_label = $entity->label();
       }
@@ -195,7 +192,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
-    $metadatadisplayentity_id = $this->getSetting('metadatadisplayentity_id');
+    $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
     $nodeid = $items->getEntity()->id();
 
     foreach ($items as $delta => $item) {
@@ -204,11 +201,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       if (empty($value)) {
         continue;
       }
-      if (empty($metadatadisplayentity_id)) {
+      if (empty($metadatadisplayentity_uuid)) {
         continue;
       }
+
+
+      $metadatadisplayentities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       /** @var \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity $metadatadisplayentity */
-      $metadatadisplayentity = $this->entityTypeManager->getStorage('metadatadisplay_entity')->load($this->getSetting('metadatadisplayentity_id'));
+      $metadatadisplayentity = reset($metadatadisplayentities);
       if ($metadatadisplayentity == NULL) {
         continue;
       }
@@ -227,6 +227,28 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
             '@field' => $items->getName(),
           ]);
         return $elements[$delta] = ['#markup' => $message];
+      }
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      $embargo_context = [];
+      // This one is for the Twig template
+      // We do not need the IP here. No use of showing the IP at all?
+      $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $context_embargo['data_embargo']['embargoed'] = $embargoed;
+
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+          $context_embargo['data_embargo']['until'] = $embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
+      }
+      else {
+        $context_embargo['data_embargo']['embargoed'] = $embargo_info;
       }
 
       try {
@@ -248,7 +270,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           'data' => $jsondata,
           'node' => $items->getEntity(),
           'iiif_server' => $this->getIiifUrls()['public'],
-        ];
+        ] + $context_embargo;
         $original_context = $context;
 
         // Allow other modules to provide extra Context!
@@ -270,7 +292,6 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         else {
           $elements[$delta]['content'] = $templaterenderelement;
         }
-
       }
       catch (\Exception $e) {
         // Render each element as markup.

@@ -20,6 +20,7 @@ use Drupal\Core\Render\RenderContext;
 use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -56,6 +57,11 @@ class MetadataExposeDisplayController extends ControllerBase {
   protected $mimeTypeGuesser;
 
   /**
+   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface
+   */
+  protected $embargoResolver;
+
+  /**
    * MetadataExposeDisplayController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
@@ -68,19 +74,23 @@ class MetadataExposeDisplayController extends ControllerBase {
    *   The Drupal Renderer Service.
    * @param \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface $mime_type_guesser
    *   The Drupal Mime type guesser Service.
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
   public function __construct(
     RequestStack $request_stack,
     StrawberryfieldUtilityService $strawberryfield_utility_service,
     EntityTypeManagerInterface $entitytype_manager,
     RendererInterface $renderer,
-    MimeTypeGuesserInterface $mime_type_guesser
+    MimeTypeGuesserInterface $mime_type_guesser,
+    EmbargoResolverInterface $embargo_resolver
+
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->entityTypeManager = $entitytype_manager;
     $this->renderer = $renderer;
     $this->mimeTypeGuesser = $mime_type_guesser;
+    $this->embargoResolver = $embargo_resolver;
 
   }
 
@@ -93,7 +103,8 @@ class MetadataExposeDisplayController extends ControllerBase {
       $container->get('strawberryfield.utility'),
       $container->get('entity_type.manager'),
       $container->get('renderer'),
-      $container->get('file.mime_type.guesser')
+      $container->get('file.mime_type.guesser'),
+      $container->get('format_strawberryfield.embargo_resolver')
     );
   }
 
@@ -198,12 +209,33 @@ class MetadataExposeDisplayController extends ControllerBase {
             }
           }
 
+          $embargo_info = $this->embargoResolver->embargoInfo($node->uuid(), $jsondata);
+          $embargo_context = [];
+          // This one is for the Twig template
+          // We do not need the IP here. No use of showing the IP at all?
+          $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+          $embargo_tags = [];
+          if (is_array($embargo_info)) {
+            $embargoed = $embargo_info[0];
+            $context_embargo['data_embargo']['embargoed'] = $embargoed;
+            $embargo_tags[] = 'format_strawberryfield:all_embargo';
+            if ($embargo_info[1]) {
+              $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+              $context_embargo['data_embargo']['until'] = $embargo_info[1];
+            }
+            if ($embargo_info[2]) {
+              $embargo_context[] = 'ip';
+            }
+          }
+          else {
+            $embargoed = $embargo_info;
+          }
 
           $context['node'] = $node;
           $context['iiif_server'] = $this->config(
             'format_strawberryfield.iiif_settings'
           )->get('pub_server_url');
-          $original_context = $context;
+          $original_context = $context + $context_embargo;
           // Allow other modules to provide extra Context!
           // Call modules that implement the hook, and let them add items.
           \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
@@ -259,7 +291,9 @@ class MetadataExposeDisplayController extends ControllerBase {
           $response->addCacheableDependency($metadataexposeconfig_entity);
           $metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
           $response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
+          $response->getCacheableMetadata()->addCacheTags($embargo_tags);
           $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
+          $response->getCacheableMetadata()->addCacheContexts($embargo_context);
         }
         return $response;
 

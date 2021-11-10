@@ -11,6 +11,8 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\Annotation\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\file\FileInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Url;
@@ -139,9 +141,20 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
     $max_height = $this->getSetting('max_height');
     //@TODO allow more than one?
     $number_warcs = $this->getSetting('number_warcs');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
+
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+    $current_language = $items->getEntity()->get('langcode')->value;
+    $nodeid = $items->getEntity()->id();
+    $number_media = $this->getSetting('number_media') ?? 1;
     $key = $this->getSetting('json_key_source');
+
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     foreach ($items as $delta => $item) {
@@ -179,113 +192,142 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
          }
       }*/
       $i = 0;
-      $jsondatafiltered = $this->filterMediaByJMESPath($jsondata, $key);
-      foreach ($jsondatafiltered as $mediaitem) {
-        $i++;
-        if ($i > 1) {
-          break;
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
+        ->uuid(), $jsondata);
+      // Check embargo
+      $embargo_context = [];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
         }
-        if (isset($mediaitem['type']) && (
-            $mediaitem['dr:mimetype'] == 'application/warc' ||
-            $mediaitem['dr:mimetype'] == 'application/wacz' ||
-            $mediaitem['dr:mimetype'] == 'application/zip' ||
-            $mediaitem['dr:mimetype'] == 'application/gzip' ||
-            $mediaitem['dr:mimetype'] == 'application/vnd.datapackage+zip' ||
-            $mediaitem['dr:mimetype'] == 'application/x-gzip'
-          )
-        ) {
-          if (isset($mediaitem['dr:fid'])) {
-            // @TODO check if loading the entity is really needed to check access.
-            // @TODO we can refactor a lot here and move it to base methods
-            $file = OcflHelper::resolvetoFIDtoURI(
-              $mediaitem['dr:fid']
-            );
-            if (!$file) {
-              continue;
-            }
-            //@TODO if no media key to file loading was possible
-            // means we have a broken/missing media reference
-            // we should inform to logs and continue
-            if ($this->checkAccess($file)) {
-              // We assume here file could not be accessible publicly;
-              $route_parameters = [
-                'node' => $nodeid,
-                'uuid' => $file->uuid(),
-                'format' => urlencode($mediaitem['name']),
-              ];
-              $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
-              $filecachetags = $file->getCacheTags();
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
+      }
+      else {
+        $embargoed = $embargo_info;
+      }
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys_string;
+      }
 
-              $uniqueid = 'replayweb-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-warc' . $i;
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+        $ordersubkey = 'sequence';
+        // Since the conditionals here are more complex
+        // we do not call $this->fetchMediaFromJsonWithFilter()
+        $jsondatafiltered = $this->filterMediaByJMESPath($jsondata, $key);
 
-              $cache_contexts = [
-                'url.site',
-                'url.path',
-                'url.query_args',
-                'user.permissions',
-              ];
-              // @ see https://www.drupal.org/files/issues/2517030-125.patch
-              $cache_tags = Cache::mergeTags(
-                $filecachetags,
-                $items->getEntity()->getCacheTags()
-              );
-
-              // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
-              $elements[$delta]['warc_replayweb_' . $i] = [
-                '#type' => 'html_tag',
-                '#tag' => 'replay-web-page',
-                '#cache' => [
-                  'tags' =>
-                    $cache_tags,
-                ],
-                '#attributes' => [
-                  'id' => $uniqueid,
-                  'source' => $publicurl->toString(),
-                  'replaybase' => "/replay/",
-                  'deeplink' => "true",
-                  'style' => "width:{$max_width_css}; height:{$max_height}px; display:block",
-                ],
-              ];
-
-              if (isset($jsondata[$url_key])) {
-                if (is_array($jsondata[$url_key]) && isset($jsondata[$url_key][$i]) &&
-                  is_string($jsondata[$url_key][$i]) && !empty(trim($jsondata[$url_key][$i]))
-                ) {
-                  $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key][$i];
-
-                }
-                elseif (!is_array($jsondata[$url_key]) && !empty(trim($jsondata[$url_key]))) {
-                  // This is if there is a single URL. WE assume its for all WARC files.
-                  // But let's be honest. We go for a single WARC file for now
-                  $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key];
-                }
-              }
-              else {
-                if (!$navbar) {
-                  $elements[$delta]['warc_replayweb_' . $i]['#attributes']['view'] = "pages";
-                }
-              }
-
-
-              $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/replayweb';
-              if (isset($item->_attributes)) {
-                $elements[$delta] += ['#attributes' => []];
-                $elements[$delta]['#attributes'] += $item->_attributes;
-                // Unset field item attributes since they have been included in the
-                // formatter output and should not be rendered in the field template.
-                unset($item->_attributes);
-              }
-            }
+        foreach ($jsondatafiltered as $mediaitem) {
+          $i++;
+          if ($i > 1) {
+            break;
           }
-          else {
-            // @TODO Deal with no access here
-            // Should we put a thumb? Just hide?
-            // @TODO we can bring a plugin here and there that deals with
-            $elements[$delta]['media_thumb' . $i] = [
-              '#markup' => '<i class="fas fa-times-circle"></i>',
-              '#prefix' => '<span>',
-              '#suffix' => '</span>',
-            ];
+          if (isset($mediaitem['type']) && (
+              $mediaitem['dr:mimetype'] == 'application/warc' ||
+              $mediaitem['dr:mimetype'] == 'application/wacz' ||
+              $mediaitem['dr:mimetype'] == 'application/zip' ||
+              $mediaitem['dr:mimetype'] == 'application/gzip' ||
+              $mediaitem['dr:mimetype'] == 'application/vnd.datapackage+zip' ||
+              $mediaitem['dr:mimetype'] == 'application/x-gzip'
+            )
+          ) {
+            if (isset($mediaitem['dr:fid'])) {
+              // @TODO check if loading the entity is really needed to check access.
+              // @TODO we can refactor a lot here and move it to base methods
+              $file = OcflHelper::resolvetoFIDtoURI(
+                $mediaitem['dr:fid']
+              );
+              if (!$file) {
+                continue;
+              }
+              //@TODO if no media key to file loading was possible
+              // means we have a broken/missing media reference
+              // we should inform to logs and continue
+              if ($this->checkAccess($file)) {
+                // We assume here file could not be accessible publicly;
+                $route_parameters = [
+                  'node' => $nodeid,
+                  'uuid' => $file->uuid(),
+                  'format' => urlencode($mediaitem['name']),
+                ];
+                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+                  $route_parameters);
+                $filecachetags = $file->getCacheTags();
+
+                $uniqueid = 'replayweb-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-warc' . $i;
+
+                $cache_contexts = [
+                  'url.site',
+                  'url.path',
+                  'url.query_args',
+                  'user.permissions',
+                ];
+                // @ see https://www.drupal.org/files/issues/2517030-125.patch
+                $cache_tags = Cache::mergeTags(
+                  $filecachetags,
+                  $items->getEntity()->getCacheTags()
+                );
+
+                // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
+                $elements[$delta]['warc_replayweb_' . $i] = [
+                  '#type' => 'html_tag',
+                  '#tag' => 'replay-web-page',
+                  '#cache' => [
+                    'tags' =>
+                      $cache_tags,
+                  ],
+                  '#attributes' => [
+                    'id' => $uniqueid,
+                    'source' => $publicurl->toString(),
+                    'replaybase' => "/replay/",
+                    'deeplink' => "true",
+                    'style' => "width:{$max_width_css}; height:{$max_height}px; display:block",
+                  ],
+                ];
+
+                if (isset($jsondata[$url_key])) {
+                  if (is_array($jsondata[$url_key]) && isset($jsondata[$url_key][$i]) &&
+                    is_string($jsondata[$url_key][$i]) && !empty(trim($jsondata[$url_key][$i]))
+                  ) {
+                    $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key][$i];
+
+                  }
+                  elseif (!is_array($jsondata[$url_key]) && !empty(trim($jsondata[$url_key]))) {
+                    // This is if there is a single URL. WE assume its for all WARC files.
+                    // But let's be honest. We go for a single WARC file for now
+                    $elements[$delta]['warc_replayweb_' . $i]['#attributes']['url'] = $jsondata[$url_key];
+                  }
+                }
+                else {
+                  if (!$navbar) {
+                    $elements[$delta]['warc_replayweb_' . $i]['#attributes']['view'] = "pages";
+                  }
+                }
+
+
+                $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/replayweb';
+                if (isset($item->_attributes)) {
+                  $elements[$delta] += ['#attributes' => []];
+                  $elements[$delta]['#attributes'] += $item->_attributes;
+                  // Unset field item attributes since they have been included in the
+                  // formatter output and should not be rendered in the field template.
+                  unset($item->_attributes);
+                }
+              }
+            }
+            else {
+              // @TODO Deal with no access here
+              // Should we put a thumb? Just hide?
+              // @TODO we can bring a plugin here and there that deals with
+              $elements[$delta]['media_thumb' . $i] = [
+                '#markup' => '<i class="fas fa-times-circle"></i>',
+                '#prefix' => '<span>',
+                '#suffix' => '</span>',
+              ];
+            }
           }
         }
       }
@@ -294,9 +336,21 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
         unset($elements[$delta]["#attributes"]);
       }
     }
-
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
 
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+    // Empty for now since we kept the inline logic (too complex to refactor).
+    return [];
+  }
+
 
 }

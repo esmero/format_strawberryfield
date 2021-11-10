@@ -8,13 +8,20 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\Annotation\FieldFormatter;
+use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -34,6 +41,80 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  */
 class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
 
+  /**
+   * The entity manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+
+  /**
+   * StrawberryMiradorFormatter constructor.
+   *
+   * @param $plugin_id
+   * @param $plugin_definition
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
+   * @param array $settings
+   * @param $label
+   * @param $view_mode
+   * @param array $third_party_settings
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   * @param \Drupal\Core\Session\AccountInterface $current_user
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
+   */
+  public function __construct(
+    $plugin_id,
+    $plugin_definition,
+    FieldDefinitionInterface $field_definition,
+    array $settings,
+    $label,
+    $view_mode,
+    array $third_party_settings,
+    ConfigFactoryInterface $config_factory,
+    AccountInterface $current_user,
+    EntityTypeManagerInterface $entity_type_manager,
+    EmbargoResolverInterface $embargo_resolver
+  ) {
+    parent::__construct(
+      $plugin_id,
+      $plugin_definition,
+      $field_definition,
+      $settings,
+      $label,
+      $view_mode,
+      $third_party_settings,
+      $config_factory,
+      $embargo_resolver,
+      $current_user
+    );
+    $this->entityTypeManager = $entity_type_manager;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(
+    ContainerInterface $container,
+    array $configuration,
+    $plugin_id,
+    $plugin_definition
+  ) {
+    return new static(
+      $plugin_id,
+      $plugin_definition,
+      $configuration['field_definition'],
+      $configuration['settings'],
+      $configuration['label'],
+      $configuration['view_mode'],
+      $configuration['third_party_settings'],
+      $container->get('config.factory'),
+      $container->get('current_user'),
+      $container->get('entity_type.manager'),
+      $container->get('format_strawberryfield.embargo_resolver')
+    );
+  }
   /**
    * {@inheritdoc}
    */
@@ -178,6 +259,16 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $settings_autoload = $this->getSetting('autoLoad');
     $settings_key = $this->getSetting('json_key_settings');
 
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+    $upload_keys = array_map('trim', $upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+    $publicimageurl = NULL;
+
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
@@ -205,240 +296,269 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
 
-      if (!empty($multiscene) && isset($jsondata[$multiscene]) && count(
-          $jsondata[$multiscene]
-        )) {
-        // We assume that any other Entity will contain Data in the same fieldname
-        // @TODO explore edge cases of multi SBFs around?
-        // WE could use the SBF service to get the field names too.
-        $elements[$delta] = $this->processMultiScene(
-          $jsondata[$multiscene],
-          $fieldname,
-          $nodeid
-        );
-        if (is_array($elements[$delta]) && !empty($elements[$delta])) {
-          continue;
+      $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
+      $embargo_context = [];
+      // This one is for the Twig template
+      // We do not need the IP here. No use of showing the IP at all?
+      $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $context_embargo['data_embargo']['embargoed'] = $embargoed;
+
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+          $context_embargo['data_embargo']['until'] = $embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
         }
       }
+      else {
+        $context_embargo['data_embargo']['embargoed'] = $embargo_info;
+      }
+      // @NOTE: For now we are going to only enforce Embargoes for
+      // Main ADO. If a tour we can not (right now) go and check
+      // For this release each ADO because if one is embargoed
+      // The whole Tour would break.
 
-      /* Expected structure of an Media item inside JSON
-          "as:image": {
-             "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
-             "fid": 32, // Drupal's FID
-             "for": "add_some_master_images", // The webform element key that generated this one
-             "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
-             "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
-             "type": "Image",
-             "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
-             }
-          }*/
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
 
-      $i = 0;
-      if (isset($jsondata[$key])) {
-        $iiifhelper = new IiifHelper(
-          $this->getIiifUrls()['public'],
-          $this->getIiifUrls()['internal']
-        );
-        // Order Images based on a given 'sequence' key
-        $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitemkey => $mediaitem) {
-          $i++;
-          if ($i > $number_images) {
-            break;
+        if (!empty($multiscene) && isset($jsondata[$multiscene]) && is_array($jsondata[$multiscene]) && count(
+            $jsondata[$multiscene]
+          )) {
+          // We assume that any other Entity will contain Data in the same fieldname
+          // @TODO explore edge cases of multi SBFs around?
+          // WE could use the SBF service to get the field names too.
+          $elements[$delta] = $this->processMultiScene(
+            $jsondata[$multiscene],
+            $fieldname,
+            $nodeid
+          );
+          if (is_array($elements[$delta]) && !empty($elements[$delta])) {
+            continue;
           }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              // @TODO we can refactor a lot here and move it to base methods
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
-              if (!$file) {
-                continue;
-              }
-              //@TODO if no media key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
-              if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
+        }
 
-                if ($iiifidentifier == NULL || empty($iiifidentifier)) {
-                  continue;
-                  // @TODO add a default Thumbnail here.
-                }
+        /* Expected structure of an Media item inside JSON
+            "as:image": {
+               "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
+               "fid": 32, // Drupal's FID
+               "for": "add_some_master_images", // The webform element key that generated this one
+               "url": "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg",
+               "name": "new-metadata-en-image-a8d0090cbd2cd3ca2ab16e3699577538f3049941.jpg",
+               "type": "Image",
+               "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
+               }
+            }*/
 
-                $uniqueid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-panorama' . $i;
-                $htmlid = $uniqueid;
-
-                // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson(
-                  $iiifidentifier
+        $i = 0;
+        if (isset($jsondata[$key])) {
+          $iiifhelper = new IiifHelper(
+            $this->getIiifUrls()['public'],
+            $this->getIiifUrls()['internal']
+          );
+          // Order Images based on a given 'sequence' key
+          $ordersubkey = 'sequence';
+          StrawberryfieldJsonHelper::orderSequence($jsondata, $key,
+            $ordersubkey);
+          foreach ($jsondata[$key] as $mediaitemkey => $mediaitem) {
+            $i++;
+            if ($i > $number_images) {
+              break;
+            }
+            if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
+              if (isset($mediaitem['dr:fid'])) {
+                // @TODO check if loading the entity is really needed to check access.
+                // @TODO we can refactor a lot here and move it to base methods
+                $file = OcflHelper::resolvetoFIDtoURI(
+                  $mediaitem['dr:fid']
                 );
-                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
+                if (!$file) {
+                  continue;
+                }
+                //@TODO if no media key to file loading was possible
+                // means we have a broken/missing media reference
+                // we should inform to logs and continue
+                if ($this->checkAccess($file)) {
+                  $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
 
-                if (!$iiifsizes) {
-                  $message = $this->t(
-                    'We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
-                    [
-                      '@url' => $iiifpublicinfojson,
-                      '@id' => $nodeid,
-                    ]
+                  if ($iiifidentifier == NULL || empty($iiifidentifier)) {
+                    continue;
+                    // @TODO add a default Thumbnail here.
+                  }
+
+                  $uniqueid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-panorama' . $i;
+                  $htmlid = $uniqueid;
+
+                  // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
+                  $iiifpublicinfojson = $iiifhelper->getPublicInfoJson(
+                    $iiifidentifier
                   );
-                  \Drupal::logger('format_strawberryfield')->warning($message);
-                  //continue; // Nothing can be done here?
+                  $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
+
+                  if (!$iiifsizes) {
+                    $message = $this->t(
+                      'We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
+                      [
+                        '@url' => $iiifpublicinfojson,
+                        '@id' => $nodeid,
+                      ]
+                    );
+                    \Drupal::logger('format_strawberryfield')
+                      ->warning($message);
+                    //continue; // Nothing can be done here?
+                  }
+                  else {
+                    // Give it the minimum in case things go wrong.
+                    // Why 256Mbytes? Compression (if source is JPEG to be scaled can take way more)
+                    $iiifsizes = array_reverse($iiifsizes);
+                    foreach ($iiifsizes as $iiifsize) {
+                      $max_iiif_sizes = $iiifsize;
+                      // 16 bits, 3 Channels. If PNG it should be 4 channels.
+                      if (round($iiifsize['height'] * $iiifsize['width'] * 16 * 3 / 8 / 1024 / 1024) <= 256) {
+                        break;
+                      }
+                    }
+
+                    if (($max_width == 0) && ($max_height == 0)) {
+                      $max_height = $max_iiif_sizes['height'];
+                      $max_width = $max_iiif_sizes['width'];
+                    }
+                    if (($max_width == 0) && ($max_height > 0)) {
+                      $max_width = round(
+                        $max_iiif_sizes['width'] / $max_iiif_sizes['height'] * $max_height,
+                        0
+                      );
+                      // Overide $max_width_css in this only case
+                      // But we allow 100% since Panellum will accomodate for the actual distortion
+                      $max_width_css = $max_width_css == '100%' ? $max_width_css : $max_width . 'px';
+                    }
+                    elseif (($max_width > 0) && ($max_height == 0)) {
+                      $max_height = round(
+                        $max_iiif_sizes['height'] / $max_iiif_sizes['width'] * $max_width,
+                        0
+                      );
+                    }
+                    // Pannellum recommends max 4096 pixel width images for WebGl. Lets use that as max.
+                    // Standard webGL Max is 16384 but Modern OSX with newer Intel reports double.
+                    $max_width_source_comp = ($max_iiif_sizes['width'] >= 16384) ? '16384,' : $max_iiif_sizes['width'] . ',';
+                    $max_width_source_mob = ($max_iiif_sizes['width'] >= 4096) ? '4096,' : $max_iiif_sizes['width'] . ',';
+                    $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_comp}/0/default.jpg";
+                    $iiifserverimg_mobile = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_mob}/0/default.jpg";
+                    $elements[$delta]['panorama' . $i] = [
+                      '#type' => 'container',
+                      '#attributes' => [
+                        'class' => ['field-iiif', 'strawberry-panorama-item'],
+                        'id' => $htmlid,
+                        'data-iiif-image' => $iiifserverimg,
+                        'data-iiif-image-mobile' => $iiifserverimg_mobile,
+                        'data-iiif-image-width' => $max_width_css,
+                        'data-iiif-image-height' => max(
+                          $max_height,
+                          520
+                        ),
+                        'style' => "width:{$max_width_css}; height:{$max_height}px",
+                      ],
+                      '#title' => $this->t(
+                        'Panorama for @label',
+                        ['@label' => $items->getEntity()->label()]
+                      ),
+                    ];
+                    // Lets add hotspots
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = [
+                      'hotSpotDebug' => $settings_hotspotdebug,
+                      'autoLoad' => $settings_autoload,
+                    ];
+                    // Let's check if the user provided in-metadata settings for the viewer
+                    // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
+
+                    // @TODO. We can maybe have an option where $mediaitemkey is not set
+                    // And then have general settings for every image?
+                    if (isset($jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings'])) {
+                      // We only want a few settings here.
+                      // Question is do we allow everything pannellum can?
+                      // Or do we control this?
+                      // @see https://pannellum.org/documentation/reference/
+                      /*
+                      const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
+                      const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
+                      const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
+                      const $maxYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxYaw;
+                      const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
+                      const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
+                      const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
+                       */
+                      $viewer_settings = $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'];
+                      $viewer_settings = array_merge($viewer_settings,
+                        $jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings']);
+                      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = $viewer_settings;
+                    }
+
+
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['width'] = $max_width_css;
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['height'] = max(
+                      $max_height,
+                      520
+                    );
+                    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
+                    // Hotspots are a list of objects in the form of
+                    /*{
+                      "yaw": "-14.626185026728738",
+                       "text": "Sheryl's team at the Theater",
+                      "type": "info",
+                      "pitch": "-4.409886580572494"
+                     }, */
+                    // @TODO enable multiple scenes and more hotspot options
+
+                    if (isset($jsondata[$hotspots])) {
+                      $hotspotsjs = [];
+                      $i = 0;
+                      foreach ($jsondata[$hotspots] as $hotspotitems) {
+                        $i++;
+                        $hotspotdefaults = [
+                          'id' => $i,
+                          'pitch' => 0,
+                          'yaw' => 0,
+                          'type' => 'info',
+                          'text' => '',
+                        ];
+                        $hotspotsjs[] = $hotspotitems + $hotspotdefaults;
+                      }
+                      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['hotspots'] = $hotspotsjs;
+                    }
+
+                    if (isset($item->_attributes)) {
+                      $elements[$delta] += ['#attributes' => []];
+                      $elements[$delta]['#attributes'] += $item->_attributes;
+                      // Unset field item attributes since they have been included in the
+                      // formatter output and should not be rendered in the field template.
+                      unset($item->_attributes);
+                    }
+                  }
                 }
                 else {
-                  // Give it the minimum in case things go wrong.
-                  // Why 256Mbytes? Compression (if source is JPEG to be scaled can take way more)
-                  $iiifsizes = array_reverse($iiifsizes);
-                  foreach ($iiifsizes as $iiifsize) {
-                    $max_iiif_sizes = $iiifsize;
-                    // 16 bits, 3 Channels. If PNG it should be 4 channels.
-                    if (round($iiifsize['height'] * $iiifsize['width'] * 16 * 3 / 8 / 1024 / 1024) <= 256) {
-                      break;
-                    }
-                  }
-
-                  if (($max_width == 0) && ($max_height == 0)) {
-                    $max_height = $max_iiif_sizes['height'];
-                    $max_width = $max_iiif_sizes['width'];
-                  }
-                  if (($max_width == 0) && ($max_height > 0)) {
-                    $max_width = round(
-                      $max_iiif_sizes['width'] / $max_iiif_sizes['height'] * $max_height,
-                      0
-                    );
-                    // Overide $max_width_css in this only case
-                    // But we allow 100% since Panellum will accomodate for the actual distortion
-                    $max_width_css = $max_width_css == '100%' ? $max_width_css : $max_width . 'px';
-                  }
-                  elseif (($max_width > 0) && ($max_height == 0)) {
-                    $max_height = round(
-                      $max_iiif_sizes['height'] / $max_iiif_sizes['width'] * $max_width,
-                      0
-                    );
-                  }
-                  // Pannellum recommends max 4096 pixel width images for WebGl. Lets use that as max.
-                  // Standard webGL Max is 16384 but Modern OSX with newer Intel reports double.
-                  $max_width_source_comp = ($max_iiif_sizes['width'] >= 16384) ? '16384,' : $max_iiif_sizes['width'] . ',';
-                  $max_width_source_mob = ($max_iiif_sizes['width'] >= 4096) ? '4096,' : $max_iiif_sizes['width'] . ',';
-                  $iiifserverimg = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_comp}/0/default.jpg";
-                  $iiifserverimg_mobile = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/{$max_width_source_mob}/0/default.jpg";
+                  // @TODO Deal with no access here
+                  // Should we put a thumb? Just hide?
+                  // @TODO we can bring a plugin here and there that deals with
                   $elements[$delta]['panorama' . $i] = [
-                    '#type' => 'container',
-                    '#attributes' => [
-                      'class' => ['field-iiif', 'strawberry-panorama-item'],
-                      'id' => $htmlid,
-                      'data-iiif-image' => $iiifserverimg,
-                      'data-iiif-image-mobile' => $iiifserverimg_mobile,
-                      'data-iiif-image-width' => $max_width_css,
-                      'data-iiif-image-height' => max(
-                        $max_height,
-                        520
-                      ),
-                      'style' => "width:{$max_width_css}; height:{$max_height}px",
-                    ],
-                    '#title' => $this->t(
-                      'Panorama for @label',
-                      ['@label' => $items->getEntity()->label()]
-                    ),
+                    '#markup' => '<i class="fas fa-times-circle"></i>',
+                    '#prefix' => '<span>',
+                    '#suffix' => '</span>',
                   ];
-                  // Lets add hotspots
-                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = [
-                    'hotSpotDebug' => $settings_hotspotdebug,
-                    'autoLoad' => $settings_autoload,
-                  ];
-                  // Let's check if the user provided in-metadata settings for the viewer
-                  // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
-
-                  // @TODO. We can maybe have an option where $mediaitemkey is not set
-                  // And then have general settings for every image?
-                  if (isset($jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings'])) {
-                    // We only want a few settings here.
-                    // Question is do we allow everything pannellum can?
-                    // Or do we control this?
-                    // @see https://pannellum.org/documentation/reference/
-                    /*
-                    const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
-                    const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
-                    const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
-                    const $maxYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxYaw;
-                    const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
-                    const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
-                    const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
-                     */
-                    $viewer_settings = $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'];
-                    $viewer_settings = array_merge($viewer_settings, $jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings']);
-                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = $viewer_settings;
-                  }
-
-
-                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
-                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['width'] = $max_width_css;
-                  $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['height'] = max(
-                    $max_height,
-                    520
-                  );
-                  $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_pannellum_strawberry';
-                  // Hotspots are a list of objects in the form of
-                  /*{
-                    "yaw": "-14.626185026728738",
-                     "text": "Sheryl's team at the Theater",
-                    "type": "info",
-                    "pitch": "-4.409886580572494"
-                   }, */
-                  // @TODO enable multiple scenes and more hotspot options
-
-                  if (isset($jsondata[$hotspots])) {
-                    $hotspotsjs = [];
-                    $i = 0;
-                    foreach ($jsondata[$hotspots] as $hotspotitems) {
-                      $i++;
-                      $hotspotdefaults = [
-                        'id' => $i,
-                        'pitch' => 0,
-                        'yaw' => 0,
-                        'type' => 'info',
-                        'text' => '',
-                      ];
-                      $hotspotsjs[] = $hotspotitems + $hotspotdefaults;
-                    }
-                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['hotspots'] = $hotspotsjs;
-                  }
-
-                  if (isset($item->_attributes)) {
-                    $elements[$delta] += ['#attributes' => []];
-                    $elements[$delta]['#attributes'] += $item->_attributes;
-                    // Unset field item attributes since they have been included in the
-                    // formatter output and should not be rendered in the field template.
-                    unset($item->_attributes);
-                  }
                 }
               }
-              else {
-                // @TODO Deal with no access here
-                // Should we put a thumb? Just hide?
-                // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['panorama' . $i] = [
-                  '#markup' => '<i class="fas fa-times-circle"></i>',
-                  '#prefix' => '<span>',
-                  '#suffix' => '</span>',
-                ];
-              }
             }
-            elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['[panorama' . $i] = [
-                '#markup' => 'Non managed ' . $mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
-            }
-
           }
         }
       }
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
 
@@ -480,11 +600,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       if (isset($scenes["scene"])) {
         $nid = $scenes["scene"];
         // Don't allow circular references
-        if ($nid != $ownnodeid) {
-          // @TODO inject-it as we do in the other formatters.
-          $node = \Drupal::service('entity_type.manager')->getStorage('node')->load(
-            $nid
-          );
+        if ($nid != $ownnodeid)
+          $node = $this->entityTypeManager->getStorage('node')->load($nid);
           if (!$node) {
             continue;
           }
@@ -520,6 +637,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     $single_scene_details->yaw = (int) $scenes['yaw'];
                   }
                   $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
                   $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                   // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
                   $single_scenes->{"$nid"} = clone $single_scene_details;
@@ -540,6 +658,9 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     $single_scene_details->yaw = (int) $scenes['yaw'];
                   }
                   $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                  // Adds the mobile version which on the JS will replace the normal panorama if
+                  // we are on mobile mode.
+                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
                   $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
                   $single_scenes->{"$nid"} = clone $single_scene_details;
                 }

@@ -9,6 +9,8 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\file\FileInterface;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
@@ -121,17 +123,20 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
-    $max_height = $this->getSetting('max_height');
-    $number_media =  $this->getSetting('number_media');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
+
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+    $current_language = $items->getEntity()->get('langcode')->value;
+    $nodeid = $items->getEntity()->id();
+    $number_media = $this->getSetting('number_media') ?? 0;
     $key = $this->getSetting('json_key_source');
 
-    $nodeuuid = $items->getEntity()->uuid();
-    $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -174,169 +179,191 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
 			  ]
 		   }}}
       */
-      $i = 0;
-      if (isset($jsondata[$key])) {
-        // Order Audio based on a given 'sequence' key
+
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      // Check embargo
+      $embargo_context = [];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
+      }
+      else {
+        $embargoed = $embargo_info;
+      }
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys_string;
+      }
+
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
         $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitem) {
-          $i++;
-          if ($i > (int) $number_media) {
-            break;
-          }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Audio') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              // @TODO we can refactor a lot here and move it to base methods
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
-              if (!$file) {
-                continue;
-              }
-              //@TODO if no media key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
-              if ($this->checkAccess($file)) {
-                $audiourl = $file->getFileUri();
-                // We assume here file could not be accessible publicly
-                $route_parameters = [
-                  'node' => $nodeid,
-                  'uuid' => $file->uuid(),
-                  'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
-                ];
-                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
+        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+          TRUE, $jsondata, 'Audio', $key, $ordersubkey, $number_media,
+          $upload_keys, []);
+        if (count($media)) {
+          $conditions[] = [
+            'source' => ['dr:mimetype'],
+            'condition' => 'text/vtt',
+          ];
+          $vtt = $this->fetchMediaFromJsonWithFilter($delta, $items,
+            $elements,
+            FALSE, $jsondata, 'Text', 'as:text', $ordersubkey, $number_media,
+            $upload_keys, $conditions);
+          /* This may be a bit more complex, possible situations
+            1.- NO vtt, all good
+            2.- One Media, multiple vtt, all good
+            3.- Multiple media, single vtt (all good?)
+            4.- Multiple media, multiple vtt. But there is a single media per upload_key and vtt share the upload key
+            5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
+            */
+          if (count($vtt)) {
+            // Yep, redundant but we have no longer these settings here
+            // and i need to add 30px (uff) to the top.
 
-                $filecachetags = $file->getCacheTags();
-                //@TODO check this filecachetags and see if they make sense
+            if  ($max_height = $this->getSetting('max_height') <= 90) {
+              $max_width = $this->getSetting('max_width');
+              $max_height = 90;
+              $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
+            }
 
-                $uniqueid =
-                  'av-' . $items->getName(
-                  ) . '-' . $nodeuuid . '-' . $delta . '-audio' . $i;
-
-                $cache_contexts = [
-                  'url.site',
-                  'url.path',
-                  'url.query_args',
-                  'user.permissions'
-                ];
-                // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags(
-                  $filecachetags,
-                  $items->getEntity()->getCacheTags()
-                );
-                // We will use HTML5 Video tag because Audio Tag does not allow Tracks with Subtitles
-                // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
-                $elements[$delta]['audio_hmtl5_' . $i] = [
-                  '#type' => 'html_tag',
-                  '#tag' => 'figure',
-                  'audio' => [
-                    '#type' => 'html_tag',
-                    '#tag' => 'video',
-                    '#attributes' => [
-                      'class' => ['field-av', 'audio-av'],
-                      'id' => 'audio_' . $uniqueid,
-                      'controls' => TRUE,
-                      'style' => "width:{$max_width_css}; height:{$max_height}px",
-                    ],
-                    '#alt' => $this->t(
-                      'Audio for @label',
-                      ['@label' => $items->getEntity()->label()]
-                    ),
-                    'source' => [
+            foreach ($media as $drforkey => $media_item) {
+              if (isset($vtt[$drforkey])) {
+                foreach ($media_item as $key => $media_entry) {
+                  $elements[$delta]['audio_hmtl5_' . $key]['audio']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height}px";
+                  foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
+                    $route_parameters = [
+                      'node' => $nodeid,
+                      'uuid' => $vtt_item['file']->uuid(),
+                      'format' => 'default.' . pathinfo($vtt_item['file']->getFilename(),
+                          PATHINFO_EXTENSION)
+                    ];
+                    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+                      $route_parameters);
+                    //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
+                    // tracks need at least 30px more up. Wonder if we should add those here
+                    // Or document it as min: 90px height?
+                    $elements[$delta]['audio_hmtl5_' . $key]['audio']['track' . $vtt_key] = [
                       '#type' => 'html_tag',
-                      '#tag' => 'source',
+                      '#tag' => 'track',
                       '#attributes' => [
+                        'label' => $this->t('Transcript ' . $current_language),
+                        'kind' => 'subtitles',
+                        'srclang' => $current_language,
                         'src' => $publicurl->toString(),
-                        'type' => $file->getMimeType(),
+                        'default' => TRUE
                       ]
-                    ]
-                  ]
-                  //@TODO add tracks from structure,
-                  // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryAudioFormatter::processTracksElement
-                ];
-                if (isset($item->_attributes)) {
-                  $elements[$delta] += ['#attributes' => []];
-                  $elements[$delta]['#attributes'] += $item->_attributes;
-                  // Unset field item attributes since they have been included in the
-                  // formatter output and should not be rendered in the field template.
-                  unset($item->_attributes);
+                    ];
+                  }
                 }
               }
-
-              else {
-                // @TODO Deal with no access here
-                // Should we put a thumb? Just hide?
-                // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['media'.$i] = [
-                  '#markup' => '<i class="fas fa-times-circle"></i>',
-                  '#prefix' => '<span>',
-                  '#suffix' => '</span>',
-                ];
-              }
-            } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
             }
           }
         }
+
+        if (empty($elements[$delta])) {
+          $elements[$delta] = [
+            '#markup' => '<i class="fas fa-times-circle"></i>',
+            '#prefix' => '<span>',
+            '#suffix' => '</span>',
+          ];
+        }
+
+        if (isset($item->_attributes)) {
+          $elements[$delta] += ['#attributes' => []];
+          $elements[$delta]['#attributes'] += $item->_attributes;
+          // Unset field item attributes since they have been included in the
+          // formatter output and should not be rendered in the field template.
+          unset($item->_attributes);
+        }
       }
-      // Get rid of empty #attributes key to avoid render error
-      if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
-        unset($elements[$delta]["#attributes"]);
-      }
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+
     return $elements;
   }
 
-  protected function processTracksElement(array $media_elements = [], array $mediaitem) {
-    if (isset($mediaitem['tracks']) && is_array($mediaitem['tracks'])) {
-      foreach ($mediaitem['tracks'] as $trackid => $track) {
-        $vtt_url = NULL;
-        if (isset($track['url'])) {
-          if (UrlHelper::isExternal($track['url'])) {
-            $vtt_url = $track['url'];
-          }
-          elseif (isset($track['dr:fid'])) {
-            $file = OcflHelper::resolvetoFIDtoURI(
-              $track['dr:fid']
-            );
-            if (!$file) {
-              continue;
-            }
-            if ($this->checkAccess($file)) {
-              $vtt_url = $file->getFileUri();
-            }
-          }
-        }
+  /**
+   * {@inheritdoc}
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
 
-        if ($vtt_url) {
-          $media_element["track_{$trackid}"] = [
-            '#type' => 'html_tag',
-            '#tag' => 'track',
-            '#attributes' => [
-              'src' => $vtt_url,
-              'type' => isset($track['type']) ? $track['type'] : 'subtitles' ,
-              'label' => isset($track['label']) ? $track['label'] : $this->t('Subtitle Track'),
-              'srclang' =>  isset($track['subtitleLanguage']) ? $track['subtitleLanguage']  : 'en'
-            ]
-          ];
-          if ($trackid == 1) {
-            $media_element["track_{$trackid}"]['#attributes']['default'] = NULL;
-          }
-        }
-        else {
-          //@TODO if no media key to file loading was possible
-          // means we have a broken/missing media reference
-          // we should inform to logs and continue
-          //@TODO add a common, base method to deal with this
-        }
-      }
-    }
-    return $media_element;
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
+    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
+    $max_height = $this->getSetting('max_height');
+    $nodeuuid = $items->getEntity()->uuid();
+    $nodeid = $items->getEntity()->id();
+    $imagefile = NULL;
+    $publicimageurl = NULL;
+    $fieldname = $items->getName();
+
+    // We assume here file could not be accessible publicly
+    $route_parameters = [
+      'node' => $nodeid,
+      'uuid' => $file->uuid(),
+      'format' => 'default.' . pathinfo($file->getFilename(),
+          PATHINFO_EXTENSION)
+    ];
+    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+      $route_parameters);
+
+    $filecachetags = $file->getCacheTags();
+    //@TODO check this filecachetags and see if they make sense
+
+    $uniqueid =
+      'av-' . $items->getName(
+      ) . '-' . $nodeuuid . '-' . $delta . '-audio' . $i;
+
+    $cache_contexts = [
+      'url.site',
+      'url.path',
+      'url.query_args',
+      'user.permissions'
+    ];
+
+    // We will use HTML5 Video tag because Audio Tag does not allow Tracks with Subtitles
+    // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
+    $elements[$delta]['audio_hmtl5_' . $i] = [
+      '#type' => 'html_tag',
+      '#tag' => 'figure',
+      'audio' => [
+        '#type' => 'html_tag',
+        '#tag' => 'video',
+        '#attributes' => [
+          'class' => ['field-av', 'audio-av'],
+          'id' => 'audio_' . $uniqueid,
+          'controls' => TRUE,
+          'style' => "width:{$max_width_css}; height:{$max_height}px",
+        ],
+        '#alt' => $this->t(
+          'Audio for @label',
+          ['@label' => $items->getEntity()->label()]
+        ),
+        'source' => [
+          '#type' => 'html_tag',
+          '#tag' => 'source',
+          '#attributes' => [
+            'src' => $publicurl->toString(),
+            'type' => $file->getMimeType(),
+          ]
+        ],
+      ],
+      '#cache' => [
+        'context' => $file->getCacheContexts(),
+        'tags' => $file->getCacheTags(),
+      ]
+    ];
+
+    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
   }
+
 }

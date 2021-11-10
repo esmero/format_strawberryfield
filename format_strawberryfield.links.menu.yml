@@ -24,6 +24,13 @@ format_strawberryfield.view_mode_mapping_settings_form:
   description: 'Configure how ADO type defined in your SBF JSON can be magically mapped to Drupal Content View Modes.'
   parent: strawberryfield.group.admin
   weight: 100
+format_strawberryfield.embargo_settings_form:
+  title: 'Metadata based Embargo settings'
+  route_name: format_strawberryfield.embargo_settings_form
+  description: 'Configure Metadata/JSON based embargo enforcement for Field Formatters and Media'
+  parent: strawberryfield.group.admin
+  weight: 101
+
 #Adds to Archipelago Expose Metadata Config
 entity.metadataexpose_entity.collection:
   title: 'Configure Exposed Metadata Endpoints'

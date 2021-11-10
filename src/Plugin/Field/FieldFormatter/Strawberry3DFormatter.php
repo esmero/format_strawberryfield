@@ -9,11 +9,12 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Url;
-use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Drupal\file\FileInterface;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
 
 /**
  * Simplistic Strawberry 3D Field formatter.
@@ -48,42 +49,44 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE
-      ],
-      'number_models' => [
-        '#type' => 'number',
-        '#title' => $this->t('Number of 3D Models'),
-        '#default_value' => $this->getSetting('number_models'),
-        '#size' => 2,
-        '#maxlength' => 2,
-        '#min' => 0,
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#description' => $this->t('Use 0 to force 100% width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#description' => t('An Archipelago managed "as:mediatype". For 3D models its always "as:model"'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE
+        ],
+        'number_models' => [
+          '#type' => 'number',
+          '#title' => $this->t('Number of 3D Models. This Formatter currently permits only one.'),
+          '#default_value' => $this->getSetting('number_models'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 1,
+          '#max' => 1,
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -114,44 +117,45 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     return $summary;
   }
 
-
   /**
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
-    $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
-    // Because canvases can not be dynamic. But we can make them scale with JS?
-    $max_width = empty($max_width) || $max_width == 0 ? 720 : $max_width ;
-    $max_height = $this->getSetting('max_height');
-    $number_models =  $this->getSetting('number_models');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
-    $key = $this->getSetting('json_key_source');
-    $baseiiifserveruri = $this->getSetting('iiif_base_url');
-    $baseiiifserveruri_internal =  $this->getSetting('iiif_base_url_internal');
 
-    $nodeuuid = $items->getEntity()->uuid();
+    $elements = [];
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+    $upload_keys = array_map('trim', $upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+    $public_iiif_image_url = NULL;
+    $publicimageurl = NULL;
+    // List of all images that are square keyed by they original filenames
+    // Used to map back MTL textures into remote URLS at the JS level
+    $publicimageurls = [];
+    $publicmtlurl = NULL;
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
+
+    $number_media = $this->getSetting('number_models') ?? 1;
+    $key = $this->getSetting('json_key_source');
+
     foreach ($items as $delta => $item) {
-      $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
+      $main_property = $item->getFieldDefinition()
+        ->getFieldStorageDefinition()
+        ->getMainPropertyName();
       $value = $item->{$main_property};
       if (empty($value)) {
         continue;
       }
 
-      $jsondata = json_decode($item->value, true);
+      $jsondata = json_decode($item->value, TRUE);
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        $message= $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
-          [
-            '@id' => $nodeid,
-            '@field' => $items->getName(),
-          ]);
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        return $elements[$delta] = ['#markup' => $this->t('Sorry, we had issues processing this metadata')];
       }
       /* Expected structure of an Model item inside JSON
       "as:model": {
@@ -164,104 +168,205 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      $i = 0;
-      if (isset($jsondata[$key])) {
-        // Order 3D Models based on a given 'sequence' key
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      // Check embargo
+      $embargo_context = [];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
+      }
+      else {
+        $embargoed = $embargo_info;
+      }
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys_string;
+      }
+
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
         $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitem) {
-          $i++;
-          if ($i > $number_models) {
-            break;
-          }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Model') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              // @TODO we can refactor a lot here and move it to base methods
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
-              if (!$file) {
-                continue;
-              }
-              //@TODO if no media key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
-              if ($this->checkAccess($file)) {
-                $audiourl = $file->getFileUri();
-                // We assume here file could not be accessible publicly
+        $conditions_model[] = [
+          'source' => ['dr:mimetype'],
+          'condition' => 'model/mtl',
+          'comp' => '!==',
+        ];
+        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+          TRUE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
+          $upload_keys, $conditions_model);
+
+        if (count($media)) {
+          // Now get me materials
+          $conditions_mtl[] = [
+            'source' => ['dr:mimetype'],
+            'condition' => 'model/mtl',
+            'comp' => '===',
+          ];
+
+          $mtls = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+            FALSE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
+            $upload_keys, $conditions_mtl);
+
+          if (count($mtls)) {
+            foreach ($mtls as $uploadkey => $mtl_in_key) {
+              foreach ($mtl_in_key as $mtl) {
                 $route_parameters = [
                   'node' => $nodeid,
-                  'uuid' => $file->uuid(),
-                  'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
+                  'uuid' => $mtl['file']->uuid(),
+                  'format' => $mtl['file_name'],
                 ];
-                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
-
-                $filecachetags = $file->getCacheTags();
-                //@TODO check this filecachetags and see if they make sense
-
-                $uniqueid =
-                  'iiif-'.$items->getName(
-                  ).'-'.$nodeuuid.'-'.$delta.'-model'.$i;
-                $htmlid = $uniqueid;
-
-                $cache_contexts = ['url.site', 'url.path', 'url.query_args','user.permissions'];
-                // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
-                // For Textures and materials see
-                // https://github.com/kovacsv/Online3DViewer/blob/master/embeddable/multiple.html
-                  $elements[$delta]['model' . $i] = [
-                    '#type' => 'html_tag',
-                    '#tag' => 'canvas',
-                    '#attributes' => [
-                      'class' => ['field-iiif', 'strawberry-3d-item'],
-                      'id' => $htmlid,
-                      'data-iiif-model' => $publicurl->toString(),
-                      'data-iiif-image-width' => $max_width,
-                      'data-iiif-image-height' => $max_height,
-                      'height' => $max_height,
-                      'width' => $max_width,
-                      'style' => "width:{$max_width_css}; height:{$max_height}px"
-                     ],
-                    '#title' => $this->t(
-                      '3D Model for @label',
-                      ['@label' => $items->getEntity()->label()]
-                    )
-                  ];
-                  // Lets add hotspots
-                  $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_model_strawberry';
-
-                  if (isset($item->_attributes)) {
-                    $elements[$delta] += ['#attributes' => []];
-                    $elements[$delta]['#attributes'] += $item->_attributes;
-                    // Unset field item attributes since they have been included in the
-                    // formatter output and should not be rendered in the field template.
-                    unset($item->_attributes);
-                  }
-                }
+                $publicmtlurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+                  $route_parameters)->toString();
               }
-              else {
-                // @TODO Deal with no access here
-                // Should we put a thumb? Just hide?
-                // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['model'.$i] = [
-                  '#markup' => '<i class="fas fa-times-circle"></i>',
-                  '#prefix' => '<span>',
-                  '#suffix' => '</span>',
-                ];
-              }
-            } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['[model'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
             }
-
+            foreach ($elements[$delta] as &$element) {
+              if (isset($element['#attributes'])) {
+                $element['#attributes']['data-iiif-material'] = $publicmtlurl ?? 'null';
+              }
+            }
           }
 
+          // Now get me all images.
+          $conditions[] = [
+            'source' => ['flv:exif', 'ImageHeight'],
+            'condition' => ['flv:exif', 'ImageWidth'],
+          ];
+          $images = $this->fetchMediaFromJsonWithFilter($delta, $items,
+            $elements,
+            FALSE, $jsondata, 'Image', 'as:image', $ordersubkey, 0,
+            $upload_keys,
+            $conditions);
+          foreach ($images as $uploadkey => $images_in_key) {
+            foreach ($images_in_key as $image) {
+              if (count($mtls)) {
+                $route_parameters = [
+                  'node' => $nodeid,
+                  'uuid' => $image['file']->uuid(),
+                  'format' => $image['file_name'],
+                ];
+                $publicimageurls[] = Url::fromRoute('format_strawberryfield.iiifbinary',
+                  $route_parameters)->toString();
+              }
+              else {
+                $iiifidentifier = urlencode(
+                  StreamWrapperManager::getTarget($image['file']->getFileUri())
+                );
+                if ($iiifidentifier) {
+                  $publicimageurl = "{$this->getIiifUrls()['public']}/{$iiifidentifier}" . "/full/full/0/default.jpg";
+                  break 2;
+                }
+              }
+            }
+          }
+        }
+          // Add the texture
+          // Its always the same.
+
+        foreach ($elements[$delta] as &$element) {
+            if (isset($element['#attributes'])) {
+              $element['#attributes']['data-iiif-texture'] = $publicimageurl ?? 'null';
+              $element['#attributes']['data-iiif-filename2texture'] = implode('|', $publicimageurls);
+            }
+          }
+        }
+
+      if (empty($elements[$delta])) {
+        $elements[$delta] = [
+          '#markup' => '<i class="fas fa-times-circle"></i>',
+          '#prefix' => '<span>',
+          '#suffix' => '</span>',
+        ];
+      }
+
+      if (isset($item->_attributes)) {
+        $elements[$delta] += ['#attributes' => []];
+        $elements[$delta]['#attributes'] += $item->_attributes;
+        // Unset field item attributes since they have been included in the
+        // formatter output and should not be rendered in the field template.
+        unset($item->_attributes);
       }
     }
+
+
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+
+      $max_width = $this->getSetting('max_width');
+      $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
+      // Because canvases can not be dynamic. But we can make them scale with JS?
+      $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
+      $max_height = $this->getSetting('max_height');
+      $nodeuuid = $items->getEntity()->uuid();
+      $nodeid = $items->getEntity()->id();
+      $imagefile = NULL;
+      $publicimageurl = NULL;
+
+      // We assume here file could not be accessible publicly
+      $route_parameters = [
+        'node' => $nodeid,
+        'uuid' => $file->uuid(),
+        'format' => 'default.' . pathinfo($file->getFilename(),
+            PATHINFO_EXTENSION)
+      ];
+      $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+        $route_parameters);
+
+      $filecachetags = $file->getCacheTags();
+      //@TODO check this filecachetags and see if they make sense
+
+      $uniqueid =
+        'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-model' . $i;
+      $htmlid = $uniqueid;
+
+      $cache_contexts = [
+        'url.site',
+        'url.path',
+        'url.query_args',
+        'user.permissions'
+      ];
+
+      // For Textures and materials see
+      // https://github.com/kovacsv/Online3DViewer/blob/master/embeddable/multiple.html
+      $elements[$delta]['model' . $i] = [
+        '#type' => 'html_tag',
+        '#tag' => 'canvas',
+        '#attributes' => [
+          'class' => ['field-iiif', 'strawberry-3d-item'],
+          'id' => $htmlid,
+          'data-iiif-model' => $publicurl->toString(),
+          'data-iiif-texture' => $publicimageurl,
+          'data-iiif-image-width' => $max_width,
+          'data-iiif-image-height' => $max_height,
+          'data-ado-title' => substr($items->getEntity()->label(),0,16) . '...',
+          'height' => $max_height,
+          'style' => "width:{$max_width_css}; height:{$max_height}px"
+        ],
+        '#title' => $this->t(
+          '3D Model for @label',
+          ['@label' => $items->getEntity()->label()]
+        ),
+        '#cache' => [
+          'context' => $file->getCacheContexts(),
+          'tags' => $file->getCacheTags(),
+        ],
+      ];
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_model_strawberry';
+      if ($max_width) {
+        $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
+      }
+    }
 }

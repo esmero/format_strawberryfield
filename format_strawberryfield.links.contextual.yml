@@ -1,0 +1,6 @@
+# Contextual Links for Metadata Display Entities
+metadatadisplay.page_edit:
+  title: Edit Metadata Display Entity
+  route_name: entity.metadatadisplay_entity.edit_form
+  group: metadatadisplay_entity
+  weight: 0

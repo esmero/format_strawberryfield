@@ -43,7 +43,7 @@ use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
  *     "uuid",
  *     "target_entity_types",
  *     "source_entityfield_name",
- *     "processor_entity_id",
+ *     "metadatadisplayentity_uuid",
  *     "cache",
  *     "active",
  *   },
@@ -74,6 +74,13 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
   protected $label;
 
   /**
+   * To be deprecated after 1.0.0
+   *
+   * @var string
+   */
+  public $processor_entity_id;
+
+  /**
    * The node entity types this configuration entity can target.
    *
    * @var array
@@ -81,13 +88,13 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
   protected $target_entity_types = [];
 
   /**
-   * The Metadata Display entity id.
+   * The Metadata Display entity uuid.
    *
    * Of type \Drupal\format_strawberryfield\MetadataDisplayInterface.
    *
    * @var string
    */
-  protected $processor_entity_id = NULL;
+  protected $metadatadisplayentity_uuid = NULL;
 
   /**
    * The MetadataDisplay Entity.
@@ -164,17 +171,13 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    *   The processor entity id.
    */
   public function getProcessorEntityId() {
-    return $this->processor_entity_id;
-  }
-
-  /**
-   * Processor entity id setter.
-   *
-   * @param string $processor_entity_id
-   *   The processor entity ID.
-   */
-  public function setProcessorEntityId(string $processor_entity_id): void {
-    $this->processor_entity_id = $processor_entity_id;
+    $metadatadisplayentity = $this->entityTypeManager()->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->metadatadisplayentity_uuid]);
+    if (isset($metadatadisplayentity[0])) {
+      return $metadatadisplayentity[0]->id();
+    }
+    else {
+      return NULL;
+    }
   }
 
   /**
@@ -185,8 +188,15 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    */
   public function getMetadataDisplayEntity() {
     if (empty($this->metadataDisplayEntity)) {
-      $this->metadataDisplayEntity = \Drupal::service('entity_type.manager')->getStorage('metadatadisplay_entity')
-        ->load($this->processor_entity_id);
+      if ($this->metadatadisplayentity_uuid) {
+        $metadatadisplayentities = $this->entityTypeManager()
+          ->getStorage('metadatadisplay_entity')
+          ->loadByProperties(['uuid' => $this->metadatadisplayentity_uuid]);
+        $metadatadisplayentity = reset($metadatadisplayentities);
+        if (isset($metadatadisplayentity)) {
+          $this->metadataDisplayEntity = $metadatadisplayentity;
+        }
+      }
     }
     return $this->metadataDisplayEntity;
   }
@@ -221,6 +231,20 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    */
   public function isCache(): bool {
     return $this->cache;
+  }
+
+  /**
+   * @return string
+   */
+  public function getMetadatadisplayentityUuid(): string {
+    return $this->metadatadisplayentity_uuid;
+  }
+
+  /**
+   * @param string $metadatadisplayentity_uuid
+   */
+  public function setMetadatadisplayentityUuid(string $metadatadisplayentity_uuid): void {
+    $this->metadatadisplayentity_uuid = $metadatadisplayentity_uuid;
   }
 
   /**
@@ -324,10 +348,13 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
 
     $url = NULL;
     $extension = NULL;
-
+    $responsetype = NULL;
     try {
-      $responsetypefield = $this->getMetadataDisplayEntity()->get('mimetype');
-      $responsetype = $responsetypefield->first()->getValue();
+      $entity = $this->getMetadataDisplayEntity();
+      if ($entity) {
+        $responsetypefield = $entity->get('mimetype');
+        $responsetype = $responsetypefield->first()->getValue();
+      }
       // We can have a LogicException or a Data One, both extend different
       // classes, so better catch any.
     }
@@ -343,7 +370,7 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
       return $url;
     }
 
-    $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
+    $responsetype = $responsetype['value'] ??  'text/html';
 
     // Guess extension based on mime,
     // \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeExtensionGuesser

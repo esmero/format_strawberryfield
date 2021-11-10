@@ -8,6 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -16,6 +17,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
@@ -38,13 +40,6 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
  * )
  */
 class StrawberryPagedFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
-
-  /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  protected $currentUser;
 
   /**
    * The entity manager.
@@ -79,8 +74,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    *   The formatter settings.
    * @param $view_mode
    *   The view mode.
-   * @param array
-   *   Any third party settings.
+   * @param array $third_party_settings
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    * @param \Drupal\Core\Session\AccountInterface $current_user
    *   The current User
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -89,10 +84,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    *   The Loaded twig Environment
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service
    *   The SBF Utility Service.
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service) {
-    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory);
-    $this->currentUser = $current_user;
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, ConfigFactoryInterface $config_factory, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service,  EmbargoResolverInterface $embargo_resolver) {
+    parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory, $embargo_resolver, $current_user);
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
     $this->strawberryFieldUtility = $strawberryfield_utility_service;
@@ -114,7 +109,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       $container->get('current_user'),
       $container->get('entity_type.manager'),
       $container->get('twig'),
-      $container->get('strawberryfield.utility')
+      $container->get('strawberryfield.utility'),
+      $container->get('format_strawberryfield.embargo_resolver')
+
     );
   }
 
@@ -126,7 +123,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       'iiif_group' => TRUE,
       'mediasource' => 'json_key',
       'json_key_source' => 'as:image',
-      'metadatadisplayentity_source' => NULL,
+      'metadatadisplayentity_uuid' => NULL,
       'manifesturl_source' => 'iiifmanifest',
       'max_width' => 720,
       'max_height' => 480,
@@ -139,77 +136,83 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
   public function settingsForm(array $form, FormStateInterface $form_state) {
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     $entity = NULL;
-    if ($this->getSetting('metadatadisplayentity_source')) {
-      $entity = $this->entityTypeManager
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
+      $entities = $this->entityTypeManager
         ->getStorage('metadatadisplay_entity')
-        ->load($this->getSetting('metadatadisplayentity_source'));
+        ->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $entity = reset($entities);
     }
 
     return [
-      'mediasource' => [
-        '#type' => 'select',
-        '#title' => $this->t('Source for your paged media'),
-        '#options' => [
-          'manifesturl' => $this->t(
-            'Strawberryfield JSON Key with a Manifest URL'
-          ),
-          'metadatadisplayentity' => $this->t(
-            'A IIIF Manifest generated by a Metadata Display template'
-          ),
-        ],
-        '#default_value' => $this->getSetting('mediasource'),
-        '#required' => TRUE,
-        '#attributes' => [
-          'data-formatter-selector' => 'mediasource',
-        ],
-      ],
-      'manifesturl_source' => [
-        '#type' => 'textfield',
-        '#title' => t(
-          'JSON Key from where to fetch an absolute full IIIF manifest URL'
-        ),
-        '#default_value' => $this->getSetting('manifesturl_source'),
-        '#states' => [
-          'visible' => [
-            ':input[data-formatter-selector="mediasource"]' => ['value' => 'manifesturl'],
+        'mediasource' => [
+          '#type' => 'select',
+          '#title' => $this->t('Source for your paged media'),
+          '#options' => [
+            'manifesturl' => $this->t(
+              'Strawberryfield JSON Key with a Manifest URL'
+            ),
+            'metadatadisplayentity' => $this->t(
+              'A IIIF Manifest generated by a Metadata Display template'
+            ),
+          ],
+          '#default_value' => $this->getSetting('mediasource'),
+          '#required' => TRUE,
+          '#attributes' => [
+            'data-formatter-selector' => 'mediasource',
           ],
         ],
-      ],
-      'metadatadisplayentity_source' => [
-        '#type' => 'entity_autocomplete',
-        '#target_type' => 'metadatadisplay_entity',
-        '#selection_handler' => 'default:metadatadisplay',
-        '#validate_reference' => FALSE,
-        '#default_value' => $entity,
-        '#states' => [
-          'visible' => [
-            ':input[data-formatter-selector="mediasource"]' => ['value' => 'metadatadisplayentity'],
+        'manifesturl_source' => [
+          '#type' => 'textfield',
+          '#title' => t(
+            'JSON Key from where to fetch an absolute full IIIF manifest URL'
+          ),
+          '#default_value' => $this->getSetting('manifesturl_source'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="mediasource"]' => ['value' => 'manifesturl'],
+            ],
           ],
         ],
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#description' => $this->t('Use 0 to force 100% width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'metadatadisplayentity_uuid' => [
+          '#type' => 'sbf_entity_autocomplete_uuid',
+          '#target_type' => 'metadatadisplay_entity',
+          '#selection_handler' => 'default:metadatadisplay',
+          '#validate_reference' => FALSE,
+          '#default_value' => $entity,
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="mediasource"]' => ['value' => 'metadatadisplayentity'],
+            ],
+          ],
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
+
+  public function setSettings(array $settings) {
+    return parent::setSettings($settings); // TODO: Change the autogenerated stub
+  }
+
 
   /**
    * {@inheritdoc}
@@ -235,10 +238,11 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           break;
         case 'metadatadisplayentity':
           $entity = NULL;
-          if ($this->getSetting('metadatadisplayentity_source')) {
-            $entity = $this->entityTypeManager
+          if ($this->getSetting('metadatadisplayentity_uuid')) {
+            $entities = $this->entityTypeManager
               ->getStorage('metadatadisplay_entity')
-              ->load($this->getSetting('metadatadisplayentity_source'));
+              ->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+            $entity = reset($entities);
             $label = $entity->toLink()->getText();
             $summary[] = $this->t('Pages processed by the "%manifesturl_source" Metadata Data Display template',
               [
@@ -375,11 +379,12 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
-    if ($this->getSetting('metadatadisplayentity_source')) {
+    if ($this->getSetting('metadatadisplayentity_uuid')) {
       /* @var $metadatadisplayentity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
-      $metadatadisplayentity = $this->entityTypeManager
+      $metadatadisplayentities = $this->entityTypeManager
         ->getStorage('metadatadisplay_entity')
-        ->load($this->getSetting('metadatadisplayentity_source'));
+        ->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+      $metadatadisplayentity = reset($metadatadisplayentities);
 
       if ($metadatadisplayentity) {
         // Quickly sort the pages. We assume user will use the as:image key
@@ -389,6 +394,28 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         $ordersubkey = 'sequence';
         StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
 
+        $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
+        $embargo_context = [];
+        // This one is for the Twig template
+        // We do not need the IP here. No use of showing the IP at all?
+        $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+        $embargo_tags = [];
+        if (is_array($embargo_info)) {
+          $embargoed = $embargo_info[0];
+          $context_embargo['data_embargo']['embargoed'] = $embargoed;
+
+          $embargo_tags[] = 'format_strawberryfield:all_embargo';
+          if ($embargo_info[1]) {
+            $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+            $context_embargo['data_embargo']['until'] = $embargo_info[1];
+          }
+          if ($embargo_info[2]) {
+            $embargo_context[] = 'ip';
+          }
+        }
+        else {
+          $context_embargo['data_embargo']['embargoed'] = $embargo_info;
+        }
         $context = [
           'data' => $jsondata,
           'node' => $item->getEntity(),
@@ -401,6 +428,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // In case someone decided to wipe the original context?
         // We bring it back!
         $context = $context + $original_context;
+
         $manifestrenderelement = $metadatadisplayentity->renderNative($context);
 
         $manifest = $manifestrenderelement->jsonSerialize();
@@ -442,6 +470,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         ];
       }
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
 
     return $element;
   }

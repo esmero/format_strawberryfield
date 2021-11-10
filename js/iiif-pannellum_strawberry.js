@@ -88,8 +88,9 @@
           var default_width = drupalSettings.format_strawberryfield.pannellum[element_id]['width'];
           var default_height = drupalSettings.format_strawberryfield.pannellum[element_id]['height'];
           var externalConfigURL = drupalSettings.format_strawberryfield.pannellum[element_id]['configjsonurl'];
+          //@TODO make this work?
           if (externalConfigURL) {
-            $.getJSON('http://query.yahooapis.com/v1/public/yql?q=select%20%2a%20from%20yahoo.finance.quotes%20WHERE%20symbol%3D%27WRC%27&format=json&diagnostics=true&env=store://datatables.org/alltableswithkeys&callback', function (data) {
+            $.getJSON(drupalSettings.format_strawberryfield.pannellum[element_id]['configjsonurl'], function (data) {
               console.log(data);
             });
           }
@@ -137,10 +138,13 @@
             // When loading a webform with an embeded Viewer
             // The context of Pannellum is not global
             // So we can't really use 'pannellum' directly
+            let mobile = false;
             if (checkMobileDevice()) {
+              mobile = true;
               console.log('Mobile defaulting to smaller version');
               var sourceimage = $(value).data('iiifImageMobile');
             } else {
+              mobile = false;
               var sourceimage = $(value).data('iiifImage');
             }
             if (!$multiscene) {
@@ -152,7 +156,7 @@
                 "hotSpots": hotspots,
                 "haov": $haov || 360,
                 "vaov": $vaov || 180,
-                "friction": 0.2,
+                "friction": 0.5,
                 "maxYaw": $maxYaw || 180,
                 "minYaw": $minYaw || -180,
                 "vOffset": $vOffset || 0,
@@ -177,9 +181,15 @@
                     }
                   });
                 }
+                if (mobile) {
+                  // Since the settings for other scenes is built by the Formatter as an Object
+                  // We need to replace the right Image for a mobile.
+                  drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panorama = drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panoramaMobile;
+                }
+                delete drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panoramaMobile;
               });
              // Add Autoload property for global Tour Viewer
-              drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad); 
+              drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad);
               var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
             }
             FormatStrawberryfieldPanoramas.panoramas.set(element_id, new FormatStrawberryfieldPanoramas(viewer));
