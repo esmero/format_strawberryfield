@@ -355,10 +355,11 @@ class MetadataDisplayForm extends ContentEntityForm {
     // Always refresh the Preview Element too.
     $form['preview']['#open'] = TRUE;
     $response->addCommand(new ReplaceCommand('#metadata-preview-container', $form['preview']));
-
+    \Drupal::messenger()->deleteByType(MessengerInterface::TYPE_STATUS);
     if ($form_state->getErrors()) {
       // Clear errors so the user does not get confused when reloading.
       \Drupal::messenger()->deleteByType(MessengerInterface::TYPE_ERROR);
+
       $form_state->clearErrors();
     }
     return $response;
