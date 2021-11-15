@@ -669,7 +669,6 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           }
         }
       }
-    }
     $full_tour->default = $default_scene;
     $full_tour->scenes = $single_scenes;
     //@TODO we should validate these puppies probably.
