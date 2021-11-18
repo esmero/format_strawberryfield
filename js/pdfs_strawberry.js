@@ -12,7 +12,8 @@
             $('.strawberry-document-item[data-iiif-document]').once('attache_pdf')
                 .each(function (index, value) {
                     var $document = $(this).data("iiif-document");
-                    var $theid = $(this).attr("id");
+                    let $theid = $(this).attr("id");
+                    let $thefileselectorid = $(this).attr("id") + '_file_selector';
                     var $initialpage = $(this).data("iiif-initialpage");
                     pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.worker.min.js';
 
@@ -133,6 +134,17 @@
                         document.getElementById($theid+'-pagecount').textContent = pdfDoc.numPages;
                         renderPage(pageNum);
                     });
+
+                    let select_file = $('#'+$thefileselectorid);
+                    if (select_file.length) {
+                        select_file.change(function() {
+                            pdfjsLib.getDocument($( this ).val()).promise.then(function(pdfDoc_) {
+                                pdfDoc = pdfDoc_;
+                                document.getElementById($theid+'-pagecount').textContent = pdfDoc.numPages;
+                                renderPage(pageNum);
+                            });
+                        });
+                    }
 
                 });
         }

@@ -9,6 +9,23 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Internal IIIF server URL'
 
+format_strawberryfield.embargo_settings:
+  type: config_object
+  label: 'Archipelago Metadata Driven Embargo configurations'
+  mapping:
+    date_until_json_key:
+      type: string
+      label: 'Which JSON key will contain a Date to lift the embargo'
+      default: date_embargoed_until
+    ip_json_key:
+      type: string
+      label: 'Which JSON key will contain a string with IP addresses that are allowed to see this Object'
+      default: ip_embargoed
+    enabled:
+      type: boolean
+      label: 'If Embargo is Globally enabled'
+      default: false
+
 field.formatter.settings.strawberry_audio_formatter:
   type: mapping
   label: 'Specific config for strawberry_audio_formatter'
@@ -33,7 +50,15 @@ field.formatter.settings.strawberry_audio_formatter:
       type: string
     number_media:
       type: integer
-
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Audio and Subtitle Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Audio and Subtitle Upload JSON keys to filter against'
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
@@ -66,6 +91,15 @@ field.formatter.settings.strawberry_image_formatter:
       type: string
     image_link:
       type: boolean
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
@@ -100,6 +134,15 @@ field.formatter.settings.strawberry_media_formatter:
     number_images:
       type: integer
       label: 'Number of images'
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
   label: 'Specific Config for strawberry_3d_formatter'
@@ -123,7 +166,15 @@ field.formatter.settings.strawberry_3d_formatter:
     number_models:
       type: integer
       label: 'Number of 3D Models to load from JSON'
-
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of 3D Model, UV textures and MTL Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of 3D Model, UV textures and MTL Upload JSON keys to filter against'
 field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -148,7 +199,7 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     specs:
       type: string
-    metadatadisplayentity_id:
+    metadatadisplayentity_uuid:
       type: string
     metadatadisplayentity_uselabel:
       type: string
@@ -177,10 +228,20 @@ field.formatter.settings.strawberry_paged_formatter:
       label: 'Whether to use global IIIF settings or not.'
     mediasource:
       type: string
-    metadatadisplayentity_source:
+    metadatadisplayentity_uuid:
       type: string
     manifesturl_source:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pannellum_formatter'
@@ -222,6 +283,16 @@ field.formatter.settings.strawberry_pannellum_formatter:
     number_images:
       type: integer
       label: "Number of Images"
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Image Panorama Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Image Panorama Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
@@ -250,6 +321,16 @@ field.formatter.settings.strawberry_video_formatter:
       type: integer
     posterframe:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of Video and Subtitle Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of Video and Subtitle Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_pdf_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pdf_formatter'
@@ -280,6 +361,16 @@ field.formatter.settings.strawberry_pdf_formatter:
     initial_page:
       type: integer
       label: 'First Page to display per PDF'
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of PDF Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
+
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_mirador_formatter'
@@ -290,9 +381,6 @@ field.formatter.settings.strawberry_mirador_formatter:
     iiif_base_url_internal:
       type: string
       label: 'Custom internal IIIF Server URL'
-    metadataexposeentity:
-      type: string
-      label: 'Machine name of the exposed Metadata Config Entity endpoint'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'
@@ -355,6 +443,15 @@ field.formatter.settings.strawberry_warc_formatter:
       label: 'Whether to use global IIIF settings or not.'
     json_key_starting_url:
       type: string
+    jmespath:
+      type: format_strawberryfield.jmespath_config.mapping
+      label: 'JMESPath filter expression settings'
+    upload_json_key_source:
+      type: string
+      label: 'Comma separated list of WebArchive packages Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'When embargoed, comma separated list of WebArchive packages Upload JSON keys to filter against'
 
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
@@ -455,3 +552,21 @@ ds.field_plugin.*:
     formatter:
       type: field.formatter.settings.[%parent.%parent.formatter]
       label: "Formatter settings for a generic ds.field plugin"
+
+# Reusable JMESPath Config schema for File dependant Formatters
+format_strawberryfield.jmespath_config.mapping:
+  type: mapping
+  label: 'JMESPath Config to be used in Formatters using direct access to Files'
+  mapping:
+    use_jmespath:
+      type: boolean
+      label: 'Whether to use JMESPath Expression to Filter Files'
+    fallback_jmespath:
+      type: boolean
+      label: 'Whether to use the base defaults in case JMESPath Expression returns null or not'
+    jmespath_filter:
+      type: string
+      label: 'A JMESPath filter expression'
+    jmespath_alternative_filter:
+      type: string
+      label: 'An alternative JMESPath filter expression'

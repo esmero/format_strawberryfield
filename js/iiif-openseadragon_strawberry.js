@@ -29,7 +29,7 @@
                     current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
                     var group = $(this).data("iiif-group");
                     var infojson = $(this).data("iiif-infojson");
-                    showthumbs = $(this).data("iiif-thumbnails");
+                    var showthumbs = $(this).data("iiif-thumbnails");
                     if (!groupsinfojsons.hasOwnProperty(group)) {
                         groupsinfojsons[group] = [infojson];
 
@@ -40,7 +40,8 @@
                             "annotations_tool": annotations_tool,
                             "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
                             "file_uuid" : file_uuid,
-                            "keystoreid" : keystoreid
+                            "keystoreid" : keystoreid,
+                            "showthumbs": showthumbs
                         }
 
                         if (typeof annotations != "undefined" && annotations == true) {
@@ -71,7 +72,7 @@
                 var thumbs = false
                 if (tiles.length > 1) {
                     sequence = true;
-                    thumbs = showthumbs;
+                    thumbs = groupssettings[group].showthumbs;
                 }
                 if (tiles.length == 0) return false;
 

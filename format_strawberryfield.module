@@ -4,14 +4,13 @@
  * Contains formater_strawberryfield.module.
  */
 
-use Drupal\Component\Serialization\Json;
-use \Drupal\Core\Entity\Display\EntityViewDisplayInterface;
-use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Url;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\node\NodeInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\Display\EntityDisplayInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Swaggest\JsonDiff\JsonDiff;
+
 /**
  * Implements hook_page_attachments().
  *
@@ -33,18 +32,18 @@ function format_strawberryfield_page_attachments(array &$page) {
   $page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
   $page['#attached']['library'][] = 'format_strawberryfield/pannellum';
   $page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
+  $page['#attached']['library'][] = 'format_strawberryfield/lazyload_strawberry';
   $page['#attached']['library'][] = 'core/jquery';
   $page['#attached']['library'][] = 'core/drupal.dialog.ajax';
   $page['#attached']['library'][] = 'core/drupal.ajax';
-
 }
 
+/**
+ * Implements hook_form_FORM_ID_alter() for node_form.
+ */
 function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface $form_state) {
-
   // Deal with Possible Addded Annotations.
-
   if ($form_state->get('hadAnnotations')) {
-    $node = $form_state->getFormObject()->getEntity();
     $count = $form_state->get('hadAnnotations');
 
     $form['annotations'] = [
@@ -90,47 +89,22 @@ function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface 
   }
 }
 
-
-
-function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
-  if ($entity->getEntityTypeId() == 'node' && $view_mode == 'full') {
-    $adotype = [];
-    $original_view_mode = $view_mode;
-    /* @var \Drupal\Core\Config\ImmutableConfig $config */
-    if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
-      foreach ($sbf_fields as $field_name) {
-        /* @var $field StrawberryFieldItem */
-        $field = $entity->get($field_name);
-        if (!$field->isEmpty()) {
-          foreach ($field->getIterator() as $delta => $itemfield) {
-            /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
-            $flatvalues = (array) $itemfield->provideFlatten();
-            if (isset($flatvalues['type'])) {
-              $adotype = array_merge($adotype, (array) $flatvalues['type']);
-            }
-          }
-        }
-      }
-    }
-    if (!empty($adotype)) {
-      $config = \drupal::config(
-        'format_strawberryfield.viewmodemapping_settings'
-      );
-      $viewmodemappings = $config->get('type_to_viewmode');
-      $viewmodemappings = !empty($viewmodemappings) ? (array) $viewmodemappings : [];
-      usort($viewmodemappings, ['\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm', 'sortSettings']);
-
-      foreach ($viewmodemappings as $viewmodemapping) {
-        if (($viewmodemapping['active'] == TRUE) && in_array($viewmodemapping['jsontype'],$adotype)) {
-          $view_mode = $viewmodemapping['view_mode'];
-          break;
-        }
-      }
-    }
-    // To be determined if we want to be dependat on ds module or not
-    // if so we really want to act on this alter and not the general one.
-    /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
+/**
+ * Implements hook_entity_view_mode_alter().
+ */
+function format_strawberryfield_entity_view_mode_alter(&$view_mode, Drupal\Core\Entity\EntityInterface $entity, $context) {
+  if ($entity->getEntityTypeId() != 'node') {
+    return;
   }
+  if ($view_mode != 'full') {
+    return;
+  }
+  $view_mode = \Drupal::service('format_strawberryfield.view_mode_resolver')->get($entity);
+
+  // To be determined if we want to be dependat on ds module or not
+  // if so we really want to act on this alter and not the general one.
+  /* \Drupal::moduleHandler()->alter('ds_switch_view_mode', $view_mode, $original_view_mode, $entity); */
+
 }
 
 /**
@@ -154,10 +128,12 @@ function format_strawberryfield_file_mimetype_mapping_alter(&$mapping) {
   // Add relevant Repository Mimetypes missing from D8
   $mapping['mimetypes']['obj_model_mimetype'] = 'model/obj';
   $mapping['mimetypes']['webarchive_mimetype'] = 'application/warc';
+  $mapping['mimetypes']['ob_material_mimetype'] = 'model/mtl';
   $mapping['extensions']['obj'] = 'obj_model_mimetype';
   $mapping['extensions']['warc'] = 'webarchive_mimetype';
   $mapping['extensions']['wacz'] = 'webarchive_mimetype';
   $mapping['extensions']['warc.gz'] = 'webarchive_mimetype';
+  $mapping['extensions']['mtl'] = 'ob_material_mimetype';
   // @see https://www.iana.org/assignments/media-types/media-types.xhtml
 
 }
@@ -174,7 +150,8 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
   }
 
   $account = \Drupal::currentUser();
-  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) && $account->hasPermission('add strawberryfield webannotation')) {
+  if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) &&
+    $account->hasPermission('add strawberryfield webannotation')) {
     foreach ($sbf_fields as $field_name) {
       /* @var $field \Drupal\Core\Field\FieldItemInterface */
       $field = $entity->get($field_name);
@@ -183,16 +160,14 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
         /** @var $itemfield \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem */
         $fullvalues = $itemfield->provideDecoded(TRUE);
         /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
-        $tempstore = \Drupal::service('tempstore.private')->get(
-          'webannotation'
-        );
+        $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
         $keystoreid = WebAnnotationController::getTempStoreKeyName(
           $field_name,
           $delta,
           $entity->uuid()
         );
         $annotation_values = $tempstore->get($keystoreid);
-        // If not present escape the loop. Needs to be EXACT NULL
+        // If not present escape the loop. Needs to be EXACT NULL.
         if ($annotation_values === NULL) {
           break 2;
         }
@@ -217,7 +192,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
           );
           // We just keep track of the changes. If none! Then we do not set
           // the formstate flag.
-          if ($r->getDiffCnt() > 0 ) {
+          if ($r->getDiffCnt() > 0) {
             $fullvalues['ap:annotationCollection'] = $annotation_values;
             $entity->{$field_name}[0]->setMainValueFromArray($fullvalues);
             $form_state->set('hadAnnotations', $r->getDiffCnt());
@@ -233,3 +208,162 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
     }
   }
 }
+
+/**
+ * Implements hook_css_alter().
+ */
+function format_strawberryfield_css_alter(&$css) {
+  // Remove the stable.theme's off-canvas CSS reset for metadata display edit
+  // routes, otherwise CodeMirror doesn't display properly.
+  // @TODO Reevaluate for Drupal 9.
+  // @see https://www.drupal.org/project/drupal/issues/2826722
+
+  if (\Drupal::routeMatch()->getRouteName() !== 'entity.metadatadisplay_entity.edit_form') {
+    return;
+  }
+  foreach ($css as $key => $item) {
+    // @see 'core/misc/dialog/off-canvas
+    // @see core/themes/stable/css/core/dialog/off-canvas
+    if (strpos($key, '/off-canvas.') !== FALSE) {
+      unset($css[$key]);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_contextual_links_alter().
+ *
+ * Converts one Metadata Display Entity Contextual Link with metadata to multiple
+ * Links with propert Titles.
+ *
+ */
+function format_strawberryfield_contextual_links_alter(array &$links, $group, array $route_parameters) {
+
+  if ($group == 'metadatadisplay_entity') {
+    $entities = [];
+    $other_entities = [];
+    $entities[] = $route_parameters['metadatadisplay_entity'] ?? NULL;
+    if (isset($links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids']) &&
+      is_array($links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids'])) {
+      $other_entities = $links['metadatadisplay.page_edit']['metadata']['metadatadisplay_entity_ids'];
+    }
+    $combined_entities = array_unique(array_merge($entities, $other_entities));
+    $metadata_display_entities = \Drupal::entityTypeManager()
+      ->getStorage('metadatadisplay_entity')
+      ->loadMultiple($combined_entities);
+    $weight = 0;
+    foreach ($metadata_display_entities as $entity) {
+      $weight++;
+      $links['metadatadisplay.page_edit.' . $entity->id()] = $links['metadatadisplay.page_edit'];
+      $links['metadatadisplay.page_edit.' . $entity->id()]['route_parameters']['metadatadisplay_entity'] = $entity->id();
+      $links['metadatadisplay.page_edit.' . $entity->id()]['title'] = t('Edit Metadatadata Display: @label',
+        ['@label' => $entity->label()]);
+      $links['metadatadisplay.page_edit.' . $entity->id()]['weight'] = $weight;
+    }
+    // After building new link entries Delete the original One.
+    unset($links['metadatadisplay.page_edit']);
+  }
+}
+
+
+/**
+ * Implements hook_ENTITY_TYPE_view_alter().
+ */
+function format_strawberryfield_node_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
+  // Empty. Issue is if this hook does not exist, the broader one fail;
+}
+
+/**
+ * Implements hook_entity_view_alter().
+ */
+function format_strawberryfield_entity_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
+
+  if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
+    $display_array = $display->toArray();
+    // First we get main field/that has a SBF
+    foreach ($sbf_fields as $sbf_field_name) {
+      if (isset($display_array['content'][$sbf_field_name]['settings']['metadatadisplayentity_uuid'])) {
+        $uuid = $display_array['content'][$sbf_field_name]['settings']['metadatadisplayentity_uuid'];
+        $entities = \Drupal::entityTypeManager()
+          ->getStorage('metadatadisplay_entity')
+          ->loadByProperties(['uuid' => $uuid]);
+        $entity = reset($entities);
+        if ($entity) {
+          $build['#contextual_links']['metadatadisplay_entity'] = [
+            'route_parameters' => ['metadatadisplay_entity' => $entity->id()],
+          ];
+        }
+      }
+    }
+    // Now we deal with in memory DS copy fields
+    if (isset($display_array['third_party_settings']['ds']['fields'])) {
+      foreach ($display_array['third_party_settings']['ds']['fields'] as $candidate_field) {
+        // The list of formatters (static here, we may want to make this a method in a service
+        // or add a Field Formatter annotation in the future?) that use metadatadisplay_entities
+        if (in_array($candidate_field['formatter'],
+          [
+            'strawberry_metadata_formatter',
+            'strawberry_mirador_formatter',
+            'strawberry_paged_formatter',
+            'strawberry_map_formatter'
+          ])) {
+          $uuid = $candidate_field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL;
+          if ($uuid) {
+            $entities = \Drupal::entityTypeManager()
+              ->getStorage('metadatadisplay_entity')
+              ->loadByProperties(['uuid' => $uuid]);
+            $entity = reset($entities);
+            if ($entity) {
+              if (isset($build['#contextual_links']['metadatadisplay_entity'])) {
+                $build['#contextual_links']['metadatadisplay_entity']['metadata']['metadatadisplay_entity_ids'][] = (int) $entity->id();
+              }
+              else {
+                $build['#contextual_links']['metadatadisplay_entity'] = [
+                  'route_parameters' => ['metadatadisplay_entity' => (int) $entity->id()],
+                ];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * We push our hooks to the end so we have all DS processed data available.
+
+ */
+function format_strawberryfield_module_implements_alter(&$implementations, $hook) {
+  if (($hook == 'entity_view_alter') || ($hook == 'node_view_alter')) {
+    $group = $implementations['format_strawberryfield'] ?? NULL;
+    if ($group !== NULL) {
+      unset($implementations['format_strawberryfield']);
+      $implementations['format_strawberryfield'] = $group;
+    }
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function format_strawberryfield_cron() {
+  $now = \Drupal::requestStack()->getCurrentRequest()->server->get('REQUEST_TIME');
+  $timesincerun = $now - \Drupal::state()->get('system.cron_last');
+  if ($timesincerun/60/60/24 > 7) {
+    \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:all_embargo']);
+  }
+  else {
+    $dayssince = ceil($timesincerun/60/60/24);
+    $current_time = time();
+    for ($i = 0; $i < $dayssince; $i++) {
+      $date_to_invalidate =  date('Y-m-d', $current_time - 60 * 60 * 24 * $i);
+      \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:embargo:'.$date_to_invalidate]);
+    }
+  }
+
+}
+

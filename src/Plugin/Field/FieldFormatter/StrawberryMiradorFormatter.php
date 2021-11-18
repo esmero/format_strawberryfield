@@ -10,6 +10,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\UrlHelper;
@@ -40,14 +41,6 @@ use Drupal\Component\Utility\NestedArray;
 class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  protected $currentUser;
-
-
-  /**
    * The entity manager.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
@@ -58,29 +51,18 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
   /**
    * StrawberryMiradorFormatter constructor.
    *
-   * @param string $plugin_id
-   *   The plugin_id for the formatter.
+   * @param $plugin_id
    * @param $plugin_definition
-   *   The plugin implementation definition.
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field_definition
-   *   The definition of the field to which the formatter is associated.
    * @param array $settings
-   * @param string $label
-   *   The formatter settings.
+   * @param $label
    * @param $view_mode
-   *   The view mode.
-   * @param array
-   *   Any third party settings.
-   * @param \Drupal\Core\Session\AccountInterface $current_user
-   *   The current User
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The Entity Type manager
-   * @param \Drupal\Core\Template\TwigEnvironment $twigEnvironment
-   *   The Loaded twig Environment
+   * @param array $third_party_settings
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The config factory.
+   * @param \Drupal\Core\Session\AccountInterface $current_user
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
-
   public function __construct(
     $plugin_id,
     $plugin_definition,
@@ -91,7 +73,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     array $third_party_settings,
     ConfigFactoryInterface $config_factory,
     AccountInterface $current_user,
-    EntityTypeManagerInterface $entity_type_manager
+    EntityTypeManagerInterface $entity_type_manager,
+    EmbargoResolverInterface $embargo_resolver
   ) {
     parent::__construct(
       $plugin_id,
@@ -101,9 +84,10 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       $label,
       $view_mode,
       $third_party_settings,
-      $config_factory
+      $config_factory,
+      $embargo_resolver,
+      $current_user
     );
-    $this->currentUser = $current_user;
     $this->entityTypeManager = $entity_type_manager;
   }
 
@@ -126,7 +110,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       $configuration['third_party_settings'],
       $container->get('config.factory'),
       $container->get('current_user'),
-      $container->get('entity_type.manager')
+      $container->get('entity_type.manager'),
+      $container->get('format_strawberryfield.embargo_resolver')
     );
   }
 
@@ -430,8 +415,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       ]
     );
 
-
-
     return array_merge($summary, parent::settingsSummary());
   }
 
@@ -532,7 +515,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
               'strawberry-mirador-item',
               'MiradorViewer',
               'field-iiif',
-              'container',
             ],
             'style' => "width:{$max_width_css}; height:{$max_height}px",
             'height' => $max_height,

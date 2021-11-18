@@ -2,15 +2,23 @@ figure {
     margin: 0
 }
 video.audio-av {
-    border: 1px solid #aaa;
-    object-fit: initial;
+    object-fit: contain;
 }
 
 ::cue {
-    font-size: 12px;
+    font-size: 16px;
+    background-color: black;
+    color: ghostwhite;
 }
 
 video.video-av {
-    border: 1px solid #aaa;
-    object-fit: initial;
+    object-fit: contain;
 }
+
+
+video.audio-av::-webkit-media-text-track-display {
+    font-size: 16px;
+    top: -100% !important;
+}
+
+

@@ -2,13 +2,21 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\file\FileInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
+use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -24,12 +32,18 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $iiifConfig;
+
   /**
    * The Current User
-   * @var \Drupal\Core\Session\AccountProxyInterface
+   * @var \Drupal\Core\Session\AccountInterface
    */
 
   protected $currentUser;
+
+  /**
+   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface
+   */
+  protected $embargoResolver;
 
   /**
    * StrawberryBaseFormatter Constructor.
@@ -51,7 +65,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    *   The definition of the field to which the formatter is associated.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The ConfigFactory Container Interface.
-   * @param \Drupal\Core\Session\AccountProxyInterface|null $current_user
+   * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
+   * @param \Drupal\Core\Session\AccountInterface $current_user
    */
   public function __construct(
     $plugin_id,
@@ -62,7 +77,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     string $view_mode,
     array $third_party_settings,
     ConfigFactoryInterface $config_factory,
-    AccountProxyInterface $current_user = NULL
+    EmbargoResolverInterface $embargo_resolver,
+    AccountInterface $current_user = NULL
   ) {
     parent::__construct(
       $plugin_id,
@@ -75,6 +91,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     );
     $this->iiifConfig = $config_factory->get('format_strawberryfield.iiif_settings');
     $this->currentUser = $current_user;
+    $this->embargoResolver = $embargo_resolver;
   }
 
   /**
@@ -90,6 +107,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       $configuration['view_mode'],
       $configuration['third_party_settings'],
       $container->get('config.factory'),
+      $container->get('format_strawberryfield.embargo_resolver'),
       $container->get('current_user')
     );
   }
@@ -102,6 +120,8 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       'iiif_base_url' => \Drupal::config('format_strawberryfield.iiif_settings')->get('pub_server_url'),
       'iiif_base_url_internal' => \Drupal::config('format_strawberryfield.iiif_settings')->get('int_server_url'),
       'use_iiif_globals' => TRUE,
+      'upload_json_key_source' => '',
+      'embargo_json_key_source' => '',
     ];
   }
 
@@ -142,6 +162,12 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     $summary[] = $this->t('IIIF Media Server Internal base URI: %url', [
       '%url' => $this->getIiifUrls()['internal'],
     ]);
+    $summary[] = $this->t('Limited to the following file upload JSON Keys: %value', [
+      '%value' => strlen(trim($this->getSetting('upload_json_key_source' ))) == 0 ? 'Fetch from any available' : $this->getSetting('upload_json_key_source')
+    ]);
+    $summary[] = $this->t('Embargo Alternate upload JSON Keys: %value', [
+      '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ))) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
+    ]);
     return $summary;
   }
 
@@ -149,6 +175,24 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    * {@inheritdoc}
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
+    $element['upload_json_key_source'] = [
+      '#type' => 'textfield',
+      '#title' => t('JSON Key(s) where the files to be used by this formatter where uploaded/store in your JSON.'),
+      '#description' => t('You can add multiple ones separated by comma. Some viewers use multiple file types, e.g audios and Subtitles, in that case please add all of them.  In case of multiple Keys for the same type e.g "audios1", "audios2", the key names will be also used for grouping. Leave empty to not filter by upload location at all.'),
+      '#default_value' => $this->getSetting('upload_json_key_source'),
+      '#required' => FALSE,
+      '#maxlength' => 255,
+      '#size' => 64,
+    ];
+    $element['embargo_json_key_source'] = [
+      '#type' => 'textfield',
+      '#title' => t('When embargo is used or applied, alternate JSON Key(s) where the files to be used by this formatter where uploaded/store in your JSON.'),
+      '#description' => t('Be careful about providing same keys used for user that can by pass an embargo. You can add multiple ones separated by comma. Some viewers use multiple file types, e.g audios and Subtitles, in that case please add all of them. In case of multiple Keys for the same type e.g "audios1", "audios2", the key names will be also used for grouping. Leave empty to not provide any alternate embargo option at all.'),
+      '#default_value' => $this->getSetting('upload_json_key_source'),
+      '#required' => FALSE,
+      '#maxlength' => 255,
+      '#size' => 64,
+    ];
     $element['use_iiif_globals'] = [
       '#type' => 'checkbox',
       '#title' => t('Use Global IIIF Urls'),
@@ -257,6 +301,198 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    */
   protected function guessMimeForExternalUri(string $uripath) {
     return \Drupal::service('file.mime_type.guesser')->guess($uripath);
+  }
+
+
+  /**
+   * Fetches the needed media by a given Formatter from JSON array.
+   *
+   * @param int $delta
+   *    The field delta
+   * @param FieldItemListInterface $items
+   *    The actual Field Items list
+   * @param array $elements
+   *    A by reference enriched render $element if
+   *    $generate_element == TRUE
+   * @param bool $generate_element
+   *    Generate/pass by reference render $element
+   * @param array $jsondata
+   *    The original JSON data as an array for this particular field delta
+   * @param string $mediatype
+   *    The type of media to fetch, e.g 'Images' for the as: key prop.
+   * @param string $key
+   *    The Key from which to fetch the files, e.g as:images
+   * @param string $ordersubkey
+   *    Which Key inside as:images is used for sorting
+   * @param int $number_media
+   *    How much media to fetch, if 0 fetch all
+   * @param array $upload_keys
+   *    To which JSON Key the actual file was uploaded as a filter option
+   *    This is passed as an array of keys.
+   *
+   * @param array $extra_conditions
+   *
+   * @return array
+   *    With all files keyed by upload JSON key
+   *    with each item in the following form
+   * $media[$mediaitem['dr:for']][] = [
+   * 'file' =>  $file / A file Entity
+   * 'media_id' => $id / The key inside the chosen as:mediatype
+   * ];
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function fetchMediaFromJsonWithFilter(int $delta, FieldItemListInterface $items, array &$elements, bool $generate_element, array $jsondata, string $mediatype, string $key, string $ordersubkey, int $number_media, array $upload_keys, array $extra_conditions = []) {
+    $media = [];
+    $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
+    if (isset($jsondata[$key])) {
+      $i = 0;
+      // Order Media based on a given 'sequence' key
+      StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+      foreach ($jsondata[$key] as $id => $mediaitem) {
+        if (isset($mediaitem['type']) && $mediaitem['type'] == $mediatype) {
+          if ((!empty($mediaitem['dr:fid']) && !empty($mediaitem['dr:for'])) && (empty($upload_keys) || in_array($mediaitem['dr:for'], $upload_keys))) {
+            // This is a bit complex but the idea is that we can pass a value or an array as a source for a condition
+            // and a value or an array as the condition itself.
+            // if the condition itself is also an array we assume (blindly here) that the check is against another key in the same
+            // Technical metadata instead of an actual value.
+            // Only simple way. So again, to check against a fixed value pass a value, to check agains another
+            // Array (compare two keys) then please pass an array.
+            // We can also pass an assertion (comparison operator like !==)
+            foreach($extra_conditions as $condition) {
+              if (isset($condition['source']) && isset($condition['condition'])) {
+                if (is_array($condition['condition'])) {
+                  $condition_value = NestedArray::getValue($mediaitem, $condition['condition']);
+                }
+                else {
+                  $condition_value = $condition['condition'];
+                }
+                $op = "===";
+                if (isset($condition['comp'])) {
+                  $op = $condition['comp'] ?? $op;
+                }
+                if (is_array($condition['source']) && !($this->varComp(NestedArray::getValue($mediaitem, $condition['source']), $op, $condition_value))) {
+                  continue 2;
+                }
+                elseif (!is_array($condition['source']) && isset($mediaitem[$condition['source']]) && !($this->varComp($mediaitem[$condition['source']], $op, $condition_value))) {
+                  continue 2;
+                }
+              }
+            }
+
+            $file = OcflHelper::resolvetoFIDtoURI(
+              $mediaitem['dr:fid']
+            );
+            if (!$file) {
+              continue;
+            }
+
+            //@TODO if no media key to file loading was possible
+            // means we have a broken/missing media reference
+            // we should inform to logs and continue
+            if ($this->checkAccess($file)) {
+              if ($generate_element) {
+                $this->generateElementForItem($delta, $items, $file,
+                  $iiifhelper, $i, $elements, $jsondata, $mediaitem);
+              }
+              // This allows us to group by $mediaitem['dr:for']. // e.g images
+              // and also returns the key of this file inside the as:structure
+              // In case i need to find quickly in some other place its
+              // Technical metadata
+              $media[$mediaitem['dr:for']][$i] = [
+                'file' =>  $file,
+                'media_id' => $id,
+                'file_name' => $mediaitem['name'] ?? $file->getFilename(),
+              ];
+              $i++;
+              if ($i > (int) $number_media && !empty($number_media)) {
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return $media;
+  }
+
+  /**
+   * Generates the actual Render array entry for a given File.
+   *
+   * @param int $delta
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   * @param \Drupal\file\FileInterface $file
+   * @param \Drupal\format_strawberryfield\Tools\IiifHelper $iiifhelper
+   * @param int $i
+   * @param array $elements
+   * @param array $jsondata
+   *
+   * This is a stub method and each formatter needs to implements its own
+   * Render array generation. For a working example see
+   * @param array $mediaitem
+   *
+   * @see \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+    // WARNING. THIS is a stub method. Please implement the correct render
+    // Array based on the needs of your own Formatter when
+    // extending this base class.
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
+    $max_height = $this->getSetting('max_height');
+    $nodeuuid = $items->getEntity()->uuid();
+
+    $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
+    if ($iiifidentifier == NULL || empty($iiifidentifier)) {
+      return;
+    }
+
+    $uniqueid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+    $elements[$delta]['media' . $i] = [
+      '#type' => 'container',
+      '#default_value' => $uniqueid,
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => [
+          'strawberry-media-item',
+          'field-iiif',
+        ],
+        'style' => "width:{$max_width_css}; height:{$max_height}px",
+      ],
+
+      '#cache' => [
+        'tags' => $file->getCacheTags(),
+      ],
+    ];
+    if (isset($item->_attributes)) {
+      $elements[$delta] += ['#attributes' => []];
+      $elements[$delta]['#attributes'] += $item->_attributes;
+      // Unset field item attributes since they have been included
+      // in the formatter output and should not be rendered in the
+      // field template.
+      unset($item->_attributes);
+    }
+  }
+
+  /**
+   * @param $var1
+   * @param mixed $op
+   * @param mixed $var2
+   *
+   * @return bool
+   */
+  protected function varComp($var1, string $op, $var2) {
+    switch ($op) {
+      case "==": return $var1 == $var2;
+      case "!=": return $var1 != $var2;
+      case "!==": return $var1 !== $var2;
+      case ">=": return $var1 >= $var2;
+      case "<=": return $var1 <= $var2;
+      case ">": return $var1 >  $var2;
+      case "<": return $var1 <  $var2;
+      case "===": return $var1 ===  $var2;
+      default: return true;
+    }
   }
 
 }

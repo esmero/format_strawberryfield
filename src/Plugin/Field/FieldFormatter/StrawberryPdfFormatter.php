@@ -8,7 +8,13 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\file\FileInterface;
+use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
@@ -147,20 +153,25 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
+
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
-    $max_height = $this->getSetting('max_height');
-    $number_pages =  $this->getSetting('number_pages');
-    $number_documents =  $this->getSetting('number_documents');
-    $initial_page =  $this->getSetting('initial_page');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+    $current_language = $items->getEntity()->get('langcode')->value;
+    $nodeid = $items->getEntity()->id();
     $key = $this->getSetting('json_key_source');
+    $number_media =  $this->getSetting('number_documents') ?? 0;
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $fieldname = $items->getName();
+
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -197,114 +208,211 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         }
       },
       }*/
-      $i = 0;
-      if (isset($jsondata[$key])) {
-        // Order Documents based on a given 'sequence' key
-        $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        foreach ($jsondata[$key] as $mediaitem) {
-          $i++;
-          if ($i > $number_documents && (int)$number_documents !=0) {
-            break;
-          }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Document') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              // @TODO we can refactor a lot here and move it to base methods
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
-              if (!$file) {
-                continue;
-              }
-              //@TODO if no Document key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
-              // Also check if user has access and the mimeType is of an PDF.
-              if ($this->checkAccess($file) && $file->getMimeType() == 'application/pdf') {
-                $documenturl = $file->getFileUri();
-                // We assume here file could not be accessible publicly
-                $route_parameters = [
-                  'node' => $nodeid,
-                  'uuid' => $file->uuid(),
-                  'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
-                ];
-                $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
-                $uniqueid =
-                  'pdf-' . $items->getName(
-                  ) . '-' . $nodeuuid . '-' . $delta . '-document' . $i;
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      $embargo_context = [];
+      // This one is for the Twig template
+      // We do not need the IP here. No use of showing the IP at all?
+      $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+      $embargo_tags = [];
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $context_embargo['data_embargo']['embargoed'] = $embargoed;
 
-                //@TODO make a select component that is ajax driven.
-                // If we have more than a single Document, simply rebuild and reload the given $delta instead of rendering
-                // Multiple deltas as i do here.
-                $elements[$delta]['controller' . $i] = [
-                  '#theme' => 'format_strawberryfield_pdfs',
-                  '#item' =>  [
-                    'id' =>  'document_' . $uniqueid,
-                  ]
-                ];
-
-
-                if ($max_height == 0) {
-                  $css_style = "width:{$max_width_css};height:auto";
-                } else {
-                  $css_style = "width:{$max_width_css}; height:{$max_height}px";
-                }
-
-
-
-
-                $elements[$delta]['pdf' . $i] = [
-                  '#type' => 'html_tag',
-                  '#tag' => 'canvas',
-                  '#attributes' => [
-                      'class' => ['field-pdf-canvas','strawberry-document-item'],
-                      'id' => 'document_' . $uniqueid,
-                      'style' => $css_style,
-                      'data-iiif-document' =>  $publicurl->toString(),
-                      'data-iiif-initialpage' => $initial_page,
-                      'data-iiif-pages' => $number_pages,
-                  ],
-                   '#alt' => $this->t(
-                      'PDF @name for  @label',
-                      [
-                        '@label' => $items->getEntity()->label(),
-                        '@name' => $file->getFilename()
-                      ]),
-                  ];
-
-                  $elements[$delta]['pdf'.$i]['#attached']['drupalSettings']['format_strawberryfield']['pdf']['innode'][$uniqueid] = $nodeuuid;
-                  $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/pdfs_strawberry';
-
-              }
-              else {
-                // @TODO Deal with no access here
-                // Should we put a thumb? Just hide?
-                // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['pdf'.$i] = [
-                  '#markup' => '<i class="fas fa-times-circle"></i>',
-                  '#prefix' => '<span>',
-                  '#suffix' => '</span>',
-                ];
-              }
-            } elseif (isset($mediaitem['url'])) {
-              // TODO. We can serve non mananged by US PDFS directly here
-              // We would just have less data. But that is all
-              $elements[$delta]['[pdf'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
-            }
-
-          }
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+          $context_embargo['data_embargo']['until'] = $embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
         }
       }
+      else {
+        $context_embargo['data_embargo']['embargoed'] = $embargo_info;
+      }
+
+      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+        $ordersubkey = 'sequence';
+        $conditions[] = [
+          'source' => ['dr:mimetype'],
+          'condition' => 'application/pdf',
+        ];
+        // This fetchMediaFromJsonWithFilter impl. has JMESPATH filtering.
+        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
+          TRUE, $jsondata, 'Document', $key, $ordersubkey, $number_media,
+          $upload_keys, $conditions);
+      }
+
+      if (empty($elements[$delta])) {
+        $elements[$delta] = [
+          '#markup' => '<i class="fas fa-times-circle"></i>',
+          '#prefix' => '<span>',
+          '#suffix' => '</span>',
+        ];
+      }
+
+      if (isset($item->_attributes)) {
+        $elements[$delta] += ['#attributes' => []];
+        $elements[$delta]['#attributes'] += $item->_attributes;
+        // Unset field item attributes since they have been included in the
+        // formatter output and should not be rendered in the field template.
+        unset($item->_attributes);
+      }
+
       // Get rid of empty #attributes key to avoid render error
-      if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
+      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
         unset($elements[$delta]["#attributes"]);
       }
     }
+
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_height = $this->getSetting('max_height');
+    $number_pages =  $this->getSetting('number_pages');
+    $initial_page =  $this->getSetting('initial_page');
+    /* @var \Drupal\file\FileInterface[] $files */
+    // Fixing the key to extract while coding to 'Media'
+    $nodeuuid = $items->getEntity()->uuid();
+    $nodeid = $items->getEntity()->id();
+
+    $route_parameters = [
+      'node' => $nodeid,
+      'uuid' => $file->uuid(),
+      'format' => 'default.'. pathinfo($file->getFilename(), PATHINFO_EXTENSION)
+    ];
+    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary', $route_parameters);
+    $uniqueid =
+      'pdf-' . $items->getName(
+      ) . '-' . $nodeuuid . '-' . $delta . '-document' . $i;
+
+    $cache_contexts = [
+      'url.site',
+      'url.path',
+      'url.query_args',
+      'user.permissions'
+    ];
+
+
+    if ($i == 0) {
+      //@TODO make a select component that is ajax driven.
+      // If we have more than a single Document, simply rebuild and reload the given $delta instead of rendering
+      // Multiple deltas as i do here.
+      $elements[$delta]['controller' . $i] = [
+        '#theme' => 'format_strawberryfield_pdfs',
+        '#item' => [
+          'id' => 'document_' . $uniqueid,
+        ]
+      ];
+
+      if ($max_height == 0) {
+        $css_style = "width:{$max_width_css};height:auto";
+      }
+      else {
+        $css_style = "width:{$max_width_css}; height:{$max_height}px";
+      }
+
+      $elements[$delta]['pdf' . $i] = [
+        '#type' => 'html_tag',
+        '#tag' => 'canvas',
+        '#attributes' => [
+          'class' => ['field-pdf-canvas', 'strawberry-document-item'],
+          'id' => 'document_' . $uniqueid,
+          'style' => $css_style,
+          'data-iiif-document' => $publicurl->toString(),
+          'data-iiif-initialpage' => $initial_page,
+          'data-iiif-pages' => $number_pages,
+        ],
+        '#alt' => $this->t(
+          'PDF @name for @label',
+          [
+            '@label' => $items->getEntity()->label(),
+            '@name' => $file->getFilename()
+          ]),
+      ];
+      $options[$publicurl->toString()] =$this->t(
+        'PDF @name for @label',
+        [
+          '@label' => $items->getEntity()->label(),
+          '@name' => $mediaitem['name'] ?? $file->getFilename()
+        ]);
+      $elements[$delta]['select'] = [
+        '#title' => t('Select a PDF'),
+        '#attributes' => [
+          'id' => 'document_' . $uniqueid .'_file_selector',
+          'class' => ['field-pdf-selector', 'strawberry-document-selector'],
+          ],
+        '#weight' => -100,
+        '#type' => 'select',
+        '#options' => $options,
+        '#default_value'  => $publicurl->toString(),
+        '#access' => FALSE,
+      ];
+
+      $elements[$delta]['pdf' . $i]['#attached']['drupalSettings']['format_strawberryfield']['pdf']['innode'][$uniqueid] = $nodeuuid;
+      $elements[$delta]['pdf' . $i]['#attached']['drupalSettings']['format_strawberryfield']['pdf']['innode'][$uniqueid] = $nodeuuid;
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/pdfs_strawberry';
+    }
+    else {
+
+      $options = $elements[$delta]['select']['#options'] ?? [];
+      $options[$publicurl->toString()] =$this->t(
+        'PDF @name for @label',
+        [
+          '@label' => $items->getEntity()->label(),
+          '@name' => $mediaitem['name'] ?? $file->getFilename()
+        ]);
+
+      $elements[$delta]['select']['#options'] = $options;
+      $elements[$delta]['select']['#access'] = TRUE;
+    }
+  }
+
+  /**
+   * @param array $form
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   */
+  public static function changePdfCallBack(
+    array $form,
+    FormStateInterface $form_state
+  ) {
+    error_log('changeSceneCallBack called');
+    $button = $form_state->getTriggeringElement();
+    $element = NestedArray::getValue(
+      $form,
+      array_slice($button['#array_parents'], 0, -1)
+    );
+    $response = new AjaxResponse();
+    $element_name = $element['#name'];
+    $data_selector = $element['hotspots_temp']['#attributes']['data-webform_strawberryfield-selector'];
+
+
+    // Now update the JS settings
+    if ($form_state->getValue([$element_name, 'scene'])) {
+      $current_scene = $form_state->getValue([$element_name, 'scene']);
+      static::updateJsSettings($form_state, $current_scene, $element_name, $response);
+    }
+    // And now replace the container
+    $response->addCommand(
+      new ReplaceCommand(
+        '[data-webform_strawberryfield-selector="' . $data_selector . '"]',
+        $element['hotspots_temp']
+      )
+    );
+    return $response;
+  }
+
 }
