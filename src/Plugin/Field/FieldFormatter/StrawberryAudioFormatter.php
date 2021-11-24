@@ -86,14 +86,14 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         '#min' => 0,
         '#required' => TRUE
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t('Plays Audio from JSON');
 
     if ($this->getSetting('json_key_source')) {
