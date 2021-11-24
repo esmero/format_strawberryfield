@@ -161,6 +161,11 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
 
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
     $number_media = $this->getSetting('number_media') ?? 0;
