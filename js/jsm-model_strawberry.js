@@ -108,7 +108,7 @@
                                     onStart: function (/*taskCount, meshes*/) {
                                         viewer.EnableDraw(false);
                                         viewer.navigation.SetNearDistanceLimit (0.5);
-                                        viewer.navigation.SetFarDistanceLimit (20.0);
+                                        viewer.navigation.SetFarDistanceLimit (40.0);
                                     },
                                     onProgress: function (currentTask, meshes) {
                                         while (currentMeshIndex < meshes.length) {
