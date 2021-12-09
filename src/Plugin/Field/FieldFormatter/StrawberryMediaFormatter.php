@@ -169,6 +169,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
@@ -204,8 +206,6 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
         ->uuid(), $jsondata);
       // Check embargo
-      $embargo_context = [];
-      $embargo_tags = [];
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $embargo_tags[] = 'format_strawberryfield:all_embargo';
