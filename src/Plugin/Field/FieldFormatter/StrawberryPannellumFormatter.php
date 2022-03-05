@@ -263,6 +263,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
@@ -297,11 +299,10 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       }
 
       $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
-      $embargo_context = [];
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
-      $embargo_tags = [];
+
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $context_embargo['data_embargo']['embargoed'] = $embargoed;

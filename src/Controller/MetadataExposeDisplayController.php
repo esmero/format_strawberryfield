@@ -141,6 +141,8 @@ class MetadataExposeDisplayController extends ControllerBase {
       );
     }
     $context = [];
+    $embargo_context = [];
+    $embargo_tags = [];
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
@@ -210,11 +212,9 @@ class MetadataExposeDisplayController extends ControllerBase {
           }
 
           $embargo_info = $this->embargoResolver->embargoInfo($node->uuid(), $jsondata);
-          $embargo_context = [];
           // This one is for the Twig template
           // We do not need the IP here. No use of showing the IP at all?
           $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
-          $embargo_tags = [];
           if (is_array($embargo_info)) {
             $embargoed = $embargo_info[0];
             $context_embargo['data_embargo']['embargoed'] = $embargoed;

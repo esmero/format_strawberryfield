@@ -154,6 +154,8 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
     $nodeid = $items->getEntity()->id();
     $number_media = $this->getSetting('number_media') ?? 1;
     $key = $this->getSetting('json_key_source');
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
@@ -195,8 +197,6 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
         ->uuid(), $jsondata);
       // Check embargo
-      $embargo_context = [];
-      $embargo_tags = [];
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $embargo_tags[] = 'format_strawberryfield:all_embargo';

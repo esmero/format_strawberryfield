@@ -194,6 +194,8 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
     $nodeid = $items->getEntity()->id();
+    $embargo_context = [];
+    $embargo_tags = [];
 
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
@@ -229,11 +231,10 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         return $elements[$delta] = ['#markup' => $message];
       }
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
-      $embargo_context = [];
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
-      $embargo_tags = [];
+
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $context_embargo['data_embargo']['embargoed'] = $embargoed;
