@@ -88,12 +88,21 @@ use Twig\Source;
  *     "access" = "Drupal\format_strawberryfield\MetadataDisplayAccessControlHandler",
  *   },
  *   base_table = "strawberryfield_metadatadisplay",
+ *   revision_table = "strawberryfield_metadatadisplay_revision",
+ *   revision_data_table = "strawberryfield_metadatadisplay_field_revision",
  *   admin_permission = "administer metadatadisplay entity",
  *   fieldable = TRUE,
  *   entity_keys = {
  *     "id" = "id",
  *     "label" = "name",
- *     "uuid" = "uuid"
+ *     "uuid" = "uuid",
+ *     "revision" = "revision_id",
+ *     "published" = "status"
+ *   },
+ *   revision_metadata_keys = {
+ *     "revision_user" = "revision_user",
+ *     "revision_created" = "revision_created",
+ *     "revision_log_message" = "revision_log_message"
  *   },
  *   links = {
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
@@ -218,6 +227,17 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDescription(t('The ID of the Metadata Display entity.'))
       ->setReadOnly(TRUE);
 
+    $fields['revision_id'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('REVISION_ID'))
+      ->setDescription(t('The revision ID of the Metadata Display entity.'))
+      ->setReadOnly(TRUE);
+    $fields['changed'] = BaseFieldDefinition::create('changed')
+      ->setLabel(t('Changed'))
+      ->setDescription(t('The time that the term was last edited.'))
+      ->setTranslatable(TRUE);
+
+    // Enable revision support for the 'changed' field.
+    $fields['changed']->setRevisionable(TRUE);
     // Standard field, unique outside of the scope of the current project.
     $fields['uuid'] = BaseFieldDefinition::create('uuid')
       ->setLabel(t('UUID'))
