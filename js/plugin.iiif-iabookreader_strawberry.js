@@ -72,12 +72,7 @@ BookReader.prototype.loadManifest = function () {
   // Simplest approach, we got a full manifest passed as an Object
   if (self.options.iiifmanifest != null) {
     self.jsonLd = self.options.iiifmanifest;
-    self.bookTitle =
-        self.getApiVersion() === "3.x"
-        && Object.keys(self.jsonLd.label).length > 0
-        && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
-          ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
-          : self.jsonLd.label;
+    self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
     self.bookUrl = '#';
     // self.thumbnail = self.jsonLd.thumbnail['@id'];
     self.metadata = self.jsonLd.metadata;
@@ -92,12 +87,7 @@ BookReader.prototype.loadManifest = function () {
       async: false,
       success: function (jsonLd) {
         self.jsonLd = jsonLd;
-        self.bookTitle =
-            self.getApiVersion() === "3.x"
-            && Object.keys(self.jsonLd.label).length > 0
-            && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
-                ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
-                : self.jsonLd.label;
+        self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
         self.bookUrl = '#';
         self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
@@ -120,22 +110,22 @@ BookReader.prototype.setupTooltips = function() {
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
   if(self.getApiVersion() == "3.x") {
-    // try with a specific sequenceID
-    if (sequenceId!= null) {
-      if (item['id'] === sequenceId) {
+      // try with a specific sequenceID
+      if (sequenceId!= null) {
+        if (item['@id'] === sequenceId) {
+          self.IIIFsequence.title = "Sequence";
+          self.IIIFsequence.bookUrl = "http://iiif.io";
+          self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
+          self.numLeafs = self.IIIFsequence.imagesList.length;
+        }
+      } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
-        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd);
+        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
         self.numLeafs = self.IIIFsequence.imagesList.length;
+        // return false;
+        // Just take the first one if no default one set
       }
-    } else {
-      self.IIIFsequence.title = "Sequence";
-      self.IIIFsequence.bookUrl = "http://iiif.io";
-      self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd);
-      self.numLeafs = self.IIIFsequence.imagesList.length;
-      // return false;
-      // Just take the first one if no default one set
-    }
   }
   else {
     jQuery.each(self.jsonLd.sequences, function(index, sequence) {
@@ -150,7 +140,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
       } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
-        self.IIIFsequence.imagesList = getImagesList(sequence);
+        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd);
         self.numLeafs = self.IIIFsequence.imagesList.length;
         return false;
         // Just take the first one if no default one set
@@ -259,72 +249,40 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     return imagesList;
   }
 
-  // This expects individual pages to be provided as the root level `items` in the jsonLd.
-  // If a structure range element exists, it is used to define the page order.
-  // This works with "IIIF Presentation API 3 Creative Works Series Manifest" as provided by
-  // https://github.com/esmero/archipelago-deployment-live/blob/1.0.0-RC3/drupal/d8content/metadatadisplay_entity_14.json
-  function getImagesListApi3(jsonLd) {
+  function getImagesListApi3(items) {
     var imagesList = [];
-    let items = jsonLd.items;
-    if(items.length > 0) {
-      // Use the first structure range, if present, to reorder the items.
-      if (jsonLd.structures[0].items.length > 0) {
-        // Create associative array of the items so we can use the first structure range to order them.
-        let itemsMap = {};
-        jQuery.each(items, function (index, item) {
-          itemsMap[item.id] = item;
-        });
 
-        // Zero out the items array, then push individual items back in in the order found in the structure range.
-        newitems = [];
-        jQuery.each(jsonLd.structures[0].items, function (index, structureItem) {
-          if(itemsMap.hasOwnProperty(structureItem.id)) {
-            newitems.push(itemsMap[structureItem.id]);
-          }
-          else {
-            console.log("Could not find \"" + structureItem.id + "\" in the IIIF 3.0 presentation manifest's items array.");
+    jQuery.each(items, function (index, item) {
+      if (item['type'] === 'Canvas') {
+        let imageObj = {
+          canvasHeight: item.height || 0,
+          canvasWidth: item.width || 0,
+        };
+        let annotationpages = item.items;
+        jQuery.each(annotationpages, function (index, annotationpage) {
+          if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
+            let annotation = annotationpage['items'][0];
+            imageObj.serviceUrl = null;
+            if (annotation.body.hasOwnProperty('service') && isValidHttpUrl(annotation.body.service['id'])) {
+              imageObj.serviceUrl = annotation.body.service['id'].replace(/\/$/, '');
+            }
+            imageObj.imageUrl = annotation.body.id || "";
+            // imageObj.imageUrl = imageObj.imageUrl.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
+            imageObj.width = annotation.body.width || 0;
+            imageObj.height = annotation.body.height || 0;
+            imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
+            imageObj.imageGetArgument = getURLArgument(annotation.body.id);
+
+            // Add it to the images list
+            if (!(/#xywh/).test(annotation.target)) {
+              imagesList.push(imageObj);
+            }
           }
         });
-        if(newitems.length == jsonLd.structures[0].items.length) {
-          items = newitems;
-        }
-        else {
-          console.log("Could not use structures to set page order because structure range item ids did not match item ids.");
-        }
 
       }
 
-      // Extract data from each item.
-      jQuery.each(items, function (index, item) {
-        if (item['type'] === 'Canvas') {
-          let imageObj = {
-            canvasHeight: item.height || 0,
-            canvasWidth: item.width || 0,
-          };
-          let annotationpages = item.items;
-          jQuery.each(annotationpages, function (index, annotationpage) {
-            if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
-              let annotation = annotationpage['items'][0];
-              imageObj.serviceUrl = null;
-              if (annotation.body.hasOwnProperty('service') && annotation.body.service[0] && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
-                imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
-              }
-              imageObj.imageUrl = annotation.body.id || "";
-              imageObj.width = annotation.body.width || 0;
-              imageObj.height = annotation.body.height || 0;
-              imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
-              imageObj.imageGetArgument = getURLArgument(annotation.body.id);
-              // Add it to the images list
-              if (!(/#xywh/).test(annotation.target)) {
-                imagesList.push(imageObj);
-              }
-            }
-          });
-
-        }
-      });
-
-    }
+    });
 
     return imagesList;
   }
