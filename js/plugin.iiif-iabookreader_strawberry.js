@@ -49,6 +49,21 @@ BookReader.prototype.init = (function(super_) {
   };
 })(BookReader.prototype.init);
 
+BookReader.prototype.getApiVersion = function() {
+  var self = this;
+
+  if(!self.apiVersion) {
+    var $apiVersion = "2.x";
+    if (self.jsonLd["@context"].length > 0 && self.jsonLd["@context"].includes("http://iiif.io/api/presentation/3/context.json")) {
+      $apiVersion = "3.x";
+    }
+    self.apiVersion = $apiVersion;
+    return $apiVersion;
+  }
+  else {
+    return self.apiVersion;
+  }
+}
 
 BookReader.prototype.loadManifest = function () {
   var self = this;
@@ -57,7 +72,7 @@ BookReader.prototype.loadManifest = function () {
   // Simplest approach, we got a full manifest passed as an Object
   if (self.options.iiifmanifest != null) {
     self.jsonLd = self.options.iiifmanifest;
-    self.bookTitle = self.jsonLd.label;
+    self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
     self.bookUrl = '#';
     // self.thumbnail = self.jsonLd.thumbnail['@id'];
     self.metadata = self.jsonLd.metadata;
@@ -72,7 +87,7 @@ BookReader.prototype.loadManifest = function () {
       async: false,
       success: function (jsonLd) {
         self.jsonLd = jsonLd;
-        self.bookTitle = jsonLd.label;
+        self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
         self.bookUrl = '#';
         self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
@@ -94,25 +109,44 @@ BookReader.prototype.setupTooltips = function() {
 
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
-
-  jQuery.each(self.jsonLd.sequences, function(index, sequence) {
-    // try with a specific sequenceID
-    if (sequenceId!= null) {
-      if (sequence['@id'] === sequenceId) {
+  if(self.getApiVersion() == "3.x") {
+      // try with a specific sequenceID
+      if (sequenceId!= null) {
+        if (item['@id'] === sequenceId) {
+          self.IIIFsequence.title = "Sequence";
+          self.IIIFsequence.bookUrl = "http://iiif.io";
+          self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
+          self.numLeafs = self.IIIFsequence.imagesList.length;
+        }
+      } else {
+        self.IIIFsequence.title = "Sequence";
+        self.IIIFsequence.bookUrl = "http://iiif.io";
+        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
+        self.numLeafs = self.IIIFsequence.imagesList.length;
+        // return false;
+        // Just take the first one if no default one set
+      }
+  }
+  else {
+    jQuery.each(self.jsonLd.sequences, function(index, sequence) {
+      // try with a specific sequenceID
+      if (sequenceId!= null) {
+        if (sequence['@id'] === sequenceId) {
+          self.IIIFsequence.title = "Sequence";
+          self.IIIFsequence.bookUrl = "http://iiif.io";
+          self.IIIFsequence.imagesList = getImagesList(sequence);
+          self.numLeafs = self.IIIFsequence.imagesList.length;
+        }
+      } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
         self.IIIFsequence.imagesList = getImagesList(sequence);
         self.numLeafs = self.IIIFsequence.imagesList.length;
+        return false;
+        // Just take the first one if no default one set
       }
-    } else {
-      self.IIIFsequence.title = "Sequence";
-      self.IIIFsequence.bookUrl = "http://iiif.io";
-      self.IIIFsequence.imagesList = getImagesList(sequence);
-      self.numLeafs = self.IIIFsequence.imagesList.length;
-      return false;
-      // Just take the first one if no default one set
-    }
-  });
+    });
+  }
 
   var tmpdata = [];
   jQuery.each(self.IIIFsequence.imagesList, function(index,image) {
@@ -210,6 +244,44 @@ BookReader.prototype.parseSequence = function (sequenceId) {
         });
 
       }
+    });
+
+    return imagesList;
+  }
+
+  function getImagesListApi3(items) {
+    var imagesList = [];
+
+    jQuery.each(items, function (index, item) {
+      if (item['type'] === 'Canvas') {
+        let imageObj = {
+          canvasHeight: item.height || 0,
+          canvasWidth: item.width || 0,
+        };
+        let annotationpages = item.items;
+        jQuery.each(annotationpages, function (index, annotationpage) {
+          if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
+            let annotation = annotationpage['items'][0];
+            imageObj.serviceUrl = null;
+            if (annotation.body.hasOwnProperty('service') && isValidHttpUrl(annotation.body.service['id'])) {
+              imageObj.serviceUrl = annotation.body.service['id'].replace(/\/$/, '');
+            }
+            imageObj.imageUrl = annotation.body.id || "";
+            // imageObj.imageUrl = imageObj.imageUrl.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
+            imageObj.width = annotation.body.width || 0;
+            imageObj.height = annotation.body.height || 0;
+            imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
+            imageObj.imageGetArgument = getURLArgument(annotation.body.id);
+
+            // Add it to the images list
+            if (!(/#xywh/).test(annotation.target)) {
+              imagesList.push(imageObj);
+            }
+          }
+        });
+
+      }
+
     });
 
     return imagesList;
