@@ -90,6 +90,7 @@ use Twig\Source;
  *   base_table = "strawberryfield_metadatadisplay",
  *   revision_table = "strawberryfield_metadatadisplay_revision",
  *   revision_data_table = "strawberryfield_metadatadisplay_field_revision",
+ *   show_revision_ui = TRUE,
  *   admin_permission = "administer metadatadisplay entity",
  *   fieldable = TRUE,
  *   entity_keys = {
