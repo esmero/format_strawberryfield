@@ -234,7 +234,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setReadOnly(TRUE);
     $fields['changed'] = BaseFieldDefinition::create('changed')
       ->setLabel(t('Changed'))
-      ->setDescription(t('The time that the term was last edited.'))
+      ->setDescription(t('The time that Metadata Display entity last edited.'))
       ->setTranslatable(TRUE);
 
     // Enable revision support for the 'changed' field.

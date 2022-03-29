@@ -223,8 +223,8 @@ function format_strawberryfield_update_dependencies() {
   // content_translation_update_8400() which fixes NULL values for the
   // 'content_translation_status' field.
   if (\Drupal::moduleHandler()->moduleExists('content_translation')) {
-    $dependencies['format_strawberryfield'][8400] = [
-      'content_translation' => 8400,
+    $dependencies['format_strawberryfield'][8703] = [
+      'content_translation' => 8703,
     ];
 
     return $dependencies;
@@ -234,7 +234,7 @@ function format_strawberryfield_update_dependencies() {
 /**
  * Add the 'published' and revisionable metadata fields to my_entity.
  */
-function my_module_update_8400() {
+function format_strawberryfield_update_8703() {
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
 
   // Add the published entity key and revisionable metadata fields to the
