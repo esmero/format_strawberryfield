@@ -72,7 +72,12 @@ BookReader.prototype.loadManifest = function () {
   // Simplest approach, we got a full manifest passed as an Object
   if (self.options.iiifmanifest != null) {
     self.jsonLd = self.options.iiifmanifest;
-    self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
+    self.bookTitle =
+        self.getApiVersion() === "3.x"
+        && Object.keys(self.jsonLd.label).length > 0
+        && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
+          ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
+          : self.jsonLd.label;
     self.bookUrl = '#';
     // self.thumbnail = self.jsonLd.thumbnail['@id'];
     self.metadata = self.jsonLd.metadata;
@@ -87,7 +92,12 @@ BookReader.prototype.loadManifest = function () {
       async: false,
       success: function (jsonLd) {
         self.jsonLd = jsonLd;
-        self.bookTitle = self.getApiVersion() == "3.x" ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ") : self.jsonLd.label;
+        self.bookTitle =
+            self.getApiVersion() === "3.x"
+            && Object.keys(self.jsonLd.label).length > 0
+            && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
+                ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
+                : self.jsonLd.label;
         self.bookUrl = '#';
         self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
@@ -110,22 +120,22 @@ BookReader.prototype.setupTooltips = function() {
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
   if(self.getApiVersion() == "3.x") {
-      // try with a specific sequenceID
-      if (sequenceId!= null) {
-        if (item['@id'] === sequenceId) {
-          self.IIIFsequence.title = "Sequence";
-          self.IIIFsequence.bookUrl = "http://iiif.io";
-          self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
-          self.numLeafs = self.IIIFsequence.imagesList.length;
-        }
-      } else {
+    // try with a specific sequenceID
+    if (sequenceId!= null) {
+      if (item['id'] === sequenceId) {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
         self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
         self.numLeafs = self.IIIFsequence.imagesList.length;
-        // return false;
-        // Just take the first one if no default one set
       }
+    } else {
+      self.IIIFsequence.title = "Sequence";
+      self.IIIFsequence.bookUrl = "http://iiif.io";
+      self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
+      self.numLeafs = self.IIIFsequence.imagesList.length;
+      // return false;
+      // Just take the first one if no default one set
+    }
   }
   else {
     jQuery.each(self.jsonLd.sequences, function(index, sequence) {
@@ -263,8 +273,8 @@ BookReader.prototype.parseSequence = function (sequenceId) {
           if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
             let annotation = annotationpage['items'][0];
             imageObj.serviceUrl = null;
-            if (annotation.body.hasOwnProperty('service') && isValidHttpUrl(annotation.body.service['id'])) {
-              imageObj.serviceUrl = annotation.body.service['id'].replace(/\/$/, '');
+            if (annotation.body.hasOwnProperty('service') && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
+              imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
             }
             imageObj.imageUrl = annotation.body.id || "";
             // imageObj.imageUrl = imageObj.imageUrl.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
