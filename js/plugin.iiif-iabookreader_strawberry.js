@@ -259,6 +259,9 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     return imagesList;
   }
 
+  // This expects individual pages to be provided as the root level `items` in the jsonLd.
+  // This works with "IIIF Presentation API 3 Creative Works Series Manifest" as provided by
+  // https://github.com/esmero/archipelago-deployment-live/blob/1.0.0-RC3/drupal/d8content/metadatadisplay_entity_14.json
   function getImagesListApi3(items) {
     var imagesList = [];
 
