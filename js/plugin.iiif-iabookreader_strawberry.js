@@ -306,7 +306,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
             if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
               let annotation = annotationpage['items'][0];
               imageObj.serviceUrl = null;
-              if (annotation.body.hasOwnProperty('service') && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
+              if (annotation.body.hasOwnProperty('service') && annotation.body.service[0] && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
                 imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
               }
               imageObj.imageUrl = annotation.body.id || "";
