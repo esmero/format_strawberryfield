@@ -310,7 +310,6 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                 imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
               }
               imageObj.imageUrl = annotation.body.id || "";
-              // imageObj.imageUrl = imageObj.imageUrl.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
               imageObj.width = annotation.body.width || 0;
               imageObj.height = annotation.body.height || 0;
               imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
