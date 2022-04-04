@@ -309,11 +309,17 @@ BookReader.prototype.parseSequence = function (sequenceId) {
               if (annotation.body.hasOwnProperty('service') && annotation.body.service[0] && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
                 imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
               }
-              imageObj.imageUrl = annotation.body.id || "";
+              if(annotation.body.id) {
+                imageObj.imageGetArgument = getURLArgument(annotation.body.id);
+                imageObj.imageUrl = annotation.body.id.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg') + imageObj.imageGetArgument;
+              }
+              else {
+                imageObj.imageUrl = "";
+                imageObj.imageGetArgument = "";
+              }
               imageObj.width = annotation.body.width || 0;
               imageObj.height = annotation.body.height || 0;
               imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
-              imageObj.imageGetArgument = getURLArgument(annotation.body.id);
               // Add it to the images list
               if (!(/#xywh/).test(annotation.target)) {
                 imagesList.push(imageObj);
