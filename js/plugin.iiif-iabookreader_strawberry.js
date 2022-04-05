@@ -311,7 +311,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
               }
               if(annotation.body.id) {
                 imageObj.imageGetArgument = getURLArgument(annotation.body.id);
-                imageObj.imageUrl = annotation.body.id.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg') + imageObj.imageGetArgument;
+                imageObj.imageUrl = annotation.body.id.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
               }
               else {
                 imageObj.imageUrl = "";
