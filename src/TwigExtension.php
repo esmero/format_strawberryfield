@@ -8,6 +8,8 @@ use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
+use Seboettg\CiteProc\CiteProc;
+use Seboettg\CiteProc\StyleSheet;
 
 /**
  * Class TwigExtension.
@@ -212,5 +214,14 @@ class TwigExtension extends AbstractExtension {
     return $Parsedown->text($body);
   }
 
-
+  /**
+   * Generates CSL citations.
+   *
+   * @param $body
+   *
+   * @return string
+   */
+  public function citation($body): string {
+    
+  }
 }
