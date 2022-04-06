@@ -56,6 +56,7 @@ class TwigExtension extends AbstractExtension {
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
+      new TwigFilter('citation', [$this, 'citation'], ['is_safe' => ['all']]),
     ];
   }
 
@@ -222,6 +223,6 @@ class TwigExtension extends AbstractExtension {
    * @return string
    */
   public function citation($body): string {
-    
+    return $body;
   }
 }
