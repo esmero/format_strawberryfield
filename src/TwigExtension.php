@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Twig\Extension\AbstractExtension;
 use Twig\Markup;
 use Twig\TwigTest;
 use Twig\TwigFilter;
@@ -13,7 +14,7 @@ use League\HTMLToMarkdown\HtmlConverter;
  *
  * @package Drupal\format_strawberryfield
  */
-class TwigExtension extends \Twig_Extension {
+class TwigExtension extends AbstractExtension {
 
   public function getTests(): array {
     return [
