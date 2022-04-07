@@ -223,6 +223,45 @@ class TwigExtension extends AbstractExtension {
    * @return string
    */
   public function citation($body): string {
-    return $body;
+    $style = StyleSheet::loadStyleSheet("din-1505-2");
+    $citeProc = new CiteProc($style);
+    $test_json = '[
+    {
+      "author": [
+            {
+              "family": "Doe",
+                "given": "James",
+                "suffix": "III"
+            }
+        ],
+        "id": "item-1",
+        "issued": {
+      "date-parts": [
+        [
+          "2001"
+        ]
+      ]
+        },
+        "title": "My Anonymous Heritage",
+        "type": "book"
+    },
+    {
+      "author": [
+            {
+              "family": "Anderson",
+                "given": "John"
+            },
+            {
+              "family": "Brown",
+                "given": "John"
+            }
+        ],
+        "id": "ITEM-2",
+        "type": "book",
+        "title": "Two authors writing a book"
+    }
+]';
+    $citation = $citeProc->render(json_decode($test_json), "citation");
+    return $citation;
   }
 }

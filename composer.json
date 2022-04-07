@@ -20,6 +20,6 @@
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^5.23 || ^6.0",
         "ext-json": "*",
-	"seboettg/citeproc-php": "^2.2.5"
+	"seboettg/citeproc-php": "master"
     }
 }
