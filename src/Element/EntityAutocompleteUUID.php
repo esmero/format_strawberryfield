@@ -186,7 +186,7 @@ class EntityAutocompleteUUID extends Textfield {
     $data = serialize($selection_settings) . $element['#target_type'] . $element['#selection_handler'];
     $selection_settings_key = Crypt::hmacBase64($data, Settings::getHashSalt());
 
-    $key_value_storage = \Drupal::keyValue('sbf_entity_autocomplete');
+    $key_value_storage = \Drupal::keyValue('entity_autocomplete');
     if (!$key_value_storage->has($selection_settings_key)) {
       $key_value_storage->set($selection_settings_key, $selection_settings);
     }
