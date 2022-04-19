@@ -14,6 +14,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\CiteProc;
+use Drupal\Core\File\FileSystemInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -48,6 +49,13 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   protected $twig;
 
   /**
+   * The file system.
+   *
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  protected $fileSystem;
+
+  /**
    * StrawberryMetadataTwigFormatter constructor.
    *
    * @param string $plugin_id
@@ -73,11 +81,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The Config factory.
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
+   *
+   * @param \Drupal\Core\File\FileSystemInterface $file_system
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory,  EmbargoResolverInterface $embargo_resolver) {
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, AccountInterface $current_user, EntityTypeManagerInterface $entity_type_manager, TwigEnvironment $twigEnvironment, ConfigFactoryInterface $config_factory, EmbargoResolverInterface $embargo_resolver, FileSystemInterface $file_system) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $config_factory, $embargo_resolver, $current_user);
     $this->entityTypeManager = $entity_type_manager;
     $this->twig = $twigEnvironment;
+    $this->fileSystem = $file_system;
   }
 
   /**
@@ -96,8 +107,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $container->get('entity_type.manager'),
       $container->get('twig'),
       $container->get('config.factory'),
-      $container->get('format_strawberryfield.embargo_resolver')
-
+      $container->get('format_strawberryfield.embargo_resolver'),
+      $container->get('file_system')
     );
   }
 
@@ -107,9 +118,9 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   public static function defaultSettings() {
     return parent::defaultSettings() + [
         'label' => 'Descriptive Metadata',
-        'specs' => 'http://schema.org',
         'metadatadisplayentity_uuid' => NULL,
         'metadatadisplayentity_uselabel' => TRUE,
+        'citationstyle' => NULL,
       ];
   }
 
@@ -123,6 +134,17 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entity = reset($entities);
     }
 
+    // There's a better way to get this directory
+    $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution';
+    // Get the list of style files.
+    $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
+    # Generate a list of select options and push in the styles.
+    $style_options = [];
+    foreach($style_list as $style) {
+      array_push($style_options, t($style->name));
+    }
+    // Alphabetize them.
+    sort($style_options);
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
@@ -137,12 +159,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#required' => TRUE,
         '#default_value' => $entity,
       ],
-      'specs' => [
-        '#type' => 'url',
-        '#title' => $this->t('URL that helps your visitors (and you) understand the metadata displayed'),
-        '#default_value' => $this->getSetting('specs'),
-        '#required' => TRUE,
-      ],
       'label' => [
         '#type' => 'textfield',
         '#title' => $this->t('Public facing Label for this Metadata Display'),
@@ -155,6 +171,16 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#description' => t('If enabled we will also generate a collapsible container around the display for you.'),
         '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
       ],
+      'citationstyle' => [
+        '#type' => 'select',
+        '#title' => $this->t('Choose a citation style.'),
+        '#description' => 'Citation Style',
+        '#validate_reference' => TRUE,
+        '#required' => TRUE,
+        '#multiple' => TRUE,
+        '#options' => $style_options,
+      ],
+
     ];
   }
 
@@ -463,11 +489,10 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $citeProc = new CiteProc($style, "en-US");
       $data = json_decode($dataString);
       $bibliography = $citeProc->render($data, "bibliography");
-      #$cssStyles = $citeProc->renderCssStyles();
+      $cssStyles = $citeProc->renderCssStyles();
       #$citeProc = new CiteProc($style, "en-US", $bibliography );
     } catch (Exception $e) {
       echo $e->getMessage();
-      die;
     }
     $elements[$delta] = [
       '#markup' => $bibliography

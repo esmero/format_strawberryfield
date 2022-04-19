@@ -592,9 +592,9 @@ field.formatter.settings.strawberry_citation_formatter:
       label: 'Whether to use global IIIF settings or not.'
     label:
       type: string
-    specs:
-      type: string
     metadatadisplayentity_uuid:
       type: string
     metadatadisplayentity_uselabel:
+      type: string
+    citationstyle:
       type: string
