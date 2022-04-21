@@ -133,18 +133,22 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-
+    if ($this->getSetting('citationstyle')) {
+      //
+    }
     // There's a better way to get this directory
     $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution';
     // Get the list of style files.
     $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
     # Generate a list of select options and push in the styles.
-    $style_options = [];
+    $style_options = array();
     foreach($style_list as $style) {
-      array_push($style_options, t($style->name));
+      $style_name = $style->name;
+      $style_options[$style_name] = $this->t($style_name);
+      //array_push($style_options, (array)[$style_name => $this->t($style_name)]);
     }
     // Alphabetize them.
-    sort($style_options);
+    asort($style_options);
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
@@ -173,12 +177,13 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       ],
       'citationstyle' => [
         '#type' => 'select',
-        '#title' => $this->t('Choose a citation style.'),
+        '#title' => $this->t('Choose a citation style (you may select multiple).'),
         '#description' => 'Citation Style',
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#multiple' => TRUE,
         '#options' => $style_options,
+        '#default_value' => $this->getSetting('citationstyle'),
       ],
 
     ];
@@ -197,12 +202,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         $entity_label = $entity->label();
       }
     }
-
+    if ($this->getSetting('citationstyle')) {
+      $citationstyles = $this->getSetting('citationstyle');
+    }
     // Build the summary.
     $summary = [];
-    $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
-    $summary[] = $this->t('Selected: %template', [
-      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
+    $summary[] = $this->t('Uses your selected style(s) to generate citations.');
+    $summary[] = $this->t('Selected: %styles', [
+      '%styles' => $citationstyles ? implode(', ', $citationstyles) : 'None selected. Please configure this formatter by providing at least one in the configuration form.',
     ]);
     return $summary;
   }
