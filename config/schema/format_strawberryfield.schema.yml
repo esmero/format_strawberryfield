@@ -570,6 +570,7 @@ format_strawberryfield.jmespath_config.mapping:
     jmespath_alternative_filter:
       type: string
       label: 'An alternative JMESPath filter expression'
+
 field.formatter.settings.strawberry_citation_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -597,4 +598,7 @@ field.formatter.settings.strawberry_citation_formatter:
     metadatadisplayentity_uselabel:
       type: string
     citationstyle:
-      type: string
+      type: mapping
+      mapping:
+        type: string
+        label: 'style'

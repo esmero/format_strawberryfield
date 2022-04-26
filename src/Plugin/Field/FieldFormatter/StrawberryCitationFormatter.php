@@ -9,6 +9,7 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Template\TwigEnvironment;
+use Drupal\Core\Field\FieldItemInterface;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -133,9 +134,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-    if ($this->getSetting('citationstyle')) {
-      //
-    }
+    //$citation_locales_file = '/var/www/html/vendor/citation-style-language/locales/locales.json';
+    //$citation_locales_file_contents = file_get_contents($citation_locales_file);
+    //$citation_locales = json_decode($citation_locales_file_contents, true);
+    //$locale_options = array();
+    //foreach($citation_locales['language-names'] as $key => $value) {
+    //  $locale_string = $value[1];
+    //  $locale_options[$key] = $this->t($locale_string);
+    //}
     // There's a better way to get this directory
     $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution';
     // Get the list of style files.
@@ -145,10 +151,10 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     foreach($style_list as $style) {
       $style_name = $style->name;
       $style_options[$style_name] = $this->t($style_name);
-      //array_push($style_options, (array)[$style_name => $this->t($style_name)]);
     }
     // Alphabetize them.
     asort($style_options);
+    //asort($locale_options);
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
@@ -185,7 +191,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#options' => $style_options,
         '#default_value' => $this->getSetting('citationstyle'),
       ],
-
     ];
   }
 
@@ -207,7 +212,10 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     }
     // Build the summary.
     $summary = [];
-    $summary[] = $this->t('Uses your selected style(s) to generate citations.');
+    $summary[] = $this->t('Uses your selected template and style(s) to generate citations.');
+    $summary[] = $this->t('Selected: %template', [
+      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
+    ]);
     $summary[] = $this->t('Selected: %styles', [
       '%styles' => $citationstyles ? implode(', ', $citationstyles) : 'None selected. Please configure this formatter by providing at least one in the configuration form.',
     ]);
@@ -332,6 +340,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         ];
       }
     }
+
+    // Example json string for testing until actual data gets pulled in from a template.
     $example = '[
   {
     "author": [
@@ -491,18 +501,77 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   }
 ]';
     try {
-      $dataString = $example;
-      $style = StyleSheet::loadStyleSheet("ieee");
-      $citeProc = new CiteProc($style, "en-US");
-      $data = json_decode($dataString);
-      $bibliography = $citeProc->render($data, "bibliography");
-      $cssStyles = $citeProc->renderCssStyles();
-      #$citeProc = new CiteProc($style, "en-US", $bibliography );
+      // Get styles selected from formatter settings.
+      $selected_styles = $this->settings['citationstyle'];
+      $data = json_decode($example);
+      $rendered_bibliography = '';
+
+      // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
+      function parse($css){
+        preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
+        $result = array();
+        foreach ($arr[0] as $i => $x){
+          $selector = trim($arr[1][$i]);
+          $rules = explode(';', trim($arr[2][$i]));
+          $rules_arr = array();
+          foreach ($rules as $strRule){
+            if (!empty($strRule)){
+              $rule = explode(":", $strRule);
+              $rules_arr[trim($rule[0])] = trim($rule[1]);
+            }
+          }
+
+          $selectors = explode(',', trim($selector));
+          foreach ($selectors as $strSel){
+            $result[$strSel] = $rules_arr;
+          }
+        }
+        return $result;
+      }
+
+      // Loop through each style, render it as a CSS block, convert to
+      // array, and process as inline style tag against rendered HTML.
+      foreach ($selected_styles as $selected_style) {
+        $style = StyleSheet::loadStyleSheet($selected_style);
+        $citeProc = new CiteProc($style);
+        $bibliography = $citeProc->render($data, "bibliography");
+        $cssStyles = $citeProc->renderCssStyles();
+        $parsedStyle = parse($cssStyles);
+        $processed_bibliography = $bibliography;
+        // Deconstruct the CSS rules by selector.
+        foreach ($parsedStyle as $css_prop => $css_statements) {
+          // Remove dot from class to match against HTML block.
+          $css_selector = ltrim($css_prop, '.');
+          // Get the length to offset below and insert the style tag inline.
+          $css_selector_len = strlen($css_selector);
+          // Check if the selector exists in the HTML block.
+          $pos = strpos($processed_bibliography,$css_selector);
+          if($pos !== false) {
+            // Construct the inline style tag string to insert.
+            $inline_rule = ' style="';
+            foreach($css_statements as $css_property => $css_value) {
+              $inline_rule .= $css_property . ':' . $css_value . ';';
+            }
+            $inline_rule .= '"';
+            // For each instance of the tag match insert the inline style.
+            $start = 0;
+            while(($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
+              // The below offset makes the assumption that the matched tag is the only class, but is that right?
+              $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
+              $start = $inline_pos + 1;
+            }
+          }
+        }
+        // For now append to an HTML string for rendering.
+        $rendered_bibliography .= '<br><h5>' . $selected_style . '</h5>' . $processed_bibliography;
+      }
     } catch (Exception $e) {
       echo $e->getMessage();
     }
     $elements[$delta] = [
-      '#markup' => $bibliography
+      //'#markup' => $rendered_bibliography,
+      // The below has to be used so style tags don't get stripped in the render process.
+      '#markup' => \Drupal\Core\Render\Markup::create($rendered_bibliography)
     ];
     return $elements;
   }
