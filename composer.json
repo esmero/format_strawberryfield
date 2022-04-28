@@ -24,20 +24,20 @@
                     "reference": "master"
                 }
             }
-        }
-    ],
-    {
-        "type": "package",
-        "package": {
-            "name": "citation-style-language/styles-distribution",
-            "version":"1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/citation-style-language/styles-distribution.git",
-                "reference": "master"
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "citation-style-language/styles-distribution",
+                "version":"1.0.0",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/citation-style-language/styles-distribution.git",
+                    "reference": "master"
+                }
             }
         }
-    },
+    ],
     "require": {
         "ml/json-ld": "^1.2",
         "mtdowling/jmespath.php": "^2.5",
