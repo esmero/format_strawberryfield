@@ -13,18 +13,19 @@
         }
     ],
     "repositories": [
-    {
-        "type": "package",
-        "package": {
-            "name": "citation-style-language/locales",
-            "version":"1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/citation-style-language/locales.git",
-                "reference": "master"
+        {
+            "type": "package",
+            "package": {
+                "name": "citation-style-language/locales",
+                "version":"1.0.0",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/citation-style-language/locales.git",
+                    "reference": "master"
+                }
             }
         }
-    },
+    ],
     {
         "type": "package",
         "package": {
