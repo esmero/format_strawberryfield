@@ -12,32 +12,6 @@
             "role": "Owner"
         }
     ],
-    "repositories": [
-        {
-            "type": "package",
-            "package": {
-                "name": "citation-style-language/locales",
-                "version":"1.0.0",
-                "source": {
-                    "type": "git",
-                    "url": "https://github.com/citation-style-language/locales.git",
-                    "reference": "master"
-                }
-            }
-        },
-        {
-            "type": "package",
-            "package": {
-                "name": "citation-style-language/styles-distribution",
-                "version":"1.0.0",
-                "source": {
-                    "type": "git",
-                    "url": "https://github.com/citation-style-language/styles-distribution.git",
-                    "reference": "master"
-                }
-            }
-        }
-    ],
     "require": {
         "ml/json-ld": "^1.2",
         "mtdowling/jmespath.php": "^2.5",
@@ -45,9 +19,6 @@
         "league/html-to-markdown": "^5.0.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^5.23 || ^6.0",
-        "ext-json": "*",
-        "citation-style-language/locales": "@dev",
-        "citation-style-language/styles-distribution": "@dev",
-	"seboettg/citeproc-php": "master"
+        "ext-json": "*"
     }
 }

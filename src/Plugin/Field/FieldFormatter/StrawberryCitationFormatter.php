@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -316,19 +317,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         // In case someone decided to wipe the original context?
         // We bring it back!
         $context = $context + $original_context;
-        $templaterenderelement = $metadatadisplayentity->processHtml($context);
-
-        if ($usemetadatalabel) {
-          $elements[$delta]['container'] = [
-            '#type' => 'details',
-            '#title' => $metadatadisplayentity->toLink()->getText(),
-            '#open' => FALSE,
-            'content' => $templaterenderelement,
-          ];
-        }
-        else {
-          $elements[$delta]['content'] = $templaterenderelement;
-        }
       }
       catch (\Exception $e) {
         // Render each element as markup.
@@ -341,169 +329,12 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       }
     }
 
-    // Example json string for testing until actual data gets pulled in from a template.
-    $example = '[
-  {
-    "author": [
-      {
-        "family": "Doe",
-        "given": "James",
-        "suffix": "III"
-      }
-    ],
-    "id": "ITEM-1",
-    "issued": {
-    "date-parts": [
-      [
-        "2001"
-      ]
-    ]
-    },
-    "title": "My Anonymous Heritage",
-    "type": "book"
-  },
-  {
-    "author": [
-      {
-        "family": "Anderson",
-        "given": "John",
-        "id": "anderson.j"
-      },
-      {
-        "family": "Brown",
-        "given": "John",
-        "id": "brown.j"
-      }
-    ],
-    "issued": {
-    "date-parts": [
-      [
-        "1998"
-      ]
-    ]
-    },
-    "id": "ITEM-2",
-    "type": "book",
-    "title": "Two authors writing a book"
-  },
-  {
-    "DOI": "10.1016/j.jhydrol.2008.05.025",
-    "ISSN": "0022-1694",
-    "author": [
-      {
-        "family": "Cole",
-        "given": "Steven J.",
-        "id": "steven.j"
-      },
-      {
-        "family": "Moore",
-        "given": "Robert",
-        "id": "moore.r"
-      }
-    ],
-    "container-title": "Journal of Hydrology",
-    "id": "ITEM-3",
-    "issue": "3-4",
-    "issued": {
-    "date-parts": [
-      [
-        2008
-      ]
-    ]
-    },
-    "page": "159-181",
-    "title": "Hydrological modelling using raingauge- and radar-based estimators of areal rainfall",
-    "type": "article-journal",
-    "url": "http://www.sciencedirect.com/science/article/pii/S0022169408002394",
-    "volume": "358"
-  },
-  {
-    "abstract": "The PUMA project fosters the Open Access movement und aims at a better support of the researcher’s publication work. PUMA stands for an integrated solution, where the upload of a publication results automatically in an update of both the personal and institutional homepage, the creation of an entry in a social bookmarking systems like BibSonomy, an entry in the academic reporting system of the university, and its publication in the institutional repository. In this poster, we present the main features of our solution.",
-    "annote": "",
-    "author": [
-      {
-        "family": "Benz",
-        "given": "Dominik",
-        "id": "benz"
-      },
-      {
-        "family": "Hotho",
-        "given": "Andreas",
-        "id": "hotho"
-      },
-      {
-        "family": "Jäschke",
-        "given": "Robert",
-        "id": "rjaeschke"
-      },
-      {
-        "family": "Stumme",
-        "given": "Gerd",
-        "id": "stumme"
-      },
-      {
-        "family": "Halle",
-        "given": "Axel"
-      },
-      {
-        "family": "Lima",
-        "given": "Angela Gerlach Sanches"
-      },
-      {
-        "family": "Steenweg",
-        "given": "Helge"
-      },
-      {
-        "family": "Stefani",
-        "given": "Sven"
-      },
-      {
-        "family": "Dietrich",
-        "given": "Bernhard"
-      }
-    ],
-    "citation-label": "benz2010academic",
-    "collection-title": "Lecture Notes in Computer Science",
-    "container-title": "Proceedings of the European Conference on Research and Advanced Technology for Digital Libraries",
-    "container-title-short": "ECDL",
-    "edition": "",
-    "event-date": {
-    "date-parts": [
-      [
-        "2010"
-      ]
-    ],
-      "literal": "2010"
-    },
-    "event-place": "Berlin/Heidelberg",
-    "id": "ITEM-4",
-    "interhash": "db94bafecb815048ede11f6d28e5a9f1",
-    "intrahash": "11bdf4636bc92aed96461eace25484f7",
-    "issue": "",
-    "issued": {
-    "date-parts": [
-      [
-        "2010"
-      ]
-    ],
-      "literal": "2010"
-    },
-    "keyword": "2010 ecdl myown puma",
-    "number-of-pages": "3",
-    "page": "417--420",
-    "page-first": "417",
-    "publisher": "Springer",
-    "publisher-place": "Berlin/Heidelberg",
-    "status": "",
-    "title": "Academic Publication Management with PUMA - collect, organize and share publications",
-    "type": "paper-conference",
-    "volume": "6273"
-  }
-]';
+    $rendered_json_string = $metadatadisplayentity->renderNative($context);
+
     try {
       // Get styles selected from formatter settings.
       $selected_styles = $this->settings['citationstyle'];
-      $data = json_decode($example);
+      $data = json_decode($rendered_json_string);
       $rendered_bibliography = '';
 
       // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
