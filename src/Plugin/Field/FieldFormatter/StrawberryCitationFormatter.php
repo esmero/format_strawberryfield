@@ -122,7 +122,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     return parent::defaultSettings() + [
         'label' => 'Descriptive Metadata',
         'metadatadisplayentity_uuid' => NULL,
-        'metadatadisplayentity_uselabel' => TRUE,
         'citationstyle' => NULL,
         'localekey' => NULL
       ];
@@ -163,18 +162,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $entity,
-      ],
-      'label' => [
-        '#type' => 'textfield',
-        '#title' => $this->t('Public facing Label for this Metadata Display'),
-        '#default_value' => $this->getSetting('label'),
-        '#required' => TRUE,
-      ],
-      'metadatadisplayentity_uselabel' => [
-        '#type' => 'checkbox',
-        '#title' => t('Use also the Metadata Display Name as label?'),
-        '#description' => t('If enabled we will also generate a collapsible container around the display for you.'),
-        '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
       ],
       'citationstyle' => [
         '#type' => 'select',
@@ -234,7 +221,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
     $nodeid = $items->getEntity()->id();
     $embargo_context = [];
@@ -249,7 +235,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       if (empty($metadatadisplayentity_uuid)) {
         continue;
       }
-
 
       $metadatadisplayentities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       /** @var \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity $metadatadisplayentity */
