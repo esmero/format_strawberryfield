@@ -602,3 +602,5 @@ field.formatter.settings.strawberry_citation_formatter:
       mapping:
         type: string
         label: 'style'
+    localekey:
+      type: string

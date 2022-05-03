@@ -13,6 +13,7 @@ use Drupal\Core\Field\FieldItemInterface;
 use Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use phpDocumentor\Reflection\PseudoTypes\LowercaseString;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\CiteProc;
@@ -123,6 +124,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         'metadatadisplayentity_uuid' => NULL,
         'metadatadisplayentity_uselabel' => TRUE,
         'citationstyle' => NULL,
+        'localekey' => NULL
       ];
   }
 
@@ -135,14 +137,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-    //$citation_locales_file = '/var/www/html/vendor/citation-style-language/locales/locales.json';
-    //$citation_locales_file_contents = file_get_contents($citation_locales_file);
-    //$citation_locales = json_decode($citation_locales_file_contents, true);
-    //$locale_options = array();
-    //foreach($citation_locales['language-names'] as $key => $value) {
-    //  $locale_string = $value[1];
-    //  $locale_options[$key] = $this->t($locale_string);
-    //}
+
     // There's a better way to get this directory
     $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution';
     // Get the list of style files.
@@ -155,7 +150,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     }
     // Alphabetize them.
     asort($style_options);
-    //asort($locale_options);
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
@@ -192,6 +186,12 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#options' => $style_options,
         '#default_value' => $this->getSetting('citationstyle'),
       ],
+      'localekey' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('Provide a metadata key to use as the locale (language) for citations.'),
+        '#default_value' => $this->getSetting('localekey'),
+        '#required' => FALSE,
+      ],
     ];
   }
 
@@ -211,14 +211,20 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     if ($this->getSetting('citationstyle')) {
       $citationstyles = $this->getSetting('citationstyle');
     }
+    if ($this->getSetting('localekey')) {
+      $localekey = $this->getSetting('localekey');
+    }
     // Build the summary.
     $summary = [];
-    $summary[] = $this->t('Uses your selected template and style(s) to generate citations.');
-    $summary[] = $this->t('Selected: %template', [
+    $summary[] = $this->t('Uses your selected template, style(s), and metadata locale (language) key to generate citations.');
+    $summary[] = $this->t('Selected Metadata Template: %template', [
       '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
     ]);
-    $summary[] = $this->t('Selected: %styles', [
+    $summary[] = $this->t('Selected Citation Style(s): %styles', [
       '%styles' => $citationstyles ? implode(', ', $citationstyles) : 'None selected. Please configure this formatter by providing at least one in the configuration form.',
+    ]);
+    $summary[] = $this->t('Selected Metadata key for locale (language): %locale', [
+      '%locale' => $localekey ? $localekey : 'None selected. The default will be used.',
     ]);
     return $summary;
   }
@@ -328,12 +334,42 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         ];
       }
     }
-
+    // Render data from metadata template into JSON string.
     $rendered_json_string = $metadatadisplayentity->renderNative($context);
 
     try {
+      // Get citation locales (not the right way to do this yet).
+      $citation_locales_file = '/var/www/html/vendor/citation-style-language/locales/locales.json';
+      $citation_locales_file_contents = file_get_contents($citation_locales_file);
+      $citation_locales = json_decode($citation_locales_file_contents, true);
+
+
       // Get styles selected from formatter settings.
       $selected_styles = $this->settings['citationstyle'];
+      // Get language key from settings.
+      $selected_locale_key = false;
+      if($this->getSetting('localekey')) {
+        $selected_locale_key = $this->settings['localekey'];
+      }
+      $locale = false;
+      $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
+      if($selected_locale_value) {
+        $available_locale = trim($selected_locale_value);
+      } elseif($langcode) {
+        $available_locale = trim($langcode);
+      }
+      $len_of_available_locale = strlen($available_locale);
+      $locale_hyphen = strpos($available_locale, '-') == 2;
+      $primary_dialects = $citation_locales['primary-dialects'];
+      $language_names = $citation_locales['language-names'];
+      if( $len_of_available_locale == 2) {
+        $normalized_locale = strtolower($available_locale);
+        $locale = array_key_exists($normalized_locale, $primary_dialects) ? $primary_dialects[$normalized_locale] : $locale;
+      } elseif ($len_of_available_locale == 5 && $locale_hyphen) {
+        $normalized_locale = strtolower(substr($available_locale, 0, 2)) . '-' . strtoupper(substr($available_locale, 3, 2));
+        $locale = array_key_exists($normalized_locale, $language_names) ? $normalized_locale : $locale;
+      }
+
       $data = json_decode($rendered_json_string);
       $rendered_bibliography = '';
 
@@ -364,7 +400,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       // array, and process as inline style tag against rendered HTML.
       foreach ($selected_styles as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
-        $citeProc = new CiteProc($style);
+        if($locale) {
+          $citeProc = new CiteProc($style, $locale);
+        } else {
+          $citeProc = new CiteProc($style);
+        }
         $bibliography = $citeProc->render($data, "bibliography");
         $cssStyles = $citeProc->renderCssStyles();
         $parsedStyle = parse($cssStyles);
@@ -400,7 +440,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       echo $e->getMessage();
     }
     $elements[$delta] = [
-      //'#markup' => $rendered_bibliography,
       // The below has to be used so style tags don't get stripped in the render process.
       '#markup' => \Drupal\Core\Render\Markup::create($rendered_bibliography)
     ];
