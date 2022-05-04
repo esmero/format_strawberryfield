@@ -145,7 +145,9 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $style_options = array();
     foreach($style_list as $style) {
       $style_name = $style->name;
-      $style_options[$style_name] = $this->t($style_name);
+      $style_xml = simplexml_load_file($style->uri);
+      $style_title = $style_xml->info->title->__toString();
+      $style_options[$style_name] = $this->t($style_title);
     }
     // Alphabetize them.
     asort($style_options);
@@ -207,6 +209,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $summary[] = $this->t('Selected Metadata Template: %template', [
       '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
     ]);
+    // Long titles used on form are too long for here so tried using short, but not available for all so sticking with filenames for now.
     $summary[] = $this->t('Selected Citation Style(s): %styles', [
       '%styles' => $citationstyles ? implode(', ', $citationstyles) : 'None selected. Please configure this formatter by providing at least one in the configuration form.',
     ]);
@@ -328,7 +331,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $citation_locales_file_contents = file_get_contents($citation_locales_file);
       $citation_locales = json_decode($citation_locales_file_contents, true);
 
-
       // Get styles selected from formatter settings.
       $selected_styles = $this->settings['citationstyle'];
       // Get language key from settings.
@@ -357,6 +359,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
 
       $data = json_decode($rendered_json_string);
       $rendered_bibliography = '';
+      $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution/';
+      $select = '
+        <label for="citation-styles">Style:</label>
+        <select name="citation-style" id="citation-styles">
+      ';
 
       // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
       function parse($css){
@@ -383,6 +390,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
 
       // Loop through each style, render it as a CSS block, convert to
       // array, and process as inline style tag against rendered HTML.
+      $style_iterator = 0;
       foreach ($selected_styles as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
         if($locale) {
@@ -418,15 +426,43 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
             }
           }
         }
-        // For now append to an HTML string for rendering.
-        $rendered_bibliography .= '<br><h5>' . $selected_style . '</h5>' . $processed_bibliography;
+        if($style_iterator > 0) {
+          $processed_bibliography = '<div class="hidden bib-style" id="'. $selected_style . '">' . $processed_bibliography . '</div>';
+        } else {
+          $processed_bibliography = '<div class="bib-style" id="'. $selected_style . '">' . $processed_bibliography . '</div>';
+        }
+        $rendered_bibliography .= $processed_bibliography;
+        $style_file = $citation_style_directory . $selected_style . '.csl';
+        $style_xml = simplexml_load_file($style_file);
+        $style_title = $style_xml->info->title->__toString();
+        $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
+        ++$style_iterator;
       }
     } catch (Exception $e) {
       echo $e->getMessage();
     }
+    $select .= '
+      </select>
+      <script>
+        document.addEventListener("DOMContentLoaded", function() {
+          var citationStyleSelector = document.querySelector("#citation-styles");
+          var styledBibs = document.querySelectorAll(".bib-style");
+          citationStyleSelector.addEventListener("change", function() {
+            var selectedStyle = this.value;
+            styledBibs.forEach(function(el, i) {
+               if( el.classList.contains("hidden") && el.id == selectedStyle ) {
+                 el.classList.remove("hidden");
+               } else if(!el.classList.contains("hidden")){
+                 el.classList.add("hidden");
+               }
+            });
+
+          });
+        });
+      </script>';
     $elements[$delta] = [
       // The below has to be used so style tags don't get stripped in the render process.
-      '#markup' => \Drupal\Core\Render\Markup::create($rendered_bibliography)
+      '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography)
     ];
     return $elements;
   }
