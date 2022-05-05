@@ -228,8 +228,12 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $nodeid = $items->getEntity()->id();
     $embargo_context = [];
     $embargo_tags = [];
+    $nodeuuid = $items->getEntity()->uuid();
 
     foreach ($items as $delta => $item) {
+      $uniqueid =
+        'bibliography-' . $items->getName(
+        ) . '-' . $nodeuuid . '-' . $delta;
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
       if (empty($value)) {
@@ -254,7 +258,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        $message = $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
+        $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
           [
             '@id' => $nodeid,
             '@field' => $items->getName(),
@@ -358,6 +362,15 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       }
 
       $data = json_decode($rendered_json_string);
+      $json_error = json_last_error();
+      if ($json_error != JSON_ERROR_NONE) {
+        $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
+          [
+            '@id' => $nodeid,
+            '@field' => $items->getName(),
+          ]);
+        return $elements[$delta] = ['#markup' => $message];
+      }
       $rendered_bibliography = '<div class="bibliography">';
       $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution/';
       $select = '
@@ -446,7 +459,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       </select>';
     $elements[$delta] = [
       // The below has to be used so style tags don't get stripped in the render process.
-      '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography)
+      '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography),
     ];
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
     return $elements;
