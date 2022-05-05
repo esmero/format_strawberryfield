@@ -309,3 +309,13 @@ lazyload_strawberry:
     - format_strawberryfield/lozad
     - core/jquery
     - core/drupal
+
+citations_strawberry:
+  version: 1.0
+  js:
+    js/citations_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings

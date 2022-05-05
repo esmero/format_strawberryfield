@@ -358,11 +358,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       }
 
       $data = json_decode($rendered_json_string);
-      $rendered_bibliography = '';
+      $rendered_bibliography = '<div class="bibliography">';
       $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution/';
       $select = '
         <label for="citation-styles">Style:</label>
-        <select name="citation-style" id="citation-styles">
+        <select name="citation-style" id="citation-styles" class="citation-style-selector">
       ';
 
       // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
@@ -441,29 +441,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     } catch (Exception $e) {
       echo $e->getMessage();
     }
+    $rendered_bibliography .= '</div>';
     $select .= '
-      </select>
-      <script>
-        document.addEventListener("DOMContentLoaded", function() {
-          var citationStyleSelector = document.querySelector("#citation-styles");
-          var styledBibs = document.querySelectorAll(".bib-style");
-          citationStyleSelector.addEventListener("change", function() {
-            var selectedStyle = this.value;
-            styledBibs.forEach(function(el, i) {
-               if( el.classList.contains("hidden") && el.id == selectedStyle ) {
-                 el.classList.remove("hidden");
-               } else if(!el.classList.contains("hidden")){
-                 el.classList.add("hidden");
-               }
-            });
-
-          });
-        });
-      </script>';
+      </select>';
     $elements[$delta] = [
       // The below has to be used so style tags don't get stripped in the render process.
       '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography)
     ];
+    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
     return $elements;
   }
 
