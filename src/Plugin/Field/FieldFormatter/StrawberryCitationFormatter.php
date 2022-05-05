@@ -371,11 +371,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           ]);
         return $elements[$delta] = ['#markup' => $message];
       }
-      $rendered_bibliography = '<div class="bibliography">';
+      $rendered_bibliography = '';
       $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution/';
       $select = '
         <label for="citation-styles">Style:</label>
-        <select name="citation-style" id="citation-styles" class="citation-style-selector">
+        <select name="citation-style" class="citation-style-selector">
       ';
 
       // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
@@ -440,9 +440,9 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           }
         }
         if($style_iterator > 0) {
-          $processed_bibliography = '<div class="hidden bib-style" id="'. $selected_style . '">' . $processed_bibliography . '</div>';
+          $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         } else {
-          $processed_bibliography = '<div class="bib-style" id="'. $selected_style . '">' . $processed_bibliography . '</div>';
+          $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         }
         $rendered_bibliography .= $processed_bibliography;
         $style_file = $citation_style_directory . $selected_style . '.csl';
@@ -454,14 +454,20 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     } catch (Exception $e) {
       echo $e->getMessage();
     }
-    $rendered_bibliography .= '</div>';
     $select .= '
       </select>';
     $elements[$delta] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => 'bibliography' . $uniqueid,
+        'class' => ['bibliography'],
+      ]
+    ];
+    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
+    $elements[$delta]['bibliography'] = [
       // The below has to be used so style tags don't get stripped in the render process.
       '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography),
     ];
-    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
     return $elements;
   }
 

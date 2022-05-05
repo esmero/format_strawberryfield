@@ -4,15 +4,18 @@
       attach: function (context, settings) {
         $('.bibliography').once('attach_citations')
           .each(function (index, value) {
-            var citationStyleSelector = document.querySelector("#citation-styles");
-            var styledBibs = document.querySelectorAll(".bib-style");
+            var theid = '#' + $(this).attr("id");
+            var bibliographyContainer = document.querySelector(theid);
+            var citationStyleSelector = bibliographyContainer.querySelector('.citation-style-selector');
+            var styledBibs = bibliographyContainer.querySelectorAll(".csl-bib-body-container");
             citationStyleSelector.addEventListener("change", function() {
               var selectedStyle = this.value;
               styledBibs.forEach(function (el, i) {
-                if (el.classList.contains("hidden") && el.id == selectedStyle) {
-                  el.classList.remove("hidden");
-                } else if (!el.classList.contains("hidden")) {
-                  el.classList.add("hidden");
+                var elClassList = el.classList;
+                if (elClassList.contains("hidden") && elClassList.contains(selectedStyle)) {
+                  elClassList.remove("hidden");
+                } else if (!elClassList.contains("hidden") && !elClassList.contains(selectedStyle)) {
+                  elClassList.add("hidden");
                 }
               });
             });
