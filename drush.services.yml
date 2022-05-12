@@ -1,0 +1,5 @@
+services:
+  format_strawberryfield.commands:
+    class: Drupal\format_strawberryfield\Commands\LibrariesDrushCommands
+    tags:
+      - { name: drush.command }
