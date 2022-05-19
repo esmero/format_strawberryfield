@@ -9,11 +9,8 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Template\TwigEnvironment;
-use Drupal\Core\Field\FieldItemInterface;
-use Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
-use phpDocumentor\Reflection\PseudoTypes\LowercaseString;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\CiteProc;
@@ -35,7 +32,6 @@ use Drupal\Core\File\FileSystemInterface;
  * )
  */
 class StrawberryCitationFormatter extends StrawberryBaseFormatter {
-
 
   /**
    * The entity manager.
@@ -136,9 +132,9 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-
-    // There's a better way to get this directory
-    $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution';
+    $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
+    $csl_exists = $this->fileSystem->prepareDirectory($csl_root);
+    $citation_style_directory = $csl_root . '/styles-distribution';
     // Get the list of style files.
     $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
     # Generate a list of select options and push in the styles.
@@ -153,7 +149,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     asort($style_options);
     return [
       'customtext' => [
-        '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
+        '#markup' => '<h3>Use this form to select options for your citations.</h3>',
       ],
       'metadatadisplayentity_uuid' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
@@ -229,6 +225,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $embargo_context = [];
     $embargo_tags = [];
     $nodeuuid = $items->getEntity()->uuid();
+    $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
 
     foreach ($items as $delta => $item) {
       $uniqueid =
@@ -330,8 +327,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $rendered_json_string = $metadatadisplayentity->renderNative($context);
 
     try {
-      // Get citation locales (not the right way to do this yet).
-      $citation_locales_file = DRUPAL_ROOT . '/libraries/citation-style-language/locales/locales.json';
+      $citation_locales_file = $csl_root . '/locales/locales.json';
       $citation_locales_file_contents = file_get_contents($citation_locales_file);
       $citation_locales = json_decode($citation_locales_file_contents, true);
 
@@ -339,21 +335,21 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $selected_styles = $this->settings['citationstyle'];
       // Get language key from settings.
       $selected_locale_key = false;
-      if($this->getSetting('localekey')) {
+      if ($this->getSetting('localekey')) {
         $selected_locale_key = $this->settings['localekey'];
       }
       $locale = false;
       $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
-      if($selected_locale_value) {
+      if ($selected_locale_value) {
         $available_locale = trim($selected_locale_value);
-      } elseif($langcode) {
+      } elseif ($langcode) {
         $available_locale = trim($langcode);
       }
       $len_of_available_locale = strlen($available_locale);
       $locale_hyphen = strpos($available_locale, '-') == 2;
       $primary_dialects = $citation_locales['primary-dialects'];
       $language_names = $citation_locales['language-names'];
-      if( $len_of_available_locale == 2) {
+      if ( $len_of_available_locale == 2) {
         $normalized_locale = strtolower($available_locale);
         $locale = array_key_exists($normalized_locale, $primary_dialects) ? $primary_dialects[$normalized_locale] : $locale;
       } elseif ($len_of_available_locale == 5 && $locale_hyphen) {
@@ -372,7 +368,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $message];
       }
       $rendered_bibliography = '';
-      $citation_style_directory = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution/';
+      $citation_style_directory = $csl_root . '/styles-distribution';
       $select = '
         <label for="citation-styles">Style:</label>
         <select name="citation-style" class="citation-style-selector">
@@ -406,7 +402,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $style_iterator = 0;
       foreach ($selected_styles as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
-        if($locale) {
+        if ($locale) {
           $citeProc = new CiteProc($style, $locale);
         } else {
           $citeProc = new CiteProc($style);
@@ -423,7 +419,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           $css_selector_len = strlen($css_selector);
           // Check if the selector exists in the HTML block.
           $pos = strpos($processed_bibliography,$css_selector);
-          if($pos !== false) {
+          if ($pos !== false) {
             // Construct the inline style tag string to insert.
             $inline_rule = ' style="';
             foreach($css_statements as $css_property => $css_value) {
@@ -432,20 +428,20 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
             $inline_rule .= '"';
             // For each instance of the tag match insert the inline style.
             $start = 0;
-            while(($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
+            while (($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
               // The below offset makes the assumption that the matched tag is the only class, but is that right?
               $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
               $start = $inline_pos + 1;
             }
           }
         }
-        if($style_iterator > 0) {
+        if ($style_iterator > 0) {
           $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         } else {
           $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         }
         $rendered_bibliography .= $processed_bibliography;
-        $style_file = $citation_style_directory . $selected_style . '.csl';
+        $style_file = $citation_style_directory . '/' . $selected_style . '.csl';
         $style_xml = simplexml_load_file($style_file);
         $style_title = $style_xml->info->title->__toString();
         $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
