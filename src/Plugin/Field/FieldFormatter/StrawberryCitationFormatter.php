@@ -331,7 +331,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
 
     try {
       // Get citation locales (not the right way to do this yet).
-      $citation_locales_file = '/var/www/html/vendor/citation-style-language/locales/locales.json';
+      $citation_locales_file = DRUPAL_ROOT . '/libraries/citation-style-language/locales/locales.json';
       $citation_locales_file_contents = file_get_contents($citation_locales_file);
       $citation_locales = json_decode($citation_locales_file_contents, true);
 
@@ -372,7 +372,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $message];
       }
       $rendered_bibliography = '';
-      $citation_style_directory = '/var/www/html/vendor/citation-style-language/styles-distribution/';
+      $citation_style_directory = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution/';
       $select = '
         <label for="citation-styles">Style:</label>
         <select name="citation-style" class="citation-style-selector">
