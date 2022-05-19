@@ -115,7 +115,8 @@ class LibrariesDrushCommands extends DrushCommands {
     if ($file_system->prepareDirectory($csl_root )) {
       $io->note('Citeproc-php dependencies are present.');
       return 1;
-    } else {
+    }
+    else {
       $io->note('Citeproc-php dependencies are not present.');
       $csl_locales_path = $csl_root . '/locales';
       $csl_styles_path = $csl_root . '/styles-distribution';

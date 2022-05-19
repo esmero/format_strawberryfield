@@ -138,7 +138,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $style_options = array();
     if (!$csl_exists) {
       $this->messenger()->addWarning('Please run "drush archipelago-download-citeproc-dependencies" before using this formatter.', 'warning');
-    } else {
+    }
+    else {
       $citation_style_directory = $csl_root . '/styles-distribution';
       // Get the list of style files.
       $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
@@ -349,7 +350,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
       if ($selected_locale_value) {
         $available_locale = trim($selected_locale_value);
-      } elseif ($langcode) {
+      }
+      elseif ($langcode) {
         $available_locale = trim($langcode);
       }
       $len_of_available_locale = strlen($available_locale);
@@ -359,7 +361,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       if ( $len_of_available_locale == 2) {
         $normalized_locale = strtolower($available_locale);
         $locale = array_key_exists($normalized_locale, $primary_dialects) ? $primary_dialects[$normalized_locale] : $locale;
-      } elseif ($len_of_available_locale == 5 && $locale_hyphen) {
+      }
+      elseif ($len_of_available_locale == 5 && $locale_hyphen) {
         $normalized_locale = strtolower(substr($available_locale, 0, 2)) . '-' . strtoupper(substr($available_locale, 3, 2));
         $locale = array_key_exists($normalized_locale, $language_names) ? $normalized_locale : $locale;
       }
@@ -411,7 +414,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         $style = StyleSheet::loadStyleSheet($selected_style);
         if ($locale) {
           $citeProc = new CiteProc($style, $locale);
-        } else {
+        }
+        else {
           $citeProc = new CiteProc($style);
         }
         $bibliography = $citeProc->render($data, "bibliography");
@@ -444,7 +448,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         }
         if ($style_iterator > 0) {
           $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
-        } else {
+        }
+        else {
           $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         }
         $rendered_bibliography .= $processed_bibliography;
