@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
+use Drupal\pathauto\MessengerInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Seboettg\CiteProc\StyleSheet;
@@ -133,20 +134,24 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entity = reset($entities);
     }
     $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
-    $csl_exists = $this->fileSystem->prepareDirectory($csl_root);
-    $citation_style_directory = $csl_root . '/styles-distribution';
-    // Get the list of style files.
-    $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
-    # Generate a list of select options and push in the styles.
+    $csl_exists = is_dir($csl_root);
     $style_options = array();
-    foreach($style_list as $style) {
-      $style_name = $style->name;
-      $style_xml = simplexml_load_file($style->uri);
-      $style_title = $style_xml->info->title->__toString();
-      $style_options[$style_name] = $this->t($style_title);
+    if (!$csl_exists) {
+      $this->messenger()->addWarning('Please run "drush archipelago-download-citeproc-dependencies" before using this formatter.', 'warning');
+    } else {
+      $citation_style_directory = $csl_root . '/styles-distribution';
+      // Get the list of style files.
+      $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
+      # Generate a list of select options and push in the styles.
+      foreach($style_list as $style) {
+        $style_name = $style->name;
+        $style_xml = simplexml_load_file($style->uri);
+        $style_title = $style_xml->info->title->__toString();
+        $style_options[$style_name] = $this->t($style_title);
+      }
+      // Alphabetize them.
+      asort($style_options);
     }
-    // Alphabetize them.
-    asort($style_options);
     return [
       'customtext' => [
         '#markup' => '<h3>Use this form to select options for your citations.</h3>',
@@ -169,6 +174,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#required' => TRUE,
         '#multiple' => TRUE,
         '#options' => $style_options,
+        '#disabled' => !$csl_exists,
         '#default_value' => $this->getSetting('citationstyle'),
       ],
       'localekey' => [
@@ -176,6 +182,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#title' => $this->t('Provide a metadata key to use as the locale (language) for citations.'),
         '#default_value' => $this->getSetting('localekey'),
         '#required' => FALSE,
+        '#disabled' => !$csl_exists,
       ],
     ];
   }
