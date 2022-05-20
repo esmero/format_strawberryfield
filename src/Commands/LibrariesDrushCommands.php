@@ -44,6 +44,12 @@ class LibrariesDrushCommands extends DrushCommands {
    */
   protected $fileSystem;
 
+  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
+
+  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+
+  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution';
+
   /**
    * Constructs the object.
    *
@@ -102,53 +108,72 @@ class LibrariesDrushCommands extends DrushCommands {
     return $destination;
   }
 
+  private function downloadExtractCiteProcDependencies() {
+    $file_system = $this->fileSystem;
+    $csl_root = $this->cslRoot;
+    $csl_locales_path = $this->cslLocalesPath;
+    $csl_styles_path = $this->cslStylesPath;
+    $csl_styles_url = 'https://github.com/citation-style-language/styles/tarball/v1.0.2';
+    $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/v1.0.2';
+    $tmp_dir = $file_system->getTempDirectory() ;
+    $csl_styles_destination = $this->downloadFiles($csl_styles_url, $tmp_dir . '/citeproc-styles.tar.gz');
+    $csl_locales_destination = $this->downloadFiles($csl_locales_url, $tmp_dir . '/citeproc-locales.tar.gz');
+    $csl_styles_tar = new TAR($csl_styles_destination);
+    $csl_locales_tar = new TAR($csl_locales_destination);
+
+    $csl_locales_files_all = $csl_locales_tar->listContents();
+    $csl_locales_files_extract = [];
+    $csl_locales_path_remove = explode('/', $csl_locales_files_all[0],0 )[0];
+    foreach ( $csl_locales_files_all as $csl_locales_file ) {
+      if (str_ends_with( $csl_locales_file, '.xml' ) || str_ends_with( $csl_locales_file, '.json' )) {
+        array_push( $csl_locales_files_extract, $csl_locales_file );
+      }
+    }
+    $csl_locales_tar->extract($csl_root, $csl_locales_files_extract);
+    if (is_dir($csl_locales_path)) {
+      $file_system->deleteRecursive($csl_locales_path);
+    }
+    rename($csl_root . '/' . $csl_locales_path_remove, $csl_locales_path);
+
+    $csl_styles_files_all = $csl_styles_tar->listContents();
+    $csl_styles_files_extract = [];
+    $csl_styles_path_remove = explode('/', $csl_styles_files_all[0],0 )[0];
+    foreach ( $csl_styles_files_all as $csl_styles_file ) {
+      if (str_ends_with( $csl_styles_file, '.csl')) {
+        array_push( $csl_styles_files_extract, $csl_styles_file );
+      }
+    }
+    $csl_styles_tar->extract($csl_root, $csl_styles_files_extract);
+    if (is_dir($csl_styles_path)) {
+      $file_system->deleteRecursive($csl_styles_path);
+    }
+    rename($csl_root . '/' . $csl_styles_path_remove, $csl_styles_path );
+  }
+
   /**
    * Downloads citeproc-php and dependencies.
    *
    * @command archipelago:download-citeproc-dependencies
    * @aliases archipelago-download-citeproc-dependencies
    */
-  public function downloadCiteProcDependencies() {
+  public function installCiteProcDependencies() {
     $io = $this->io();
-    $file_system = $this->fileSystem;
-    $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
-    if ($file_system->prepareDirectory($csl_root )) {
+    $csl_root = $this->cslRoot;
+    $csl_locales_path = $this->cslLocalesPath;
+    $csl_styles_path = $this->cslStylesPath;
+    // @TODO Maybe check if there are actually files in both directories in case
+    // something went wrong?
+    if (is_dir($csl_root) || (is_dir($csl_locales_path) && is_dir($csl_styles_path))) {
       $io->note('Citeproc-php dependencies are present.');
+      $download_again = $io->choice('Download and extract libraries again?', ['Yes']);
+      if ($download_again == 0) {
+        $this->downloadExtractCiteProcDependencies();
+      }
       return 1;
     }
     else {
       $io->note('Citeproc-php dependencies are not present.');
-      $csl_locales_path = $csl_root . '/locales';
-      $csl_styles_path = $csl_root . '/styles-distribution';
-      $csl_styles_url = 'https://github.com/citation-style-language/styles/tarball/v1.0.2';
-      $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/v1.0.2';
-      $tmp_dir = $file_system->getTempDirectory() ;
-      $csl_styles_destination = $this->downloadFiles($csl_styles_url, $tmp_dir . '/citeproc-styles.tar.gz');
-      $csl_locales_destination = $this->downloadFiles($csl_locales_url, $tmp_dir . '/citeproc-locales.tar.gz');
-      $csl_styles_tar = new TAR($csl_styles_destination);
-      $csl_locales_tar = new TAR($csl_locales_destination);
-
-      $csl_locales_files_all = $csl_locales_tar->listContents();
-      $csl_locales_files_extract = [];
-      $csl_locales_path_remove = explode('/', $csl_locales_files_all[0],0 )[0];
-      foreach ( $csl_locales_files_all as $csl_locales_file ) {
-        if (str_ends_with( $csl_locales_file, '.xml' ) || str_ends_with( $csl_locales_file, '.json' )) {
-          array_push( $csl_locales_files_extract, $csl_locales_file );
-        }
-      }
-      $csl_locales_tar->extract( $csl_root, $csl_locales_files_extract );
-      rename($csl_root . '/' . $csl_locales_path_remove, $csl_locales_path);
-
-      $csl_styles_files_all = $csl_styles_tar->listContents();
-      $csl_styles_files_extract = [];
-      $csl_styles_path_remove = explode('/', $csl_styles_files_all[0],0 )[0];
-      foreach ( $csl_styles_files_all as $csl_styles_file ) {
-        if (str_ends_with( $csl_styles_file, '.csl')) {
-          array_push( $csl_styles_files_extract, $csl_styles_file );
-        }
-      }
-      $csl_styles_tar->extract( $csl_root, $csl_styles_files_extract );
-      rename($csl_root . '/' . $csl_styles_path_remove, $csl_styles_path );
+      $this->downloadExtractCiteProcDependencies();
     }
   }
 }
