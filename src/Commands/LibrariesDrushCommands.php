@@ -120,8 +120,8 @@ class LibrariesDrushCommands extends DrushCommands {
       $io->note('Citeproc-php dependencies are not present.');
       $csl_locales_path = $csl_root . '/locales';
       $csl_styles_path = $csl_root . '/styles-distribution';
-      $csl_styles_url = 'https://github.com/citation-style-language/styles-distribution/tarball/master';
-      $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/master';
+      $csl_styles_url = 'https://github.com/citation-style-language/styles/tarball/v1.0.2';
+      $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/v1.0.2';
       $tmp_dir = $file_system->getTempDirectory() ;
       $csl_styles_destination = $this->downloadFiles($csl_styles_url, $tmp_dir . '/citeproc-styles.tar.gz');
       $csl_locales_destination = $this->downloadFiles($csl_locales_url, $tmp_dir . '/citeproc-locales.tar.gz');
