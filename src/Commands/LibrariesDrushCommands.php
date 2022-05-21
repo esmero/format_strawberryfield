@@ -113,6 +113,8 @@ class LibrariesDrushCommands extends DrushCommands {
     $csl_root = $this->cslRoot;
     $csl_locales_path = $this->cslLocalesPath;
     $csl_styles_path = $this->cslStylesPath;
+
+    // @TODO Eventually will need to update to 1.1.0 and accommodate breaking changes.
     $csl_styles_url = 'https://github.com/citation-style-language/styles/tarball/v1.0.2';
     $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/v1.0.2';
     $tmp_dir = $file_system->getTempDirectory() ;
@@ -161,10 +163,12 @@ class LibrariesDrushCommands extends DrushCommands {
     $csl_root = $this->cslRoot;
     $csl_locales_path = $this->cslLocalesPath;
     $csl_styles_path = $this->cslStylesPath;
-    // @TODO Maybe check if there are actually files in both directories in case
-    // something went wrong?
     if (is_dir($csl_root) || (is_dir($csl_locales_path) && is_dir($csl_styles_path))) {
       $io->note('Citeproc-php dependencies are present.');
+
+      // @TODO Add documentation about the fact that re-downloading and
+      // extracting via below option will delete what's existing in folders and
+      // try again.
       $download_again = $io->choice('Download and extract libraries again?', ['Yes']);
       if ($download_again == 0) {
         $this->downloadExtractCiteProcDependencies();
@@ -172,7 +176,7 @@ class LibrariesDrushCommands extends DrushCommands {
       return 1;
     }
     else {
-      $io->note('Citeproc-php dependencies are not present.');
+      $io->note('Citeproc-php dependencies are not present. Downloading and extracting them now.');
       $this->downloadExtractCiteProcDependencies();
     }
   }

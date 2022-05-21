@@ -10,7 +10,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Drupal\pathauto\MessengerInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Seboettg\CiteProc\StyleSheet;
@@ -55,6 +54,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
    */
   protected $fileSystem;
 
+  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
+
+  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+
+  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution';
   /**
    * StrawberryMetadataTwigFormatter constructor.
    *
@@ -133,14 +137,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-    $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
+    $csl_root = $this->cslRoot;
     $csl_exists = is_dir($csl_root);
     $style_options = array();
     if (!$csl_exists) {
       $this->messenger()->addWarning('Please run "drush archipelago-download-citeproc-dependencies" before using this formatter.', 'warning');
     }
     else {
-      $citation_style_directory = $csl_root . '/styles-distribution';
+      $citation_style_directory = $this->cslStylesPath;
       // Get the list of style files.
       $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
       # Generate a list of select options and push in the styles.
@@ -223,6 +227,28 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     return $summary;
   }
 
+  private function parseCSS($css){
+    preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
+    $result = array();
+    foreach ($arr[0] as $i => $x){
+      $selector = trim($arr[1][$i]);
+      $rules = explode(';', trim($arr[2][$i]));
+      $rules_arr = array();
+      foreach ($rules as $strRule){
+        if (!empty($strRule)){
+          $rule = explode(":", $strRule);
+          $rules_arr[trim($rule[0])] = trim($rule[1]);
+        }
+      }
+
+      $selectors = explode(',', trim($selector));
+      foreach ($selectors as $strSel){
+        $result[$strSel] = $rules_arr;
+      }
+    }
+    return $result;
+  }
+
   /**
    * {@inheritdoc}
    */
@@ -233,7 +259,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $embargo_context = [];
     $embargo_tags = [];
     $nodeuuid = $items->getEntity()->uuid();
-    $csl_root = DRUPAL_ROOT . '/libraries/citation-style-language';
+    $csl_root = $this->cslRoot;
 
     foreach ($items as $delta => $item) {
       $uniqueid =
@@ -335,7 +361,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $rendered_json_string = $metadatadisplayentity->renderNative($context);
 
     try {
-      $citation_locales_file = $csl_root . '/locales/locales.json';
+      $citation_locales_file = $this->cslLocalesPath . '/locales.json';
       $citation_locales_file_contents = file_get_contents($citation_locales_file);
       $citation_locales = json_decode($citation_locales_file_contents, true);
 
@@ -378,37 +404,12 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $message];
       }
       $rendered_bibliography = '';
-      $citation_style_directory = $csl_root . '/styles-distribution';
+      $citation_style_directory = $this->cslStylesPath;
       $select = '
         <label for="citation-styles">Style:</label>
         <select name="citation-style" class="citation-style-selector">
       ';
 
-      // Following function taken whole cloth from here: https://stackoverflow.com/questions/3618381/parse-a-css-file-with-php
-      function parse($css){
-        preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
-        $result = array();
-        foreach ($arr[0] as $i => $x){
-          $selector = trim($arr[1][$i]);
-          $rules = explode(';', trim($arr[2][$i]));
-          $rules_arr = array();
-          foreach ($rules as $strRule){
-            if (!empty($strRule)){
-              $rule = explode(":", $strRule);
-              $rules_arr[trim($rule[0])] = trim($rule[1]);
-            }
-          }
-
-          $selectors = explode(',', trim($selector));
-          foreach ($selectors as $strSel){
-            $result[$strSel] = $rules_arr;
-          }
-        }
-        return $result;
-      }
-
-      // Loop through each style, render it as a CSS block, convert to
-      // array, and process as inline style tag against rendered HTML.
       $style_iterator = 0;
       foreach ($selected_styles as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
@@ -420,27 +421,20 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         }
         $bibliography = $citeProc->render($data, "bibliography");
         $cssStyles = $citeProc->renderCssStyles();
-        $parsedStyle = parse($cssStyles);
+        $parsedStyle = $this->parseCSS($cssStyles);
         $processed_bibliography = $bibliography;
-        // Deconstruct the CSS rules by selector.
         foreach ($parsedStyle as $css_prop => $css_statements) {
-          // Remove dot from class to match against HTML block.
           $css_selector = ltrim($css_prop, '.');
-          // Get the length to offset below and insert the style tag inline.
           $css_selector_len = strlen($css_selector);
-          // Check if the selector exists in the HTML block.
           $pos = strpos($processed_bibliography,$css_selector);
           if ($pos !== false) {
-            // Construct the inline style tag string to insert.
             $inline_rule = ' style="';
             foreach($css_statements as $css_property => $css_value) {
               $inline_rule .= $css_property . ':' . $css_value . ';';
             }
             $inline_rule .= '"';
-            // For each instance of the tag match insert the inline style.
             $start = 0;
             while (($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
-              // The below offset makes the assumption that the matched tag is the only class, but is that right?
               $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
               $start = $inline_pos + 1;
             }
@@ -473,7 +467,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     ];
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
     $elements[$delta]['bibliography'] = [
-      // The below has to be used so style tags don't get stripped in the render process.
       '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography),
     ];
     return $elements;
