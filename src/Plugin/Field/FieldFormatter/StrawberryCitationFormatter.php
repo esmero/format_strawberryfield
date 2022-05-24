@@ -12,7 +12,8 @@ use Drupal\Core\Template\TwigEnvironment;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Seboettg\CiteProc\StyleSheet;
+#use Seboettg\CiteProc\StyleSheet;
+use Drupal\format_strawberryfield\CiteProc\StyleSheet;
 use Seboettg\CiteProc\CiteProc;
 use Drupal\Core\File\FileSystemInterface;
 
@@ -54,11 +55,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
    */
   protected $fileSystem;
 
-  protected $cslRoot = DRUPAL_ROOT . '/../vendor/citation-style-language';
+  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/styles';
+  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles';
   /**
    * StrawberryMetadataTwigFormatter constructor.
    *
