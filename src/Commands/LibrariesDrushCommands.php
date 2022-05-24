@@ -44,11 +44,11 @@ class LibrariesDrushCommands extends DrushCommands {
    */
   protected $fileSystem;
 
-  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
+  protected $cslRoot = DRUPAL_ROOT . '/../vendor/citation-style-language';
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution';
+  protected $cslStylesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/styles';
 
   /**
    * Constructs the object.
@@ -114,6 +114,9 @@ class LibrariesDrushCommands extends DrushCommands {
     $csl_locales_path = $this->cslLocalesPath;
     $csl_styles_path = $this->cslStylesPath;
 
+    if (is_dir($csl_root)) {
+      $file_system->deleteRecursive($csl_root);
+    }
     // @TODO Eventually will need to update to 1.1.0 and accommodate breaking changes.
     $csl_styles_url = 'https://github.com/citation-style-language/styles/tarball/v1.0.2';
     $csl_locales_url = 'https://github.com/citation-style-language/locales/tarball/v1.0.2';
@@ -132,9 +135,6 @@ class LibrariesDrushCommands extends DrushCommands {
       }
     }
     $csl_locales_tar->extract($csl_root, $csl_locales_files_extract);
-    if (is_dir($csl_locales_path)) {
-      $file_system->deleteRecursive($csl_locales_path);
-    }
     rename($csl_root . '/' . $csl_locales_path_remove, $csl_locales_path);
 
     $csl_styles_files_all = $csl_styles_tar->listContents();
@@ -146,9 +146,6 @@ class LibrariesDrushCommands extends DrushCommands {
       }
     }
     $csl_styles_tar->extract($csl_root, $csl_styles_files_extract);
-    if (is_dir($csl_styles_path)) {
-      $file_system->deleteRecursive($csl_styles_path);
-    }
     rename($csl_root . '/' . $csl_styles_path_remove, $csl_styles_path );
   }
 

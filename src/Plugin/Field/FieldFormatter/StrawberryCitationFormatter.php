@@ -54,11 +54,11 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
    */
   protected $fileSystem;
 
-  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
+  protected $cslRoot = DRUPAL_ROOT . '/../vendor/citation-style-language';
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles-distribution';
+  protected $cslStylesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/styles';
   /**
    * StrawberryMetadataTwigFormatter constructor.
    *
@@ -259,7 +259,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $embargo_context = [];
     $embargo_tags = [];
     $nodeuuid = $items->getEntity()->uuid();
-    $csl_root = $this->cslRoot;
 
     foreach ($items as $delta => $item) {
       $uniqueid =

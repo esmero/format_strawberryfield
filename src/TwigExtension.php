@@ -43,6 +43,8 @@ class TwigExtension extends AbstractExtension {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
         [$this, 'entityIdsByLabel']),
+      //new TwigFunction('generate_citation',
+      //  [$this, 'citation']),
     ];
   }
 
@@ -56,7 +58,7 @@ class TwigExtension extends AbstractExtension {
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
-      new TwigFilter('citation', [$this, 'citation'], ['is_safe' => ['all']]),
+      new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
     ];
   }
 
@@ -219,49 +221,64 @@ class TwigExtension extends AbstractExtension {
    * Generates CSL citations.
    *
    * @param $body
+   * @param array $styles
+   * @param $locale
    *
    * @return string
    */
-  public function citation($body): string {
-    $style = StyleSheet::loadStyleSheet("din-1505-2");
-    $citeProc = new CiteProc($style);
-    $test_json = '[
-    {
-      "author": [
-            {
-              "family": "Doe",
-                "given": "James",
-                "suffix": "III"
-            }
-        ],
-        "id": "item-1",
-        "issued": {
-      "date-parts": [
-        [
-          "2001"
-        ]
-      ]
-        },
-        "title": "My Anonymous Heritage",
-        "type": "book"
-    },
-    {
-      "author": [
-            {
-              "family": "Anderson",
-                "given": "John"
-            },
-            {
-              "family": "Brown",
-                "given": "John"
-            }
-        ],
-        "id": "ITEM-2",
-        "type": "book",
-        "title": "Two authors writing a book"
+  public function bibliography($body, array $styles = [], $locale): string {
+    $bibliography = '';
+    foreach ($styles as $style) {
+      $style = StyleSheet::loadStyleSheet($style);
+      //$citeProc = new CiteProc($style);
+      if ($locale) {
+        $citeProc = new CiteProc($style, $locale);
+      }
+      else {
+        $citeProc = new CiteProc($style);
+      }
+      $bibliography .= $citeProc->render(json_decode($body), "bibliography");
     }
-]';
-    $citation = $citeProc->render(json_decode($test_json), "citation");
-    return $citation;
+
+    //  @EXAMPLE_JSON = '[
+    //    {
+    //      "author": [
+    //            {
+    //              "family": "Doe",
+    //                "given": "James",
+    //                "suffix": "III"
+    //            }
+    //        ],
+    //        "id": "item-1",
+    //        "issued": {
+    //      "date-parts": [
+    //        [
+    //          "2001"
+    //        ]
+    //      ]
+    //        },
+    //        "title": "My Anonymous Heritage",
+    //        "type": "book"
+    //    },
+    //    {
+    //      "author": [
+    //            {
+    //              "family": "Anderson",
+    //                "given": "John"
+    //            },
+    //            {
+    //              "family": "Brown",
+    //                "given": "John"
+    //            }
+    //        ],
+    //        "id": "ITEM-2",
+    //        "type": "book",
+    //        "title": "Two authors writing a book"
+    //    }
+    // ]';
+
+    //$citation = $citeProc->render(json_decode($test_json), "citation");
+    //return $citation;
+    return $bibliography;
   }
 }
