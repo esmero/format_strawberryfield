@@ -42,8 +42,6 @@ class TwigExtension extends AbstractExtension {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
         [$this, 'entityIdsByLabel']),
-      //new TwigFunction('generate_citation',
-      //  [$this, 'citation']),
     ];
   }
 
@@ -158,7 +156,6 @@ class TwigExtension extends AbstractExtension {
     }
   }
 
-
   /**
    * Converts HTML to Markdown.
    *
@@ -217,29 +214,15 @@ class TwigExtension extends AbstractExtension {
   }
 
   /**
-   * Generates CSL citations.
+   * Generates CSL bibliography.
    *
-   * @param $body
+   * @param array $value
    * @param array $styles
-   * @param $locale
+   * @param string $locale
    *
    * @return string
    */
   public function bibliography(array $value, string $locale, array $styles = []): string {
-
-    $json_string = json_encode($value);
-    $json_data = json_decode($json_string);
-    $json_error = json_last_error();
-    if ($json_error != JSON_ERROR_NONE) {
-      return $json_error;
-    }
-    $render = new Render();
-    if ($locale) {
-        $bibliography = $render->bibliography($locale, $styles, $json_data);
-    }
-    else {
-      $bibliography = $render->bibliography(null, $styles, $json_data);
-    }
 
     //  @EXAMPLE_JSON = '[
     //    {
@@ -278,6 +261,19 @@ class TwigExtension extends AbstractExtension {
     //    }
     // ]';
 
+    $json_string = json_encode($value);
+    $json_data = json_decode($json_string);
+    $json_error = json_last_error();
+    if ($json_error != JSON_ERROR_NONE) {
+      return $json_error;
+    }
+    $render = new Render();
+    if ($locale) {
+        $bibliography = $render->bibliography($locale, $styles, $json_data);
+    }
+    else {
+      $bibliography = $render->bibliography(null, $styles, $json_data);
+    }
     return $bibliography;
   }
 }

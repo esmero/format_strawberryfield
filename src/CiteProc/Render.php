@@ -15,7 +15,7 @@ class Render {
    * Parses CSS string into an array for processing.
    *
    * @param string $css
-   * @return string
+   * @return array
    */
   private function parseCSS(string $css): array {
     preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
@@ -45,7 +45,9 @@ class Render {
    *
    * See in styles folder (which is included as git submodule) for all available style sheets
    *
-   * @param string $styleName e.g. "american-physiological-society" for apa
+   * @param string $locale
+   * @param array $styleNames e.g. "american-physiological-society" for apa
+   * @param array $jsonData
    * @return string
    * @throws CiteProcException
    */
