@@ -2,7 +2,6 @@
 
 namespace Drupal\format_strawberryfield\CiteProc;
 
-//use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
@@ -16,8 +15,7 @@ class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
    * @return string
    * @throws CiteProcException
    */
-  public static function loadStyleSheet(string $styleName): string
-  {
+  public static function loadStyleSheet(string $styleName): string {
     $stylesPath = self::vendorPath() . "/citation-style-language/styles";
     return self::readFileContentsOrThrowException("$stylesPath/$styleName.csl");
   }
@@ -29,8 +27,7 @@ class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
    * @return string
    * @throws CiteProcException
    */
-  public static function loadLocales(string $langKey): string
-  {
+  public static function loadLocales(string $langKey): string {
     $localesPath = self::vendorPath()."/citation-style-language/locales";
     $localeFile = "$localesPath/locales-${langKey}.xml";
     if (file_exists($localeFile)) {
@@ -49,8 +46,7 @@ class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
   /**
    * @throws CiteProcException
    */
-  private static function readFileContentsOrThrowException($path): string
-  {
+  private static function readFileContentsOrThrowException($path): string {
     $fileContent = file_get_contents($path);
     if (false === $fileContent) {
       throw new CiteProcException("Couldn't read $path");
@@ -62,8 +58,7 @@ class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
    * @return mixed
    * @throws CiteProcException
    */
-  public static function loadLocalesMetadata()
-  {
+  public static function loadLocalesMetadata() {
     $localesMetadataPath = self::vendorPath() . "/citation-style-language/locales/locales.json";
     return json_decode(self::readFileContentsOrThrowException($localesMetadataPath));
   }
@@ -72,11 +67,10 @@ class StyleSheet extends \Seboettg\CiteProc\StyleSheet {
    * @return bool|string
    * @throws CiteProcException
    */
-  private static function vendorPath()
-  {
+  private static function vendorPath() {
     $vendorPath = DRUPAL_ROOT . '/libraries';
     if (!is_dir($vendorPath)) {
-      throw new CiteProcException('CiteProc dependencies not present. Please install by running "drush archipelago-download-citeproc-dependencies');
+      throw new CiteProcException('Drupal root "/libraries" folder missing. Please create directory first.');
     }
     return $vendorPath;
   }

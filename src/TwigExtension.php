@@ -8,8 +8,7 @@ use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
-use Seboettg\CiteProc\CiteProc;
-use Seboettg\CiteProc\StyleSheet;
+use Drupal\format_strawberryfield\CiteProc\Render;
 
 /**
  * Class TwigExtension.
@@ -226,18 +225,20 @@ class TwigExtension extends AbstractExtension {
    *
    * @return string
    */
-  public function bibliography($body, array $styles = [], $locale): string {
-    $bibliography = '';
-    foreach ($styles as $style) {
-      $style = StyleSheet::loadStyleSheet($style);
-      //$citeProc = new CiteProc($style);
-      if ($locale) {
-        $citeProc = new CiteProc($style, $locale);
-      }
-      else {
-        $citeProc = new CiteProc($style);
-      }
-      $bibliography .= $citeProc->render(json_decode($body), "bibliography");
+  public function bibliography(array $value, string $locale, array $styles = []): string {
+
+    $json_string = json_encode($value);
+    $json_data = json_decode($json_string);
+    $json_error = json_last_error();
+    if ($json_error != JSON_ERROR_NONE) {
+      return $json_error;
+    }
+    $render = new Render();
+    if ($locale) {
+        $bibliography = $render->bibliography($locale, $styles, $json_data);
+    }
+    else {
+      $bibliography = $render->bibliography(null, $styles, $json_data);
     }
 
     //  @EXAMPLE_JSON = '[
@@ -277,8 +278,6 @@ class TwigExtension extends AbstractExtension {
     //    }
     // ]';
 
-    //$citation = $citeProc->render(json_decode($test_json), "citation");
-    //return $citation;
     return $bibliography;
   }
 }

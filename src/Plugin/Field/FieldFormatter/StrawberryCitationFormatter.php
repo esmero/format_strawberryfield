@@ -12,9 +12,7 @@ use Drupal\Core\Template\TwigEnvironment;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-#use Seboettg\CiteProc\StyleSheet;
-use Drupal\format_strawberryfield\CiteProc\StyleSheet;
-use Seboettg\CiteProc\CiteProc;
+use Drupal\format_strawberryfield\CiteProc\Render;
 use Drupal\Core\File\FileSystemInterface;
 
 /**
@@ -56,8 +54,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   protected $fileSystem;
 
   protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
-
-  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
 
   protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles';
   /**
@@ -228,27 +224,27 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     return $summary;
   }
 
-  private function parseCSS($css){
-    preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
-    $result = array();
-    foreach ($arr[0] as $i => $x){
-      $selector = trim($arr[1][$i]);
-      $rules = explode(';', trim($arr[2][$i]));
-      $rules_arr = array();
-      foreach ($rules as $strRule){
-        if (!empty($strRule)){
-          $rule = explode(":", $strRule);
-          $rules_arr[trim($rule[0])] = trim($rule[1]);
-        }
-      }
+  //private function parseCSS($css){
+  //  preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
+  //  $result = array();
+  //  foreach ($arr[0] as $i => $x){
+  //    $selector = trim($arr[1][$i]);
+  //    $rules = explode(';', trim($arr[2][$i]));
+  //    $rules_arr = array();
+  //    foreach ($rules as $strRule){
+  //      if (!empty($strRule)){
+  //        $rule = explode(":", $strRule);
+  //        $rules_arr[trim($rule[0])] = trim($rule[1]);
+  //      }
+  //    }
 
-      $selectors = explode(',', trim($selector));
-      foreach ($selectors as $strSel){
-        $result[$strSel] = $rules_arr;
-      }
-    }
-    return $result;
-  }
+  //    $selectors = explode(',', trim($selector));
+  //    foreach ($selectors as $strSel){
+  //      $result[$strSel] = $rules_arr;
+  //    }
+  //  }
+  //  return $result;
+  //}
 
   /**
    * {@inheritdoc}
@@ -360,104 +356,33 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     // Render data from metadata template into JSON string.
     $rendered_json_string = $metadatadisplayentity->renderNative($context);
 
-    try {
-      $citation_locales_file = $this->cslLocalesPath . '/locales.json';
-      $citation_locales_file_contents = file_get_contents($citation_locales_file);
-      $citation_locales = json_decode($citation_locales_file_contents, true);
-
-      // Get styles selected from formatter settings.
-      $selected_styles = $this->settings['citationstyle'];
-      // Get language key from settings.
-      $selected_locale_key = false;
-      if ($this->getSetting('localekey')) {
-        $selected_locale_key = $this->settings['localekey'];
-      }
-      $locale = false;
-      $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
-      if ($selected_locale_value) {
-        $available_locale = trim($selected_locale_value);
-      }
-      elseif ($langcode) {
-        $available_locale = trim($langcode);
-      }
-      $len_of_available_locale = strlen($available_locale);
-      $locale_hyphen = strpos($available_locale, '-') == 2;
-      $primary_dialects = $citation_locales['primary-dialects'];
-      $language_names = $citation_locales['language-names'];
-      if ( $len_of_available_locale == 2) {
-        $normalized_locale = strtolower($available_locale);
-        $locale = array_key_exists($normalized_locale, $primary_dialects) ? $primary_dialects[$normalized_locale] : $locale;
-      }
-      elseif ($len_of_available_locale == 5 && $locale_hyphen) {
-        $normalized_locale = strtolower(substr($available_locale, 0, 2)) . '-' . strtoupper(substr($available_locale, 3, 2));
-        $locale = array_key_exists($normalized_locale, $language_names) ? $normalized_locale : $locale;
-      }
-
-      $data = json_decode($rendered_json_string);
-      $json_error = json_last_error();
-      if ($json_error != JSON_ERROR_NONE) {
-        $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
-          [
-            '@id' => $nodeid,
-            '@field' => $items->getName(),
-          ]);
-        return $elements[$delta] = ['#markup' => $message];
-      }
-      $rendered_bibliography = '';
-      $citation_style_directory = $this->cslStylesPath;
-      $select = '
-        <label for="citation-styles">Style:</label>
-        <select name="citation-style" class="citation-style-selector">
-      ';
-
-      $style_iterator = 0;
-      foreach ($selected_styles as $selected_style) {
-        $style = StyleSheet::loadStyleSheet($selected_style);
-        if ($locale) {
-          $citeProc = new CiteProc($style, $locale);
-        }
-        else {
-          $citeProc = new CiteProc($style);
-        }
-        $bibliography = $citeProc->render($data, "bibliography");
-        $cssStyles = $citeProc->renderCssStyles();
-        $parsedStyle = $this->parseCSS($cssStyles);
-        $processed_bibliography = $bibliography;
-        foreach ($parsedStyle as $css_prop => $css_statements) {
-          $css_selector = ltrim($css_prop, '.');
-          $css_selector_len = strlen($css_selector);
-          $pos = strpos($processed_bibliography,$css_selector);
-          if ($pos !== false) {
-            $inline_rule = ' style="';
-            foreach($css_statements as $css_property => $css_value) {
-              $inline_rule .= $css_property . ':' . $css_value . ';';
-            }
-            $inline_rule .= '"';
-            $start = 0;
-            while (($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
-              $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
-              $start = $inline_pos + 1;
-            }
-          }
-        }
-        if ($style_iterator > 0) {
-          $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
-        }
-        else {
-          $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
-        }
-        $rendered_bibliography .= $processed_bibliography;
-        $style_file = $citation_style_directory . '/' . $selected_style . '.csl';
-        $style_xml = simplexml_load_file($style_file);
-        $style_title = $style_xml->info->title->__toString();
-        $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
-        ++$style_iterator;
-      }
-    } catch (Exception $e) {
-      echo $e->getMessage();
+    // Get styles selected from formatter settings.
+    $selected_styles = $this->settings['citationstyle'];
+    // Get language key from settings.
+    $selected_locale_key = false;
+    if ($this->getSetting('localekey')) {
+      $selected_locale_key = $this->settings['localekey'];
     }
-    $select .= '
-      </select>';
+    $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
+    if ($selected_locale_value) {
+      $available_locale = trim($selected_locale_value);
+    }
+    elseif ($langcode) {
+      $available_locale = trim($langcode);
+    }
+
+    $data = json_decode($rendered_json_string);
+    $json_error = json_last_error();
+    if ($json_error != JSON_ERROR_NONE) {
+      $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
+        [
+          '@id' => $nodeid,
+          '@field' => $items->getName(),
+        ]);
+      return $elements[$delta] = ['#markup' => $message];
+    }
+    $render = new Render();
+    $bibliography = $render->bibliography($available_locale, $selected_styles, $data);
     $elements[$delta] = [
       '#type' => 'container',
       '#attributes' => [
@@ -467,7 +392,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     ];
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
     $elements[$delta]['bibliography'] = [
-      '#markup' => \Drupal\Core\Render\Markup::create($select . $rendered_bibliography),
+      '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
     ];
     return $elements;
   }
