@@ -274,6 +274,20 @@ class TwigExtension extends AbstractExtension {
     else {
       $bibliography = $render->bibliography(null, $styles, $json_data);
     }
-    return $bibliography;
+
+    $render_bibliography = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => 'bibliography' . 'test-unique-id',
+        'class' => ['bibliography'],
+      ],
+      '#attached' => [
+        'library' => 'format_strawberryfield/citations_strawberry'],
+    ];
+    $render_bibliography['bibliography'] = [
+      '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
+    ];
+    $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
+    return $rendered_bibliography;
   }
 }
