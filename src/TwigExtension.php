@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Drupal\Component\Utility\Html;
 use Twig\Extension\AbstractExtension;
 use Twig\Markup;
 use Twig\TwigTest;
@@ -274,11 +275,11 @@ class TwigExtension extends AbstractExtension {
     else {
       $bibliography = $render->bibliography(null, $styles, $json_data);
     }
-
+    $uniqueid = Html::getUniqueId('bibliography');
     $render_bibliography = [
       '#type' => 'container',
       '#attributes' => [
-        'id' => 'bibliography' . 'test-unique-id',
+        'id' => $uniqueid,
         'class' => ['bibliography'],
       ],
       '#attached' => [
