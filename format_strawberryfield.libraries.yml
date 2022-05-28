@@ -320,7 +320,7 @@ citations_strawberry:
     - core/jquery.once
     - core/drupalSettings
 
-clipboard_copy_element:
+clipboard_copy:
   version: 1.1.2
   license:
     name: MIT
@@ -328,3 +328,13 @@ clipboard_copy_element:
     gpl-compatible: true
   js:
     https://unpkg.com/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
+
+clipboard_copy_strawberry:
+  version: 1.0
+  js:
+    js/clipboard_copy_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings

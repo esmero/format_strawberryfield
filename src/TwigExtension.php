@@ -43,6 +43,8 @@ class TwigExtension extends AbstractExtension {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
         [$this, 'entityIdsByLabel']),
+      new TwigFunction('clipboard_copy',
+        [$this, 'clipboardCopy']),
     ];
   }
 
@@ -290,5 +292,27 @@ class TwigExtension extends AbstractExtension {
     ];
     $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
     return $rendered_bibliography;
+  }
+  public function clipboardCopy(string $copyButtonCssClass, string $copyContentCssClass) {
+
+    $uniqueid = Html::getUniqueId('clipboard-copy');
+    $button_html = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => ['clipboard-copy'],
+        'data-clipboard-copy-button' => $copyButtonCssClass,
+        'data-clipboard-copy-content' => $copyContentCssClass,
+      ],
+      '#attached' => [
+        'library' => [
+          'format_strawberryfield/clipboard_copy',
+          'format_strawberryfield/clipboard_copy_strawberry',
+         ],
+      ],
+    ];
+    $rendered_button = \Drupal::service('renderer')->render($button_html);
+    return $rendered_button;
+
   }
 }
