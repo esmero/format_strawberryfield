@@ -293,8 +293,18 @@ class TwigExtension extends AbstractExtension {
     $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
     return $rendered_bibliography;
   }
-  public function clipboardCopy(string $copyButtonCssClass, string $copyContentCssClass) {
 
+  /**
+   * @param string $copyButtonCssClass
+   * @param string $copyContentCssClass
+   *
+   * @return mixed
+   */
+  public function clipboardCopy(string $copyContentCssClass, string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
+
+    if (is_null($copyButtonCssClass)) {
+      $copyButtonCssClass = $copyContentCssClass;
+    }
     $uniqueid = Html::getUniqueId('clipboard-copy');
     $button_html = [
       '#type' => 'container',
@@ -303,6 +313,7 @@ class TwigExtension extends AbstractExtension {
         'class' => ['clipboard-copy'],
         'data-clipboard-copy-button' => $copyButtonCssClass,
         'data-clipboard-copy-content' => $copyContentCssClass,
+        'data-clipboard-copy-button-text' => $copyButtonText,
       ],
       '#attached' => [
         'library' => [
