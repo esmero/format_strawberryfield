@@ -2,8 +2,6 @@
   'use strict';
   Drupal.behaviors.format_strawberryfield_clipboard_copy = {
     attach: function (context, settings) {
-      //console.log(context);
-      //console.log(settings);
       $('.clipboard-copy').once('attach_clipboard')
         .each(function (index, value) {
           var theid = '#' + $(this).attr("id");
@@ -23,9 +21,11 @@
           }
           for(var i = 0; i < copyButtonContainers.length; i++) {
             var copyButtonContainer = copyButtonContainers[i];
+            var copyContentContainer = copyContentContainers[i];
+            copyContentContainer.id = 'clipboard-copy-' + i;
             var copyButtonWrapper = document.createElement('button');
             var copyButton = document.createElement('clipboard-copy');
-            copyButton.setAttribute('for', copyButtonContainer.id);
+            copyButton.setAttribute('for', copyContentContainer.id);
             copyButton.innerHTML = copyButtonText;
             copyButtonWrapper.appendChild(copyButton);
             copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer);

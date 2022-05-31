@@ -2,7 +2,6 @@
 
 namespace Drupal\format_strawberryfield\CiteProc;
 
-use Drupal\Component\Utility\Html;
 use Seboettg\CiteProc\CiteProc;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
@@ -111,12 +110,10 @@ class Render {
           }
         }
         if ($style_iterator > 0) {
-          $copyId = Html::getUniqueId('clipboard-copy');
-          $processed_bibliography = '<div id="' . $copyId . '" class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
+          $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         }
         else {
-          $copyId = Html::getUniqueId('clipboard-copy');
-          $processed_bibliography = '<div id="' . $copyId . '" class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
+          $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
         }
         $rendered_bibliography .= $processed_bibliography;
         $style_file = $citation_style_directory . '/' . $selected_style . '.csl';
