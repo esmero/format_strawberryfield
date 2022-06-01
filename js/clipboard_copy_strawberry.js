@@ -22,7 +22,7 @@
           for(var i = 0; i < copyButtonContainers.length; i++) {
             var copyButtonContainer = copyButtonContainers[i];
             var copyContentContainer = copyContentContainers[i];
-            copyContentContainer.id = 'clipboard-copy-' + i;
+            copyContentContainer.id = 'clipboard-copy-content-' + i;
             var copyButtonWrapper = document.createElement('button');
             var copyButton = document.createElement('clipboard-copy');
             copyButton.setAttribute('for', copyContentContainer.id);

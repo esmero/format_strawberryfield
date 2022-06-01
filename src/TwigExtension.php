@@ -220,8 +220,8 @@ class TwigExtension extends AbstractExtension {
    * Generates CSL bibliography.
    *
    * @param array $value
-   * @param array $styles
    * @param string $locale
+   * @param array $styles
    *
    * @return string
    */
@@ -297,6 +297,7 @@ class TwigExtension extends AbstractExtension {
   /**
    * @param string $copyButtonCssClass
    * @param string $copyContentCssClass
+   * @param string $copyButtonText
    *
    * @return mixed
    */
