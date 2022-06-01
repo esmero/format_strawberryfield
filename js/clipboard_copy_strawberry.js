@@ -21,7 +21,7 @@
               copyButtonContainers = copyContentContainers;
             }
           }
-          if(!copyButtonContainers == undefined) {
+          if(copyButtonContainers !== undefined) {
             for(var i = 0; i < copyButtonContainers.length; i++) {
               var copyButtonContainer = copyButtonContainers[i];
               var copyContentContainer = copyContentContainers[i];
