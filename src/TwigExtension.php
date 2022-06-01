@@ -295,14 +295,23 @@ class TwigExtension extends AbstractExtension {
   }
 
   /**
-   * @param string $copyButtonCssClass
    * @param string $copyContentCssClass
+   * @param string $copyButtonCssClass
    * @param string $copyButtonText
    *
    * @return mixed
    */
-  public function clipboardCopy(string $copyContentCssClass, string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
+  public function clipboardCopy(string $copyContentCssClass = '', string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
 
+    if (is_null($copyContentCssClass)) {
+      return '';
+    }
+    if (empty($copyContentCssClass)) {
+      return '';
+    }
+    if (!is_string($copyContentCssClass)) {
+      return '';
+    }
     if (is_null($copyButtonCssClass)) {
       $copyButtonCssClass = $copyContentCssClass;
     }

@@ -11,7 +11,9 @@
           var copyButtonText = copyContainer.dataset.clipboardCopyButtonText;
           var copyButtonContainers;
           var copyContentContainers = document.querySelectorAll('.' + copyContentClass);
-          if(copyButtonClass == copyContentClass) {
+          if(copyContentContainers.length == 0) {
+            console.log('Class provided by Twig function is not available. Clipboard Copy was not initiated.');
+          } else if(copyButtonClass == copyContentClass) {
             copyButtonContainers = copyContentContainers;
           } else {
             copyButtonContainers = document.querySelectorAll('.' + copyButtonClass);
@@ -19,16 +21,18 @@
               copyButtonContainers = copyContentContainers;
             }
           }
-          for(var i = 0; i < copyButtonContainers.length; i++) {
-            var copyButtonContainer = copyButtonContainers[i];
-            var copyContentContainer = copyContentContainers[i];
-            copyContentContainer.id = 'clipboard-copy-content-' + i;
-            var copyButtonWrapper = document.createElement('button');
-            var copyButton = document.createElement('clipboard-copy');
-            copyButton.setAttribute('for', copyContentContainer.id);
-            copyButton.innerHTML = copyButtonText;
-            copyButtonWrapper.appendChild(copyButton);
-            copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer);
+          if(!copyButtonContainers == undefined) {
+            for(var i = 0; i < copyButtonContainers.length; i++) {
+              var copyButtonContainer = copyButtonContainers[i];
+              var copyContentContainer = copyContentContainers[i];
+              copyContentContainer.id = 'clipboard-copy-content-' + i;
+              var copyButtonWrapper = document.createElement('button');
+              var copyButton = document.createElement('clipboard-copy');
+              copyButton.setAttribute('for', copyContentContainer.id);
+              copyButton.innerHTML = copyButtonText;
+              copyButtonWrapper.appendChild(copyButton);
+              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer);
+            }
           }
         });
     }
