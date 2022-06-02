@@ -227,8 +227,12 @@ class TwigExtension extends \Twig_Extension {
     $parsed = $parser->parse($edtfString);
     if ($parsed->isValid()) {
       $edtfValue = $parsed->getEdtfValue();
-      $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
-      return $humanizer->humanize($edtfValue);
+      try {
+        $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
+        return $humanizer->humanize($edtfValue);
+      } catch (\Exception $exception) {
+        return '';
+      }
     }
     return '';
   }
