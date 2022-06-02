@@ -7,6 +7,7 @@ use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
+use EDTF\EdtfFactory;
 
 /**
  * Class TwigExtension.
@@ -222,11 +223,11 @@ class TwigExtension extends \Twig_Extension {
    * @return string
    */
   public function edtfToHumanDate(string $edtfString, string $lang = 'en'): string {
-    $parser = \EDTF\EdtfFactory::newParser();
+    $parser = EdtfFactory::newParser();
     $parsed = $parser->parse($edtfString);
     if ($parsed->isValid()) {
       $edtfValue = $parsed->getEdtfValue();
-      $humanizer = \EDTF\EdtfFactory::newHumanizerForLanguage($lang);
+      $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
       return $humanizer->humanize($edtfValue);
     }
     return '';
