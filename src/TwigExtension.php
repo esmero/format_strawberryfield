@@ -215,7 +215,7 @@ class TwigExtension extends \Twig_Extension {
   }
 
   /**
-   * Converts Markdown to HTML.
+   * Converts EDTF to human-readable date.
    *
    * @param string $edtfString
    * @param string $lang
