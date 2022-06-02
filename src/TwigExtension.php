@@ -53,6 +53,8 @@ class TwigExtension extends \Twig_Extension {
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
+        ['is_safe' => ['all']]),
     ];
   }
 
@@ -211,5 +213,23 @@ class TwigExtension extends \Twig_Extension {
     return $Parsedown->text($body);
   }
 
+  /**
+   * Converts Markdown to HTML.
+   *
+   * @param string $edtfString
+   * @param string $lang
+   *
+   * @return string
+   */
+  public function edtfToHumanDate(string $edtfString, string $lang = 'en'): string {
+    $parser = \EDTF\EdtfFactory::newParser();
+    $parsed = $parser->parse($edtfString);
+    if ($parsed->isValid()) {
+      $edtfValue = $parsed->getEdtfValue();
+      $humanizer = \EDTF\EdtfFactory::newHumanizerForLanguage($lang);
+      return $humanizer->humanize($edtfValue);
+    }
+    return '';
+  }
 
 }
