@@ -52,8 +52,13 @@
       else {
         var ajaxObject = Drupal.ajax({
           url: url,
-          dialogType: 'modal',
-          dialog: {width: '800px'},
+          dialogType: 'dialog',
+          dialogRenderer: 'off_canvas',
+          dialog: {
+            width: '30%',
+            minWidth: '800px',
+            maxWidth: '1024px'
+          },
           progress: {
             type: 'fullscreen',
             message: Drupal.t('Please wait...')

@@ -6,6 +6,15 @@ use Drupal\Core\Database\Database;
 /**
  * Install Entity and add 'mime type' field to 'metadata display' entities.
  */
+
+/**
+ * Implements hook_install().
+ */
+
+function format_strawberryfield_install() {
+}
+
+
 function format_strawberryfield_update_8001() {
 
   $schema = Database::getConnection()->schema();
@@ -213,4 +222,24 @@ function format_strawberryfield_update_8702() {
   }
   $message = "All Metadata Display Entities in Configurations updated to use UUIDs";
   return $message;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Installs metadataapi_entity config entity for dynamic APIs.
+ *
+ */
+function format_strawberryfield_update_9001() {
+  $schema = Database::getConnection()->schema();
+  if (!$schema->tableExists('metadataapi_entity')) {
+    \Drupal::entityTypeManager()->clearCachedDefinitions();
+    \Drupal::entityDefinitionUpdateManager()
+      ->installEntityType(
+        \Drupal::entityTypeManager()->getDefinition('metadataapi_entity')
+      );
+  }
+  else {
+    return 'Metadata API Configuration Entity already exists';
+  }
 }

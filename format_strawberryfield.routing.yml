@@ -257,3 +257,17 @@ format_strawberryfield.display_settings:
     parameters:
       node:
         type: 'entity:node'
+
+# Direct access to Metadata display / Views processed API using Metadata API Config Entity.
+format_strawberryfield.metadataapi_caster_base:
+  path: '/ap/api/{metadataapiconfig_entity}/{patharg}'
+  methods: [GET, POST, HEAD]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataAPIController::castViaView'
+  options:
+    parameters:
+      metadataapiconfig_entity:
+        type: 'entity:metadataapi_entity'
+  requirements:
+    patharg: .+
+    _permission: 'search content'
