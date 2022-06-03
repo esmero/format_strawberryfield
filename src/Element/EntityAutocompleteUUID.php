@@ -111,6 +111,10 @@ class EntityAutocompleteUUID extends Textfield {
       }
 
       if ($element['#default_value']) {
+        if (is_string(reset($element['#default_value'])) && Uuid::isValid(reset($element['#default_value']))) {
+          $element['#default_value'] = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadByProperties(['uuid' => $element['#default_value']]);
+        }
+
         if (!(reset($element['#default_value']) instanceof EntityInterface)) {
           throw new \InvalidArgumentException('The #default_value property has to be an entity object or an array of entity objects.');
         }
@@ -304,7 +308,7 @@ class EntityAutocompleteUUID extends Textfield {
     if (is_array($value)) {
       //$entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($entity_ids);
     }
-    else {
+    elseif (!empty($value)) {
       $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->load($value);
       if ($entities) {
         $value = $entities->uuid();
