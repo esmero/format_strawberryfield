@@ -349,7 +349,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       */
 
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     }
     return $elements;
   }

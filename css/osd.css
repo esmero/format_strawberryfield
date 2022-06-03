@@ -1,0 +1,45 @@
+/* 5. CSS styles for the color selector widget */
+.colorselector-widget {
+  padding:5px;
+  border-bottom:1px solid #e5e5e5;
+}
+
+.colorselector-widget button {
+  outline:none;
+  border:none;
+  display:inline-block;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  cursor:pointer;
+  opacity:0.5;
+  margin:4px;
+}
+
+.colorselector-widget button.selected,
+.colorselector-widget button:hover {
+  opacity:1;
+}
+.r6o-widget.comment {
+  display:block;
+}
+
+button.a9s-toolbar-btn.opencv-face {
+  background-image: url(../svg/face-poker-svgrepo-com.svg);
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+}
+
+button.a9s-toolbar-btn.opencv-contour-light {
+  background-image: url(../svg/polygon-hole-pt-svgrepo-com.svg);
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+}
+button.a9s-toolbar-btn.opencv-contour-avg {
+  background-image: url(../svg/polygon-hole-pt2-svgrepo-com.svg);
+  background-repeat: no-repeat;
+  background-position-x: center;
+  background-position-y: center;
+}
