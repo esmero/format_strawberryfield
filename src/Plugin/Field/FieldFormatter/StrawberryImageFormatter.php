@@ -32,7 +32,7 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  * )
  */
 class StrawberryImageFormatter extends StrawberryBaseFormatter {
-  
+
   /**
    * {@inheritdoc}
    */

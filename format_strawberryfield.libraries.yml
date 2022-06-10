@@ -17,6 +17,7 @@ iiif_openseadragon_strawberry:
     - core/jquery
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/annotoriousopenseadragon
 
 iiif_iabookreader:

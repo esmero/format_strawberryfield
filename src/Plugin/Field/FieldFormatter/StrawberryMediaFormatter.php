@@ -226,6 +226,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       if (!$embargoed || !empty($embargo_upload_keys_string)) {
 
 
+        //$elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
         // We need to load main Library on each page for views to see it.
         $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
         $ordersubkey = 'sequence';
