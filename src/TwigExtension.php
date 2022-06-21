@@ -7,6 +7,7 @@ use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
+use EDTF\EdtfFactory;
 
 /**
  * Class TwigExtension.
@@ -52,6 +53,8 @@ class TwigExtension extends \Twig_Extension {
       new TwigFilter('markdown_2_html', [$this, 'markdownToHtml'],
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
+        ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
         ['is_safe' => ['all']]),
     ];
   }
@@ -211,5 +214,27 @@ class TwigExtension extends \Twig_Extension {
     return $Parsedown->text($body);
   }
 
+  /**
+   * Converts EDTF to human-readable date.
+   *
+   * @param string $edtfString
+   * @param string $lang
+   *
+   * @return string
+   */
+  public function edtfToHumanDate(string $edtfString, string $lang = 'en'): string {
+    $parser = EdtfFactory::newParser();
+    $parsed = $parser->parse($edtfString);
+    if ($parsed->isValid()) {
+      $edtfValue = $parsed->getEdtfValue();
+      try {
+        $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
+        return $humanizer->humanize($edtfValue);
+      } catch (\Exception $exception) {
+        return '';
+      }
+    }
+    return '';
+  }
 
 }
