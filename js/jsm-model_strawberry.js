@@ -28,6 +28,8 @@
                     // Ajusts width to what ever is smallest.
                     // If given width is less than window size, do nothing
                     // In any other case make it as width
+                    console.log(JSM);
+                    console.log(this);
                     function resizeCanvas () {
                         if (canvas.parentElement.clientWidth < canvasDom.data("iiif-image-width") || typeof canvasDom.data("iiif-image-width") == "undefined") {
                             canvasDom.width(canvasDom.first().parent().innerWidth());
