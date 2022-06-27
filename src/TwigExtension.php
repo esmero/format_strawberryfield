@@ -44,6 +44,8 @@ class TwigExtension extends AbstractExtension {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
         [$this, 'entityIdsByLabel']),
+      new TwigFunction('clipboard_copy',
+        [$this, 'clipboardCopy']),
     ];
   }
 
@@ -221,8 +223,8 @@ class TwigExtension extends AbstractExtension {
    * Generates CSL bibliography.
    *
    * @param array $value
-   * @param array $styles
    * @param string $locale
+   * @param array $styles
    *
    * @return string
    */
@@ -295,6 +297,52 @@ class TwigExtension extends AbstractExtension {
     return $rendered_bibliography;
   }
   
+  /**
+   * Generates ClipBoardCopy HTML/JS element.
+   
+   * @param string $copyContentCssClass
+   * @param string $copyButtonCssClass
+   * @param string $copyButtonText
+   *
+   * @return mixed
+   */
+  public function clipboardCopy(string $copyContentCssClass = '', string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
+
+    if (is_null($copyContentCssClass)) {
+      return '';
+    }
+    if (empty($copyContentCssClass)) {
+      return '';
+    }
+    if (!is_string($copyContentCssClass)) {
+      return '';
+    }
+    if (is_null($copyButtonCssClass)) {
+      $copyButtonCssClass = $copyContentCssClass;
+    }
+    $uniqueid = Html::getUniqueId('clipboard-copy');
+    $button_html = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => ['clipboard-copy'],
+        'data-clipboard-copy-button' => $copyButtonCssClass,
+        'data-clipboard-copy-content' => $copyContentCssClass,
+        'data-clipboard-copy-button-text' => $copyButtonText,
+      ],
+      '#attached' => [
+        'library' => [
+          'format_strawberryfield/clipboard_copy',
+          'format_strawberryfield/clipboard_copy_strawberry',
+         ],
+      ],
+    ];
+    $rendered_button = \Drupal::service('renderer')->render($button_html);
+    return $rendered_button;
+
+  }
+}
+
   /**
    * Converts EDTF to human-readable date.
    *
