@@ -200,7 +200,7 @@ class WebAnnotationController extends ControllerBase {
               }
             }
             if ($persisted == FALSE) {
-              throw new MethodNotAllowedHttpException(
+              throw new MethodNotAllowedHttpException(['PUT'],
                 "The Annotation has no unique id!"
               );
             } // means it was new
@@ -263,7 +263,7 @@ class WebAnnotationController extends ControllerBase {
           if (isset($existingannotations[$target])) {
             foreach ($existingannotations[$target] as $key => &$existingannotation) {
               if (($existingannotation['id'] == $annotation['id'])) {
-                throw new MethodNotAllowedHttpException(
+                throw new MethodNotAllowedHttpException(['POST'],
                   "The ID is already present, to update use PUT method"
                 );
               }

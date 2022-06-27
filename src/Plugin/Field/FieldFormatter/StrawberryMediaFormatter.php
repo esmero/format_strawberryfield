@@ -231,6 +231,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
         $ordersubkey = 'sequence';
         $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
           TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys);
+
         if (empty($elements[$delta])) {
           $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
         }
@@ -315,6 +316,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     // Reason we use 'innode' array key using our $uniqueid
     // @TODO probably better to use uuid() or the node id() instead of $uniqueid
     $elements[$delta]['media' . $i]['#attributes']['data-iiif-infojson'] = $iiifpublicinfojson;
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['path'] = \Drupal::service('extension.path.resolver')->getPath('module', 'format_strawberryfield');
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();

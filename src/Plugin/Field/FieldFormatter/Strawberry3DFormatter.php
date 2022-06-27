@@ -264,6 +264,8 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
             }
           }
         }
+        // Attach the Library
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
           // Add the texture
           // Its always the same.
 
