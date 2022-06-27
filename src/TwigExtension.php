@@ -2,11 +2,14 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Drupal\Component\Utility\Html;
+use Twig\Extension\AbstractExtension;
 use Twig\Markup;
 use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
+use Drupal\format_strawberryfield\CiteProc\Render;
 use EDTF\EdtfFactory;
 
 /**
@@ -14,7 +17,7 @@ use EDTF\EdtfFactory;
  *
  * @package Drupal\format_strawberryfield
  */
-class TwigExtension extends \Twig_Extension {
+class TwigExtension extends AbstractExtension {
 
   public function getTests(): array {
     return [
@@ -54,6 +57,7 @@ class TwigExtension extends \Twig_Extension {
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
+      new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
       new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
         ['is_safe' => ['all']]),
     ];
@@ -156,7 +160,6 @@ class TwigExtension extends \Twig_Extension {
     }
   }
 
-
   /**
    * Converts HTML to Markdown.
    *
@@ -215,6 +218,84 @@ class TwigExtension extends \Twig_Extension {
   }
 
   /**
+   * Generates CSL bibliography.
+   *
+   * @param array $value
+   * @param array $styles
+   * @param string $locale
+   *
+   * @return string
+   */
+  public function bibliography(array $value, string $locale, array $styles = []): string {
+
+    //  @EXAMPLE_JSON = '[
+    //    {
+    //      "author": [
+    //            {
+    //              "family": "Doe",
+    //                "given": "James",
+    //                "suffix": "III"
+    //            }
+    //        ],
+    //        "id": "item-1",
+    //        "issued": {
+    //      "date-parts": [
+    //        [
+    //          "2001"
+    //        ]
+    //      ]
+    //        },
+    //        "title": "My Anonymous Heritage",
+    //        "type": "book"
+    //    },
+    //    {
+    //      "author": [
+    //            {
+    //              "family": "Anderson",
+    //                "given": "John"
+    //            },
+    //            {
+    //              "family": "Brown",
+    //                "given": "John"
+    //            }
+    //        ],
+    //        "id": "ITEM-2",
+    //        "type": "book",
+    //        "title": "Two authors writing a book"
+    //    }
+    // ]';
+
+    $json_string = json_encode($value);
+    $json_data = json_decode($json_string);
+    $json_error = json_last_error();
+    if ($json_error != JSON_ERROR_NONE) {
+      return $json_error;
+    }
+    $render = new Render();
+    if ($locale) {
+        $bibliography = $render->bibliography($locale, $styles, $json_data);
+    }
+    else {
+      $bibliography = $render->bibliography(null, $styles, $json_data);
+    }
+    $uniqueid = Html::getUniqueId('bibliography');
+    $render_bibliography = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => ['bibliography'],
+      ],
+      '#attached' => [
+        'library' => 'format_strawberryfield/citations_strawberry'],
+    ];
+    $render_bibliography['bibliography'] = [
+      '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
+    ];
+    $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
+    return $rendered_bibliography;
+  }
+  
+  /**
    * Converts EDTF to human-readable date.
    *
    * @param string $edtfString
@@ -236,5 +317,4 @@ class TwigExtension extends \Twig_Extension {
     }
     return '';
   }
-
 }

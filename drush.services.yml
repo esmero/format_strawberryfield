@@ -1,0 +1,10 @@
+services:
+  format_strawberryfield.commands:
+    class: Drupal\format_strawberryfield\Commands\LibrariesDrushCommands
+    arguments:
+      - '@http_client'
+      - '@state'
+      - '@datetime.time'
+      - '@file_system'
+    tags:
+      - { name: drush.command }
