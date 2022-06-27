@@ -10,6 +10,7 @@ use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
 use Drupal\format_strawberryfield\CiteProc\Render;
+use EDTF\EdtfFactory;
 
 /**
  * Class TwigExtension.
@@ -59,6 +60,8 @@ class TwigExtension extends AbstractExtension {
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
       new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
+        ['is_safe' => ['all']]),
     ];
   }
 
@@ -293,8 +296,10 @@ class TwigExtension extends AbstractExtension {
     $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
     return $rendered_bibliography;
   }
-
+  
   /**
+   * Generates ClipBoardCopy HTML/JS element.
+   
    * @param string $copyContentCssClass
    * @param string $copyButtonCssClass
    * @param string $copyButtonText
@@ -335,5 +340,29 @@ class TwigExtension extends AbstractExtension {
     $rendered_button = \Drupal::service('renderer')->render($button_html);
     return $rendered_button;
 
+  }
+}
+
+  /**
+   * Converts EDTF to human-readable date.
+   *
+   * @param string $edtfString
+   * @param string $lang
+   *
+   * @return string
+   */
+  public function edtfToHumanDate(string $edtfString, string $lang = 'en'): string {
+    $parser = EdtfFactory::newParser();
+    $parsed = $parser->parse($edtfString);
+    if ($parsed->isValid()) {
+      $edtfValue = $parsed->getEdtfValue();
+      try {
+        $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
+        return $humanizer->humanize($edtfValue);
+      } catch (\Exception $exception) {
+        return '';
+      }
+    }
+    return '';
   }
 }

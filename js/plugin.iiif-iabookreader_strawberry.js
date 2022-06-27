@@ -551,6 +551,10 @@ BookReader.prototype.search =  (function(super_) {
         if (null == searchInsideResults) return;
 
         var searchInsideResultsScale = {};
+        searchInsideResults.matches = searchInsideResults.matches.filter(function(a){
+          return typeof a === 'object' && !Array.isArray(a) && a !== null
+          }
+        );
         searchInsideResults.matches.forEach(function(match,index,array) {
           match.par[0].boxes.forEach(function(box,index,array) {
             var pageindex = self.leafNumToIndex(array[index].page);
