@@ -299,7 +299,7 @@ class TwigExtension extends AbstractExtension {
   
   /**
    * Generates ClipBoardCopy HTML/JS element.
-   
+   *
    * @param string $copyContentCssClass
    * @param string $copyButtonCssClass
    * @param string $copyButtonText
@@ -341,7 +341,6 @@ class TwigExtension extends AbstractExtension {
     return $rendered_button;
 
   }
-}
 
   /**
    * Converts EDTF to human-readable date.
