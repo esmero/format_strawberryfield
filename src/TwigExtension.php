@@ -3,6 +3,8 @@
 namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
+use Drupal\search_api\Query\QueryInterface;
+use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Twig\Extension\AbstractExtension;
 use Twig\Markup;
 use Twig\TwigTest;
@@ -10,6 +12,8 @@ use Twig\TwigFilter;
 use Twig\TwigFunction;
 use League\HTMLToMarkdown\HtmlConverter;
 use Drupal\format_strawberryfield\CiteProc\Render;
+use Drupal\search_api\ParseMode\ParseModePluginManager;
+use Drupal\Core\Render\RendererInterface;
 use EDTF\EdtfFactory;
 
 /**
@@ -18,6 +22,33 @@ use EDTF\EdtfFactory;
  * @package Drupal\format_strawberryfield
  */
 class TwigExtension extends AbstractExtension {
+
+  /**
+   * The parse mode manager.
+   *
+   * @var \Drupal\search_api\ParseMode\ParseModePluginManager
+   */
+  protected $parseModeManager;
+
+  /**
+   * The renderer.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
+  /**
+   * Constructs \Drupal\format_strawberryfield\TwigExtension
+   *
+   * @param \Drupal\Core\Render\RendererInterface $renderer
+   *   The renderer.
+   * @param \Drupal\search_api\ParseMode\ParseModePluginManager $parse_mode_manager
+   *   The search API parse mode manager.
+   */
+  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager) {
+    $this->renderer = $renderer;
+    $this->parseModeManager = $parse_mode_manager;
+  }
 
   public function getTests(): array {
     return [
@@ -46,6 +77,8 @@ class TwigExtension extends AbstractExtension {
         [$this, 'entityIdsByLabel']),
       new TwigFunction('clipboard_copy',
         [$this, 'clipboardCopy']),
+      new TwigFunction('sbf_search_api',
+        [$this, 'searchApiQuery']),
     ];
   }
 
@@ -293,13 +326,13 @@ class TwigExtension extends AbstractExtension {
     $render_bibliography['bibliography'] = [
       '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
     ];
-    $rendered_bibliography = \Drupal::service('renderer')->render($render_bibliography);
+    $rendered_bibliography = $this->renderer->render($render_bibliography);
     return $rendered_bibliography;
   }
-  
+
   /**
    * Generates ClipBoardCopy HTML/JS element.
-   
+
    * @param string $copyContentCssClass
    * @param string $copyButtonCssClass
    * @param string $copyButtonText
@@ -337,11 +370,10 @@ class TwigExtension extends AbstractExtension {
          ],
       ],
     ];
-    $rendered_button = \Drupal::service('renderer')->render($button_html);
+    $rendered_button = $this->renderer->render($button_html);
     return $rendered_button;
 
   }
-}
 
   /**
    * Converts EDTF to human-readable date.
@@ -365,4 +397,99 @@ class TwigExtension extends AbstractExtension {
     }
     return '';
   }
+
+  /**
+   * Executes and Search API query programatically
+   *
+   * @param string $index
+   *    The machine name of the Search API index to search against
+   * @param string $term
+   *    A Full text term to search against
+   * @param array  $fulltext
+   *    An array of Fields (Fulltext) to search Term against.
+   *    If empty all will be used
+   * @param array  $filters
+   *    An associative array with fields => filters to match against
+   * @param array  $facets
+   *    An array of fields to facet
+   * @param array  $sort
+   *    An associative array with fields => Sort Order
+   * @param int    $limit
+   *    How many results to return
+   * @param int    $offset
+   *    Offset for the results
+   *
+   * @return array
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\search_api\SearchApiException
+   */
+  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => 'ASC'], int $limit = 1, int $offset = 0): array {
+
+    /** @var \Drupal\search_api\IndexInterface[] $indexes */
+    $indexes = \Drupal::entityTypeManager()
+      ->getStorage('search_api_index')
+      ->loadMultiple([$index]);
+
+    // We can check if $fulltext, $filters and $facets are inside $indexes['theindex']->field_settings["afield"]?
+
+    foreach ($indexes as $search_api_index) {
+
+      // Create the query.
+      // How many?
+      $query = $search_api_index->query([
+        'limit' => $limit,
+        'offset' => $offset,
+      ]);
+
+      $parse_mode = $this->parseModeManager->createInstance('terms');
+      $query->setParseMode($parse_mode);
+      foreach ($sort as $field => $order) {
+        $query->sort($field, $order);
+      }
+      $query->keys($term);
+      if (!empty($fulltext)) {
+        $query->setFulltextFields($fulltext);
+      }
+
+      $allfields_translated_to_solr = $search_api_index->getServerInstance()
+        ->getBackend()
+        ->getSolrFieldNames($query->getIndex());
+
+      $query->setOption('search_api_retrieved_field_values', ['id']);
+      foreach ($filters as $field => $condition) {
+        $query->addCondition($field, $condition);
+      }
+      // Facets, does this search api index supports them?
+      if ($search_api_index->getServerInstance()->supportsFeature('search_api_facets')) {
+        // My real goal!
+        //https://solarium.readthedocs.io/en/stable/queries/select-query/building-a-select-query/components/facetset-component/facet-pivot/
+        $facet_options = [];
+        foreach ($facets as $facet_field) {
+          $facet_options['facet:' . $facet_field] = [
+            'field'     => $facet_field,
+            'limit'     => 10,
+            'operator'  => 'or',
+            'min_count' => 1,
+            'missing'   => TRUE,
+          ];
+        }
+
+        if (!empty($facet_options)) {
+          $query->setOption('search_api_facets', $facet_options);
+        }
+      }
+
+      $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
+      //$query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
+
+      $results = $query->execute();
+      $extradata = $results->getAllExtraData();
+
+    }
+    return [];
+
+  }
+
 }
