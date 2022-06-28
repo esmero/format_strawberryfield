@@ -378,12 +378,19 @@ class TwigExtension extends AbstractExtension {
   /**
    * Converts EDTF to human-readable date.
    *
-   * @param string $edtfString
+   * @param mixed $edtfString
    * @param string $lang
    *
    * @return string
    */
-  public function edtfToHumanDate(string $edtfString, string $lang = 'en'): string {
+  public function edtfToHumanDate($edtfString, string $lang = 'en'): string {
+    if (empty($edtfString)) {
+      return '';
+    }
+    if (!is_string($edtfString)) {
+      return '';
+    }
+
     $parser = EdtfFactory::newParser();
     $parsed = $parser->parse($edtfString);
     if ($parsed->isValid()) {
