@@ -332,7 +332,7 @@ class TwigExtension extends AbstractExtension {
 
   /**
    * Generates ClipBoardCopy HTML/JS element.
-
+   *
    * @param string $copyContentCssClass
    * @param string $copyButtonCssClass
    * @param string $copyButtonText
