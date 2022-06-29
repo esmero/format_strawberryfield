@@ -126,14 +126,17 @@ class MetadataDisplayForm extends ContentEntityForm {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     try {
-      $build = [
-        '#type' => 'inline_template',
-        '#template' => $form_state->getValue('twig')[0]['value'],
-        '#context' => [],
-      ];
-      $this->renderer->renderPlain($build);
+      if (isset($form_state->getTriggeringElement()['##op']) && $form_state->getTriggeringElement()['#op']!='preview') {
+        $build = [
+          '#type'     => 'inline_template',
+          '#template' => $form_state->getValue('twig')[0]['value'],
+          '#context'  => ['data' => []],
+        ];
+        $this->renderer->renderPlain($build);
+      }
     }
     catch (\Exception $exception) {
+      $message = 'Error in parsing the template';
       // Make the Message easier to read for the end user
       if ($exception instanceof TwigError) {
         $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
@@ -143,6 +146,8 @@ class MetadataDisplayForm extends ContentEntityForm {
       // Do not set Form Errors if running a Preview Operation.
       if (isset($form_state->getTriggeringElement()['#type']) &&
         $form_state->getTriggeringElement()['#type'] == 'submit') {
+        // This is not showing correctly. Why is the message missing?
+        $this->messenger()->addError($message);
         $form_state->setErrorByName('twig', $message);
       }
     }

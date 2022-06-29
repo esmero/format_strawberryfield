@@ -487,16 +487,33 @@ class TwigExtension extends AbstractExtension {
           $query->setOption('search_api_facets', $facet_options);
         }
       }
-
+      /* Basic is good enough for facets */
       $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
-      //$query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
-
+      // see also \Drupal\search_api_autocomplete\Plugin\search_api_autocomplete\suggester\LiveResults::getAutocompleteSuggestions
       $results = $query->execute();
       $extradata = $results->getAllExtraData();
-
+      // We return here
+      $return = [];
+      foreach( $results->getResultItems() as $resultItem) {
+        $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['entity'] = $resultItem->getOriginalObject()->getValue();
+       foreach ($resultItem->getFields() as $field) {
+         $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['fields'][$field->getFieldIdentifier()] = $field->getValues();
+       }
+      }
+      $return['total'] = $results->getResultCount();
+      if (isset($extradata['search_api_facets'])) {
+        foreach($extradata['search_api_facets'] as $facet_id => $facet_values) {
+          [$not_used, $field_id] = explode(':', $facet_id);
+          $facet = [];
+          foreach ($facet_values as $entry) {
+            $facet[$entry['filter']] = $entry['count'];
+          }
+          $return['facets'][$field_id] = $facet;
+        }
+      }
+      return $return;
     }
     return [];
-
   }
 
 }
