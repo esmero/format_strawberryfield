@@ -150,7 +150,7 @@ BookReader.prototype.parseSequence = function (sequenceId) {
       } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
-        sself.IIIFsequence.imagesList = getImagesList(sequence);
+        self.IIIFsequence.imagesList = getImagesList(sequence);
         self.numLeafs = self.IIIFsequence.imagesList.length;
         return false;
         // Just take the first one if no default one set
