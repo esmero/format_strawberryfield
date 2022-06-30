@@ -126,7 +126,7 @@ class MetadataDisplayForm extends ContentEntityForm {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     try {
-      if (isset($form_state->getTriggeringElement()['##op']) && $form_state->getTriggeringElement()['#op']!='preview') {
+      if (isset($form_state->getTriggeringElement()['#op']) && $form_state->getTriggeringElement()['#op']!='preview') {
         $build = [
           '#type'     => 'inline_template',
           '#template' => $form_state->getValue('twig')[0]['value'],
