@@ -255,13 +255,13 @@ class TwigExtension extends AbstractExtension {
   /**
    * Generates CSL bibliography.
    *
-   * @param array $value
+   * @param string $value
    * @param string $locale
    * @param array $styles
    *
    * @return string
    */
-  public function bibliography(array $value, string $locale, array $styles = []): string {
+  public function bibliography(string $value, string $locale, array $styles = []): string {
 
     //  @EXAMPLE_JSON = '[
     //    {
@@ -300,8 +300,7 @@ class TwigExtension extends AbstractExtension {
     //    }
     // ]';
 
-    $json_string = json_encode($value);
-    $json_data = json_decode($json_string);
+    $json_data = json_decode($value);
     $json_error = json_last_error();
     if ($json_error != JSON_ERROR_NONE) {
       return $json_error;
