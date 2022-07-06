@@ -34,7 +34,7 @@
               copyButton.innerHTML = copyButtonText;
               copyButtonWrapper.appendChild(copyButton);
               copyButtonWrapper.classList.add(copyButtonClass);
-              copyButtonContainer.parentElement.after(copyButtonWrapper, copyButtonContainer);
+              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
             }
           }
         });
