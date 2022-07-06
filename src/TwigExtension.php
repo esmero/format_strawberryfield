@@ -349,15 +349,15 @@ class TwigExtension extends AbstractExtension {
     if (!is_string($copyContentCssClass)) {
       return '';
     }
-    if (is_null($copyButtonCssClass)) {
-      $copyButtonCssClass = $copyContentCssClass;
+    if (is_null($copyButtonCssClass) || empty($copyButtonCssClass)) {
+      $copyButtonCssClass = 'clipboard-copy-button';
     }
-    $uniqueid = Html::getUniqueId('clipboard-copy');
+    $uniqueid = Html::getUniqueId('clipboard-copy-data');
     $button_html = [
       '#type' => 'container',
       '#attributes' => [
         'id' => $uniqueid,
-        'class' => ['clipboard-copy'],
+        'class' => ['clipboard-copy-data','hidden'],
         'data-clipboard-copy-button' => $copyButtonCssClass,
         'data-clipboard-copy-content' => $copyContentCssClass,
         'data-clipboard-copy-button-text' => $copyButtonText,
