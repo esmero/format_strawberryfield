@@ -50,24 +50,59 @@
         }
       }
       else {
-        var ajaxObject = Drupal.ajax({
-          url: url,
-          dialogType: 'modal',
-          dialog: {width: '800px'},
-          progress: {
-            type: 'fullscreen',
-            message: Drupal.t('Please wait...')
+        if (!$.fn.modal) {
+          var ajaxObject = Drupal.ajax({
+            url: url,
+            dialogType: 'modal',
+            dialog: {width: '800px'},
+            progress: {
+              type: 'fullscreen',
+              message: Drupal.t('Please wait...')
+            }
+          });
+          if (typeof (fullscreenelement) != 'undefined') {
+            try {
+              document.exitFullscreen();
+              document.webkitCancelFullScreen();
+            } catch (event) {
+              try {
+                document.exitFullscreen();
+              }
+              catch (event) {
+                console.log('Full screen is not supported by this Browser.')
+              }
+              console.log('Full screen is not supported by this Browser.')
+            }
           }
-        });
-        if (typeof (fullscreenelement) != 'undefined') {
-          try {
-            document.webkitCancelFullScreen();
-          }
-          catch (event) {
-            // Fullscreen doesn't work
-          }
+          ajaxObject.execute();
         }
-        ajaxObject.execute();
+        else {
+          var ajaxObject = Drupal.ajax({
+            url: url,
+            wrapper: 'sbfModalBody',
+            method: 'append',
+            dialogType: 'ajax',
+            progress: {
+              type: 'fullscreen',
+              message: Drupal.t('Please wait...')
+            },
+          });
+          var success = ajaxObject.success;
+
+          ajaxObject.success = function (response, status) {
+            $('#sbfModalBody').empty();
+            success.bind(this)(response, status);
+            $('#sbfModal').modal('show');
+          };
+          if (typeof (fullscreenelement) != 'undefined') {
+            try {
+              document.webkitCancelFullScreen();
+            } catch (event) {
+              console.log('Full screen is not supported by this Browser.')
+            }
+          }
+          ajaxObject.execute();
+        }
       }
     }
     event.preventDefault();
@@ -188,7 +223,7 @@
                 }
                 delete drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panoramaMobile;
               });
-             // Add Autoload property for global Tour Viewer
+              // Add Autoload property for global Tour Viewer
               drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad);
               var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
               viewer.on('scenechange',
