@@ -1,0 +1,11 @@
+leaflet_strawberry_views:
+  version: 1.0
+  js:
+    js/leaflet_strawberry_views.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/drupal
+    - core/drupalSettings
+    - core/views
+    - format_strawberryfield/leaflet_ajax
