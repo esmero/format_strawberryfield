@@ -361,7 +361,6 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
       ];
 
       $elements[$delta]['pdf' . $i]['#attached']['drupalSettings']['format_strawberryfield']['pdf']['innode'][$uniqueid] = $nodeuuid;
-      $elements[$delta]['pdf' . $i]['#attached']['drupalSettings']['format_strawberryfield']['pdf']['innode'][$uniqueid] = $nodeuuid;
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/pdfs_strawberry';
     }
     else {
