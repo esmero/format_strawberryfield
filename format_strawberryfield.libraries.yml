@@ -98,6 +98,9 @@ iiif_pannellum_strawberry:
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
     - format_strawberryfield/jsm_modeler
+    - format_strawberryfield/pdfs_strawberry
+    - format_strawberryfield/av_strawberry
+
 av_strawberry:
   version: 1.0
   css:
