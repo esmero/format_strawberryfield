@@ -607,8 +607,6 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
                 'container',
               ],
               'style' => "width:{$max_width_css}; height:{$max_height}px",
-              'width' => $max_width,
-              'height' => $max_height,
             ],
           ];
 
