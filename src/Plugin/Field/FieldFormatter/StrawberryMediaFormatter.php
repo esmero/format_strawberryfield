@@ -25,7 +25,7 @@ use Drupal\Core\Url;
  *
  * @FieldFormatter(
  *   id = "strawberry_media_formatter",
- *   label = @Translation("Strawberry Field Media Formatter for IIIF media"),
+ *   label = @Translation("Strawberry Field Media Formatter using OpenSeadragon for IIIF media"),
  *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter",
  *   field_types = {
  *     "strawberryfield_field"
@@ -271,7 +271,17 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
     $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
     $uniqueid = $groupid . $i;
-
+    $elements[$delta]['toolbar-' . $i] = [
+      '#type' => 'container',
+      '#default_value' => 'toolbar-'. $uniqueid,
+      '#attributes' => [
+        'id' => 'toolbar-'. $uniqueid,
+        'class' => [
+          'toolbar-wrapper',
+        ],
+        'style' => "display:inline-flex",
+      ],
+    ];
     $elements[$delta]['media' . $i] = [
       '#type' => 'container',
       '#default_value' => $uniqueid,
