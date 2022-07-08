@@ -292,6 +292,7 @@ annotoriousopenseadragon:
   js:
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-toolbar@0.1.1/dist/annotorious-toolbar.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-better-polygon@0.2.0/dist/annotorious-better-polygon.js: { external: true, minified: true, preprocess: false}
   css:
     component:
       https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/annotorious.min.css: { external: true }
