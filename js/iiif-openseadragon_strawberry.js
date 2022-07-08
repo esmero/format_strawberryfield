@@ -59,10 +59,9 @@
     input3.addEventListener('click', setOpenCV);
 
     const container = document.createElement('div');
-    container.className = 'toolbar-wrapper';
     container.style = "display:inline-flex";
     const toolbar = document.createElement('div');
-    toolbar.setAttribute('id', id+ '_toolbar');
+    toolbar.setAttribute('id', id+ '-annon-toolbar');
     container.appendChild(toolbar);
     container.appendChild(input1);
     container.appendChild(input2);
@@ -477,8 +476,10 @@
               displayName: current_user['name'],
             });
             let toggle = ThreeWaySwitchElement(element_id);
-            $('#' + element_id).prepend(toggle);
-            window.Annotorious.Toolbar(annotorious[element_id], document.getElementById(element_id+'_toolbar'));
+            // #toolbar-'+ element_id is passed as a div at the same level of the OSD viewer by
+            // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
+            $('#toolbar-'+ element_id).prepend(toggle);
+            window.Annotorious.Toolbar(annotorious[element_id], document.getElementById(element_id+'-annon-toolbar'));
           }
           /* Acts on page change. We need to load new annotations when that happens! */
           viewers[element_id].addHandler("page", function (data) {
