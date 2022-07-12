@@ -37,7 +37,6 @@ function template_preprocess_format_strawberryfield_views_leaflet(array &$variab
   $view = $variables['view'];
   $variables['view']->style_plugin->options;
   $geojsons = [];
-  error_log(print_r(array_keys($variables),true));
   $geojsonsgrouped = [];
   if (!empty($variables['options']['leaflet_options']['metadataexposeentity_source'])) {
     /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity */
@@ -63,8 +62,9 @@ function template_preprocess_format_strawberryfield_views_leaflet(array &$variab
         }
     }
   }
-  $geojsons = base64_encode(json_encode($geojsons));
-  $geojsonsgrouped = base64_encode(json_encode($geojsonsgrouped));
+  // Tried base64 but that expands 3 bytes into 4. Means it grows.
+  $geojsons = json_encode($geojsons);
+  $geojsonsgrouped = json_encode($geojsonsgrouped);
   $max_width = $variables['options']['leaflet_options']['max_width'];
   $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
   $max_height = $variables['options']['leaflet_options']['max_height'];

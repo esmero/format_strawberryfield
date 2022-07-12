@@ -68,7 +68,7 @@
                 minZoom: $minzoom
               }).addTo(map);
 
-            var controlLayers = L.control.layers().addTo(map);
+            var controlLayers = L.control.layers();
 
             // Use current's user lat/long
             // Does not work without HTTPS
@@ -76,10 +76,9 @@
             // Because DRUPAL is "something/gosh"
             // and does always a deep merge of drupal settings, passing a different array will always lead in every
             // previous and new GeoJSON urls merged together, making FACETING impossible.
-            // Solution for now. A single base64 encode value
-            let urls = JSON.parse(atob(drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsonurls']));
-            let groupedurls = JSON.parse(atob(drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsongroupedurls']));
-
+            // Solution for now. atob was used before to decode base64 but that really makes the data grow!
+            let urls = JSON.parse(drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsonurls']);
+            let groupedurls = JSON.parse(drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsongroupedurls']);
 
             var markers = new L.MarkerClusterGroup({
               showCoverageOnHover: true,
@@ -96,8 +95,36 @@
             });
 
             /* grouped ones coming from a view, each group will become a layer control using subgroups */
-            if (groupedurls.length > 0) {
+            if (
+              typeof groupedurls === 'object' &&
+              !Array.isArray(groupedurls) &&
+              groupedurls !== null
+             && Object.keys(groupedurls).length > 0) {
+              // Only add to map if groups present.
+              controlLayers.addTo(map);
               console.log(groupedurls);
+              Object.entries(groupedurls).forEach(([key, value], index) => {
+                console.log(`${index}: ${key} = ${value}`);
+                if (Array.isArray(value) && Object.values(value).length > 0) {
+                  console.log(value);
+                let geojsonLayer_group  = L.geoJson.ajax(Object.values(value), {
+                  onEachFeature: onEachFeature,
+                  pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng);
+                  },
+                });
+                geojsonLayer_group.on('data:loaded', function () {
+                  var subgroup = L.featureGroup.subGroup(markers).addTo(map);
+                  geojsonLayer_group.eachLayer(function (layer) {
+                    console.log(layer);
+                    layer.addTo(subgroup);
+                  });
+                  console.log(key);
+                  console.log(subgroup);
+                  controlLayers.addOverlay(subgroup, key);
+                  //markers.addLayer(geojsonLayer_group);
+                });
+              }});
             }
 
             geojsonLayer.on('data:loaded', function () {
