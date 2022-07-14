@@ -117,11 +117,21 @@ field.formatter.settings.strawberry_media_formatter:
       type: string
     max_height:
       type: string
+    icons_prefixurl:
+      type: string
+      label: 'Base URL for OpenSeadragon UI/UX/ICONS'
+      default: ''
     webannotations:
       type: boolean
     webannotations_tool:
       type: string
-      label: 'can be either rect of polygon'
+      label: 'can be either rect, polygon or both'
+    webannotations_opencv:
+      type: boolean
+      label: 'If OpenCV features are enabled'
+    webannotations_betterpolygon:
+      type: boolean
+      label: 'If Better Polygon plugin is enabled. Only if tool is polygon or both'
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'

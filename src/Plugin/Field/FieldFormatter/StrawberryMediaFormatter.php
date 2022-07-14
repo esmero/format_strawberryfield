@@ -42,14 +42,17 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
    */
   public static function defaultSettings() {
     return parent::defaultSettings() + [
-      'iiif_group' => TRUE,
-      'json_key_source' => 'as:image',
-      'max_width' => 720,
-      'max_height' => 480,
-      'webannotations' => FALSE,
-      'webannotations_tool' => 'polygon',
-      'thumbnails' => TRUE,
-    ];
+        'iiif_group' => TRUE,
+        'json_key_source' => 'as:image',
+        'max_width' => 720,
+        'max_height' => 480,
+        'webannotations' => FALSE,
+        'webannotations_tool' => 'polygon',
+        'webannotations_opencv' => FALSE,
+        'webannotations_betterpolygon' => FALSE,
+        'thumbnails' => TRUE,
+        'icons_prefixurl' => '',
+      ];
   }
 
   /**
@@ -58,68 +61,103 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
   public function settingsForm(array $form, FormStateInterface $form_state) {
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
     return [
-      'iiif_group' => [
-        '#type' => 'checkbox',
-        '#title' => t('Group all Media files in a single viewer?'),
-        '#default_value' => $this->getSetting('iiif_group'),
-      ],
-      'thumbnails' => [
-        '#type' => 'checkbox',
-        '#title' => t('Show a thumbnail reference bar.'),
-        '#default_value' => $this->getSetting('thumbnails'),
-      ],
-      'webannotations' => [
-        '#type' => 'checkbox',
-        '#title' => t('Enable loading/editing of W3C webAnnotations.'),
-        '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
-        '#default_value' => $this->getSetting('webannotations'),
-        '#attributes' => [
-          'data-formatter-selector' => 'webannotations',
+        'iiif_group' => [
+          '#type' => 'checkbox',
+          '#title' => t('Group all Media files in a single viewer?'),
+          '#default_value' => $this->getSetting('iiif_group'),
         ],
-      ],
-      'webannotations_tool' => [
-        '#type' => 'select',
-        '#options' => [
-          'rect' => 'Rectangle',
-          'polygon' => 'Polygon',
+        'thumbnails' => [
+          '#type' => 'checkbox',
+          '#title' => t('Show a thumbnail reference bar.'),
+          '#default_value' => $this->getSetting('thumbnails'),
         ],
-        '#title' => t('What tool to enable'),
-        '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
-        '#default_value' => $this->getSetting('webannotations_tool'),
-        '#states' => [
-          'visible' => [
-            ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+        'webannotations' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable loading/editing of W3C webAnnotations.'),
+          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
+          '#default_value' => $this->getSetting('webannotations'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations',
           ],
         ],
-      ],
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE,
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#description' => $this->t('Use 0 to force 100% width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE,
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE,
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'webannotations_tool' => [
+          '#type' => 'select',
+          '#options' => [
+            'rect' => 'Rectangle',
+            'polygon' => 'Polygon',
+            'both' => 'Both',
+          ],
+          '#title' => t('What tool to enable'),
+          '#description' => t('This defines if the user will be able to use the Polygon or the Rectangle Tool'),
+          '#default_value' => $this->getSetting('webannotations_tool'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations-tool',
+          ],
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
+        'webannotations_opencv' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable OpenCV tools'),
+          '#description' => t('This defines if the user will be able to use the Experimental Face Detect and Edge detection.'),
+          '#default_value' => $this->getSetting('webannotations_opencv'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
+        'webannotations_betterpolygon' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable Better Polygon Module'),
+          '#description' => t('This defines if the user will be able to use the Experimental advanced Polygon editor.'),
+          '#default_value' => $this->getSetting('webannotations_betterpolygon'),
+          '#states' => [
+            'visible' => [
+              [':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE]],
+              'and',
+              [':input[data-formatter-selector="webannotations-tool"]' =>  ['!value' => "rect"]],
+            ],
+          ],
+        ],
+        'icons_prefixurl' => [
+          '#type' => 'textfield',
+          '#title' => t('based URL from where to fetch the OpenSeadragon UI/UX Icons'),
+          '#description' => t('E.g <b>https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/</b>. Leave Empty to use the defaults.'),
+          '#default_value' => $this->getSetting('icons_prefixurl'),
+          '#required' => FALSE,
+        ],
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE,
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#description' => $this->t('Use 0 to force 100% width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE,
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE,
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -260,6 +298,10 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $thumbnails = $this->getSetting('thumbnails');
     $webannotations = $this->getSetting('webannotations');
     $webannotations_tool = $this->getSetting('webannotations_tool');
+    $webannotations_opencv = $this->getSetting('webannotations_opencv');
+    $webannotations_betterpolygon = $this->getSetting('webannotations_betterpolygon');
+    $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";
+
     $nodeuuid = $items->getEntity()->uuid();
 
     $iiifidentifier = urlencode(StreamWrapperManager::getTarget($file->getFileUri()));
@@ -330,13 +372,16 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['icons_prefixurl'] = $icons_prefixurl;
     // Used to keep annotations around during edit.
     // Note: Since View modes are cached, if no change to the NODE
     // this will be served from a cache! mmm.
     if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($items->getName(), $delta, $nodeuuid);
-      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
       // This also never runs if cached. So after deletion we better
       // call the controller!
       if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
