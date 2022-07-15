@@ -94,11 +94,10 @@ use Twig\Source;
  *   entity_keys = {
  *     "id" = "id",
  *     "revision" = "revision_id",
- *     "published" = "published",
+ *     "published" = "status",
  *     "label" = "name",
  *     "uuid" = "uuid",
  *     "uid" = "user_id",
- *     "status" = "status",
  *   },
  *   links = {
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
