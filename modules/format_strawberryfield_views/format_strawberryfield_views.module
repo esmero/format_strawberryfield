@@ -1,0 +1,122 @@
+<?php
+/**
+ * @file
+ * Contains formater_strawberryfield_views.module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Template\Attribute;
+use Drupal\Component\Utility\Html;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+
+/**
+ * Implements hook_theme().
+ */
+function format_strawberryfield_views_theme($existing, $type, $theme, $path) {
+  return [
+    'format_strawberryfield_views_leaflet' => [
+      'variables' => [],
+      'template' => 'format-strawberryfield-views-leaflet',
+      'render element' => 'elements',
+    ],
+  ];
+}
+/**
+ * Prepares variables for the Format Strawberry Fields Leaflet Views style template.
+ *
+ * Default template: format-strawberryfield-views-leaflet.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - view: A ViewExecutable object.
+ *   - rows: The row data that will contain Drupal Entities.
+ *   - options: The Views/Views Style configured option.
+ */
+function template_preprocess_format_strawberryfield_views_leaflet(array &$variables) {
+  $view = $variables['view'];
+  $variables['view']->style_plugin->options;
+  $geojsons = [];
+  $geojsonsgrouped = [];
+  if (!empty($variables['options']['leaflet_options']['metadataexposeentity_source'])) {
+    /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity */
+    $entity = \Drupal::entityTypeManager()->getStorage(
+      'metadataexpose_entity'
+    )->load(
+      $variables['options']['leaflet_options']['metadataexposeentity_source']
+    );
+    if ($entity) {
+      foreach ($variables['rows']['ungrouped'] ?? [] as $views_result_entity_uuid) {
+        $url = $entity->getUrlForItemFromNodeUUID(
+          $views_result_entity_uuid, TRUE
+        );
+        $geojsons[$views_result_entity_uuid] = $url;
+      }
+      foreach ($variables['rows']['grouped'] ?? [] as $group => $views_result_entity_uuids) {
+        foreach ($views_result_entity_uuids as $views_result_entity_uuid) {
+        $url = $entity->getUrlForItemFromNodeUUID(
+          $views_result_entity_uuid, TRUE
+        );
+          $geojsonsgrouped[$group][] = $url;
+          }
+        }
+    }
+  }
+  // Tried base64 but that expands 3 bytes into 4. Means it grows.
+  $geojsons = json_encode($geojsons);
+  $geojsonsgrouped = json_encode($geojsonsgrouped);
+  $max_width = $variables['options']['leaflet_options']['max_width'];
+  $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+  $max_height = $variables['options']['leaflet_options']['max_height'];
+
+  // get the URL to our Metadata Expose Endpoint, we will get a string here.
+  // Set a unique id attribute for the timeline embed div.  Also set a width and
+  // height for the div.  This is required for proper styling of the timeline.
+  // See https://timeline.knightlab.com/docs/instantiate-a-timeline.html.
+  $htmlid = Html::getId('format_strawberryfield_views_leaflet_' . $view->storage->id() . '_' . $view->current_display);
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['geojsonurls'] = $geojsons;
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['geojsongroupedurls'] = $geojsonsgrouped;
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['geojsonother'] =  [];
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['width'] = $max_width_css;
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['height'] = max(
+    $max_height,
+    480
+  );
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['maxzoom'] =$variables['options']['leaflet_options']['max_zoom'];
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['minzoom'] =$variables['options']['leaflet_options']['min_zoom'];
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['initialzoom'] =$variables['options']['leaflet_options']['initial_zoom'];
+
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['tilemap_url'] =$variables['options']['leaflet_options']['tilemap_url'];
+  $variables['#attached']['drupalSettings']['format_strawberryfield_views']['leaflet'][$htmlid]['tilemap_attribution'] =$variables['options']['leaflet_options']['tilemap_attribution'];
+  $variables['#attached']['library'][] = 'format_strawberryfield_views/leaflet_strawberry_views';
+
+
+  $style = 'width: ' . $max_width_css . '; height: ' . $max_height . ';';
+  $variables['attributes'] = new Attribute(['id' => $htmlid, 'style' => $style, 'data-iiif-infojson' => '',  'class' => [
+    'strawberry-leaflet-views-item',
+    'leafletViewer',
+    'field-iiif',
+    'container',
+  ]
+  ]);
+  unset($variables['rows']);
+}
+
+/**
+ * Alter the query before it is executed.
+ *
+ * @param \Drupal\views\ViewExecutable $view
+ *   The view object about to be processed.
+ * @param \Drupal\views\Plugin\views\query\QueryPluginBase $query
+ *   The query plugin object for the query.
+ *
+ * @see hook_views_query_substitutions()
+ * @see \Drupal\views\Plugin\views\query\Sql
+ */
+function format_strawberryfield_views_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+  // Remove HOCR highlighter in the presence of a Views
+  // Leaflet Display to avoid Solr errors
+  if ($query->getPluginId() == 'search_api_query' && $view->getStyle()->getPluginId() == 'format_strawberryfield_views_leaflet') {
+    $query->setOption('ocr_highlight', 'off');
+  }
+}
