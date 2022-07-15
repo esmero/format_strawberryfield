@@ -98,6 +98,9 @@ iiif_pannellum_strawberry:
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
     - format_strawberryfield/jsm_modeler
+    - format_strawberryfield/pdfs_strawberry
+    - format_strawberryfield/av_strawberry
+
 av_strawberry:
   version: 1.0
   css:
@@ -199,6 +202,17 @@ leaflet_markercluster:
       https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
       https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
 
+leaflet_subgroup:
+  version: 1.0.2
+  remote: https://github.com/ghybs/Leaflet.FeatureGroup.SubGroup
+  license:
+    name: BSD 2-Clause "Simplified" License
+    url: https://github.com/ghybs/Leaflet.FeatureGroup.SubGroup/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/leaflet.featuregroup.subgroup@1.0.2/dist/leaflet.featuregroup.subgroup.js : { external: true, minified: true, preprocess: false}
+
+
 leaflet_core:
   version: 1.6.0
   license:
@@ -222,6 +236,7 @@ leaflet_ajax:
   dependencies:
     - format_strawberryfield/leaflet_core
     - format_strawberryfield/leaflet_markercluster
+    - format_strawberryfield/leaflet_subgroup
 
 leaflet_strawberry:
   version: 1.0
@@ -277,6 +292,7 @@ annotoriousopenseadragon:
   js:
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-toolbar@0.1.1/dist/annotorious-toolbar.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-better-polygon@0.2.0/dist/annotorious-better-polygon.js: { external: true, minified: true, preprocess: false}
   css:
     component:
       https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/annotorious.min.css: { external: true }

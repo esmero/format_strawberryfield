@@ -28,10 +28,7 @@ function format_strawberryfield_page_attachments(array &$page) {
   /* if (\Drupal::service('router.admin_context')->isAdminRoute()) {
       return;
   }*/
-  //$page['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
-  //$page['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader';
-  //$page['#attached']['library'][] = 'format_strawberryfield/pannellum';
-  //$page['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
+
   $page['#attached']['library'][] = 'format_strawberryfield/lazyload_strawberry';
   $page['#attached']['library'][] = 'core/jquery';
   $page['#attached']['library'][] = 'core/drupal.dialog.ajax';

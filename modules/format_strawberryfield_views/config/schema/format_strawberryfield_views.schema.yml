@@ -1,0 +1,35 @@
+views.style.format_strawberryfield_views_leaflet:
+  type: views_style
+  label: 'Views leaflet display via GeoJSON'
+  mapping:
+    metadataexposeentity_source:
+      type: string
+      label: "ID of a metadataexpose_entity configuration that generates GeoJSON"
+    tilemap_url:
+      type: string
+      label: 'Url to the Leaflet Tiles'
+      default: 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    tilemap_attribution:
+      type: string
+      label: 'The attribution html or string for the tilemap'
+      default: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    max_width:
+      type: string
+      label: 'Max width for the map'
+      default: 0
+    max_height:
+      type: string
+      label: 'Max height for the map'
+      default: 720
+    initial_zoom:
+      type: string
+      label: 'Initial leaflet Zoom'
+      default: 10
+    min_zoom:
+      type: string
+      label: 'Min leaflet Zoom'
+      default: 2
+    max_zoom:
+      type: string
+      label: 'Max leaflet Zoom'
+      default: 22

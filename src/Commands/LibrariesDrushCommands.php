@@ -44,11 +44,11 @@ class LibrariesDrushCommands extends DrushCommands {
    */
   protected $fileSystem;
 
-  protected $cslRoot = DRUPAL_ROOT . '/libraries/citation-style-language';
+  protected $cslRoot = DRUPAL_ROOT . '/../vendor/citation-style-language';
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles';
+  protected $cslStylesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/styles';
 
   /**
    * Constructs the object.

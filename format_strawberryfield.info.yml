@@ -3,7 +3,7 @@ description: Provides Various Strawberries field formatters because plain JSON i
 package: Archipelago
 type: module
 core_version_requirement: ^8.8 || ^9
-php: 7.1
+php: 7.2
 dependencies:
   - 'drupal:field'
   - 'drupal:user'

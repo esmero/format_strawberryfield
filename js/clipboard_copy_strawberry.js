@@ -2,7 +2,7 @@
   'use strict';
   Drupal.behaviors.format_strawberryfield_clipboard_copy = {
     attach: function (context, settings) {
-      $('.clipboard-copy').once('attach_clipboard')
+      $('.clipboard-copy-data').once('attach_clipboard')
         .each(function (index, value) {
           var theid = '#' + $(this).attr("id");
           var copyContainer = document.querySelector(theid);
@@ -13,7 +13,7 @@
           var copyContentContainers = document.querySelectorAll('.' + copyContentClass);
           if(copyContentContainers.length == 0) {
             console.log('Class provided by Twig function is not available. Clipboard Copy was not initiated.');
-          } else if(copyButtonClass == copyContentClass) {
+          } else if(copyButtonClass == 'clipboard-copy-button') {
             copyButtonContainers = copyContentContainers;
           } else {
             copyButtonContainers = document.querySelectorAll('.' + copyButtonClass);
@@ -25,13 +25,16 @@
             for(var i = 0; i < copyButtonContainers.length; i++) {
               var copyButtonContainer = copyButtonContainers[i];
               var copyContentContainer = copyContentContainers[i];
-              copyContentContainer.id = 'clipboard-copy-content-' + i;
+              if(!copyContentContainer.hasAttribute('id')) {
+                copyContentContainer.id = 'clipboard-copy-content-' + i;
+              }
               var copyButtonWrapper = document.createElement('button');
               var copyButton = document.createElement('clipboard-copy');
               copyButton.setAttribute('for', copyContentContainer.id);
               copyButton.innerHTML = copyButtonText;
               copyButtonWrapper.appendChild(copyButton);
-              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer);
+              copyButtonWrapper.classList.add(copyButtonClass);
+              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
             }
           }
         });

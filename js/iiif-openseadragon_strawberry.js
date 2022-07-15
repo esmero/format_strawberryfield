@@ -16,7 +16,7 @@
     return uuid;
   }
 
-  var ThreeWaySwitchElement = function(id) {
+  var ThreeWaySwitchElement = function(id, opencv_enabled) {
     // 3. Triggers callbacks on user action
     var setOpenCV = function(evt) {
       // annotorious will be here already.
@@ -37,36 +37,38 @@
         $(evt.target).addClass('active');
       }
     }
-    const input1 = document.createElement('button');
-    input1.setAttribute("name","face");
-    input1.setAttribute("data-annotorious-id",id);
-    const input2 = input1.cloneNode(true);
-    const input3 = input1.cloneNode(true);
-    input2.setAttribute("name","contour");
-    input3.setAttribute("name","contour_adapt");
-    input1.setAttribute("value","OpenCV Face Detect");
-    input1.setAttribute("id",id + '_face');
-    input2.setAttribute("value","OpenCV Countour");
-    input2.setAttribute("id",id + '_countour');
-    input3.setAttribute("value","OpenCV Countour 2");
-    input3.setAttribute("id", id + '_countour_adapt');
 
-    input1.classList.add('a9s-toolbar-btn','opencv-face');
-    input2.classList.add('a9s-toolbar-btn','opencv-contour-light');
-    input3.classList.add('a9s-toolbar-btn','opencv-contour-avg');
-    input1.addEventListener('click', setOpenCV);
-    input2.addEventListener('click', setOpenCV);
-    input3.addEventListener('click', setOpenCV);
 
     const container = document.createElement('div');
-    container.className = 'toolbar-wrapper';
     container.style = "display:inline-flex";
     const toolbar = document.createElement('div');
-    toolbar.setAttribute('id', id+ '_toolbar');
+    toolbar.setAttribute('id', id+ '-annon-toolbar');
     container.appendChild(toolbar);
-    container.appendChild(input1);
-    container.appendChild(input2);
-    container.appendChild(input3);
+    if (opencv_enabled) {
+      const input1 = document.createElement('button');
+      input1.setAttribute("name","face");
+      input1.setAttribute("data-annotorious-id",id);
+      const input2 = input1.cloneNode(true);
+      const input3 = input1.cloneNode(true);
+      input2.setAttribute("name","contour");
+      input3.setAttribute("name","contour_adapt");
+      input1.setAttribute("value","OpenCV Face Detect");
+      input1.setAttribute("id",id + '_face');
+      input2.setAttribute("value","OpenCV Countour");
+      input2.setAttribute("id",id + '_countour');
+      input3.setAttribute("value","OpenCV Countour 2");
+      input3.setAttribute("id", id + '_countour_adapt');
+
+      input1.classList.add('a9s-toolbar-btn','opencv-face');
+      input2.classList.add('a9s-toolbar-btn','opencv-contour-light');
+      input3.classList.add('a9s-toolbar-btn','opencv-contour-avg');
+      input1.addEventListener('click', setOpenCV);
+      input2.addEventListener('click', setOpenCV);
+      input3.addEventListener('click', setOpenCV);
+      container.appendChild(input1);
+      container.appendChild(input2);
+      container.appendChild(input3);
+    }
 
     return container;
   }
@@ -267,8 +269,11 @@
           var element_id = $(this).attr("id");
           var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
           var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
+          var icons_prefixurl = drupalSettings.format_strawberryfield.openseadragon[element_id]['icons_prefixurl'];
           var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
           var annotations_tool = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_tool'];
+          var annotations_opencv = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_opencv'];
+          var annotations_betterpolygon = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_betterpolygon'];
           var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
           var keystoreid = drupalSettings.format_strawberryfield.openseadragon[element_id]['keystoreid'];
           current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
@@ -278,19 +283,32 @@
           if (!groupsinfojsons.hasOwnProperty(group)) {
             groupsinfojsons[group] = [infojson];
 
+            if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
+              icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
+            }
+
             groupssettings[group] = {
               "default_width": default_width,
               "default_height": default_height,
               "webannotations" : false,
               "annotations_tool": annotations_tool,
+              "annotations_opencv": false,
+              "annotations_betterpolygon": false,
               "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
               "file_uuid" : file_uuid,
               "keystoreid" : keystoreid,
-              "showthumbs": showthumbs
+              "showthumbs": showthumbs,
+              "icons_prefixurl" : icons_prefixurl,
             }
 
             if (typeof annotations != "undefined" && annotations == true) {
               groupssettings[group].webannotations = true;
+            }
+            if (typeof annotations_opencv != "undefined" && annotations_opencv == true) {
+              groupssettings[group].annotations_opencv = true;
+            }
+            if (typeof annotations_betterpolygon != "undefined" && annotations_betterpolygon == true) {
+              groupssettings[group].annotations_betterpolygon = true;
             }
 
             // We only need a single css id per group
@@ -330,7 +348,7 @@
           preserveViewport: true,
           id: element_id,
           sequenceMode: sequence,
-          prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/",
+          prefixUrl: groupssettings[group].icons_prefixurl,
           tileSources: tiles,
           showNavigator: true,
           navigatorAutoFade:  true,
@@ -355,10 +373,19 @@
             ],
           }
           // terminate the worker if the user can not add annotations
-          if ($readonly) { worker.terminate() };
+          if ($readonly || !groupssettings[group].annotations_opencv) { worker.terminate() };
 
           annotorious[element_id] = window.OpenSeadragon.Annotorious(viewers[element_id], $anonconfig);
-          annotorious[element_id].setDrawingTool(groupssettings[group].annotations_tool);
+          if (groupssettings[group].annotations_tool == 'both') {
+            annotorious[element_id].setDrawingTool('rect');
+          }
+          else {
+            annotorious[element_id].setDrawingTool(groupssettings[group].annotations_tool);
+          }
+          if ((groupssettings[group].annotations_tool == 'both' || groupssettings[group].annotations_tool == 'polygon') && groupssettings[group].annotations_betterpolygon) {
+            window.Annotorious.BetterPolygon(annotorious[element_id]);
+          }
+
           annotorious_annotations[element_id] = [];
           annotorious_current_tile[element_id] = 0;
 
@@ -476,9 +503,14 @@
               id: current_user['url'],
               displayName: current_user['name'],
             });
-            let toggle = ThreeWaySwitchElement(element_id);
-            $('#' + element_id).prepend(toggle);
-            window.Annotorious.Toolbar(annotorious[element_id], document.getElementById(element_id+'_toolbar'));
+
+            let toggle = ThreeWaySwitchElement(element_id, groupssettings[group].annotations_opencv);
+              // #toolbar-'+ element_id is passed as a div at the same level of the OSD viewer by
+              // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
+            $('#toolbar-' + element_id).prepend(toggle);
+            if (groupssettings[group].annotations_tool == 'both') {
+              window.Annotorious.Toolbar(annotorious[element_id], document.getElementById(element_id + '-annon-toolbar'));
+            }
           }
           /* Acts on page change. We need to load new annotations when that happens! */
           viewers[element_id].addHandler("page", function (data) {
