@@ -7,6 +7,7 @@ use Twig\Node\ModuleNode;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\ContentEntityBase;
+use Drupal\Core\Entity\EditorialContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
@@ -92,8 +93,12 @@ use Twig\Source;
  *   fieldable = TRUE,
  *   entity_keys = {
  *     "id" = "id",
+ *     "revision" = "revision_id",
+ *     "published" = "published",
  *     "label" = "name",
- *     "uuid" = "uuid"
+ *     "uuid" = "uuid",
+ *     "uid" = "user_id",
+ *     "status" = "status",
  *   },
  *   links = {
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
@@ -102,6 +107,14 @@ use Twig\Source;
  *     "collection" = "/metadatadisplay/list"
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
+ *   revision_table = "metadatadisplay_entity_revision",
+ *   revision_data_table = "metadatadisplay_entity_field_revision",
+ *   show_revision_ui = TRUE,
+ *   revision_metadata_keys = {
+ *     "revision_user" = "revision_user",
+ *     "revision_created" = "revision_created",
+ *     "revision_log_message" = "revision_log_message",
+ *   },
  * )
  *
  * The 'links' above are defined by their path. For core to find the
@@ -128,7 +141,7 @@ use Twig\Source;
  * the rights privileges can influence the presentation (view, edit) of each
  * field.
  */
-class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplayInterface {
+class MetadataDisplayEntity extends EditorialContentEntityBase implements MetadataDisplayInterface {
 
   // Implements methods defined by EntityChangedInterface.
   use EntityChangedTrait;
@@ -212,6 +225,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
 
+    $fields = parent::baseFieldDefinitions($entity_type);
     // Standard field, used as unique if primary index.
     $fields['id'] = BaseFieldDefinition::create('integer')
       ->setLabel(t('ID'))
@@ -224,13 +238,13 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDescription(t('The UUID of the Metadata Display entity.'))
       ->setReadOnly(TRUE);
 
-    // Name field for the contact.
+    // Name field for the entity.
     // We set display options for the view as well as the form.
     // Users with correct privileges can change the view and edit configuration.
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
       ->setDescription(t('The name of the Metadata Display entity.'))
-      ->setRevisionable(FALSE)
+      ->setRevisionable(TRUE)
       ->setSettings([
         'default_value' => '',
         'max_length' => 255,
@@ -254,6 +268,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $fields['twig'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Twig template'))
       ->setTranslatable(TRUE)
+      ->setRevisionable(TRUE)
       ->setDisplayOptions('view', [
         'label' => 'hidden',
         'type' => 'text_plain',
@@ -282,6 +297,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDescription(t('The Name of the associated user.'))
       ->setSetting('target_type', 'user')
       ->setSetting('handler', 'default')
+      ->setRevisionable(TRUE)
       ->setDisplayOptions('view', [
         'label' => 'above',
         'type' => 'entity_reference_label',
@@ -302,18 +318,22 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
     $fields['langcode'] = BaseFieldDefinition::create('language')
       ->setLabel(t('Language code'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('The language code of Metadata Display entity.'));
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(t('Created'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('The time that the Metadata Display was created.'));
 
     $fields['changed'] = BaseFieldDefinition::create('changed')
       ->setLabel(t('Changed'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('The time that the Metadata Display was last edited.'));
 
     $fields['link'] = BaseFieldDefinition::create('uri')
       ->setLabel(t('Metadata Definition Source Link'))
       ->setDescription(t('A link an Ontology, Schema or any other Metadata Definition'))
+      ->setRevisionable(TRUE)
       ->setDisplayOptions('view', [
         'region' => 'hidden',
       ])
@@ -323,6 +343,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $fields['mimetype'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
       ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
+      ->setRevisionable(TRUE)
       ->setSettings([
         'default_value' => 'text/html',
         'max_length' => 64,

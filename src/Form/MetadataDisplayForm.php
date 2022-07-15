@@ -158,10 +158,11 @@ class MetadataDisplayForm extends ContentEntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
-    $status = parent::save($form, $form_state);
 
     /** @var \Drupal\format_strawberryfield\MetadataDisplayInterface $entity */
     $entity = $this->entity;
+    $entity->setNewRevision();
+    $status = parent::save($form, $form_state);
     if ($status == SAVED_UPDATED) {
       $this->messenger()->addMessage($this->t('The Metadata Display %entity has been updated.', ['%entity' => $entity->toLink()->toString()]));
     }
