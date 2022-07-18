@@ -40,6 +40,7 @@ use Drupal\views\ViewExecutable;
 class MetadataAPIController extends ControllerBase {
 
   use UseCacheBackendTrait;
+
   /**
    * The time service.
    *
@@ -141,7 +142,7 @@ class MetadataAPIController extends ControllerBase {
    *
    * @param \Drupal\format_strawberryfield\Entity\MetadataAPIConfigEntity $metadataapiconfig_entity
    *   The Metadata Exposed Config Entity that carries the settings.
-   * @param string $format
+   * @param string                                                        $format
    *   A possible Filename used in the last part of the Route.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
@@ -158,13 +159,6 @@ class MetadataAPIController extends ControllerBase {
       );
     }
 
-    /* $valid_bundles = (array) $metadataapiconfig_entity->getTargetEntityTypes(
-    );
-    if (!in_array($node->bundle(), $valid_bundles)) {
-      throw new BadRequestHttpException(
-        "Sorry, this metadata service is not enabled for this Content Type"
-      );
-    }*/
     $openAPI = new OpenApi(
       [
         'openapi' => '3.0.2',
@@ -195,7 +189,6 @@ class MetadataAPIController extends ControllerBase {
     }
     $path = $path . '/' . $pathargument;
     $PathItem = new PathItem(['get' => ['parameters' => $schema_parameters]]);
-    //'get' => new Operation([
 
     $openAPI->paths->addPath($path, $PathItem);
 
@@ -406,8 +399,7 @@ class MetadataAPIController extends ControllerBase {
                 $executable->execute();
               }
             );
-          }
-          catch (\InvalidArgumentException $exception) {
+          } catch (\InvalidArgumentException $exception) {
             $exception->getMessage();
             throw new BadRequestHttpException(
               "Sorry, this Metadata API has configuration issues."
@@ -415,17 +407,21 @@ class MetadataAPIController extends ControllerBase {
           }
           $processed_nodes_via_templates = [];
 
-// ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
-          $total = $executable->pager->getTotalItems() !=0 ? $executable->pager->getTotalItems() : count($executable->result);
+          // ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
+          $total = $executable->pager->getTotalItems() != 0
+            ? $executable->pager->getTotalItems() : count($executable->result);
           $current_page = $executable->pager->getCurrentPage();
           $num_per_page = $executable->pager->getItemsPerPage();
           $offset = $executable->pager->getOffset();
           /** @var \Drupal\views\Plugin\views\cache\CachePluginBase $cache_plugin */
           $cache_plugin = $executable->display_handler->getPlugin('cache');
-          $cache_id = 'format_strawberry:api:'.$metadataapiconfig_entity->id();
+          $cache_id = 'format_strawberry:api:' . $metadataapiconfig_entity->id(
+            );
 
-          $cache_id_suffix = $this->generateCacheKey($executable, $context_parameters);
-          $cache_id = $cache_id.$cache_id_suffix;
+          $cache_id_suffix = $this->generateCacheKey(
+            $executable, $context_parameters
+          );
+          $cache_id = $cache_id . $cache_id_suffix;
           $cached = $this->cacheGet($cache_id);
           if ($cached) {
             $processed_nodes_via_templates = $cached->data ?? [];
@@ -455,10 +451,9 @@ class MetadataAPIController extends ControllerBase {
                           ->error(
                             'We had an issue decoding as JSON your metadata for node @id, field @field while exposing API @api',
                             [
-                              '@id'              => $node->id(),
-                              '@field'           => $field_name,
-                              '@api' => $metadataapiconfig_entity->label(
-                              ),
+                              '@id'    => $node->id(),
+                              '@field' => $field_name,
+                              '@api'   => $metadataapiconfig_entity->label(),
                             ]
                           );
                         throw new UnprocessableEntityHttpException(
@@ -490,8 +485,8 @@ class MetadataAPIController extends ControllerBase {
                     $context_embargo = [
                       'data_embargo' => [
                         'embargoed' => FALSE,
-                        'until'     => NULL
-                      ]
+                        'until'     => NULL,
+                      ],
                     ];
                     if (is_array($embargo_info)) {
                       $embargoed = $embargo_info[0];
@@ -555,27 +550,36 @@ class MetadataAPIController extends ControllerBase {
             }
             // Set the cache
             // EXPIRE?
-            $cache_expire = $metadataapiconfig_entity->getConfiguration()['cache']['expire'] ?? 120;
+            $cache_expire = $metadataapiconfig_entity->getConfiguration(
+              )['cache']['expire'] ?? 120;
             if ($cache_expire !== Cache::PERMANENT) {
               $cache_expire += (int) $this->time->getRequestTime();
             }
             $tags = [];
-            $tags = CacheableMetadata::createFromObject($metadataapiconfig_entity)->getCacheTags();
+            $tags = CacheableMetadata::createFromObject(
+              $metadataapiconfig_entity
+            )->getCacheTags();
             $tags += CacheableMetadata::createFromObject($view)->getCacheTags();
-            $tags += CacheableMetadata::createFromObject($metadatadisplay_wrapper_entity)->getCacheTags();
-            $tags += CacheableMetadata::createFromObject($metadatadisplay_item_entity)->getCacheTags();
-            $this->cacheSet($cache_id, $processed_nodes_via_templates, $cache_expire, $tags);
+            $tags += CacheableMetadata::createFromObject(
+              $metadatadisplay_wrapper_entity
+            )->getCacheTags();
+            $tags += CacheableMetadata::createFromObject(
+              $metadatadisplay_item_entity
+            )->getCacheTags();
+            $this->cacheSet(
+              $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
+            );
           }
           // Now Render the wrapper -- no caching here
           $context_wrapper['iiif_server'] = $this->config(
             'format_strawberryfield.iiif_settings'
           )->get('pub_server_url');
           $context_parameters['request_date'] = [
-              '#markup' => date("H:i:s"),
-              '#cache' => [
-                'disabled' => TRUE,
-              ],
-            ];
+            '#markup' => date("H:i:s"),
+            '#cache'  => [
+              'disabled' => TRUE,
+            ],
+          ];
           $context_wrapper['data_api'] = $context_parameters;
           $context_wrapper['data_api_context'] = 'wrapper';
           $context_wrapper['data'] = $processed_nodes_via_templates;
@@ -595,14 +599,19 @@ class MetadataAPIController extends ControllerBase {
 
           $cacheabledata_response = $this->renderer->executeInRenderContext(
             new RenderContext(),
-            function () use ($context_wrapper, $metadatadisplay_wrapper_entity) {
-              return $metadatadisplay_wrapper_entity->renderNative($context_wrapper);
+            function () use ($context_wrapper, $metadatadisplay_wrapper_entity
+            ) {
+              return $metadatadisplay_wrapper_entity->renderNative(
+                $context_wrapper
+              );
             }
           );
           // @TODO add option that allows the Admin to ask for a rendered VIEW too
           //$rendered = $executable->preview();
           $executable->destroy();
-          if ($metadataapiconfig_entity->getConfiguration()['cache']['enabled'] ?? FALSE == TRUE) {
+          if ($metadataapiconfig_entity->getConfiguration()['cache']['enabled']
+            ?? FALSE == TRUE
+          ) {
             switch ($responsetype) {
               case 'application/json':
               case 'application/ld+json':
@@ -639,7 +648,9 @@ class MetadataAPIController extends ControllerBase {
               //$response->addCacheableDependency($metadatadisplay_entity);
               $response->addCacheableDependency($metadataapiconfig_entity);
               $response->addCacheableDependency($metadatadisplay_item_entity);
-              $response->addCacheableDependency($metadatadisplay_wrapper_entity);
+              $response->addCacheableDependency(
+                $metadatadisplay_wrapper_entity
+              );
               //$metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
               //$response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
               // $response->getCacheableMetadata()->addCacheTags($embargo_tags);
@@ -701,7 +712,7 @@ class MetadataAPIController extends ControllerBase {
             'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
             [
               '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
-              '@args' => json_encode($arguments),
+              '@args'      => json_encode($arguments),
             ]
           );
           throw new BadRequestHttpException(
@@ -750,46 +761,48 @@ class MetadataAPIController extends ControllerBase {
   /**
    * @param \Drupal\views\ViewExecutable $view_executable
    *
-   * @param array                       $api_arguments
+   * @param array                        $api_arguments
    *
    *
    * @return mixed
    */
-  public function generateCacheKey(ViewExecutable $view_executable, array $api_arguments) {
+  public function generateCacheKey(ViewExecutable $view_executable,
+    array $api_arguments
+  ) {
 
-      $build_info = $view_executable->build_info;
-      $key_data = [
-        'build_info' => $build_info,
-        'pager' => [
-          'page' => $view_executable->getCurrentPage(),
-          'items_per_page' => $view_executable->getItemsPerPage(),
-          'offset' => $view_executable->getOffset(),
-        ],
-        'api' => $api_arguments
-      ];
+    $build_info = $view_executable->build_info;
+    $key_data = [
+      'build_info' => $build_info,
+      'pager'      => [
+        'page'           => $view_executable->getCurrentPage(),
+        'items_per_page' => $view_executable->getItemsPerPage(),
+        'offset'         => $view_executable->getOffset(),
+      ],
+      'api'        => $api_arguments,
+    ];
 
-      $display_handler_cache_contexts = $view_executable->display_handler
-        ->getCacheMetadata()
-        ->getCacheContexts();
-      // This will convert the Contexts and Cache metadata into values that include e.g the [url]=http://thisapi
-      $key_data +=\Drupal::service('cache_contexts_manager')
-        ->convertTokensToKeys($display_handler_cache_contexts)
-        ->getKeys();
+    $display_handler_cache_contexts = $view_executable->display_handler
+      ->getCacheMetadata()
+      ->getCacheContexts();
+    // This will convert the Contexts and Cache metadata into values that include e.g the [url]=http://thisapi
+    $key_data += \Drupal::service('cache_contexts_manager')
+      ->convertTokensToKeys($display_handler_cache_contexts)
+      ->getKeys();
 
-     $cacheKey = ':rendered:' . Crypt::hashBase64(serialize($key_data));
+    $cacheKey = ':rendered:' . Crypt::hashBase64(serialize($key_data));
 
     return $cacheKey;
   }
 
 
-/**
- * Retrieves the cache contexts manager.
- *
- * @return \Drupal\Core\Cache\Context\CacheContextsManager
- *   The cache contexts manager.
- */
-public function getCacheContextsManager() {
-  return \Drupal::service('cache_contexts_manager');
-}
+  /**
+   * Retrieves the cache contexts manager.
+   *
+   * @return \Drupal\Core\Cache\Context\CacheContextsManager
+   *   The cache contexts manager.
+   */
+  public function getCacheContextsManager() {
+    return \Drupal::service('cache_contexts_manager');
+  }
 
 }

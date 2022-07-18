@@ -2,10 +2,10 @@
 
 namespace Drupal\format_strawberryfield\Entity\Controller;
 
+use Drupal\Core\Url;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
 use Drupal\format_strawberryfield\Entity\MetadataAPIConfigEntity;
-use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
  * Provides a list controller for the MetadataDisplay entity.
@@ -58,13 +58,13 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataAPIConfigEntity */
     // Build a demo URL so people can see it working
-    $url = $this->getDemoUrlForItem($entity) ?? $this->t('No Content matches this Endpoint Enabled Bundles Configuration yet. Please create one to see a Demo link here');
+    $url = $this->getDemoUrl($entity) ?? $this->t('API URL can not be generated yet');
     $row['id'] = $entity->id();
     $row['label'] = $entity->label();
     $row['url'] = $url ? [
       'data' => [
         '#markup' => $this->t(
-        '<a href="@demolink">@demolink</a>.',
+        '@demolink',
         [
           '@demolink' => $url,
         ]
@@ -85,57 +85,25 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
    * @return \Drupal\Core\GeneratedUrl|null|string
    *   A Drupal URL if we have enough arguments or NULL if not.
    */
-  private function getDemoUrlForItem(MetadataAPIConfigEntity $entity) {
+  private function getDemoUrl(MetadataAPIConfigEntity $entity) {
     $url = NULL;
     $extension = NULL;
-    return $url;
-    // @TODO implement this once we have the API config done.
-    try {
-      $metadata_display_entity = $entity->getMetadataDisplayEntity();
-      $responsetypefield = $metadata_display_entity ? $metadata_display_entity->get('mimetype') : NULL;
-      $responsetype = $responsetypefield ? $responsetypefield->first()->getValue() : NULL;
-      // We can have a LogicException or a Data One, both extend different
-      // classes, so better catch any.
+    $parameters = $entity->getConfiguration()['openAPI'];
+    foreach ($parameters as $param) {
+      if ($param['param']['in'] ?? NULL === 'path') {
+        $pathargument = $param['param']['name'];
+      }
+      $schema_parameters[] = $param['param'];
     }
-    catch (\Exception $exception) {
-      $this->messenger()->addError(
-        'For Metadata endpoint @metadataexposed, either @metadatadisplay does not exist or has no mimetype Drupal field setup or no value for it. Please check that @metadatadisplay still exists, the entity has that field and there is a default Output Format value for it. Error message is @e',
+
+    $url = Url::fromRoute(
+        'format_strawberryfield.metadataapi_caster_base',
         [
-          '@metadataexposed' => $entity->label(),
-          '@metadatadisplay' => $entity->getMetadataDisplayEntity()->label(),
-          '@e' => $exception->getMessage(),
-        ]
-          );
-      return $url;
-    }
-
-    $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
-
-    // Guess extension based on mime,
-    // \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeExtensionGuesser
-    // has no application/ld+json even if recent
-    // And Drupal provides no mime to extension.
-    // @TODO maybe we could have https://github.com/FileEye/MimeMap as
-    // a dependency in SBF. That way the next hack would not needed.
-    if ($responsetype == 'application/ld+json') {
-      $extension = 'jsonld';
-    }
-    else {
-      $guesser = ExtensionGuesser::getInstance();
-      $extension = $guesser->guess($responsetype);
-    }
-
-    $filename = !empty($extension) ? 'default.' . $extension : 'default.html';
-
-    $url = \Drupal::urlGenerator()
-      ->generateFromRoute(
-        'format_strawberryfield.metadatadisplay_caster',
-        [
-          'node' => $uuid,
-          'metadataexposeconfig_entity' => $entity->id(),
-          'format' => $filename,
-        ]
-      );
+          'metadataapiconfig_entity' => $entity->id(),
+          'patharg' => '{' . $pathargument . '}',
+        ],
+      ['absolute' => true]
+      )->toString();
 
     return $url;
   }
