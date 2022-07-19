@@ -6,7 +6,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 /**
  * Implements hook_post_update_NAME().
  */
-function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable1(&$sandbox) {
+function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable(&$sandbox) {
 
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
   /** @var \Drupal\Core\Entity\EntityLastInstalledSchemaRepositoryInterface $last_installed_schema_repository */
