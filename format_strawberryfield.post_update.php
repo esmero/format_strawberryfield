@@ -8,6 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  */
 function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable1(&$sandbox) {
 
+  \Drupal::entityTypeManager()->clearCachedDefinitions();
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
   /** @var \Drupal\Core\Entity\EntityLastInstalledSchemaRepositoryInterface $last_installed_schema_repository */
   $last_installed_schema_repository = \Drupal::service('entity.last_installed_schema.repository');
@@ -77,8 +78,16 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
     ->setTargetEntityTypeId('metadatadisplay_entity')
     ->setRevisionable(TRUE)
     ->setTranslatable(TRUE)
+    ->setDefaultValue(TRUE)
     ->setInitialValue(TRUE)
-    ->setDefaultValue(TRUE);
+    ->setDisplayOptions('form', [
+      'type' => 'boolean_checkbox',
+      'settings' => [
+        'display_label' => TRUE,
+      ],
+    ])
+    ->setDisplayConfigurable('form', TRUE);
+
 
   $definition_update_manager->updateFieldableEntityType($entity_type, $field_storage_definitions, $sandbox);
 

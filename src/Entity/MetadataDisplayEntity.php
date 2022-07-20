@@ -365,6 +365,26 @@ class MetadataDisplayEntity extends EditorialContentEntityBase implements Metada
       ->setDisplayConfigurable('form', TRUE)
       ->addConstraint('NotBlank');
 
+    $fields['status'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Publishing status'))
+      ->setDescription(t('A boolean indicating the published state.'))
+      ->setRevisionable(TRUE)
+      ->setTranslatable(TRUE)
+      ->setDefaultValue(TRUE)
+      ->setInitialValue(TRUE)
+      ->setDisplayOptions('form', [
+        'type' => 'boolean_checkbox',
+        'settings' => [
+          'display_label' => TRUE,
+        ],
+      ])
+      ->setSettings(['on_label' => 'Published', 'off_label' => 'Unpublished'])
+      ->setDisplayOptions('view', [
+        'label' => 'visible',
+        'type' => 'boolean',
+      ])
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('form', TRUE);
     return $fields;
   }
 
