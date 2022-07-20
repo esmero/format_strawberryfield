@@ -6,7 +6,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 /**
  * Implements hook_post_update_NAME().
  */
-function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable1(&$sandbox) {
+function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable(&$sandbox) {
 
   \Drupal::entityTypeManager()->clearCachedDefinitions();
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
@@ -16,6 +16,20 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
   $entity_type = $definition_update_manager->getEntityType('metadatadisplay_entity');
   $field_storage_definitions = $last_installed_schema_repository->getLastInstalledFieldStorageDefinitions('metadatadisplay_entity');
 
+  // Update the entity type definition.
+  $entity_keys = $entity_type->getKeys();
+  $entity_keys['revision'] = 'revision_id';
+  //$entity_keys['published'] = 'status';
+  $entity_type->set('entity_keys', $entity_keys);
+  $entity_type->set('revision_table', 'metadatadisplay_entity_revision');
+  $entity_type->set('revision_data_table', 'metadatadisplay_entity_field_revision');
+  $revision_metadata_keys = [
+    'revision_default' => 'revision_default',
+    'revision_user' => 'revision_user',
+    'revision_created' => 'revision_created',
+    'revision_log_message' => 'revision_log_message',
+  ];
+  $entity_type->set('revision_metadata_keys', $revision_metadata_keys);
 
   // Update the field storage definitions and add the new ones required by a
   // revisionable entity type.
@@ -91,19 +105,5 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
 
   $definition_update_manager->updateFieldableEntityType($entity_type, $field_storage_definitions, $sandbox);
 
-  // Update the entity type definition.
-  $entity_keys = $entity_type->getKeys();
-  $entity_keys['revision'] = 'revision_id';
-  $entity_keys['published'] = 'status';
-  $entity_type->set('entity_keys', $entity_keys);
-  $entity_type->set('revision_table', 'metadatadisplay_entity_revision');
-  $entity_type->set('revision_data_table', 'metadatadisplay_entity_field_revision');
-  $revision_metadata_keys = [
-    'revision_default' => 'revision_default',
-    'revision_user' => 'revision_user',
-    'revision_created' => 'revision_created',
-    'revision_log_message' => 'revision_log_message',
-  ];
-  $entity_type->set('revision_metadata_keys', $revision_metadata_keys);
   return t('Metadata Display Entities have been converted to be revisionable.');
 }
