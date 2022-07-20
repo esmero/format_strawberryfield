@@ -269,13 +269,6 @@ function format_strawberryfield_update_8703(array &$sandbox) {
     ->setRevisionable(TRUE)
     ->setTranslatable(TRUE)
     ->setDefaultValue(TRUE);
-  $has_content_translation_status_field = \Drupal::moduleHandler()->moduleExists('content_translation') && $definition_update_manager->getFieldStorageDefinition('content_translation_status', $entity_type_id);
-  if ($has_content_translation_status_field) {
-    $status->setInitialValueFromField('content_translation_status');
-  }
-  else {
-    $status->setInitialValue(TRUE);
-  }
   $definition_update_manager->installFieldStorageDefinition('status', $entity_type_id, $entity_type_id, $status);
 
   $has_content_translation_status_field = \Drupal::moduleHandler()->moduleExists('content_translation') && $definition_update_manager->getFieldStorageDefinition('content_translation_status', $entity_type_id);
@@ -285,7 +278,6 @@ function format_strawberryfield_update_8703(array &$sandbox) {
   else {
     $status->setInitialValue(TRUE);
   }
-  $definition_update_manager->installFieldStorageDefinition('status', $entity_type_id, $entity_type_id, $status);
 
   // Add the revision metadata fields.
   $revision_created = BaseFieldDefinition::create('created')
@@ -314,9 +306,6 @@ function format_strawberryfield_update_8703(array &$sandbox) {
       ],
     ]);
   $definition_update_manager->installFieldStorageDefinition('revision_log_message', $entity_type_id, $entity_type_id, $revision_log_message);
-  //$last_installed_schema_repository = \Drupal::service('entity.last_installed_schema.repository');
-  //$field_storage_definitions = $last_installed_schema_repository->getLastInstalledFieldStorageDefinitions('metadatadisplay_entity');
-  //$definition_update_manager->updateFieldableEntityType($entity_type, $field_storage_definitions, $sandbox);
 
   // Uninstall the 'content_translation_status' field if needed.
   $database = \Drupal::database();
