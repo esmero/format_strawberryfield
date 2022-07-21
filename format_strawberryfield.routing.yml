@@ -264,10 +264,10 @@ format_strawberryfield.metadataapi_caster_base:
   methods: [GET, POST, HEAD]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\MetadataAPIController::castViaView'
+    patharg: 'v1'
   options:
     parameters:
       metadataapiconfig_entity:
         type: 'entity:metadataapi_entity'
   requirements:
-    patharg: .+
     _permission: 'search content'
