@@ -3,13 +3,14 @@
 namespace Drupal\format_strawberryfield\CiteProc;
 
 use Seboettg\CiteProc\CiteProc;
+use Seboettg\CiteProc\StyleSheet;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class Render {
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/libraries/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/libraries/citation-style-language/styles';
+  protected $cslStylesPath = DRUPAL_ROOT . '/../vendor/citation-style-language/styles';
 
   /**
    * Parses CSS string into an array for processing.
