@@ -8,9 +8,9 @@ use Seboettg\CiteProc\Exception\CiteProcException;
 
 class Render {
 
-  protected $cslLocalesPath = DRUPAL_ROOT . '/vendor/citation-style-language/locales';
+  protected $cslLocalesPath = DRUPAL_ROOT . '../vendor/citation-style-language/locales';
 
-  protected $cslStylesPath = DRUPAL_ROOT . '/vendor/citation-style-language/styles';
+  protected $cslStylesPath = DRUPAL_ROOT . '../vendor/citation-style-language/styles';
 
   /**
    * Parses CSS string into an array for processing.
