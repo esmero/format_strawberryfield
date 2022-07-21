@@ -6,7 +6,7 @@ use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\Routing\AdminHtmlRouteProvider;
 
 /**
- * Provides routes for MetadataExposeConfigEntity.
+ * Provides routes for MetadataAPIConfigEntity.
  *
  */
 class MetadataAPIConfigEntityHtmlRouteProvider extends AdminHtmlRouteProvider {
