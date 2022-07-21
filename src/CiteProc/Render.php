@@ -3,6 +3,7 @@
 namespace Drupal\format_strawberryfield\CiteProc;
 
 use Seboettg\CiteProc\CiteProc;
+use Seboettg\CiteProc\CiteProc\StyleSheet;
 use Seboettg\CiteProc\Exception\CiteProcException;
 
 class Render {
