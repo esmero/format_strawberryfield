@@ -159,6 +159,11 @@ class MetadataAPIController extends ControllerBase {
       );
     }
 
+    // Let's use Symfony the way it is supposed to be used
+
+
+
+
     $openAPI = new OpenApi(
       [
         'openapi' => '3.0.2',
@@ -172,6 +177,18 @@ class MetadataAPIController extends ControllerBase {
     // manipulate description as needed
 
     $request = $this->requestStack->getCurrentRequest();
+    // Options are JSON, XML, HTML, api_json and txt
+    // The idea here is the accept needs to be the mimetype
+    // of the output templates
+    // So we ALWAYS only allow either no format
+    // and we set it
+    // OR we throw an error if the format requestes
+    // does not match
+    // Current format error_log($request->getPreferredFormat());
+    // But it will always default to HTML
+
+    $request->setRequestFormat('json');
+
     if ($request) {
       $full_path = $request->getRequestUri();
     }
@@ -181,8 +198,11 @@ class MetadataAPIController extends ControllerBase {
     $pathargument = '';
     $schema_parameters = [];
     $parameters = $metadataapiconfig_entity->getConfiguration()['openAPI'];
+
     foreach ($parameters as $param) {
-      if ($param['param']['in'] ?? NULL === 'path') {
+      // @TODO For now we need to make sure there IS a single path argument
+      // In the config
+      if (isset($param['param']['in']) && $param['param']['in'] === 'path') {
         $pathargument = '{' . $param['param']['name'] . '}';
       }
       $schema_parameters[] = $param['param'];
@@ -192,9 +212,9 @@ class MetadataAPIController extends ControllerBase {
 
     $openAPI->paths->addPath($path, $PathItem);
 
-
-    $openAPI->paths->getPath($path);
+    //$openAPI->paths->getPath($path);
     $json = \cebe\openapi\Writer::writeToJson($openAPI);
+    error_log($json);
 
     $validator = (new ValidatorBuilder)->fromSchema($openAPI)
       ->getRequestValidator();
@@ -202,11 +222,15 @@ class MetadataAPIController extends ControllerBase {
     $psrRequest = \Drupal::service('psr7.http_message_factory')->createRequest(
       $request
     );
+
     // Will hold all arguments and will be passsed to the twig templates.
     $context_parameters = [];
+
     try {
-      $match = $validator->validate($psrRequest);
+      $match = $validator->validate($psrRequest);;
       if ($match) {
+        error_log('it matches');
+        error_log($match->path());
         $context_parameters['path']
           = $clean_path_parameter_with_values = $match->parseParams($full_path);
         $context_parameters['post'] = $request->request->all();
@@ -214,9 +238,12 @@ class MetadataAPIController extends ControllerBase {
         $context_parameters['header'] = $request->headers->all();
         $context_parameters['cookie'] = $request->cookies->all();
       }
-    } catch (\Exception $exception) {
+    }
+    catch (\Exception $exception) {
       // @see https://github.com/thephpleague/openapi-psr7-validator#exceptions
       // To be seen if we do something different for SWORD here.
+      error_log('failed to validate');
+      error_log($exception->getMessage());
       throw new BadRequestHttpException(
         $exception->getMessage()
       );
@@ -242,6 +269,7 @@ class MetadataAPIController extends ControllerBase {
         $responsetype = $responsetypefield->first()->getValue();
         $responsetype_item = $responsetypefield_item->first()->getValue();
         if ($responsetype_item !== $responsetype) {
+          error_log('Output Format differs');
           throw new \Exception(
             'Output Format differs between Wrapper and Item level templates. They need to match.'
           );
@@ -250,6 +278,7 @@ class MetadataAPIController extends ControllerBase {
         // We can have a LogicException or a Data One, both extend different
         // classes, so better catch any.
       } catch (\Exception $exception) {
+        error_log('metadatadisplay errors');
         $this->loggerFactory->get('format_strawberryfield')->error(
           'Metadata API using @metadatadisplay and/or @metadatadisplay_item have issues. Error message is @e',
           [
@@ -329,9 +358,14 @@ class MetadataAPIController extends ControllerBase {
               $paramconfig_setting['mapping'] ?? [] as $map_id => $mapped
             ) {
               if ($argument_key == $map_id && $mapped) {
-                $arguments[$argument_key]
-                  = $context_parameters[$paramconfig_setting['param']['in']][$param_name]
-                  ?? NULL;
+                // Why we check this?
+                // If two parameters both map to the same VIEWS Arguments
+                // One is passed, the other empty, then the empty one will override everything.
+                if (!isset($arguments[$argument_key]) || empty($arguments[$argument_key])) {
+                  $arguments[$argument_key]
+                    = $context_parameters[$paramconfig_setting['param']['in']][$param_name]
+                    ?? NULL;
+                }
                 // @TODO Ok kids, drupal is full of bugs
                 // IT WILL TRY TO RENDER A FORM EVEN IF NOT NEEDED FOR REST! DAMN.
                 // @see \Drupal\views\ViewExecutable::build it checks for if ($this->display_handler->usesExposed())
@@ -387,6 +421,7 @@ class MetadataAPIController extends ControllerBase {
         if ($executable->hasUrl()) {
           $executable->display_handler->overrideOption('path', '/node');
         }
+        error_log(print_r(array_values($arguments), true));
         $executable->setArguments(array_values($arguments));
         //
         $views_validation = $executable->validate();
@@ -400,6 +435,7 @@ class MetadataAPIController extends ControllerBase {
               }
             );
           } catch (\InvalidArgumentException $exception) {
+            error_log('Views failed to render'.  $exception->getMessage());
             $exception->getMessage();
             throw new BadRequestHttpException(
               "Sorry, this Metadata API has configuration issues."
