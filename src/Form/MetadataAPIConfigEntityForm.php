@@ -48,6 +48,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     if (!$this->entity->isNew()) {
       $config = $this->entity->getConfiguration();
       $form_state->setValue(
+        'api_type',
+        $config['api_type'] ?? 'REST'
+      );
+      $form_state->setValue(
         'processor_wrapper_level_entity_id',
         $config['metadataWrapperDisplayentity'][0]
       );
@@ -73,10 +77,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $views = $this->getApplicationViewsAsOptions();
 
     // load via UUID Twig templates for wrapper and item
-   /*  if ($this->getSetting('metadatadisplayentity_uuid')) {
-      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
-      $entity = reset($entities);
-    } */
+    /*  if ($this->getSetting('metadatadisplayentity_uuid')) {
+       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
+       $entity = reset($entities);
+     } */
     // Set a bunch of form_state values to get around the fact
     // that elements with #limit_validation will not pass form values for other
     // elements and this will break the logic
@@ -109,7 +113,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       'views_source_id' => [
         '#type' => 'select',
         '#title' => $this->t('Views source'),
-        '#description' => $this->t('The Views that will provide data for this API'),
+        '#description' => $this->t('The Views that will provide data for this API. Only View Displays that return machinable responses like REST of FEED can serve as source.'),
         '#options' => $views,
         '#default_value' => $form_state->getValue('views_source_id') ?? NULL,
         '#required' => TRUE,
@@ -171,6 +175,11 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data for the API wrapper response.'),
         '#target_type' => 'metadatadisplay_entity',
         '#selection_handler' => 'default:metadatadisplay',
+        '#selection_settings' => [
+          'filter' => [
+            'mimetype' => 'application/xml'
+          ]
+        ],
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('processor_wrapper_level_entity_id') : NULL,
@@ -189,6 +198,16 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#title' => $this->t('Is this Metadata API active?'),
         '#return_value' => TRUE,
         '#default_value' => ($metadataconfig->isNew()) ? TRUE : $metadataconfig->isActive()
+      ],
+      'api_type' => [
+        '#type' => 'select',
+        '#title' => $this->t('API type'),
+        '#description' => $this->t('This will define the type of HTTP responses (headers and body) it will generate and the interaction.'),
+        '#options' => [
+          'REST' => 'RESTful API',
+          'SWORD' => 'Sword 1.x & 2.x',
+        ],
+        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('api_type') : 'REST',
       ],
       'metadata_api_configure_button' => [
         '#type' => 'submit',
@@ -224,8 +243,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     );
 
     return $response;
-
-    //return $form['api_source_configs'];
   }
 
   /**
@@ -251,9 +268,9 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new RemoveCommand(
         "#api-parameters-config-internal"
-        )
+      )
     );
-   $response->addCommand(new InvokeCommand('#api-add-parameter-config-button-wrapper', 'removeClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('#api-add-parameter-config-button-wrapper', 'removeClass', ['js-hide']));
     return $response;
   }
 
@@ -369,6 +386,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     }
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
+    $config['api_type'][] = $form_state->getValue('api_type', 'REST');
     $new_form_state->setValue('configuration', $config);
     $this->entity = $this->buildEntity($form, $new_form_state);
   }
@@ -393,7 +411,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       $display = $view->getDisplay($display_id);
       $executable = $view->getExecutable();
       $executable->setDisplay($display_id);
-  // also check $executable->display_handler->options['arguments']
+      // also check $executable->display_handler->options['arguments']
       foreach ($executable->display_handler->options['filters'] as $filter) {
         if ($filter['exposed'] == TRUE) {
           $form['api_source_configs'][$filter['id']]['#type'] = 'textfield';
@@ -411,17 +429,17 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         }
       }
       foreach ($executable->display_handler->options['arguments'] as $filter) {
-          $form['api_source_configs'][$filter['id']]['#type'] = 'textfield';
-          $form['api_source_configs'][$filter['id']]['#attributes']
-            = ['class' => ['format-strawberryfield-api-source-config-wrapper']];
-          $form['api_source_configs'][$filter['id']]['#title'] = $this->t(
-            'Argument id: @id for field @field found in <em>@table</em> @admin_label', [
-              '@id' => $filter['id'],
-              '@field' => $filter['field'],
-              '@table' => $filter['table'],
-              '@admin_label' => !empty($filter['expose']['label']) ? '('. $filter['expose']['label'] .')' : '' ,
-            ]
-          );
+        $form['api_source_configs'][$filter['id']]['#type'] = 'textfield';
+        $form['api_source_configs'][$filter['id']]['#attributes']
+          = ['class' => ['format-strawberryfield-api-source-config-wrapper']];
+        $form['api_source_configs'][$filter['id']]['#title'] = $this->t(
+          'Argument id: @id for field @field found in <em>@table</em> @admin_label', [
+            '@id' => $filter['id'],
+            '@field' => $filter['field'],
+            '@table' => $filter['table'],
+            '@admin_label' => !empty($filter['expose']['label']) ? '('. $filter['expose']['label'] .')' : '' ,
+          ]
+        );
         $views_argument_options[$filter['id']] = $filter['expose']['label'] ?? $filter['id'];
       }
       $form_state->set('views_argument_options', $views_argument_options);
@@ -719,7 +737,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           '#required'      => FALSE,
           // If not #validated, dynamically populated dropdowns don't work.
           '#validated'     => TRUE,
-          '#default_value' => [],
+          '#default_value' => $parameter_config['mapping'] ?? [],
         ];
       }
       else {
@@ -1023,7 +1041,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         $schema['items']['type'] = $parameter['schema']['array_type'];
         break;
       case 'object' :
-       // Not implemented yet, the form will get super complex when
+        // Not implemented yet, the form will get super complex when
         // we are here.
     }
     $api_argument['schema'] = array_filter($schema);
@@ -1064,6 +1082,6 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
     $api_argument['deprecated'] = (bool) $parameter['deprecated'];
     $api_argument['description'] = $parameter['description'];
     // 'explode', mins and max not implemented via form, using the defaults for Open API 3.x
-  return json_encode($api_argument, JSON_PRETTY_PRINT);
+    return json_encode($api_argument, JSON_PRETTY_PRINT);
   }
 }
