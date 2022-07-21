@@ -2,6 +2,8 @@
 
 namespace Drupal\format_strawberryfield\Entity\Controller;
 
+use cebe\openapi\spec\OpenApi;
+use cebe\openapi\spec\PathItem;
 use Drupal\Core\Url;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
@@ -47,7 +49,7 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
   public function buildHeader() {
     $header['id'] = $this->t('Metadata API Endpoint Config ID');
     $header['label'] = $this->t('Label');
-    $header['url'] = $this->t('Example URL API Entry point');
+    $header['url'] = $this->t('Open API Config');
     $header['active'] = $this->t('Is active ?');
     return $header + parent::buildHeader();
   }
@@ -58,19 +60,18 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataAPIConfigEntity */
     // Build a demo URL so people can see it working
-    $url = $this->getDemoUrl($entity) ?? $this->t('API URL can not be generated yet');
+    $json = $this->getDemoAPI($entity) ?? $this->t('API structure can not be generated yet');
     $row['id'] = $entity->id();
     $row['label'] = $entity->label();
-    $row['url'] = $url ? [
+    $row['url'] = $json ? [
       'data' => [
-        '#markup' => $this->t(
-        '@demolink',
+        '#markup' => $this->t('<pre>@demolink</pre>',
         [
-          '@demolink' => $url,
+          '@demolink' => trim($json),
         ]
         ),
       ],
-    ] : $url;
+    ] : $json;
 
     $row['active'] = $entity->isActive() ? $this->t('Yes') : $this->t('No');
 
@@ -85,27 +86,47 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
    * @return \Drupal\Core\GeneratedUrl|null|string
    *   A Drupal URL if we have enough arguments or NULL if not.
    */
-  private function getDemoUrl(MetadataAPIConfigEntity $entity) {
-    $url = NULL;
-    $extension = NULL;
+  private function getDemoAPI(MetadataAPIConfigEntity $entity) {
+    $json = NULL;
+
+    //@TODO this can be an entity level method.
     $parameters = $entity->getConfiguration()['openAPI'];
+    $openAPI = new OpenApi(
+      [
+        'openapi' => '3.0.2',
+        'info'    => [
+          'title'   => 'Test API',
+          'version' => '1.0.0',
+        ],
+        'paths'   => [],
+      ]
+    );
+
+    $path = Url::fromRoute(
+      'format_strawberryfield.metadataapi_caster_base',
+      [
+        'metadataapiconfig_entity' => $entity->id(),
+        'patharg' => 'empty',
+      ],
+      ['absolute' => true]
+    )->toString();
+    $path = dirname($path, 1);
+    $pathargument = '';
     foreach ($parameters as $param) {
-      if ($param['param']['in'] ?? NULL === 'path') {
-        $pathargument = $param['param']['name'];
+      // @TODO For now we need to make sure there IS a single path argument
+      // In the config
+      if (isset($param['param']['in']) && $param['param']['in'] === 'path') {
+        $pathargument = '{' . $param['param']['name'] . '}';
       }
       $schema_parameters[] = $param['param'];
     }
+    $path = $path . '/' . $pathargument;
+    $PathItem = new PathItem(['get' => ['parameters' => $schema_parameters]]);
 
-    $url = Url::fromRoute(
-        'format_strawberryfield.metadataapi_caster_base',
-        [
-          'metadataapiconfig_entity' => $entity->id(),
-          'patharg' => '{' . $pathargument . '}',
-        ],
-      ['absolute' => true]
-      )->toString();
+    $openAPI->paths->addPath($path, $PathItem);
 
-    return $url;
+    $json = \cebe\openapi\Writer::writeToJson($openAPI, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+    return $json;
   }
 
 }
