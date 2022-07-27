@@ -6,7 +6,6 @@ use Drupal\Core\Cache\Cache;
 use Twig\Node\ModuleNode;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EditorialContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
@@ -365,14 +364,7 @@ class MetadataDisplayEntity extends EditorialContentEntityBase implements Metada
       ->setDisplayConfigurable('form', TRUE)
       ->addConstraint('NotBlank');
 
-    $fields['status'] = BaseFieldDefinition::create('boolean')
-      ->setLabel(t('Publishing status'))
-      ->setDescription(t('A boolean indicating the published state.'))
-      ->setRevisionable(TRUE)
-      ->setTranslatable(TRUE)
-      ->setDefaultValue(TRUE)
-      ->setInitialValue(TRUE)
-      ->setDisplayOptions('form', [
+    $fields['status']->setDisplayOptions('form', [
         'type' => 'boolean_checkbox',
         'settings' => [
           'display_label' => TRUE,
@@ -385,6 +377,7 @@ class MetadataDisplayEntity extends EditorialContentEntityBase implements Metada
       ])
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('form', TRUE);
+
     return $fields;
   }
 

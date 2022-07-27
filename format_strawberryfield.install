@@ -170,7 +170,8 @@ function format_strawberryfield_update_8702() {
             $needs_saving = TRUE;
           }
         }
-        else {
+        else use Drupal\Core\Entity\ContentEntityBase;
+{
           $metadatadisplayentity_source = $field['settings']['formatter']['metadatadisplayentity_source'] ?? NULL;
           $metadatadisplayentity_source = is_scalar($metadatadisplayentity_source) ? $metadatadisplayentity_source : NULL;
           if ($metadatadisplayentity_source) {
@@ -224,7 +225,7 @@ function format_strawberryfield_update_dependencies() {
   // 'content_translation_status' field.
   if (\Drupal::moduleHandler()->moduleExists('content_translation')) {
     $dependencies['format_strawberryfield'][8703] = [
-      'content_translation' => 8703,
+      'content_translation' => 8400,
     ];
 
     return $dependencies;
@@ -270,7 +271,6 @@ function format_strawberryfield_update_8703(array &$sandbox) {
     ->setRevisionable(TRUE)
     ->setTranslatable(TRUE)
     ->setDefaultValue(TRUE)
-    ->setInitialValue(TRUE)
     ->setDisplayOptions('form', [
       'type' => 'boolean_checkbox',
       'settings' => [

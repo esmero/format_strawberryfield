@@ -8,7 +8,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  */
 function format_strawberryfield_post_update_make_metadatadisplay_entity_revisionable(&$sandbox) {
 
-  \Drupal::entityTypeManager()->clearCachedDefinitions();
+  //\Drupal::entityTypeManager()->clearCachedDefinitions();
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
   /** @var \Drupal\Core\Entity\EntityLastInstalledSchemaRepositoryInterface $last_installed_schema_repository */
   $last_installed_schema_repository = \Drupal::service('entity.last_installed_schema.repository');
@@ -19,7 +19,7 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
   // Update the entity type definition.
   $entity_keys = $entity_type->getKeys();
   $entity_keys['revision'] = 'revision_id';
-  //$entity_keys['published'] = 'status';
+  $entity_keys['published'] = 'status';
   $entity_type->set('entity_keys', $entity_keys);
   $entity_type->set('revision_table', 'metadatadisplay_entity_revision');
   $entity_type->set('revision_data_table', 'metadatadisplay_entity_field_revision');
@@ -85,23 +85,22 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
     ->setRevisionable(TRUE)
     ->setDefaultValue('');
 
-  $field_storage_definitions['status'] = BaseFieldDefinition::create('boolean')
-    ->setName('status')
-    ->setLabel(t('Publishing status'))
-    ->setDescription(t('A boolean indicating the published state.'))
-    ->setTargetEntityTypeId('metadatadisplay_entity')
-    ->setRevisionable(TRUE)
-    ->setTranslatable(TRUE)
-    ->setDefaultValue(TRUE)
-    ->setInitialValue(TRUE)
-    ->setDisplayOptions('form', [
-      'type' => 'boolean_checkbox',
-      'settings' => [
-        'display_label' => TRUE,
-      ],
-    ])
-    ->setDisplayConfigurable('form', TRUE);
-
+  //$field_storage_definitions['status'] = BaseFieldDefinition::create('boolean')
+  //  ->setName('status')
+  //  ->setLabel(t('Publishing status'))
+  //  ->setDescription(t('A boolean indicating the published state.'))
+  //  ->setTargetEntityTypeId('metadatadisplay_entity')
+  //  ->setRevisionable(TRUE)
+  //  ->setTranslatable(TRUE)
+  //  ->setDefaultValue(TRUE)
+  //  ->setDisplayOptions('form', [
+  //    'type' => 'boolean_checkbox',
+  //    'settings' => [
+  //      'display_label' => TRUE,
+  //    ],
+  //  ])
+  //  ->setDisplayConfigurable('form', TRUE);
+  //$field_storage_definitions['status']->setInitialValue(TRUE);
 
   $definition_update_manager->updateFieldableEntityType($entity_type, $field_storage_definitions, $sandbox);
 
