@@ -85,22 +85,21 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
     ->setRevisionable(TRUE)
     ->setDefaultValue('');
 
-  //$field_storage_definitions['status'] = BaseFieldDefinition::create('boolean')
-  //  ->setName('status')
-  //  ->setLabel(t('Publishing status'))
-  //  ->setDescription(t('A boolean indicating the published state.'))
-  //  ->setTargetEntityTypeId('metadatadisplay_entity')
-  //  ->setRevisionable(TRUE)
-  //  ->setTranslatable(TRUE)
-  //  ->setDefaultValue(TRUE)
-  //  ->setDisplayOptions('form', [
-  //    'type' => 'boolean_checkbox',
-  //    'settings' => [
-  //      'display_label' => TRUE,
-  //    ],
-  //  ])
-  //  ->setDisplayConfigurable('form', TRUE);
-  //$field_storage_definitions['status']->setInitialValue(TRUE);
+  $field_storage_definitions['status'] = BaseFieldDefinition::create('boolean')
+    ->setName('status')
+    ->setLabel(t('Publishing status'))
+    ->setDescription(t('A boolean indicating the published state.'))
+    ->setTargetEntityTypeId('metadatadisplay_entity')
+    ->setRevisionable(TRUE)
+    ->setTranslatable(TRUE)
+    ->setDefaultValue(TRUE)
+    ->setDisplayOptions('form', [
+      'type' => 'boolean_checkbox',
+      'settings' => [
+        'display_label' => TRUE,
+      ],
+    ])
+    ->setDisplayConfigurable('form', TRUE);
 
   $definition_update_manager->updateFieldableEntityType($entity_type, $field_storage_definitions, $sandbox);
 

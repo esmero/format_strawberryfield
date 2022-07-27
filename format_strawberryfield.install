@@ -170,8 +170,7 @@ function format_strawberryfield_update_8702() {
             $needs_saving = TRUE;
           }
         }
-        else use Drupal\Core\Entity\ContentEntityBase;
-{
+        else {
           $metadatadisplayentity_source = $field['settings']['formatter']['metadatadisplayentity_source'] ?? NULL;
           $metadatadisplayentity_source = is_scalar($metadatadisplayentity_source) ? $metadatadisplayentity_source : NULL;
           if ($metadatadisplayentity_source) {
