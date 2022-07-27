@@ -93,6 +93,7 @@ function format_strawberryfield_post_update_make_metadatadisplay_entity_revision
     ->setRevisionable(TRUE)
     ->setTranslatable(TRUE)
     ->setDefaultValue(TRUE)
+    ->setInitialValue(TRUE)
     ->setDisplayOptions('form', [
       'type' => 'boolean_checkbox',
       'settings' => [

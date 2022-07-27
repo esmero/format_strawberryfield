@@ -270,6 +270,7 @@ function format_strawberryfield_update_8703(array &$sandbox) {
     ->setRevisionable(TRUE)
     ->setTranslatable(TRUE)
     ->setDefaultValue(TRUE)
+    ->setInitialValue(TRUE)
     ->setDisplayOptions('form', [
       'type' => 'boolean_checkbox',
       'settings' => [
