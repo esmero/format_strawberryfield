@@ -74,7 +74,7 @@ iiif_iabookreader_strawberry:
     - core/drupalSettings
     - core/drupal.debounce
     - core/modernizr
-    - format_strawberryfield/iiif_openseadragon_strawberry
+    - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
 pannellum:
   version: 2.5.6
