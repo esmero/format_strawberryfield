@@ -69,7 +69,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
       '#title' => t("Recurse metadata"),
       '#description' => t('Do you want this condition to look for type values everywhere in the ADO metadata, instead of just at the top level? For example, entering "Image" would cause this condition to match an ADO having an attached image file if this option is checked.'),
       '#type' => 'checkbox',
-      '#default_value' => $this->configuration['recurse_ado_types'],
+      '#default_value' => (bool) $this->configuration['recurse_ado_types'],
     ];
     return parent::buildConfigurationForm($form, $form_state);
   }
@@ -79,7 +79,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
     $this->configuration['ado_types'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_types'))));
-    $this->configuration['recurse_ado_types'] = $form_state->getValue('recurse_ado_types');
+    $this->configuration['recurse_ado_types'] = (bool) $form_state->getValue('recurse_ado_types');
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -170,7 +170,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
   public function defaultConfiguration() {
     return [
         'ado_types' => [],
-        'recurse_ado_types' => 0,
+        'recurse_ado_types' => FALSE,
       ] + parent::defaultConfiguration();
   }
 
