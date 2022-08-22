@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield\Plugin\Condition;
 use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\Url;
 use Drupal\webform\Entity\WebformOptions;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -50,19 +51,21 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    $type_options = [];
-    foreach(['schema_org_creative_works', 'schema_org_cw_collections'] as $webform_option_list_id) {
-      $webform_option_list = WebformOptions::load($webform_option_list_id);
-      if (!empty($webform_option_list)) {
-        $type_options = array_merge($type_options, $webform_option_list->getOptions());
-      }
-    }
-    asort($type_options);
     $form['ado_types'] = [
       '#title' => $this->pluginDefinition['label'],
-      '#type' => 'checkboxes',
-      '#options' => $type_options,
-      '#default_value' => $this->configuration['ado_types'],
+      '#description' => t(
+        'Enter one or more ADO type names, <strong>one per line</strong>. A list of ADO types can be viewed on the <a href="@link">ADO Type to View Mode Mapping Form</a>.',
+        ['@link' => Url::fromRoute('format_strawberryfield.view_mode_mapping_settings_form')->toString()]
+      ),
+      '#type' => 'textarea',
+      '#default_value' => implode(PHP_EOL, $this->configuration['ado_types']),
+      '#required' => TRUE,
+    ];
+    $form['recurse_ado_types'] = [
+      '#title' => t("Recurse metadata"),
+      '#description' => t('Do you want this condition to look for type values everywhere in the ADO metadata, instead of just at the top level? For example, entering "Image" would cause this condition to match an ADO having an attached image file if this option is checked.'),
+      '#type' => 'checkbox',
+      '#default_value' => $this->configuration['recurse_ado_types'],
     ];
     return parent::buildConfigurationForm($form, $form_state);
   }
@@ -71,7 +74,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['ado_types'] = array_filter($form_state->getValue('ado_types'));
+    $this->configuration['ado_types'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_types'))));
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -84,19 +87,34 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
       return TRUE;
     }
     /** @var \Drupal\node\Entity\Node $node */
-    $node = $this->getContextValue('node');
+    $entity = $this->getContextValue('node');
 
-    // Get the ADO type from the entity.
-    if ($node->hasField('field_descriptive_metadata')) {
-      $metadata = $node->get('field_descriptive_metadata')->getString();
-      if (!empty($metadata)) {
-        $metadata = json_decode($metadata);
-        if(!empty($metadata->type)) {
-          // Return true if the `type` value from the json matches a selected ado_type.
-          return !empty($this->configuration['ado_types'][$metadata->type]);
+    $ado_types = [];
+    if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
+      foreach ($sbf_fields as $field_name) {
+        /* @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $field */
+        $field = $entity->get($field_name);
+        if (!$field->isEmpty()) {
+          foreach ($field->getIterator() as $delta => $itemfield) {
+            /** @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $itemfield */
+            if($this->configuration['recurse_ado_types']) {
+              $values = (array) $itemfield->provideFlatten();
+            }
+            else {
+              $values = (array) $itemfield->provideDecoded();
+            }
+            if (isset($values['type'])) {
+              $ado_types = array_merge($ado_types, (array) $values['type']);
+            }
+          }
         }
       }
     }
+    if(!empty($ado_types)) {
+      // Return true if the any of the entity's types are in the condition's ado_types.
+      return (count(array_intersect($this->configuration['ado_types'], $ado_types)) > 0);
+    }
+    // Default, return not matched.
     return FALSE;
   }
 
