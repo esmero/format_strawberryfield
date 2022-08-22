@@ -75,6 +75,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
     $this->configuration['ado_types'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_types'))));
+    $this->configuration['recurse_ado_types'] = $form_state->getValue('recurse_ado_types');
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -165,6 +166,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
   public function defaultConfiguration() {
     return [
         'ado_types' => [],
+        'recurse_ado_types' => 0,
       ] + parent::defaultConfiguration();
   }
 
