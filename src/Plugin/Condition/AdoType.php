@@ -6,6 +6,7 @@ use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Url;
+use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Drupal\webform\Entity\WebformOptions;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -31,9 +32,11 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
+   * @param \Drupal\strawberryfield\StrawberryfieldUtilityService $strawberryfieldUtilityService
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityService $strawberryfieldUtilityService) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
 
   /**
@@ -43,7 +46,8 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
     return new static(
       $configuration,
       $plugin_id,
-      $plugin_definition
+      $plugin_definition,
+      $container->get('strawberryfield.utility')
     );
   }
 
@@ -91,7 +95,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
     $entity = $this->getContextValue('node');
 
     $ado_types = [];
-    if ($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) {
+    if ($sbf_fields = $this->strawberryfieldUtilityService->bearsStrawberryfield($entity)) {
       foreach ($sbf_fields as $field_name) {
         /* @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $field */
         $field = $entity->get($field_name);
