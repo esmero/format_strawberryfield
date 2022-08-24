@@ -13,11 +13,17 @@ iiif_openseadragon_strawberry:
   version: 1.0
   js:
     js/iiif-openseadragon_strawberry.js: {minified: false}
+    js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
   dependencies:
     - core/jquery
+    - core/jquery.once
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/annotoriousopenseadragon
+  css:
+    component:
+      css/osd.css: { }
 
 iiif_iabookreader:
   remote: https://openlibrary.org/dev/docs/bookreader
@@ -52,13 +58,13 @@ iiif_iabookreader:
     - core/jquery.ui.effects.core
     - core/drupal
     - core/drupalSettings
+
 iiif_iabookreader_strawberry:
   version: 1.0
   js:
     js/iiif-iabookreader_strawberry.js: {minified: false, weight: -6}
     js/plugin.iiif-iabookreader_strawberry.js: {minified: false, weight: -8}
     js/iiif-iabookreader_collapse.js: {minified: false}
-    js/iiif-openseadragon_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/jquery.once
@@ -68,6 +74,7 @@ iiif_iabookreader_strawberry:
     - core/drupalSettings
     - core/drupal.debounce
     - core/modernizr
+    - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
 pannellum:
   version: 2.5.6
@@ -88,6 +95,12 @@ iiif_pannellum_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
+    - format_strawberryfield/iiif_openseadragon
+    - format_strawberryfield/iiif_iabookreader
+    - format_strawberryfield/jsm_modeler
+    - format_strawberryfield/pdfs_strawberry
+    - format_strawberryfield/av_strawberry
+
 av_strawberry:
   version: 1.0
   css:
@@ -97,9 +110,9 @@ av_strawberry:
 jsm_modeler:
   version: 0.45
   js:
-    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/lib/three.min.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.ext.three.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.js: { external: true, minified: true, preprocess: false, weight: -10}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/lib/three.min.js: { external: true, minified: true, preprocess: false, weight: -9}
+    https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.ext.three.js: { external: true, minified: true, preprocess: false, weight: -8}
 
 jsm_model_strawberry:
   version: 1.0
@@ -114,7 +127,6 @@ jsm_model_strawberry:
     - core/jquery.ui
     - core/drupal
     - core/drupalSettings
-    - format_strawberryfield/jsm_modeler
 
 pdfs_mozilla:
   version: 2.2.228
@@ -190,6 +202,17 @@ leaflet_markercluster:
       https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
       https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
 
+leaflet_subgroup:
+  version: 1.0.2
+  remote: https://github.com/ghybs/Leaflet.FeatureGroup.SubGroup
+  license:
+    name: BSD 2-Clause "Simplified" License
+    url: https://github.com/ghybs/Leaflet.FeatureGroup.SubGroup/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdn.jsdelivr.net/npm/leaflet.featuregroup.subgroup@1.0.2/dist/leaflet.featuregroup.subgroup.js : { external: true, minified: true, preprocess: false}
+
+
 leaflet_core:
   version: 1.6.0
   license:
@@ -213,6 +236,7 @@ leaflet_ajax:
   dependencies:
     - format_strawberryfield/leaflet_core
     - format_strawberryfield/leaflet_markercluster
+    - format_strawberryfield/leaflet_subgroup
 
 leaflet_strawberry:
   version: 1.0
@@ -267,9 +291,20 @@ annotoriousopenseadragon:
     gpl-compatible: true
   js:
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-toolbar@0.1.1/dist/annotorious-toolbar.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-better-polygon@0.2.0/dist/annotorious-better-polygon.js: { external: true, minified: true, preprocess: false}
   css:
     component:
       https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/annotorious.min.css: { external: true }
+
+opencv:
+  version: 4.5.5
+  license:
+    name: Apache 2
+    url: https://github.com/opencv/opencv/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://docs.opencv.org/4.5.0/opencv.js: { external: true, minified: true, preprocess: false}
 
 w3cWebAnnotations_strawberry:
   version: 1.0
@@ -309,3 +344,32 @@ lazyload_strawberry:
     - format_strawberryfield/lozad
     - core/jquery
     - core/drupal
+
+citations_strawberry:
+  version: 1.0
+  js:
+    js/citations_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings
+
+clipboard_copy:
+  version: 1.1.2
+  license:
+    name: MIT
+    url: https://github.com/github/clipboard-copy-element/blob/main/LICENSE
+    gpl-compatible: true
+  js:
+    https://unpkg.com/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
+
+clipboard_copy_strawberry:
+  version: 1.0
+  js:
+    js/clipboard_copy_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings

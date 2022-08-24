@@ -1,6 +1,176 @@
 /**
- * Strawberry Plugin which allows IIIF manifest parsing
+ * Strawberry Plugin which allows IIIF manifest parsing/OpenSeadragon Extensions
+ * Used by Bookreader. OpenSeadragon.IIIFTileSource.* used to be inside js/iiif-openseadragon_strawberry
+ * But because of cross dependencies we ended initializing a JS Web Worker Open CV on every book.
  */
+
+// override getTileUrl
+OpenSeadragon.IIIFTileSource.prototype.getTileUrl = function( level, x, y ){
+  if(this.emulateLegacyImagePyramid) {
+    var url = null;
+    if ( this.levels.length > 0 && level >= this.minLevel && level <= this.maxLevel ) {
+      url = this.levels[ level ].url;
+    }
+    return url;
+  }
+
+  //# constants
+  var IIIF_ROTATION = '0',
+    //## get the scale (level as a decimal)
+    scale = Math.pow( 0.5, this.maxLevel - level ),
+
+    //# image dimensions at this level
+    levelWidth = Math.ceil( this.width * scale ),
+    levelHeight = Math.ceil( this.height * scale ),
+
+    //## iiif region
+    tileWidth,
+    tileHeight,
+    iiifTileSizeWidth,
+    iiifTileSizeHeight,
+    iiifRegion,
+    iiifTileX,
+    iiifTileY,
+    iiifTileW,
+    iiifTileH,
+    iiifSize,
+    iiifSizeW,
+    iiifSizeH,
+    iiifQuality,
+    uri;
+
+  tileWidth = this.getTileWidth(level);
+  tileHeight = this.getTileHeight(level);
+  iiifTileSizeWidth = Math.ceil( tileWidth / scale );
+  iiifTileSizeHeight = Math.ceil( tileHeight / scale );
+  if (this.version === 1) {
+    iiifQuality = "native." + this.tileFormat;
+  } else {
+    iiifQuality = "default." + this.tileFormat;
+  }
+  if ( levelWidth < tileWidth && levelHeight < tileHeight ){
+    if ( this.version === 2 && levelWidth === this.width ) {
+      iiifSize = "full";
+    } else if ( this.version === 3 && levelWidth === this.width && levelHeight === this.height ) {
+      iiifSize = "max";
+    } else if ( this.version === 3 ) {
+      iiifSize = levelWidth + "," + levelHeight;
+    } else {
+      iiifSize = levelWidth + ",";
+    }
+    iiifRegion = 'full';
+  } else {
+    iiifTileX = x * iiifTileSizeWidth;
+    iiifTileY = y * iiifTileSizeHeight;
+    iiifTileW = Math.min( iiifTileSizeWidth, this.width - iiifTileX );
+    iiifTileH = Math.min( iiifTileSizeHeight, this.height - iiifTileY );
+    if ( x === 0 && y === 0 && iiifTileW === this.width && iiifTileH === this.height ) {
+      iiifRegion = "full";
+    } else {
+      iiifRegion = [ iiifTileX, iiifTileY, iiifTileW, iiifTileH ].join( ',' );
+    }
+    iiifSizeW = Math.ceil( iiifTileW * scale );
+    iiifSizeH = Math.ceil( iiifTileH * scale );
+    if ( this.version === 2 && iiifSizeW === this.width ) {
+      iiifSize = "full";
+    } else if ( this.version === 3 && iiifSizeW === this.width && iiifSizeH === this.height ) {
+      iiifSize = "max";
+    } else if (this.version === 3) {
+      iiifSize = iiifSizeW + "," + iiifSizeH;
+    } else {
+      iiifSize = iiifSizeW + ",";
+    }
+  }
+
+  //OLD//uri = [ this['@id'], iiifRegion, iiifSize, IIIF_ROTATION, iiifQuality ].join( '/' );
+  queryParams = this['@id'].match(/\?.*/);
+  tilesUrl = this['@id'].replace(queryParams, '');
+  uri = [ tilesUrl, iiifRegion, iiifSize, IIIF_ROTATION, iiifQuality ].join( '/' );
+  if (queryParams) {
+    uri += queryParams;
+  }
+
+  return uri;
+};
+
+// override configure
+OpenSeadragon.IIIFTileSource.prototype.configure = function( data, url ){
+  // Try to deduce our version and fake it upwards if needed
+
+  queryParams = url.match(/\?.*/);
+  tilesUrl = url.replace(queryParams, '');
+
+  if ( !$.isPlainObject(data) ) {
+    var options = configureFromXml10( data );
+    options['@context'] = "http://iiif.io/api/image/1.0/context.json";
+
+    //OLD//options['@id'] = url.replace('/info.xml', '');
+    options['@id'] = tilesUrl.replace('/info.xml', '');
+    if (queryParams) {
+      options['@id'] += queryParams;
+    }
+
+    options.version = 1;
+    return options;
+  } else {
+    if ( !data['@context'] ) {
+      data['@context'] = 'http://iiif.io/api/image/1.0/context.json';
+
+      //OLD//data['@id'] = url.replace('/info.json', '');
+      data['@id'] = tilesUrl.replace('/info.xml', '');
+      if (queryParams) {
+        data['@id'] += queryParams;
+      }
+
+      data.version = 1;
+    } else {
+      var context = data['@context'];
+      if (Array.isArray(context)) {
+        for (var i = 0; i < context.length; i++) {
+          if (typeof context[i] === 'string' &&
+            ( /^http:\/\/iiif\.io\/api\/image\/[1-3]\/context\.json$/.test(context[i]) ||
+              context[i] === 'http://library.stanford.edu/iiif/image-api/1.1/context.json' ) ) {
+            context = context[i];
+            break;
+          }
+        }
+      }
+      switch (context) {
+        case 'http://iiif.io/api/image/1/context.json':
+        case 'http://library.stanford.edu/iiif/image-api/1.1/context.json':
+          data.version = 1;
+          break;
+        case 'http://iiif.io/api/image/2/context.json':
+          data.version = 2;
+          break;
+        case 'http://iiif.io/api/image/3/context.json':
+          data.version = 3;
+          break;
+        default:
+          $.console.error('Data has a @context property which contains no known IIIF context URI.');
+      }
+    }
+    if ( !data['@id'] && data['id'] ) {
+      data['@id'] = data['id'];
+    }
+
+    if (queryParams) {
+      data['@id'] += queryParams;
+    }
+
+    if(data.preferredFormats) {
+      for (var f = 0; f < data.preferredFormats.length; f++ ) {
+        if ( OpenSeadragon.imageFormatSupported(data.preferredFormats[f]) ) {
+          data.tileFormat = data.preferredFormats[f];
+          break;
+        }
+      }
+    }
+    return data;
+  }
+};
+
+/* Book Reader Overrides/extensions */
 
 jQuery.extend(BookReader.defaultOptions, {
   iiifmanifesturl: '',
@@ -49,6 +219,21 @@ BookReader.prototype.init = (function(super_) {
   };
 })(BookReader.prototype.init);
 
+BookReader.prototype.getApiVersion = function() {
+  var self = this;
+
+  if(!self.apiVersion) {
+    var $apiVersion = "2.x";
+    if (self.jsonLd["@context"].length > 0 && self.jsonLd["@context"].includes("http://iiif.io/api/presentation/3/context.json")) {
+      $apiVersion = "3.x";
+    }
+    self.apiVersion = $apiVersion;
+    return $apiVersion;
+  }
+  else {
+    return self.apiVersion;
+  }
+}
 
 BookReader.prototype.loadManifest = function () {
   var self = this;
@@ -57,7 +242,12 @@ BookReader.prototype.loadManifest = function () {
   // Simplest approach, we got a full manifest passed as an Object
   if (self.options.iiifmanifest != null) {
     self.jsonLd = self.options.iiifmanifest;
-    self.bookTitle = self.jsonLd.label;
+    self.bookTitle =
+        self.getApiVersion() === "3.x"
+        && Object.keys(self.jsonLd.label).length > 0
+        && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
+          ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
+          : self.jsonLd.label;
     self.bookUrl = '#';
     // self.thumbnail = self.jsonLd.thumbnail['@id'];
     self.metadata = self.jsonLd.metadata;
@@ -72,7 +262,12 @@ BookReader.prototype.loadManifest = function () {
       async: false,
       success: function (jsonLd) {
         self.jsonLd = jsonLd;
-        self.bookTitle = jsonLd.label;
+        self.bookTitle =
+            self.getApiVersion() === "3.x"
+            && Object.keys(self.jsonLd.label).length > 0
+            && self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].length > 0
+                ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
+                : self.jsonLd.label;
         self.bookUrl = '#';
         self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
@@ -94,25 +289,44 @@ BookReader.prototype.setupTooltips = function() {
 
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
-
-  jQuery.each(self.jsonLd.sequences, function(index, sequence) {
+  if(self.getApiVersion() == "3.x") {
     // try with a specific sequenceID
     if (sequenceId!= null) {
-      if (sequence['@id'] === sequenceId) {
+      if (item['id'] === sequenceId) {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
-        self.IIIFsequence.imagesList = getImagesList(sequence);
+        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
         self.numLeafs = self.IIIFsequence.imagesList.length;
       }
     } else {
       self.IIIFsequence.title = "Sequence";
       self.IIIFsequence.bookUrl = "http://iiif.io";
-      self.IIIFsequence.imagesList = getImagesList(sequence);
+      self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
       self.numLeafs = self.IIIFsequence.imagesList.length;
-      return false;
+      // return false;
       // Just take the first one if no default one set
     }
-  });
+  }
+  else {
+    jQuery.each(self.jsonLd.sequences, function(index, sequence) {
+      // try with a specific sequenceID
+      if (sequenceId!= null) {
+        if (sequence['@id'] === sequenceId) {
+          self.IIIFsequence.title = "Sequence";
+          self.IIIFsequence.bookUrl = "http://iiif.io";
+          self.IIIFsequence.imagesList = getImagesList(sequence);
+          self.numLeafs = self.IIIFsequence.imagesList.length;
+        }
+      } else {
+        self.IIIFsequence.title = "Sequence";
+        self.IIIFsequence.bookUrl = "http://iiif.io";
+        self.IIIFsequence.imagesList = getImagesList(sequence);
+        self.numLeafs = self.IIIFsequence.imagesList.length;
+        return false;
+        // Just take the first one if no default one set
+      }
+    });
+  }
 
   var tmpdata = [];
   jQuery.each(self.IIIFsequence.imagesList, function(index,image) {
@@ -210,6 +424,44 @@ BookReader.prototype.parseSequence = function (sequenceId) {
         });
 
       }
+    });
+
+    return imagesList;
+  }
+
+  function getImagesListApi3(items) {
+    var imagesList = [];
+
+    jQuery.each(items, function (index, item) {
+      if (item['type'] === 'Canvas') {
+        let imageObj = {
+          canvasHeight: item.height || 0,
+          canvasWidth: item.width || 0,
+        };
+        let annotationpages = item.items;
+        jQuery.each(annotationpages, function (index, annotationpage) {
+          if ((annotationpage['type'] === 'AnnotationPage') && (annotationpage['items'][0]['type'] === 'Annotation') && (annotationpage['items'][0]['body'])) {
+            let annotation = annotationpage['items'][0];
+            imageObj.serviceUrl = null;
+            if (annotation.body.hasOwnProperty('service') && annotation.body.service[0]['id'] && isValidHttpUrl(annotation.body.service[0]['id'])) {
+              imageObj.serviceUrl = annotation.body.service[0]['id'].replace(/\/$/, '');
+            }
+            imageObj.imageUrl = annotation.body.id || "";
+            // imageObj.imageUrl = imageObj.imageUrl.replace(/\/full\/full\/0\/default.jpg/, '/full/'+ imageObj.canvasWidth + ',/0/default.jpg');
+            imageObj.width = annotation.body.width || 0;
+            imageObj.height = annotation.body.height || 0;
+            imageObj.aspectRatio = (imageObj.width / imageObj.height) || 1;
+            imageObj.imageGetArgument = getURLArgument(annotation.body.id);
+
+            // Add it to the images list
+            if (!(/#xywh/).test(annotation.target)) {
+              imagesList.push(imageObj);
+            }
+          }
+        });
+
+      }
+
     });
 
     return imagesList;
@@ -469,6 +721,10 @@ BookReader.prototype.search =  (function(super_) {
         if (null == searchInsideResults) return;
 
         var searchInsideResultsScale = {};
+        searchInsideResults.matches = searchInsideResults.matches.filter(function(a){
+          return typeof a === 'object' && !Array.isArray(a) && a !== null
+          }
+        );
         searchInsideResults.matches.forEach(function(match,index,array) {
           match.par[0].boxes.forEach(function(box,index,array) {
             var pageindex = self.leafNumToIndex(array[index].page);
@@ -477,7 +733,7 @@ BookReader.prototype.search =  (function(super_) {
             array[index].r = Math.round(box.r * self.getPageWidth(pageindex));
             array[index].b = Math.round(box.b * self.getPageHeight(pageindex));
           })
-          });
+        });
         hasCustomSuccess
           ? options.success.call(this, searchInsideResults, options)
           : self.BRSearchCallback(searchInsideResults, options);

@@ -156,10 +156,19 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+    // Basically min 90px height if using VTT	  
+    $max_height_vtt_css = empty($max_height) || $max_height == 0 ? 'auto' : ($max_height <= 90 ? 90 : $max_height) .'px';
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
@@ -214,8 +223,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
         ->uuid(), $jsondata);
       // Check embargo
-      $embargo_context = [];
-      $embargo_tags = [];
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $embargo_tags[] = 'format_strawberryfield:all_embargo';
@@ -259,18 +266,11 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
             */
           if (count($vtt)) {
             // Yep, redundant but we have no longer these settings here
-            // and i need to add 30px (uff) to the top.
-
-            if  ($max_height = $this->getSetting('max_height') <= 90) {
-              $max_width = $this->getSetting('max_width');
-              $max_height = 90;
-              $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-            }
 
             foreach ($media as $drforkey => $media_item) {
               if (isset($vtt[$drforkey])) {
                 foreach ($media_item as $key => $media_entry) {
-                  $elements[$delta]['video_hmtl5_' . $key]['video']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height}px";
+                  $elements[$delta]['video_hmtl5_' . $key]['video']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height_vtt_css}";
                   foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
                     $route_parameters = [
                       'node' => $nodeid,
@@ -374,7 +374,7 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
           'class' => ['field-av', 'video-av'],
           'id' => 'video_' . $uniqueid,
           'controls' => TRUE,
-          'style' => "width:{$max_width_css}; height:{$max_height_css}px",
+          'style' => "width:{$max_width_css}; height:{$max_height_css}",
         ],
         '#alt' => $this->t(
           'Audio for @label',

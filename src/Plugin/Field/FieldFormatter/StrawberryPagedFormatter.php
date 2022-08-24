@@ -349,7 +349,6 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       */
 
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_iabookreader_strawberry';
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon';
     }
     return $elements;
   }
@@ -378,6 +377,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $embargo_context = [];
+    $embargo_tags = [];
 
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       /* @var $metadatadisplayentity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
@@ -395,11 +396,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
 
         $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
-        $embargo_context = [];
         // This one is for the Twig template
         // We do not need the IP here. No use of showing the IP at all?
         $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
-        $embargo_tags = [];
+
         if (is_array($embargo_info)) {
           $embargoed = $embargo_info[0];
           $context_embargo['data_embargo']['embargoed'] = $embargoed;

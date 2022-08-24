@@ -263,6 +263,8 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
@@ -297,11 +299,10 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       }
 
       $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
-      $embargo_context = [];
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
-      $embargo_tags = [];
+
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $context_embargo['data_embargo']['embargoed'] = $embargoed;
@@ -466,6 +467,29 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                         ['@label' => $items->getEntity()->label()]
                       ),
                     ];
+                    /* This makes me nervous */
+                    /* @TODO This might go better in a general page template preprocess
+                    or template. Having two (by mistake) modals with the same
+                    ID might be a mess.
+                    */
+                    $elements[$delta]['modal'] =  [
+                      '#type' => 'markup',
+                      '#allowed_tags' => ['button','span','div', 'h5'],
+                      '#markup' => '<div id="sbfModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">HotSpot</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div id="sbfModalBody" class="modal-body">
+                </div>
+                <div class="modal-footer">
+                </div>
+            </div>
+        </div>
+    </div>'
+                    ];
                     // Lets add hotspots
                     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = [
                       'hotSpotDebug' => $settings_hotspotdebug,
@@ -473,7 +497,6 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     ];
                     // Let's check if the user provided in-metadata settings for the viewer
                     // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
-
                     // @TODO. We can maybe have an option where $mediaitemkey is not set
                     // And then have general settings for every image?
                     if (isset($jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings'])) {

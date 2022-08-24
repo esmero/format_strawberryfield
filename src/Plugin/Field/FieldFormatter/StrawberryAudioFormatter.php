@@ -33,7 +33,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
  *   }
  * )
  */
-class StrawberryAudioFormatter extends StrawberryBaseFormatter {
+class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
   /**
    * {@inheritdoc}
    */
@@ -86,14 +86,14 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
         '#min' => 0,
         '#required' => TRUE
       ],
-    ];
+    ] + parent::settingsForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function settingsSummary() {
-    $summary = [];
+    $summary = parent::settingsSummary();
     $summary[] = $this->t('Plays Audio from JSON');
 
     if ($this->getSetting('json_key_source')) {
@@ -127,10 +127,17 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+    $embargo_context = [];
+    $embargo_tags = [];
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
+
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $max_height = $this->getSetting('max_height');
+    $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
@@ -182,8 +189,6 @@ class StrawberryAudioFormatter extends StrawberryBaseFormatter {
 
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
       // Check embargo
-      $embargo_context = [];
-      $embargo_tags = [];
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
         $embargo_tags[] = 'format_strawberryfield:all_embargo';

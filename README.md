@@ -1,5 +1,14 @@
 # Strawberry Field Formatters
+
 A Drupal 8 module that provides Cool Field Formatters for StrawberryField (JSON) fields. This is part of the Archipelago Commons Project.
+
+## How to install citeproc-php dependencies
+
+We include [citeproc-php](https://github.com/seboettg/citeproc-php) in this module as a Twig extension and field formatter to generate citations and bibliographies, but its dependencies need to be installed to use it:
+
+```shell
+docker exec -ti esmero-php bash -c 'drush archipelago-download-citeproc-dependencies'
+```
 
 ## Help
 
@@ -15,6 +24,7 @@ Having issues with this module? Check out the Archipelago Commons google groups 
 
 * [Diego Pino](https://github.com/DiegoPino)
 * [Giancarlo Birello](https://github.com/giancarlobi)
+* [Albert Min](https://github.com/aksm)
 
 ## Acknowledgments
 

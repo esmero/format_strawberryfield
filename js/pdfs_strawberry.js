@@ -15,7 +15,7 @@
                     let $theid = $(this).attr("id");
                     let $thefileselectorid = $(this).attr("id") + '_file_selector';
                     var $initialpage = $(this).data("iiif-initialpage");
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = '//cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.worker.min.js';
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.worker.min.js';
 
                     /**
                      * Single Page render
