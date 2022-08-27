@@ -614,3 +614,16 @@ field.formatter.settings.strawberry_citation_formatter:
         label: 'style'
     localekey:
       type: string
+condition.plugin.ado_type_condition:
+  type: condition.plugin
+  label: 'ADO Type Condition'
+  mapping:
+    ado_types:
+      type: sequence
+      label: 'ADO Type'
+      sequence:
+        type: string
+    recurse_ado_types:
+      type: boolean
+      label: 'Recurse metadata'
+
