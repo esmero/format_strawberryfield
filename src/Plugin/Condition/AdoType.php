@@ -7,7 +7,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Url;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
-use Drupal\webform\Entity\WebformOptions;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
