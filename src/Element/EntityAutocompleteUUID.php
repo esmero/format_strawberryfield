@@ -109,7 +109,7 @@ class EntityAutocompleteUUID extends Textfield {
         // static::getEntityLabels().
         $element['#default_value'] = [$element['#default_value']];
       }
-
+      // Allow an empty array in case of multiple as default value.
       if ($element['#default_value']) {
         if (!(reset($element['#default_value']) instanceof EntityInterface)) {
           throw new \InvalidArgumentException('The #default_value property has to be an entity object or an array of entity objects.');
@@ -300,18 +300,32 @@ class EntityAutocompleteUUID extends Textfield {
         $value = isset($last_value['target_id']) ? $last_value['target_id'] : $last_value;
       }
     }
+    if (empty($value)) {
+      return;
+    }
     // Now we need to turn the IDs into UUIDs.
     if (is_array($value)) {
-      //$entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($entity_ids);
+      // Check if target ID is being passed
+      $values = $value;
+      $value = [];
+      foreach ($values as $value_entry ) {
+       if (isset($value_entry['target_id'])) {
+         $value[] = $value_entry['target_id'];
+        }
+      }
+      $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($value);
+      if ($entities) {
+        foreach($entities as $entity) {
+          $value[] = $entity->uuid();
+        }
+      }
     }
-    else {
+    elseif ($value) {
       $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->load($value);
       if ($entities) {
         $value = $entities->uuid();
       }
     }
-
-
 
     $form_state->setValueForElement($element, $value);
   }
