@@ -135,7 +135,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       'add_fieldset' => [
         '#type' => 'fieldset',
         '#attributes' => [
-          'id' => 'api-add-parameter-config-button-wrapper',
+          'data-drupal-api-selector' => 'api-add-parameter-config-button-wrapper',
           'class' => isset($form_state->getTriggeringElement()['#name']) && $form_state->getTriggeringElement()['#name'] == 'metadata_add_parameter' ? ['js-hide'] : [],
         ],
         'add_more' => [
@@ -143,12 +143,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           '#name' => 'metadata_add_parameter',
           '#value' => t('Add Parameter to this API'),
           '#attributes' => [
-            'id' => 'api-add-parameter-config-button'
+            'data-drupal-api-selector' => 'api-add-parameter-config-button'
           ],
           '#limit_validation_errors' => [['views_source_id']],
           '#submit' => ['::submitAjaxAPIConfigFormAdd'],
           '#ajax' => [
-            'trigger_as' => ['name' => 'metadata_api_configure'],
+            //'trigger_as' => ['name' => 'metadata_api_configure'],
             'callback' => '::buildAjaxAPIParameterConfigForm',
             'wrapper' => 'api-parameters-config',
           ],
@@ -253,7 +253,19 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new ReplaceCommand("#api-parameters-config", $form['api_parameter_configs'])
     );
-    $response->addCommand(new InvokeCommand('#api-add-parameter-config-button', 'toggleClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'toggleClass', ['js-hide']));
+    return $response;
+  }
+
+  /**
+   * Handles Parameter config Closing/Cancel
+   */
+  public function buildAjaxAPIParameterConfigCancelForm(array $form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(
+      new ReplaceCommand("#api-parameters-config", $form['api_parameter_configs'])
+    );
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'toggleClass', ['js-hide']));
     return $response;
   }
 
@@ -270,7 +282,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         "#api-parameters-config-internal"
       )
     );
-    $response->addCommand(new InvokeCommand('#api-add-parameter-config-button-wrapper', 'removeClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button-wrapper"]', 'removeClass', ['js-hide']));
     return $response;
   }
 
@@ -660,7 +672,255 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         'class' => $hide ? ['js-hide'] : [],
       ]
     ];
+    $form['api_parameter_configs']['params']['metadata_api_cancel_button'] = [
+      '#type' => 'button',
+      '#name' => 'metadata_api_parameter_cancel',
+      '#limit_validation_errors' => [],
+      '#value' => $this->t('Cancel'),
+      '#submit' => ['::submitAjaxAddParameter'],
+      '#ajax' => [
+        'callback' => '::buildAjaxAPIParameterConfigCancelForm',
+        'wrapper' => 'api-parameters-list-form',
+      ],
+      '#attributes' => [
+        'class' => $hide ? ['js-hide'] : [],
+      ]
+    ];
   }
+
+  /**
+   * Builds the configuration form for a View. Multiple can exist.
+   *
+   * @param array $form
+   *   An associative array containing the initial structure of the plugin form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the complete form.
+   */
+  public function buildViewsConfigForm(array &$form, FormStateInterface $form_state) {
+    $selected_view = $form_state->getValue('views_source_id');
+    // As defined in https://github.com/OAI/OpenAPI-Specification/blob/3.0.2/versions/3.0.2.md#parameter-object
+    $hide = TRUE;
+    if ($form_state->getTriggeringElement()
+      && ($form_state->getTriggeringElement()['#parents'][0] == 'add_more_view' || isset($form_state->getTriggeringElement()['#rowtoedit_view']))
+    ) {
+      $hide = FALSE;
+    }
+    if (!$hide) {
+      $form['api_parameter_configs']['params'] = [
+        '#type'       => 'fieldset',
+        '#title'      => 'Configure API parameter',
+        '#tree'       => TRUE,
+        '#attributes' => [
+          'id' => 'api-parameters-config-internal'
+        ]
+      ];
+      $form['api_parameter_configs']['params']['name'] = [
+        '#type'          => 'textfield',
+        '#title'         => $this->t('Name'),
+        '#description'   => $this->t(
+          'The name of the parameter. Parameter names are case sensitive.'
+        ),
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','name']) ?? NULL,
+        '#required'      => TRUE,
+        '#disabled' => isset($form_state->getTriggeringElement()['#rowtoedit']),
+      ];
+      $form['api_parameter_configs']['params']['in'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('In'),
+        '#description'   => $this->t('The location of the parameter'),
+        '#options'       => [
+          'query'  => 'query',
+          'header' => 'header',
+          'path'   => 'path',
+          'cookie' => 'cookie'
+        ],
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','in']) ?? 'query',
+        '#required'      => TRUE,
+      ];
+
+      $form['api_parameter_configs']['params']['description'] = [
+        '#type'          => 'textfield',
+        '#title'         => $this->t('Description'),
+        '#description'   => $this->t(
+          'A brief description of the parameter. This could contain examples of use.'
+        ),
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','description']) ?? NULL,
+        '#required'      => FALSE,
+      ];
+      $form['api_parameter_configs']['params']['required'] = [
+        '#type'          => 'checkbox',
+        '#title'         => $this->t('Required'),
+        '#description'   => $this->t(
+          'Determines whether this parameter is mandatory. If "in" is "path" this will be checked automatically.'
+        ),
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','required']) ?? FALSE,
+        '#required'      => FALSE,
+      ];
+      $form['api_parameter_configs']['params']['deprecated'] = [
+        '#type'          => 'checkbox',
+        '#title'         => $this->t('Deprecate'),
+        '#description'   => $this->t(
+          'Specifies that a parameter is deprecated and SHOULD be transitioned out of usage.'
+        ),
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','deprecated']) ?? FALSE,
+        '#required'      => FALSE,
+      ];
+      // https://github.com/OAI/OpenAPI-Specification/blob/3.0.2/versions/3.0.2.md#style-values
+      $form['api_parameter_configs']['params']['style'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('Style'),
+        '#description'   => $this->t(
+          'Describes how the parameter value will be serialized depending on the type of the parameter value.'
+        ),
+        '#options'       => [
+          'form'           => 'form',
+          'simple'         => 'simple',
+          'label'          => 'label',
+          'matrix'         => 'matrix',
+          'spaceDelimited' => 'spaceDelimited',
+          'pipeDelimited'  => 'pipeDelimited',
+          'deepObject'     => 'deepObject',
+        ],
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','style']) ?? 'form',
+        '#required'      => TRUE,
+      ];
+      $form['api_parameter_configs']['params']['schema'] = [
+        '#type' => 'fieldset',
+        '#tree' => TRUE,
+      ];
+      // All of these will be readOnly: true
+      $form['api_parameter_configs']['params']['schema']['type'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('type'),
+        '#description'   => $this->t('The data type of the parameter value.'),
+        '#options'       => [
+          'array'   => 'array',
+          'string'  => 'string',
+          'integer' => 'integer',
+          'number'  => 'number',
+          'object'  => 'object',
+          'boolean' => 'boolean',
+        ],
+        '#default_value' => $form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? 'string',
+        '#required'      => TRUE,
+      ];
+
+      $form['api_parameter_configs']['params']['schema']['array_type'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('array type'),
+        '#description'   => $this->t('The data type of an array item/entry '),
+        '#options'       => [
+          'string'        => 'string',
+          'integer'       => 'integer',
+          'number'        => 'number',
+          'boolean'       => 'boolean',
+          'any/arbitrary' => '{}',
+        ],
+        '#default_value' => ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? 'string' == 'array') ? $form_state->getValue(['api_parameter_configs','params','param','schema','type']) : 'string',
+        '#required'      => TRUE,
+      ];
+      $form['api_parameter_configs']['params']['schema']['string_format'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('string format'),
+        '#empty_option'  => $this->t(' - No format -'),
+        '#description'   => $this->t(
+          'Server hint for how a string should be processed.'
+        ),
+        '#options'       => [
+          'uuid'      => 'uuid',
+          'email'     => 'email',
+          'date'      => 'date',
+          'date-time' => 'date-time',
+          'password'  => 'password',
+          'byte'      => 'byte (base64  encoded)',
+          'binary'    => 'binary (file)'
+        ],
+        '#default_value' => ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api_parameter_configs','params','param','schema','format']) : NULL,
+        '#required'      => FALSE,
+      ];
+      $form['api_parameter_configs']['params']['schema']['string_pattern'] = [
+        '#type'          => 'textfield',
+        '#title'         => $this->t('Pattern'),
+        '#description'   => $this->t(
+          'Regular expression template for a string value e.g SSN: ^\d{3}-\d{2}-\d{4}$'
+        ),
+        '#default_value' =>  ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api_parameter_configs','params','param','schema','pattern']) : NULL,
+        '#required'      => FALSE,
+      ];
+
+      $form['api_parameter_configs']['params']['schema']['number_format'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('format'),
+        '#empty_option'  => $this->t(' - No format -'),
+        '#description'   => $this->t(
+          'Server hint for how a number should be processed.'
+        ),
+        '#options'       => [
+          'float'  => 'float',
+          'double' => 'double',
+        ],
+        '#default_value' =>  ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? 'string' == 'number') ? $form_state->getValue(['api_parameter_configs','params','param','schema','format']) : NULL,
+        '#required'      => FALSE,
+      ];
+      $form['api_parameter_configs']['params']['schema']['integer_format'] = [
+        '#type'          => 'select',
+        '#title'         => $this->t('format'),
+        '#empty_option'  => $this->t(' - No format -'),
+        '#description'   => $this->t(
+          'Server hint for how a integer should be processed.'
+        ),
+        '#options'       => [
+          'int32' => 'int32',
+          'int64' => 'int64',
+        ],
+        '#default_value' => ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? 'string' == 'integer') ? $form_state->getValue(['api_parameter_configs','params','param','schema','format']) : NULL,
+        '#required'      => FALSE,
+      ];
+      $form['api_parameter_configs']['params']['schema']['enum'] = [
+        '#type'          => 'textfield',
+        '#title'         => $this->t('Enumeration'),
+        '#description'   => $this->t(
+          'A controlled list of elegible options for this paramater. Use comma separated list of strings or leave empty'
+        ),
+        '#default_value' =>  ($form_state->getValue(['api_parameter_configs','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api_parameter_configs','params','param','schema','enum']) : NULL,
+        '#required'      => FALSE,
+      ];
+    }
+
+    $form['api_parameter_configs']['params']['metadata_api_configure_button'] = [
+      '#type' => 'submit',
+      '#name' => 'metadata_api_parameter_configure',
+      '#value' => $this->t('Save parameter'),
+      '#limit_validation_errors' => [['api_parameter_configs']],
+      '#submit' => ['::submitAjaxAddParameter'],
+      '#ajax' => [
+        'callback' => '::buildAjaxAPIParameterListConfigForm',
+        'wrapper' => 'api-parameters-list-form',
+      ],
+      '#attributes' => [
+        'class' => $hide ? ['js-hide'] : [],
+      ]
+    ];
+    $form['api_parameter_configs']['params']['metadata_api_cancel_button'] = [
+      '#type' => 'button',
+      '#name' => 'metadata_api_parameter_cancel',
+      '#limit_validation_errors' => [],
+      '#value' => $this->t('Cancel'),
+      '#submit' => ['::submitAjaxAddParameter'],
+      '#ajax' => [
+        'callback' => '::buildAjaxAPIParameterConfigCancelForm',
+        'wrapper' => 'api-parameters-list-form',
+      ],
+      '#attributes' => [
+        'class' => $hide ? ['js-hide'] : [],
+      ]
+    ];
+  }
+  
+  
+  
+  
+  
   /**
    * Builds the configuration form listing current Parameter.
    *
@@ -981,7 +1241,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
   return $form;
 }
      */
-    // All entity references and their extension shave this key in the
+    // All entity references and their extension share this key in the
     // static::pluginManager('display')->getDefinitions();
     $displays_entity_reference = Views::getApplicableViews('entity_reference_display');
     // Only key that allows to me get REST and FEEDS
@@ -1002,7 +1262,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
 
 
   private function formatOpenApiArgument(array $parameter):string {
-    // Only we are calling this function (PRIVATE) so
+    // Only calling this function (PRIVATE) so
     // i know for sure that if this is missing its because $parameter
     // Comes from a saved entity and its ready
     if (isset($parameter["weight"]) && isset($parameter["param"]) && is_array($parameter["param"])) {
