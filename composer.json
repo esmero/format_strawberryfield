@@ -19,6 +19,7 @@
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^5.23 || ^6.0",
-        "ext-json": "*"
+        "ext-json": "*",
+	"seboettg/citeproc-php": "master"
     }
 }
