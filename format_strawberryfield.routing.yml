@@ -271,3 +271,27 @@ format_strawberryfield.metadataapi_caster_base:
         type: 'entity:metadataapi_entity'
   requirements:
     _permission: 'search content'
+
+# Search Highlight Endpoint for a given Node file uuid and processor.
+format_strawberryfield.flavor_datasource_search:
+  path: '/do/{node}/flavorsearchwithmetadata/{metadataexposeconfigentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfigentity:
+        type: 'entity:metadataexpose_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
