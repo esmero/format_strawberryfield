@@ -144,12 +144,16 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       $citation_style_directory = $this->cslStylesPath;
       // Get the list of style files.
       $style_list = $this->fileSystem->scanDirectory($citation_style_directory, '/\.(csl)$/i', ['recurse' => FALSE, 'key' => 'name']);
-      # Generate a list of select options and push in the styles.
+      // Generate a list of select options and push in the styles.
       foreach($style_list as $style) {
         $style_name = $style->name;
         $style_xml = simplexml_load_file($style->uri);
-        $style_title = $style_xml->info->title->__toString();
-        $style_options[$style_name] = $this->t($style_title);
+	// Check if the bibliography node exists and only add to the list if it does.
+        $style_bibliography_exists = isset($style_xml->bibliography);
+        if($style_bibliography_exists) {
+          $style_title = $style_xml->info->title->__toString();
+          $style_options[$style_name] = $this->t($style_title);
+        }
       }
       // Alphabetize them.
       asort($style_options);
