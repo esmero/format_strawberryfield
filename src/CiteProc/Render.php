@@ -127,7 +127,7 @@ class Render {
           $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
           ++$style_iterator;
         } else {
-          $message = 'The' . $selected_style . ' CSL style wasn\'t rendered because it doesn\'t contain a bibliography node.' ;
+          $message = 'The ' . $selected_style . ' CSL style wasn\'t rendered because it doesn\'t contain a bibliography node.' ;
           \Drupal::logger('format_strawberryfield')->info($message);
         }
       }
