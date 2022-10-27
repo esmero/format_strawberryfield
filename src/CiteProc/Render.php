@@ -83,45 +83,53 @@ class Render {
       $style_iterator = 0;
       foreach ($styleNames as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
-        if ($available_locale) {
-          $citeProc = new CiteProc($style, $available_locale);
-        }
-        else {
-          $citeProc = new CiteProc($style);
-        }
-        $bibliography = $citeProc->render($jsonData, "bibliography");
-        $cssStyles = $citeProc->renderCssStyles();
-        $parsedStyle = $this->parseCSS($cssStyles);
-        $processed_bibliography = $bibliography;
-        foreach ($parsedStyle as $css_prop => $css_statements) {
-          $css_selector = ltrim($css_prop, '.');
-          $css_selector_len = strlen($css_selector);
-          $pos = strpos($processed_bibliography,$css_selector);
-          if ($pos !== false) {
-            $inline_rule = ' style="';
-            foreach($css_statements as $css_property => $css_value) {
-              $inline_rule .= $css_property . ':' . $css_value . ';';
-            }
-            $inline_rule .= '"';
-            $start = 0;
-            while (($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
-              $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
-              $start = $inline_pos + 1;
+        $style_xml = simplexml_load_string($style);
+        $style_bibliography_exists = isset($style_xml->bibliography);
+
+        if($style_bibliography_exists) {
+          if ($available_locale) {
+            $citeProc = new CiteProc($style, $available_locale);
+          }
+          else {
+            $citeProc = new CiteProc($style);
+          }
+          $bibliography = $citeProc->render($jsonData, "bibliography");
+          $cssStyles = $citeProc->renderCssStyles();
+          $parsedStyle = $this->parseCSS($cssStyles);
+          $processed_bibliography = $bibliography;
+          foreach ($parsedStyle as $css_prop => $css_statements) {
+            $css_selector = ltrim($css_prop, '.');
+            $css_selector_len = strlen($css_selector);
+            $pos = strpos($processed_bibliography,$css_selector);
+            if ($pos !== false) {
+              $inline_rule = ' style="';
+              foreach($css_statements as $css_property => $css_value) {
+                $inline_rule .= $css_property . ':' . $css_value . ';';
+              }
+              $inline_rule .= '"';
+              $start = 0;
+              while (($inline_pos = strpos(($processed_bibliography),$css_selector,$start)) !== false) {
+                $processed_bibliography = substr_replace($processed_bibliography, $inline_rule, $inline_pos + $css_selector_len + 1, 0);
+                $start = $inline_pos + 1;
+              }
             }
           }
+          if ($style_iterator > 0) {
+            $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
+          }
+          else {
+            $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
+          }
+          $rendered_bibliography .= $processed_bibliography;
+          $style_file = $citation_style_directory . '/' . $selected_style . '.csl';
+          $style_xml = simplexml_load_file($style_file);
+          $style_title = $style_xml->info->title->__toString();
+          $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
+          ++$style_iterator;
+        } else {
+          $message = 'The' . $selected_style . ' CSL style wasn\'t rendered because it doesn\'t contain a bibliography node.' ;
+          \Drupal::logger('format_strawberryfield')->info($message);
         }
-        if ($style_iterator > 0) {
-          $processed_bibliography = '<div class="hidden csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
-        }
-        else {
-          $processed_bibliography = '<div class="csl-bib-body-container '. $selected_style . '">' . $processed_bibliography . '</div>';
-        }
-        $rendered_bibliography .= $processed_bibliography;
-        $style_file = $citation_style_directory . '/' . $selected_style . '.csl';
-        $style_xml = simplexml_load_file($style_file);
-        $style_title = $style_xml->info->title->__toString();
-        $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
-        ++$style_iterator;
       }
     } catch (Exception $e) {
       echo $e->getMessage();
