@@ -83,9 +83,6 @@ class Render {
       $style_iterator = 0;
       foreach ($styleNames as $selected_style) {
         $style = StyleSheet::loadStyleSheet($selected_style);
-        $style_xml = simplexml_load_string($style);
-        $style_bibliography_exists = isset($style_xml->bibliography);
-
         if ($available_locale) {
           $citeProc = new CiteProc($style, $available_locale);
         }
