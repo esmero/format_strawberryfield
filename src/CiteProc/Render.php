@@ -86,13 +86,15 @@ class Render {
         $style_xml = simplexml_load_string($style);
         $style_bibliography_exists = isset($style_xml->bibliography);
 
-        if($style_bibliography_exists) {
-          if ($available_locale) {
-            $citeProc = new CiteProc($style, $available_locale);
-          }
-          else {
-            $citeProc = new CiteProc($style);
-          }
+        if ($available_locale) {
+          $citeProc = new CiteProc($style, $available_locale);
+        }
+        else {
+          $citeProc = new CiteProc($style);
+        }
+        $citeProc->init();
+        $citeProcBibliography = $citeProc->getContext()->getBibliography();
+        if($citeProcBibliography !== null) {
           $bibliography = $citeProc->render($jsonData, "bibliography");
           $cssStyles = $citeProc->renderCssStyles();
           $parsedStyle = $this->parseCSS($cssStyles);
@@ -126,7 +128,8 @@ class Render {
           $style_title = $style_xml->info->title->__toString();
           $select .= '<option value="' . $selected_style . '">' . $style_title . '</option>';
           ++$style_iterator;
-        } else {
+	}
+	else {
           $message = 'The ' . $selected_style . ' CSL style wasn\'t rendered because it doesn\'t contain a bibliography node.' ;
           \Drupal::logger('format_strawberryfield')->info($message);
         }
