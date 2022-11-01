@@ -398,10 +398,15 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $context = $context + $this->getTwigDefaultContext();
     $twigtemplate = $this->get('twig')->getValue();
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
-    $rendered = $this->twigEnvironment()->renderInline(
-      $twigtemplate,
-      $context
-    );
+    try {
+      $rendered = $this->twigEnvironment()->renderInline(
+        $twigtemplate,
+        $context
+      );
+    }
+    catch (\Exception $exception) {
+      return $exception->getMessage();
+    }
     return $rendered;
   }
 

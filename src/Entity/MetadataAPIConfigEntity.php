@@ -42,7 +42,7 @@ use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
  *     "label",
  *     "uuid",
  *     "configuration",
- *     "views_source_id",
+ *     "views_source_ids",
  *     "cache",
  *     "active",
  *   },
@@ -73,7 +73,7 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements MetadataConfig
   protected $label;
 
   /**
-   * The quite complex configuration that will live in configuration
+   * The quite complex OpenAPI configuration that will live in configuration
    *
    * @var array
    */
@@ -97,11 +97,11 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements MetadataConfig
 
 
   /**
-   * The Data Source / Views in the form of views:views_id:display_id
+   * A Named Query Config array
    *
    * @var string
    */
-  protected $views_source_id = NULL;
+  protected $named_query_configs = [];
 
   /**
    * Whether or not the rendered output of is cached by default.
@@ -294,6 +294,94 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements MetadataConfig
    */
   public function getViewsSourceId(): string {
     return $this->views_source_id;
+  }
+
+  public function getNamedQuery($named_query): string {
+    return $this->query_config[$named_query] ?? [];
+  }
+
+  public function searchApiQuery($named_query): array {
+  /* string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => 'ASC'], int $limit = 1, int $offset = 0 */
+
+    /** @var \Drupal\search_api\IndexInterface[] $indexes */
+    $indexes = \Drupal::entityTypeManager()
+      ->getStorage('search_api_index')
+      ->loadMultiple([$index]);
+
+    // We can check if $fulltext, $filters and $facets are inside $indexes['theindex']->field_settings["afield"]?
+    foreach ($indexes as $search_api_index) {
+
+      // Create the query.
+      // How many?
+      $query = $search_api_index->query([
+        'limit' => $limit,
+        'offset' => $offset,
+      ]);
+
+      $parse_mode = $this->parseModeManager->createInstance('terms');
+      $query->setParseMode($parse_mode);
+      foreach ($sort as $field => $order) {
+        $query->sort($field, $order);
+      }
+      $query->keys($term);
+      if (!empty($fulltext)) {
+        $query->setFulltextFields($fulltext);
+      }
+
+      $allfields_translated_to_solr = $search_api_index->getServerInstance()
+        ->getBackend()
+        ->getSolrFieldNames($query->getIndex());
+
+      $query->setOption('search_api_retrieved_field_values', ['id']);
+      foreach ($filters as $field => $condition) {
+        $query->addCondition($field, $condition);
+      }
+      // Facets, does this search api index supports them?
+      if ($search_api_index->getServerInstance()->supportsFeature('search_api_facets')) {
+        // My real goal!
+        //https://solarium.readthedocs.io/en/stable/queries/select-query/building-a-select-query/components/facetset-component/facet-pivot/
+        $facet_options = [];
+        foreach ($facets as $facet_field) {
+          $facet_options['facet:' . $facet_field] = [
+            'field'     => $facet_field,
+            'limit'     => 10,
+            'operator'  => 'or',
+            'min_count' => 1,
+            'missing'   => TRUE,
+          ];
+        }
+
+        if (!empty($facet_options)) {
+          $query->setOption('search_api_facets', $facet_options);
+        }
+      }
+      /* Basic is good enough for facets */
+      $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
+      // see also \Drupal\search_api_autocomplete\Plugin\search_api_autocomplete\suggester\LiveResults::getAutocompleteSuggestions
+      $results = $query->execute();
+      $extradata = $results->getAllExtraData();
+      // We return here
+      $return = [];
+      foreach( $results->getResultItems() as $resultItem) {
+        $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['entity'] = $resultItem->getOriginalObject()->getValue();
+        foreach ($resultItem->getFields() as $field) {
+          $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['fields'][$field->getFieldIdentifier()] = $field->getValues();
+        }
+      }
+      $return['total'] = $results->getResultCount();
+      if (isset($extradata['search_api_facets'])) {
+        foreach($extradata['search_api_facets'] as $facet_id => $facet_values) {
+          [$not_used, $field_id] = explode(':', $facet_id);
+          $facet = [];
+          foreach ($facet_values as $entry) {
+            $facet[$entry['filter']] = $entry['count'];
+          }
+          $return['facets'][$field_id] = $facet;
+        }
+      }
+      return $return;
+    }
+    return [];
   }
 
 

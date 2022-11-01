@@ -152,7 +152,7 @@ class MetadataAPIController extends ControllerBase {
     MetadataAPIConfigEntity $metadataapiconfig_entity,
     $pathargument = 'some_parameter_argument'
   ) {
-    // Check if Config entity is actually enablewd.
+    // Check if Config entity is actually enabled.
     if (!$metadataapiconfig_entity->isActive()) {
       throw new AccessDeniedHttpException(
         "Sorry, this API service is currently disabled."
@@ -160,10 +160,6 @@ class MetadataAPIController extends ControllerBase {
     }
 
     // Let's use Symfony the way it is supposed to be used
-
-
-
-
     $openAPI = new OpenApi(
       [
         'openapi' => '3.0.2',
@@ -212,7 +208,6 @@ class MetadataAPIController extends ControllerBase {
 
     $openAPI->paths->addPath($path, $PathItem);
 
-    //$openAPI->paths->getPath($path);
     $json = \cebe\openapi\Writer::writeToJson($openAPI);
     error_log($json);
 
