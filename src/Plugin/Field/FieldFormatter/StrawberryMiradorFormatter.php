@@ -128,6 +128,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'metadataexposeentity_source' => NULL,
         'manifestnodelist_json_key_source' => 'isrelatedto',
         'manifesturl_json_key_source' => 'iiifmanifest',
+        'custom_js' => FALSE,
         'max_width' => 720,
         'max_height' => 480,
       ];
@@ -206,6 +207,11 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             'data-formatter-selector' => 'mediasource',
           ],
           '#ajax' => $ajax,
+        ],
+        'custom_js' => [
+          '#type' => 'checkbox',
+          '#title' => t('Use Custom Archipelago Mirador with Plugins'),
+          '#default_value' => $this->getSetting('custom_js') ?? FALSE,
         ],
         'main_mediasource' => [
           '#type' => 'select',
@@ -414,6 +420,9 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+   if ($this->getSetting('custom_js')) {
+     $summary[] = $this->t('Using Custom Mirador with Plugins');
+   }
 
     return array_merge($summary, parent::settingsSummary());
   }
@@ -532,7 +541,17 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           $max_height,
           480
         );
-        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/mirador_strawberry';
+        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['custom_js'] = $this->getSetting('custom_js') ?? FALSE;
+        if ($this->getSetting('custom_js')) {
+          $elements[$delta]['#attached']['library'][]
+            = 'format_strawberryfield/mirador_custom_strawberry';
+        }
+        else {
+          $elements[$delta]['#attached']['library'][]
+            = 'format_strawberryfield/mirador_strawberry';
+        }
+
+
         if (isset($item->_attributes)) {
           $elements[$delta] += ['#attributes' => []];
           $elements[$delta]['#attributes'] += $item->_attributes;

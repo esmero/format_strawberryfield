@@ -15,6 +15,7 @@
                         if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
                             $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
                         }
+
                         // Defines our basic options for Mirador IIIF.
                         var $options = {
                             id: element_id,
@@ -23,6 +24,32 @@
                                 thumbnailNavigationPosition: 'far-bottom',
                             }]
                         };
+
+                      if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+                        $options.window = {
+                          workspaceControlPanel: {
+                            enabled: false
+                          },
+                          allowClose: false,
+                          imageToolsEnabled: true,
+                          imageToolsOpen: true,
+                          views: [
+                            { key: 'single', behaviors: [null, 'individuals'] },
+                            { key: 'book', behaviors: [null, 'paged'] },
+                            { key: 'scroll', behaviors: ['continuous'] },
+                            { key: 'gallery' },
+                          ],
+                        };
+                        $options.windows[0].workspaceControlPanel = {
+                          enabled: false
+                        };
+                        $options.windows[0].workspace = {
+                          isWorkspaceAddVisible: false,
+                          allowNewWindows: true,
+                        };
+
+                      }
+
                         var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
                         var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
                         var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
@@ -42,8 +69,16 @@
                             $options.manifests = $manifests;
                         }
                         //@TODO add an extra Manifests key with every other one so people can select the others.
-                        const miradorInstance = Mirador.viewer($options);
-                        console.log('initializing Mirador 3.1.1')
+                        if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+                          const miradorInstance = renderMirador($options);
+                          console.log('initializing Custom Mirador 3.3.0')
+                        }
+                        else {
+                          const miradorInstance = Mirador.viewer($options);
+                          console.log('initializing Mirador 3.1.1')
+                        }
+
+
                         // Work around https://github.com/ProjectMirador/mirador/issues/3486
                         const mirador_window = document.getElementById(element_id);
                         var observer = new MutationObserver(function(mutations) {

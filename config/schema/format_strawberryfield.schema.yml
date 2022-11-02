@@ -391,6 +391,9 @@ field.formatter.settings.strawberry_mirador_formatter:
     iiif_base_url_internal:
       type: string
       label: 'Custom internal IIIF Server URL'
+    custom_js:
+      type: boolean
+      label: 'If custom Mirador with plugin is going to be used instead of Vanilla CDN'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'
