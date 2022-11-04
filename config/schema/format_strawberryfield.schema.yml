@@ -380,7 +380,27 @@ field.formatter.settings.strawberry_pdf_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
-
+field.formatter.strawberry_uv_formatter:
+  type: mapping
+    label: 'Specific Config for strawberry_uv_formatter'
+    mapping:
+      iiif_base_url:
+        type: string
+        label: 'Custom Public IIIF Server URL'
+      iiif_base_url_internal:
+        type: string
+        label: 'Custom internal IIIF Server URL'
+      metadataexposeentity_source:
+        type: string
+        label: 'metadataexpose_entity machine name'
+      max_width:
+        type: string
+        label: 'Max with for the Viewer. Can be either a % or just a number'
+      max_height:
+        type: string
+      use_iiif_globals:
+        type: string
+        label: 'Whether to use global IIIF settings or not.'
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_mirador_formatter'

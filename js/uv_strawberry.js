@@ -15,13 +15,9 @@
                         if (drupalSettings.format_strawberryfield.uv[element_id]['width'] != '100%') {
                             $(this).width(drupalSettings.format_strawberryfield.uv[element_id]['width']);
                         }
-                        // Defines our basic options for UV IIIF.
-                        // UV is funny. It uses a STATIC!! (gosh) config.json for its settings.
-                        // Not sure why. Anyways.
 
                         var $options = {
-                          //root: './uv',
-                          manifestUri: drupalSettings.format_strawberryfield.uv[element_id]['manifesturl'],
+                          footerPanelEnabled: true,
                           collectionIndex: 0,
                           manifestIndex: 0,
                           sequenceIndex: 0,
@@ -33,13 +29,23 @@
                           ]
                         };
 
-                        var urlDataProvider = new UV.URLDataProvider();
-                        var uvInstance = UV.init(
+                      const data = {
+                        manifest: drupalSettings.format_strawberryfield.uv[element_id]['manifesturl'],
+                        embedded: false // needed for codesandbox frame
+                      };
+
+                        //var urlDataProvider = new UV.URLDataProvider();
+
+                        const uvInstance = UV.init(
                           element_id,
-                          $options,
-                          urlDataProvider
+                          data
                       );
+                      uvInstance.on("configure", function ({ config, cb }) {
+                        cb({
+                          options: $options
+                        });
+                      });
                         console.log('initializing Universal Viewer 4')
                     }
                 })}}
-})(jQuery, Drupal, drupalSettings, window.UV);
+})(jQuery, Drupal, drupalSettings, UV);
