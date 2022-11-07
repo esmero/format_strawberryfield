@@ -324,6 +324,47 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         // In case someone decided to wipe the original context?
         // We bring it back!
         $context = $context + $original_context;
+        // Render data from metadata template into JSON string.
+        $rendered_json_string = $metadatadisplayentity->renderNative($context);
+
+        // Get styles selected from formatter settings.
+        $selected_styles = $this->settings['citationstyle'];
+        // Get language key from settings.
+        $selected_locale_key = false;
+        if ($this->getSetting('localekey')) {
+          $selected_locale_key = $this->settings['localekey'];
+        }
+        $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
+        if ($selected_locale_value) {
+          $available_locale = trim($selected_locale_value);
+        }
+        elseif ($langcode) {
+          $available_locale = trim($langcode);
+        }
+
+        $data = json_decode($rendered_json_string);
+        $json_error = json_last_error();
+        if ($json_error != JSON_ERROR_NONE) {
+          $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
+            [
+              '@id' => $nodeid,
+              '@field' => $items->getName(),
+            ]);
+          return $elements[$delta] = ['#markup' => $message];
+        }
+        $render = new Render();
+        $bibliography = $render->bibliography($available_locale, $selected_styles, $data);
+        $elements[$delta] = [
+          '#type' => 'container',
+          '#attributes' => [
+            'id' => 'bibliography' . $uniqueid,
+            'class' => ['bibliography'],
+          ]
+        ];
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
+        $elements[$delta]['bibliography'] = [
+          '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
+        ];
       }
       catch (\Exception $e) {
         // Render each element as markup.
@@ -335,47 +376,6 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         ];
       }
     }
-    // Render data from metadata template into JSON string.
-    $rendered_json_string = $metadatadisplayentity->renderNative($context);
-
-    // Get styles selected from formatter settings.
-    $selected_styles = $this->settings['citationstyle'];
-    // Get language key from settings.
-    $selected_locale_key = false;
-    if ($this->getSetting('localekey')) {
-      $selected_locale_key = $this->settings['localekey'];
-    }
-    $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
-    if ($selected_locale_value) {
-      $available_locale = trim($selected_locale_value);
-    }
-    elseif ($langcode) {
-      $available_locale = trim($langcode);
-    }
-
-    $data = json_decode($rendered_json_string);
-    $json_error = json_last_error();
-    if ($json_error != JSON_ERROR_NONE) {
-      $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
-        [
-          '@id' => $nodeid,
-          '@field' => $items->getName(),
-        ]);
-      return $elements[$delta] = ['#markup' => $message];
-    }
-    $render = new Render();
-    $bibliography = $render->bibliography($available_locale, $selected_styles, $data);
-    $elements[$delta] = [
-      '#type' => 'container',
-      '#attributes' => [
-        'id' => 'bibliography' . $uniqueid,
-        'class' => ['bibliography'],
-      ]
-    ];
-    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
-    $elements[$delta]['bibliography'] = [
-      '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
-    ];
     return $elements;
   }
 
