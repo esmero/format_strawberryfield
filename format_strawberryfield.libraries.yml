@@ -162,6 +162,15 @@ mirador_font:
     base:
       'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
 
+mirador_archipelago_custom:
+  version: 3.3.0
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    js/mirador-archipelago.js: {minified: false, preprocess: false}
+
 mirador_strawberry:
   version: 1.0
   js:
@@ -177,10 +186,28 @@ mirador_strawberry:
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
 
+mirador_custom_strawberry:
+  version: 1.0
+  js:
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - core/drupalSettings
+    - format_strawberryfield/mirador_archipelago_custom
+    - format_strawberryfield/mirador_font
+
+
+
 uv_strawberry:
   version: 1.0
   js:
     js/uv_strawberry.js: {minified: false}
+    js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
   dependencies:
     - core/jquery
     - core/drupal
@@ -261,15 +288,16 @@ replayweb:
     https://cdn.jsdelivr.net/npm/replaywebpage@1.5.5/ui.js: { external: true, minified: true, preprocess: false}
 
 universalviewer:
-  version: 4.0.0-pre.49
+  version: 4.0.1
   license:
     name: MIT
-    url: https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/LICENSE.txt
+    url: https://cdn.jsdelivr.net/npm/universalviewer@4.0.0/LICENSE.txt
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
-    https://unpkg.com/@edsilv/utils@1.0.2/dist-umd/utils.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/umd/UV.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/uv.css: { external: true, preprocess: false }
 
 annotorious:
   version: 2.5.10
