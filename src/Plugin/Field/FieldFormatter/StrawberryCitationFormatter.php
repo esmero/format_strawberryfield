@@ -199,6 +199,8 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   public function settingsSummary() {
     // Get the metadata template's label for display in the summary.
     $entity_label = NULL;
+    $citationstyles = NULL;
+    $localekey = NULL;
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
