@@ -90,6 +90,14 @@
                                     }
                                 });
                             }
+                            let mirador_audios = document.querySelectorAll(".mirador-viewer audio source");
+                            if (mirador_audios.length) {
+                                mutations.forEach(function (mutation) {
+                                    if ((mutation.target.localName == "audio") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                                        mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                                    }
+                                });
+                            }
                         });
                         observer.observe(mirador_window, {
                             childList: true,
