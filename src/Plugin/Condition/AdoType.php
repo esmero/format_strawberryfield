@@ -62,7 +62,6 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
       ),
       '#type' => 'textarea',
       '#default_value' => implode(PHP_EOL, $this->configuration['ado_types']),
-      '#required' => TRUE,
     ];
     $form['recurse_ado_types'] = [
       '#title' => t("Recurse metadata"),
