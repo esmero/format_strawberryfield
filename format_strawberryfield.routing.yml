@@ -257,3 +257,51 @@ format_strawberryfield.display_settings:
     parameters:
       node:
         type: 'entity:node'
+
+# Search Highlight Endpoint for a given Node file uuid and processor using an Exposed Metadata Display Entity.
+format_strawberryfield.flavor_datasource_search:
+  path: '/do/{node}/metadata/search_endpoint/{metadataexposeconfigentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfigentity:
+        type: 'entity:metadataexpose_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
+
+# Search Highlight Endpoint for a given Node file uuid and processor using Metadata Display Entity.
+format_strawberryfield.flavor_datasource_search_template:
+  path: '/do/{node}/metadata/search/{metadatadisplayentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadatadisplayentity:
+        type: 'entity:metadatadisplay_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
