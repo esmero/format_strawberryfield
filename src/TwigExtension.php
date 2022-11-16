@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Twig\Extension\AbstractExtension;
 use Twig\Markup;
@@ -431,7 +432,7 @@ class TwigExtension extends AbstractExtension {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\search_api\SearchApiException
    */
-  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => 'ASC'], int $limit = 1, int $offset = 0): array {
+  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], int $limit = 1, int $offset = 0): array {
 
     /** @var \Drupal\search_api\IndexInterface[] $indexes */
     $indexes = \Drupal::entityTypeManager()
@@ -439,7 +440,6 @@ class TwigExtension extends AbstractExtension {
       ->loadMultiple([$index]);
 
     // We can check if $fulltext, $filters and $facets are inside $indexes['theindex']->field_settings["afield"]?
-
     foreach ($indexes as $search_api_index) {
 
       // Create the query.
@@ -475,7 +475,7 @@ class TwigExtension extends AbstractExtension {
         foreach ($facets as $facet_field) {
           $facet_options['facet:' . $facet_field] = [
             'field'     => $facet_field,
-            'limit'     => 10,
+            'limit'     => 100,
             'operator'  => 'or',
             'min_count' => 1,
             'missing'   => TRUE,
@@ -487,32 +487,49 @@ class TwigExtension extends AbstractExtension {
         }
       }
       /* Basic is good enough for facets */
-      $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
+      $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
       // see also \Drupal\search_api_autocomplete\Plugin\search_api_autocomplete\suggester\LiveResults::getAutocompleteSuggestions
       $results = $query->execute();
       $extradata = $results->getAllExtraData();
       // We return here
       $return = [];
-      foreach( $results->getResultItems() as $resultItem) {
-        $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['entity'] = $resultItem->getOriginalObject()->getValue();
-       foreach ($resultItem->getFields() as $field) {
-         $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['fields'][$field->getFieldIdentifier()] = $field->getValues();
-       }
+      foreach( $results->getResultItems() as $itemid => $resultItem) {
+        try {
+          $result_object = $resultItem->getOriginalObject(TRUE);
+          if ($result_object instanceof \Drupal\Core\Entity\Plugin\DataType\EntityAdapter) {
+            $return['results'][$itemid]['entity']
+              = $result_object->getEntity();
+          }
+          else {
+            $return['results'][$itemid]['entity'] = NULL;
+          }
+        }
+        catch (SearchApiException $e) {
+          $return['results'][$itemid]['entity'] = NULL;
+        }
+
+        if ($result_object) {
+          foreach ($resultItem->getFields() as $field) {
+            $return['results'][$itemid]['fields'][$field->getFieldIdentifier()]
+              = $field->getValues();
+          }
+        }
       }
       $return['total'] = $results->getResultCount();
       if (isset($extradata['search_api_facets'])) {
         foreach($extradata['search_api_facets'] as $facet_id => $facet_values) {
           [$not_used, $field_id] = explode(':', $facet_id);
           $facet = [];
-          foreach ($facet_values as $entry) {
-            $facet[$entry['filter']] = $entry['count'];
+          if (is_array($facet_values)) {
+            foreach ($facet_values as $entry) {
+              $facet[$entry['filter']] = $entry['count'];
+            }
+            $return['facets'][$field_id] = $facet;
           }
-          $return['facets'][$field_id] = $facet;
         }
       }
       return $return;
     }
     return [];
   }
-
 }
