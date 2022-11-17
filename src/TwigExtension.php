@@ -308,7 +308,7 @@ class TwigExtension extends AbstractExtension {
     }
     $render = new Render();
     if ($locale) {
-        $bibliography = $render->bibliography($locale, $styles, $json_data);
+      $bibliography = $render->bibliography($locale, $styles, $json_data);
     }
     else {
       $bibliography = $render->bibliography(null, $styles, $json_data);
@@ -367,7 +367,7 @@ class TwigExtension extends AbstractExtension {
         'library' => [
           'format_strawberryfield/clipboard_copy',
           'format_strawberryfield/clipboard_copy_strawberry',
-         ],
+        ],
       ],
     ];
     $rendered_button = $this->renderer->render($button_html);
@@ -494,27 +494,20 @@ class TwigExtension extends AbstractExtension {
       // We return here
       $return = [];
       foreach( $results->getResultItems() as $itemid => $resultItem) {
-        try {
-          $result_object = $resultItem->getOriginalObject(TRUE);
-          if ($result_object instanceof \Drupal\Core\Entity\Plugin\DataType\EntityAdapter) {
-            $return['results'][$itemid]['entity']
-              = $result_object->getEntity();
-          }
-          else {
-            $return['results'][$itemid]['entity'] = NULL;
-          }
-        }
-        catch (SearchApiException $e) {
-          $return['results'][$itemid]['entity'] = NULL;
-        }
-
-        if ($result_object) {
-          foreach ($resultItem->getFields() as $field) {
-            $return['results'][$itemid]['fields'][$field->getFieldIdentifier()]
-              = $field->getValues();
-          }
+        // We can not allow any extraction or entity load happening here
+        // The Search API entity loading will interrupt other sessions/active NODEs
+        // and will disable EDIT/any management on the ADO that is using this
+        // Extension. So we will get what is in the index (solr)
+        // Will have no issues with this.
+        // This is related to "QueryInterface::PROCESSING_FULL" but is needed to respect
+        // Permissions. If not this will get anything from the Server
+        // Including hidden/unpublished things.
+        foreach ($resultItem->getFields(FALSE) as $field) {
+          $return['results'][$itemid]['fields'][$field->getFieldIdentifier()]
+            = $field->getValues();
         }
       }
+
       $return['total'] = $results->getResultCount();
       if (isset($extradata['search_api_facets'])) {
         foreach($extradata['search_api_facets'] as $facet_id => $facet_values) {
