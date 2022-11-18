@@ -62,7 +62,6 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
       ),
       '#type' => 'textarea',
       '#default_value' => implode(PHP_EOL, $this->configuration['ado_types']),
-      '#required' => TRUE,
     ];
     $form['recurse_ado_types'] = [
       '#title' => t("Recurse metadata"),
@@ -114,8 +113,15 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
         }
       }
     }
+    else {
+      // This not an entity type that bears a strawberryfield. Therefore, this condition can not apply.
+      // However, it could still be negated and cause in a "TRUE" evaluation to flip and result in the "FALSE"
+      // being returned. Deal with that by removing the negation.
+      unset($this->configuration['negate']);
+      return TRUE;
+    }
     if(!empty($ado_types)) {
-      // Return true if the any of the entity's types are in the condition's ado_types.
+      // Return true if any of the entity's types are in the condition's ado_types.
       return (count(array_intersect($this->configuration['ado_types'], $ado_types)) > 0);
     }
     // Default, return not matched.
