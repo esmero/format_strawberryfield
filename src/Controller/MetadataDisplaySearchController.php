@@ -18,12 +18,12 @@ class MetadataDisplaySearchController extends
   /**
    * A JMESPATH to fetch Canvas IDs, Item Ids, Images and Service(Images) for IIIF Presentation 2.x
    */
-  CONST IIIF_V2_JMESPATH = "sequences[].canvases[?\"@type\" == 'sc:Canvas'][].{\"canvas_id\":\"@id\", \"items\": images[?motivation == 'sc:painting'].{\"id\":\"@id\", \"image_ids\":[resource.\"@id\"], \"service_ids\":[resource.service.\"@id\"]}}";
+  CONST IIIF_V2_JMESPATH = "sequences[].canvases[?\"@type\" == 'sc:Canvas'][].{\"canvas_id\":\"@id\", \"items\": images[?motivation == 'sc:painting'].{\"id\":\"@id\", \"image_ids\":[resource.\"@id\"], \"service_ids\":[resource.service][?starts_with(\"@context\", 'http://iiif.io/api/image/')].\"@id\"}}";
 
   /**
    * A JMESPATH to fetch Canvas IDs, Item Ids, Images and Service(Images) for IIIF Presentation 3.x
    */
-  CONST IIIF_V3_JMESPATH = "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[*][]|[?contains(type, 'ImageService')]|[*].id }}";
+  CONST IIIF_V3_JMESPATH = "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type:({t: type, at: \"@type\"}).not_null(t, at), id:({id: id, atid: \"@id\"}).not_null(id, atid)}[?starts_with(type, 'ImageService')].id }}";
 
   /**
    * Mime type guesser service.
