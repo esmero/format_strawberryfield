@@ -18,7 +18,7 @@ class MetadataDisplaySearchController extends
   /**
    * A JMESPATH to fetch Canvas IDs, Item Ids, Images and Service(Images) for IIIF Presentation 2.x
    */
-  CONST IIIF_V2_JMESPATH = "sequences[].canvases[?\"@type\" == 'sc:Canvas'][].{\"canvas_id\":\"@id\", \"items\": images[?motivation == 'sc:painting'].{\"id\":\"@id\", \"image_ids\":[resource.\"@id\"], \"service_ids\":[resource.service.\"@id\"]}}";
+  CONST IIIF_V2_JMESPATH = "sequences[].canvases[?\"@type\" == 'sc:Canvas'][].{\"canvas_id\":\"@id\", \"items\": images[?motivation == 'sc:painting'].{\"id\":\"@id\", \"image_ids\":[resource.\"@id\"], \"service_ids\":[resource.service][?starts_with(\"@context\", 'http://iiif.io/api/image/')].\"@id\"}}";
 
   /**
    * A JMESPATH to fetch Canvas IDs, Item Ids, Images and Service(Images) for IIIF Presentation 3.x
