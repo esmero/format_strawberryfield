@@ -1,0 +1,9 @@
+name: 'Format Strawberry Field Facets Widgets and Processors'
+type: module
+description: 'Provides Facet Widgets for the Format Strawberry Module'
+core_version_requirement: ^9.4 || ^10.0
+package: Search
+dependencies:
+  - facets:facets
+  - jquery_ui_slider:jquery_ui_slider
+  - jquery_ui_touch_punch:jquery_ui_touch_punch
