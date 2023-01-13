@@ -9,6 +9,11 @@ use Drupal\Core\Template\Attribute;
 use Drupal\Component\Utility\Html;
 use Drupal\views\ViewExecutable;
 use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\Core\Block\BlockPluginInterface;
+use Drupal\search_api\Entity\Index;
+use Drupal\search_api\Query\QueryInterface;
+use Solarium\Component\ComponentAwareQueryInterface;
+use Solarium\Core\Query\QueryInterface as SolariumQueryInterface;
 
 /**
  * Implements hook_theme().
@@ -54,12 +59,12 @@ function template_preprocess_format_strawberryfield_views_leaflet(array &$variab
       }
       foreach ($variables['rows']['grouped'] ?? [] as $group => $views_result_entity_uuids) {
         foreach ($views_result_entity_uuids as $views_result_entity_uuid) {
-        $url = $entity->getUrlForItemFromNodeUUID(
-          $views_result_entity_uuid, TRUE
-        );
+          $url = $entity->getUrlForItemFromNodeUUID(
+            $views_result_entity_uuid, TRUE
+          );
           $geojsonsgrouped[$group][] = $url;
-          }
         }
+      }
     }
   }
   // Tried base64 but that expands 3 bytes into 4. Means it grows.
@@ -118,5 +123,101 @@ function format_strawberryfield_views_views_query_alter(ViewExecutable $view, Qu
   // Leaflet Display to avoid Solr errors
   if ($query->getPluginId() == 'search_api_query' && $view->getStyle()->getPluginId() == 'format_strawberryfield_views_leaflet') {
     $query->setOption('ocr_highlight', 'off');
+  }
+}
+
+/**
+ * Implements hook_block_view_BASE_BLOCK_ID_alter() for 'views_exposed_filter_block_sbf'.
+ */
+function format_strawberryfield_views_block_view_views_exposed_filter_block_sbf_alter(array &$build, BlockPluginInterface $block) {
+  if ($block->getBaseId() == 'views_exposed_filter_block_sbf') {
+    $build['#pre_render'][] = 'Drupal\format_strawberryfield_views\Plugin\Block\ViewsExposedFilterBlockModal::preRender';
+  }
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function format_strawberryfield_views_views_data_alter(array &$data) {
+  //@see search_api_views_data()
+  /** @var \Drupal\search_api\IndexInterface $index */
+  foreach (Index::loadMultiple() as $index) {
+    try {
+      $key = 'search_api_index_' . $index->id();
+      $table = &$data[$key];
+      $advanced_fulltext_field = _search_api_views_find_field_alias('sbf_advanced_search_api_fulltext', $table);
+      $table[$advanced_fulltext_field] = [
+        'title'  => t('Advanced Fulltext search'),
+        'group' => t('Search'),
+        'help' => t('Search several or all fulltext fields at once allowing also multiple operator separated entries'),
+        'filter' => [
+          'title' => t('Advanced Fulltext search'),
+          'field' => 'id',
+          'id'    => 'sbf_advanced_search_api_fulltext',
+        ],
+      ];
+      if ($advanced_fulltext_field != 'sbf_advanced_search_api_fulltext') {
+        $table[$advanced_fulltext_field]['real field'] = 'sbf_advanced_search_api_fulltext';
+      }
+      // @TODO add also an argument ID if relationships are enabled to
+      // $table[$advanced_fulltext_field]['argument']['id'] = 'sbf_advanced_search_api_fulltext';
+      // Requires a special Argument Plugin. Not needed right now.
+    }
+    catch (\Exception $e) {
+      $args = [
+        '%index' => $index->label(),
+      ];
+      watchdog_exception('format_strawberryfield_views', $e, '%type while computing Views data for index %index: @message in %function (line %line of %file).', $args);
+    }
+  }
+  return $data;
+}
+
+
+/**
+ * Finds an unused field alias for a field in a Views table definition.
+ *
+ * @param string $field_id
+ *   The original ID of the Search API field.
+ * @param array $table
+ *   The Views table definition.
+ *
+ * @return string
+ *   The field alias to use.
+ */
+function _format_strawberryfield_views_find_field_alias($field_id, array &$table) {
+  $base = $field_alias = preg_replace('/[^a-zA-Z0-9]+/S', '_', $field_id);
+  $i = 0;
+  while (isset($table[$field_alias])) {
+    $field_alias = $base . '_' . ++$i;
+  }
+  return $field_alias;
+}
+
+
+/**
+ * Implements hook_search_api_solr_query_alter().
+ *
+ * Let modules alter the Solarium select query before executing it.
+ *
+ * After this hook, the select query will be finally converted into an
+ * expression that will be processed by the lucene query parser. Therefore you
+ * can't modify the 'q' parameter here, because it gets overwritten by that
+ * conversion. If you need to modify the 'q' parameter you should implement an
+ * event listener instead of this hook that handles the solarium events (our
+ * connector injects the drupal event handler into solarium) or implement
+ * hook_search_api_solr_converted_query() instead. If you want to force a
+ * different parser like edismax you must set the 'defType' parameter
+ * accordingly.
+ */
+function format_strawberryfield_views_search_api_solr_converted_query_alter(SolariumQueryInterface $solarium_query, QueryInterface $query) {
+  // To get a list of solarium events:
+  // @see http://solarium.readthedocs.io/en/stable/customizing-solarium/#plugin-system
+  if ($query->getOption('sbf_advanced_search_filter')) {
+    $components = $solarium_query->getComponents();
+    if (isset($components['edismax'])) {
+      $solarium_query->removeComponent(ComponentAwareQueryInterface::COMPONENT_EDISMAX);
+      $solarium_query->addParam('defType','lucene');
+    }
   }
 }
