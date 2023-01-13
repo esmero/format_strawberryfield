@@ -1,0 +1,5 @@
+services:
+  format_strawberryfield_views.route_subscriber:
+    class: Drupal\format_strawberryfield_views\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
