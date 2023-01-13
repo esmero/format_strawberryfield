@@ -31,6 +31,6 @@ metadatadisplay.admin:
 format_strawberry.display_settings:
   route_name: format_strawberryfield.display_settings
   base_route: entity.node.canonical
-  title: 'Display settings'
+  title: 'Active Display settings'
   class: '\Drupal\format_strawberryfield\Plugin\Menu\LocalTask\ViewModeLocalTask'
   weight: 5
