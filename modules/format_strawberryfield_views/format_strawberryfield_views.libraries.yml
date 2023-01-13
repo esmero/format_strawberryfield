@@ -9,3 +9,13 @@ leaflet_strawberry_views:
     - core/drupalSettings
     - core/views
     - format_strawberryfield/leaflet_ajax
+
+modal-exposed-form-views-ajax:
+  js:
+    js/modal-exposed-form-ajax.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/jquery.once
+    - core/drupalSettings
+    - core/drupal.ajax
