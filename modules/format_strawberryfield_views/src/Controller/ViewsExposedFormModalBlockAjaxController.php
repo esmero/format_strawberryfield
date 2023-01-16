@@ -149,7 +149,6 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
         $block_view = $this->entityTypeManager
           ->getViewBuilder('block')
           ->view($block_entity);
-
         $block_view = (string) $this->renderer->renderPlain($block_view);
         $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block_view));
       }

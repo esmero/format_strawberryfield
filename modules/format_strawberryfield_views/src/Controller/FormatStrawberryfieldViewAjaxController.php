@@ -128,7 +128,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
       $pager_element = $request->request->get('pager_element');
       $pager_element = isset($pager_element) ? intval($pager_element) : NULL;
-      $exposed_form_display = $request->request->get('exposed_form_display');
+      $exposed_form_display = (bool) $request->request->get('exposed_form_display', FALSE);
 
       $response = new ViewAjaxResponse();
 
@@ -206,15 +206,12 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         // Views with ajax enabled aren't refreshing filters placed in blocks.
         // Only <div> containing view is refreshed. ReplaceCommand is fixing
         // that for view, if it uses ajax and exposed forms in block.
-        if ($view->display_handler->usesExposed() && $view->display_handler->getOption('exposed_block')) {
+        if ($exposed_form_display && $view->display_handler->usesExposed() && $view->display_handler->getOption('exposed_block')) {
           $view_id = preg_replace('/[^a-zA-Z0-9-]+/', '-', $name . '-' . $display_id);
           $context = new RenderContext();
           $exposed_form = $this->renderer->executeInRenderContext($context, function () use ($view) {
             return $view->display_handler->viewExposedFormBlocks();
           });
-          /*if (isset($exposed_form['#id'])) {
-           unset($exposed_form['#id']);
-          }*/
           if (!$context->isEmpty()) {
             $bubbleable_metadata = $context->pop();
             BubbleableMetadata::createFromRenderArray($exposed_form)

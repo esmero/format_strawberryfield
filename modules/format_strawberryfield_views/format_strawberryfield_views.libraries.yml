@@ -17,5 +17,15 @@ modal-exposed-form-views-ajax:
     - core/drupal
     - core/jquery
     - core/jquery.once
+    - core/once
+    - core/drupalSettings
+    - core/views
+    - core/views.ajax
+modal-exposed-form-facet-views-ajax:
+  js:
+    js/facets-views-ajax.js: {}
+  dependencies:
+    - facets/widget
     - core/drupalSettings
     - core/drupal.ajax
+    - core/views.ajax

@@ -4,170 +4,110 @@
  */
 
 
-(function ($, Drupal) {
+(function ($, Drupal, once, drupalSettings) {
   'use strict';
 
   /**
    * Keep the original beforeSend method to use it later.
    */
   var beforeSend = Drupal.Ajax.prototype.beforeSend;
+  var beforeSerialize = Drupal.Ajax.prototype.beforeSerialize;
 
-  var attachExposedFormAjax = Drupal.views.ajaxView.prototype.attachExposedFormAjax;
+  Drupal.updateModalViewsFormBlocks = function (href, view_id, display_id) {
+    var settings = drupalSettings;
+    var reload = false;
+    var block_ids = {};
+    $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
+      if (blockSettings.view_id == view_id && blockSettings.current_display_id == display_id) {
+        reload = true;
+        block_ids[formId] = blockSettings.block_id;
+      }
+    });
+
+    if (reload) {
+      // Update Modal Exposed Form Views blocks.
+      var modal_form_exposed_settings = {
+        url: Drupal.url('exposed-views-form-block-ajax'),
+        submit: {
+          exposedform_link: href,
+          modalviews_blocks: block_ids
+        }
+      };
+
+      var exposed_form_selector = '#views-exposed-form-' + view_id.replace(/_/g, '-') + '-' + display_id.replace(/_/g, '-');
+      var $exposed_form = $(exposed_form_selector).length;
+      var ModalRefreshAjaxObject = Drupal.ajax(modal_form_exposed_settings);
+      ModalRefreshAjaxObject.execute();
+    }
+  };
 
   /**
    * Trigger views AJAX refresh on click.
    */
   Drupal.behaviors.sbfModalExposedFormViewsAjax = {
-    attach: function (context, settings) {
+    detach: function (context, drupalSettings, trigger) {
+      if (trigger === 'unload') {
+        //@see https://www.drupal.org/node/3158256
+      }
+    },
+    attach: function (context, drupalSettings) {
+      var $context = $(context);
+      this.attachModalFormAjax = function ($input) {
+        $input.find('form').each(function (index, value) {
+          var $modal_exposed_form = $(value);
+          var $modal_exposed_form_id = value.id;
+          $modal_exposed_form.exposedFormAjax = [];
+          const $combined_view = $input.data('drupal-target-view');
+          var $view_parts = [];
+          $view_parts = $combined_view.split("-");
+          // data-drupal-target-view="solr_search_content-page_1"
+          // data-drupal-modalblock-selector="js-modal-form-views-block-id-exposedformsolr_search_contentpage_1_3"
+          // The idea
+          // For each initialized Views Instance of type Drupal.views.ajaxView
+          // Check which modal blocks (from the settings)
+          // belong to it.
+          // Do what Drupal.views.ajaxView.prototype.attachExposedFormAjax does differently
 
-      // Loop through all facets.
-      $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
-        // Get the View for the current facet.
-        var view, current_dom_id, view_path;
-        if (settings.views && settings.views.ajaxViews) {
-          $.each(settings.views.ajaxViews, function (domId, viewSettings) {
-            // Check if we have facet for this view.
-            if (blockSettings.view_id == viewSettings.view_name && blockSettings.current_display_id == viewSettings.view_display_id) {
-              view = $('.js-view-dom-id-' + viewSettings.view_dom_id);
-              current_dom_id = viewSettings.view_dom_id;
-              view_path = blockSettings.ajax_path;
-            }
+          Object.keys(drupalSettings.views.ajaxViews || {}).forEach((i) => {
+              //var block_settings = drupalSettings.format_strawberryfield_views.modal_exposed_form_block[$modal_exposed_form_id];
+              if (Drupal.views.instances[i].settings.view_name == $view_parts[0] //block_settings.view_id
+                && Drupal.views.instances[i].settings.view_display_id == $view_parts[1]) { //block_settings.current_display_id) {
+                var exposed_form_selector = '#views-exposed-form-' + $view_parts[0].replace(/_/g, '-') + '-' +$view_parts[1].replace(/_/g, '-');
+                var $exposed_form = $(exposed_form_selector).length;
+                if ($exposed_form > 0) {
+                  $exposed_form = 1 ;
+                }
+                $('input[type=submit], button[type=submit], input[type=image]', $modal_exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
+                  var selfSettings = $.extend({}, Drupal.views.instances[i].element_settings, {
+                    base: $(this).attr('id'),
+                    element: this
+                  });
+                  selfSettings.submit.exposed_form_display = $exposed_form;
+                  $modal_exposed_form.exposedFormAjax[index] = Drupal.ajax(selfSettings);
+                });
+              }
+          });
+        });
+      }
+
+      if (typeof(drupalSettings.views.ajaxViews) != 'undefined') {
+        if ($context.is('div[data-drupal-modalblock-selector]')) {
+          this.attachModalFormAjax($context);
+        }
+        else {
+          var $that = this;
+          once('modal-block', 'div[data-drupal-modalblock-selector]', context).forEach(function (value, index) {
+            var $input = $(value);
+            $that.attachModalFormAjax($input);
           });
         }
-
-        if (!view || view.length != 1) {
-          return;
-        }
-        this.$view = view;
-
-        var ajaxPath = drupalSettings.views.ajax_path;
-
-        if (ajaxPath.constructor.toString().indexOf('Array') !== -1) {
-          ajaxPath = ajaxPath[0];
-        }
-
-        var queryString = window.location.search || '';
-
-        if (queryString !== '') {
-          queryString = queryString.slice(1).replace(/q=[^&]+&?|&?render=[^&]+/, '');
-
-          if (queryString !== '') {
-            queryString = (/\?/.test(ajaxPath) ? '&' : '?') + queryString;
-          }
-        }
-
-        this.element_settings = {
-          url: ajaxPath + queryString,
-          submit: settings,
-          setClick: true,
-          event: 'click',
-          selector: view,
-          progress: {
-            type: 'fullscreen'
-          }
-        };
-        this.settings = settings;
-        this.$exposed_form = $(formId);
-        once('exposed-form', this.$exposed_form).forEach($.proxy(attachExposedFormAjax, this));
-        var selfSettings = $.extend({}, this.element_settings, {
-          event: 'RefreshView',
-          base: this.selector,
-          element: this.$view.get(0)
-        });
-        this.refreshViewAjax = Drupal.ajax(selfSettings);
-
-
-      /*Drupal.views.ajaxView.prototype.attachExposedFormAjax = function () {
-        var that = this;
-        this.exposedFormAjax = [];
-
-        if (that.element_settings.submit) {
-          that.element_settings.submit.exposed_form_display = 1;
-        }
-
-        $('input[type=submit], button[type=submit], input[type=image]', this.$exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
-          var selfSettings = $.extend({}, that.element_settings, {
-            base: $(this).attr('id'),
-            element: this
-          });
-          that.exposedFormAjax[index] = Drupal.ajax(selfSettings);
-        });
-      };*/
-
-
-
-
-
-
-          /*$('[data-drupal-facet-id=' + facetId + ']').each(function (index, facet_item) {
-            if ($(facet_item).hasClass('js-facets-widget')) {
-              $(facet_item).unbind('facets_filter.facets');
-              $(facet_item).on('facets_filter.facets', function (event, url) {
-                $('.js-facets-widget').trigger('facets_filtering');
-                updateFacetsView(url, current_dom_id, view_path);
-              });
-            }
-          });*/
-      });
+      }
     }
   };
 
-  // Helper function to update views output & Ajax facets.
-  var updateFacetsView = function (href, current_dom_id, view_path, block_ids) {
-    // Refresh view.
-    var views_parameters = Drupal.Views.parseQueryString(href);
-    var views_arguments = Drupal.Views.parseViewArgs(href, 'search');
-    var views_settings = $.extend(
-      {},
-      Drupal.views.instances['views_dom_id:' + current_dom_id].settings,
-      views_arguments,
-      views_parameters
-    );
-
-    // Update View.
-    var views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
-    views_ajax_settings.submit = views_settings;
-    views_ajax_settings.url = view_path + '?q=' + href;
-
-    Drupal.ajax(views_ajax_settings).execute();
-
-    // Update url.
-    window.historyInitiated = true;
-    window.history.pushState(null, document.title, href);
-
-    // ToDo: Update views+facets with ajax on history back.
-    // For now we will reload the full page.
-    window.addEventListener("popstate", function (e) {
-      if (window.historyInitiated) {
-        window.location.reload();
-      }
-    });
-
-    // Refresh facets blocks.
-    updateModalViewsFormBlocks(href);
-  }
-
-  // Helper function, updates facet blocks.
-  var updateModalViewsFormBlocks = function (href, block_ids) {
-    var settings = drupalSettings;
-    var modalviews_blocks = block_ids;
-
-    // Update Modal Exposed Form Views blocks.
-    var modal_form_exposed_settings = {
-      url: Drupal.url('exposed-views-form-block-ajax'),
-      submit: {
-        exposedform_link: href,
-        modalviews_blocks: modalviews_blocks
-      }
-    };
-
-    Drupal.ajax(modal_form_exposed_settings).execute();
-  };
-
-
-  // Helper function, return facet blocks.
-  var modalViewsFormBlocks = function () {
-    // Get all ajax facets blocks from the current page.
+  // Helper function, return modal view blocks blocks with a given submit URL
+  var modalViewsFormBlocks = function (url) {
+    // Get all ajax modal view blocks from the current page.
     var modalviews_blocks = {};
 
     $('.block-modalformviews-ajax').each(function (index) {
@@ -185,7 +125,7 @@
   };
 
   /**
-   * Overrides beforeSend to trigger facetblocks update on exposed filter change.
+   * Overrides beforeSend to trigger facetblocks/modal views exposed blocks update on exposed filter change.
    *
    * @param {XMLHttpRequest} xmlhttprequest
    *   Native Ajax object.
@@ -206,12 +146,21 @@
           reload = true;
           block_ids[formId] = blockSettings.block_id;
         }
-
       });
 
       if (reload) {
-        href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id);
-        updateModalViewsFormBlocks(href, block_ids);
+        const $current_form_params_as_array = this.$form.serializeArray();
+        href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id, $current_form_params_as_array);
+        Drupal.updateModalViewsFormBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+        var reloadfacets = false;
+        $.each(settings.facets_views_ajax, function (facetId, facetSettings) {
+          if (facetSettings.view_id == options.extraData.view_name && facetSettings.current_display_id == options.extraData.view_display_id) {
+            reloadfacets = true;
+          }
+        });
+        if (reloadfacets) {
+          Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+        }
       }
     }
 
@@ -220,16 +169,21 @@
   }
 
   // Helper function to add exposed form data to Modal Exposed Views Form url
-  var addExposedFiltersToModalExposedViewsBlockUrl = function (href, view_name, view_display_id) {
+  var addExposedFiltersToModalExposedViewsBlockUrl = function (href, view_name, view_display_id, current_form_params_as_array) {
+    // In case the default exposed form ID is also there.
     var $exposed_form = $('form#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-'));
-
     var params = Drupal.Views.parseQueryString(href);
 
     $.each($exposed_form.serializeArray(), function () {
       params[this.name] = this.value;
     });
 
+    $.each(current_form_params_as_array,  function () {
+      params[this.name] = this.value;
+    });
+
     return href.split('?')[0] + '?' + $.param(params);
   };
 
-})(jQuery, Drupal);
+
+})(jQuery, Drupal, once, drupalSettings);
