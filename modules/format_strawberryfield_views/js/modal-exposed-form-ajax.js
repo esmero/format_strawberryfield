@@ -69,23 +69,23 @@
           // Do what Drupal.views.ajaxView.prototype.attachExposedFormAjax does differently
 
           Object.keys(drupalSettings.views.ajaxViews || {}).forEach((i) => {
-              //var block_settings = drupalSettings.format_strawberryfield_views.modal_exposed_form_block[$modal_exposed_form_id];
-              if (Drupal.views.instances[i].settings.view_name == $view_parts[0] //block_settings.view_id
-                && Drupal.views.instances[i].settings.view_display_id == $view_parts[1]) { //block_settings.current_display_id) {
-                var exposed_form_selector = '#views-exposed-form-' + $view_parts[0].replace(/_/g, '-') + '-' +$view_parts[1].replace(/_/g, '-');
-                var $exposed_form = $(exposed_form_selector).length;
-                if ($exposed_form > 0) {
-                  $exposed_form = 1 ;
-                }
-                $('input[type=submit], button[type=submit], input[type=image]', $modal_exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
-                  var selfSettings = $.extend({}, Drupal.views.instances[i].element_settings, {
-                    base: $(this).attr('id'),
-                    element: this
-                  });
-                  selfSettings.submit.exposed_form_display = $exposed_form;
-                  $modal_exposed_form.exposedFormAjax[index] = Drupal.ajax(selfSettings);
-                });
+            //var block_settings = drupalSettings.format_strawberryfield_views.modal_exposed_form_block[$modal_exposed_form_id];
+            if (Drupal.views.instances[i].settings.view_name == $view_parts[0] //block_settings.view_id
+              && Drupal.views.instances[i].settings.view_display_id == $view_parts[1]) { //block_settings.current_display_id) {
+              var exposed_form_selector = '#views-exposed-form-' + $view_parts[0].replace(/_/g, '-') + '-' +$view_parts[1].replace(/_/g, '-');
+              var $exposed_form = $(exposed_form_selector).length;
+              if ($exposed_form > 0) {
+                $exposed_form = 1 ;
               }
+              $('input[type=submit], button[type=submit], input[type=image]', $modal_exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
+                var selfSettings = $.extend({}, Drupal.views.instances[i].element_settings, {
+                  base: $(this).attr('id'),
+                  element: this
+                });
+                selfSettings.submit.exposed_form_display = $exposed_form;
+                $modal_exposed_form.exposedFormAjax[index] = Drupal.ajax(selfSettings);
+              });
+            }
           });
         });
       }
@@ -138,20 +138,24 @@
     if (typeof options.extraData !== 'undefined' && typeof options.extraData.view_name !== 'undefined') {
       var href = window.location.href;
       var settings = drupalSettings;
+      const $current_form_params_as_array = this.$form.serializeArray();
+      href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id, $current_form_params_as_array);
 
-      var reload = false;
-      var block_ids = {};
-      $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
-        if (blockSettings.view_id == options.extraData.view_name && blockSettings.current_display_id == options.extraData.view_display_id) {
-          reload = true;
-          block_ids[formId] = blockSettings.block_id;
+      if (typeof(settings.format_strawberryfield_views) !== 'undefined' && typeof(settings.format_strawberryfield_views.modal_exposed_form_block) !== 'undefined') {
+        var reload = false;
+        var block_ids = {};
+        $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
+          if (blockSettings.view_id == options.extraData.view_name && blockSettings.current_display_id == options.extraData.view_display_id) {
+            reload = true;
+            block_ids[formId] = blockSettings.block_id;
+          }
+        });
+        if (reload) {
+          Drupal.updateModalViewsFormBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
         }
-      });
-
-      if (reload) {
-        const $current_form_params_as_array = this.$form.serializeArray();
-        href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id, $current_form_params_as_array);
-        Drupal.updateModalViewsFormBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+      }
+      if (typeof(settings.facets_views_ajax) !== 'undefined') {
+         console.log('defined!');
         var reloadfacets = false;
         $.each(settings.facets_views_ajax, function (facetId, facetSettings) {
           if (facetSettings.view_id == options.extraData.view_name && facetSettings.current_display_id == options.extraData.view_display_id) {
@@ -159,6 +163,7 @@
           }
         });
         if (reloadfacets) {
+          console.log('reloading!');
           Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
         }
       }

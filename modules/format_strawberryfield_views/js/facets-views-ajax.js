@@ -96,10 +96,11 @@
           window.location.reload();
         }
       });
-
-      // Refresh facets blocks.
       this.updateFacetsBlocks(href, views_settings.view_name, views_settings.view_display_id);
-      Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
+      if (typeof(drupalSettings.format_strawberryfield_views) !== 'undefined') {
+        // Refresh facets blocks.
+        Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
+      }
     }
   }
   Drupal.AjaxFacetsView.updateFacetsBlocks = function (href, view_id, current_display_id) {

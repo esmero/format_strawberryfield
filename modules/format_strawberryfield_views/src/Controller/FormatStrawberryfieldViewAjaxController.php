@@ -128,7 +128,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
       $pager_element = $request->request->get('pager_element');
       $pager_element = isset($pager_element) ? intval($pager_element) : NULL;
-      $exposed_form_display = (bool) $request->request->get('exposed_form_display', FALSE);
+      // Assume its there if not told otherwise
+      $exposed_form_display = (bool) $request->request->get('exposed_form_display', TRUE);
 
       $response = new ViewAjaxResponse();
 
