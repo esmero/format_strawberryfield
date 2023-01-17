@@ -90,7 +90,7 @@
         });
       }
 
-      if (typeof(drupalSettings.views.ajaxViews) != 'undefined') {
+      if (typeof(drupalSettings.views) != 'undefined') {
         if ($context.is('div[data-drupal-modalblock-selector]')) {
           this.attachModalFormAjax($context);
         }
