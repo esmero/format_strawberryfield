@@ -166,7 +166,6 @@
         }
       }
       if (typeof(settings.facets_views_ajax) !== 'undefined') {
-         console.log('defined!');
         var reloadfacets = false;
         $.each(settings.facets_views_ajax, function (facetId, facetSettings) {
           if (facetSettings.view_id == options.extraData.view_name && facetSettings.current_display_id == options.extraData.view_display_id) {
@@ -183,28 +182,43 @@
       const const_url_parts = options.url.split('?');
       if (const_url_parts[0] == '/views/ajax') {
         ajax_views_call = true;
-        const urlParams = new URLSearchParams('?' + options.data);
-        view_name = urlParams.get('view_name');
-        view_display_id = urlParams.get('view_display_id');
+        if (typeof(options.data) == 'string') {
+          const urlParams = new URLSearchParams('?' + options.data);
+          view_name = urlParams.get('view_name');
+          view_display_id = urlParams.get('view_display_id');
+        }
+        else {
+          view_name = options.data.hasOwnProperty('view_name') ?  options.data['view_name'] : null;
+          view_display_id = options.data.hasOwnProperty('view_display_id') ? options.data['view_display_id'] : null;
+        }
       }
     }
-    // Check if this is going into an ajax/views call.
 
+    // Check if this is going into an ajax/views call.
     if (ajax_views_call && view_name && view_display_id) {
       var exposed_form_selector = '#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-');
       var $exposed_form = $(exposed_form_selector).length;
+      console.log($exposed_form);
+      console.log(exposed_form_selector);
       if ($exposed_form > 0) {
         $exposed_form = 1;
       }
-      if (typeof(options.extraData) != 'undefined') {
+     if (typeof(options.extraData) != 'undefined') {
         options.extraData = {};
       }
       options.extraData = $.extend({}, options.extraData, {
         exposed_form_display: $exposed_form
       });
+
+     if (typeof(options.data) == 'string') {
+       var params = Drupal.Views.parseQueryString(options.data);
+       params['exposed_form_display'] = $exposed_form;
+       options.data = $.param(params);
+     }
+     else {
+       options.data['exposed_form_display'] = $exposed_form;
+     }
     }
-
-
     // Call the original Drupal method with the right context.
     beforeSend.apply(this, [xmlhttprequest,options]);
   }
