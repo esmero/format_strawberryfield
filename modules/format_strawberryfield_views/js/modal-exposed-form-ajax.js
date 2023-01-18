@@ -170,10 +170,16 @@
           Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
         }
       }
+      var exposed_form_selector = '#views-exposed-form-' + options.extraData.view_name.replace(/_/g, '-') + '-' + options.extraData.view_display_id.replace(/_/g, '-');
+      var $exposed_form = $(exposed_form_selector).length;
+      if ($exposed_form > 0) {
+        $exposed_form = 1;
+      }
+      options.extraData.exposed_form = $exposed_form;
     }
 
     // Call the original Drupal method with the right context.
-    beforeSend.apply(this, arguments);
+    beforeSend.apply(this, [xmlhttprequest,options]);
   }
 
   // Helper function to add exposed form data to Modal Exposed Views Form url
