@@ -225,15 +225,12 @@ function format_strawberryfield_views_search_api_solr_converted_query_alter(Sola
 /**
  * Implements hook_library_info_alter().
  */
-function  format_strawberryfield_views_library_info_alter(&$libraries, $module) {
-  // Update imaginary library 'foo' to version 2.0.
+function  format_strawberryfield_views_library_info_alter(&$libraries, $extension) {
   if ($extension === 'facets' && isset($libraries['drupal.facets.views-ajax'])) {
 
       $libraries['drupal.facets.views-ajax']['version'] = '1.x';
 
-      // To accurately replace library files, the order of files and the options
-      // of each file have to be retained; e.g., like this:
-      $old_path = '/js';
+      $old_path = 'js';
 
       // Since the replaced library files are no longer located in a directory
       // relative to the original extension, specify an absolute path (relative
@@ -254,6 +251,9 @@ function  format_strawberryfield_views_library_info_alter(&$libraries, $module) 
       }
       $libraries['drupal.facets.views-ajax']['js'] = $new_js;
       $libraries['drupal.facets.views-ajax']['dependencies'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
+      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.dropdown-widget';
+      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.link-widget';
+      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'drupal.facets.checkbox-widget';
       array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
