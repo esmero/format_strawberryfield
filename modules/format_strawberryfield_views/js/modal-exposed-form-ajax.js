@@ -137,12 +137,20 @@
    */
   Drupal.Ajax.prototype.beforeSend = function (xmlhttprequest, options) {
 
+    var ajax_views_call = false;
+    var view_name = null;
+    var view_display_id = null;
+
     // Get view from options.
     if (typeof options.extraData !== 'undefined' && typeof options.extraData.view_name !== 'undefined') {
+      ajax_views_call = true;
       var href = window.location.href;
       var settings = drupalSettings;
       const $current_form_params_as_array = this.$form.serializeArray();
       href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id, $current_form_params_as_array);
+
+      view_name = options.extraData.view_name
+      view_display_id = options.extraData.view_display_id;
 
       if (typeof(settings.format_strawberryfield_views) !== 'undefined' && typeof(settings.format_strawberryfield_views.modal_exposed_form_block) !== 'undefined') {
         var reload = false;
@@ -170,13 +178,32 @@
           Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
         }
       }
-      var exposed_form_selector = '#views-exposed-form-' + options.extraData.view_name.replace(/_/g, '-') + '-' + options.extraData.view_display_id.replace(/_/g, '-');
+    }
+    else if (typeof(options.data) != 'undefined') {
+      const const_url_parts = options.url.split('?');
+      if (const_url_parts[0] == '/views/ajax') {
+        ajax_views_call = true;
+        const urlParams = new URLSearchParams('?' + options.data);
+        view_name = urlParams.get('view_name');
+        view_display_id = urlParams.get('view_display_id');
+      }
+    }
+    // Check if this is going into an ajax/views call.
+
+    if (ajax_views_call && view_name && view_display_id) {
+      var exposed_form_selector = '#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-');
       var $exposed_form = $(exposed_form_selector).length;
       if ($exposed_form > 0) {
         $exposed_form = 1;
       }
-      options.extraData.exposed_form = $exposed_form;
+      if (typeof(options.extraData) != 'undefined') {
+        options.extraData = {};
+      }
+      options.extraData = $.extend({}, options.extraData, {
+        exposed_form_display: $exposed_form
+      });
     }
+
 
     // Call the original Drupal method with the right context.
     beforeSend.apply(this, [xmlhttprequest,options]);
