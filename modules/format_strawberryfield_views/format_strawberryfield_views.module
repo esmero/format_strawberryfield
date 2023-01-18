@@ -253,7 +253,7 @@ function  format_strawberryfield_views_library_info_alter(&$libraries, $extensio
       $libraries['drupal.facets.views-ajax']['dependencies'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
       $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.dropdown-widget';
       $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.link-widget';
-      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'drupal.facets.checkbox-widget';
+      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.checkbox-widget';
       array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
