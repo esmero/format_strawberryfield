@@ -226,11 +226,34 @@ function format_strawberryfield_views_search_api_solr_converted_query_alter(Sola
  * Implements hook_library_info_alter().
  */
 function  format_strawberryfield_views_library_info_alter(&$libraries, $module) {
-  if ($module === 'facets' && isset($libraries['drupal.facets.views-ajax'])) {
-    unset($libraries['drupal.facets.views-ajax']['js']);
-    $libraries['drupal.facets.views-ajax']['dependencies'][]
-      = 'format_strawberryfield_views/modal-exposed-form-facet-views-ajax';
-    $libraries['drupal.facets.views-ajax']['dependencies'][]
-      = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
+  // Update imaginary library 'foo' to version 2.0.
+  if ($extension === 'facets' && isset($libraries['drupal.facets.views-ajax'])) {
+
+      $libraries['drupal.facets.views-ajax']['version'] = '1.x';
+
+      // To accurately replace library files, the order of files and the options
+      // of each file have to be retained; e.g., like this:
+      $old_path = '/js';
+
+      // Since the replaced library files are no longer located in a directory
+      // relative to the original extension, specify an absolute path (relative
+      // to DRUPAL_ROOT / base_path()) to the new location.
+      $new_path = '/' . \Drupal::service('extension.list.module')
+          ->getPath('format_strawberryfield_views') . '/js';
+      $new_js = [];
+      $replacements = [
+        $old_path . '/facets-views-ajax.js' => $new_path . '/facets-views-ajax.js',
+      ];
+      foreach ($libraries['drupal.facets.views-ajax']['js'] as $source => $options) {
+        if (isset($replacements[$source])) {
+          $new_js[$replacements[$source]] = $options;
+        }
+        else {
+          $new_js[$source] = $options;
+        }
+      }
+      $libraries['drupal.facets.views-ajax']['js'] = $new_js;
+      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
+      array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
