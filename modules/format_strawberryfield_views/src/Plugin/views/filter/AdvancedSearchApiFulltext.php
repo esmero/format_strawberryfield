@@ -653,7 +653,12 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     for($i=1;$i < $realcount && $realcount > 1; $i++) {
       if (isset($form[$this->options['id'].'_wrapper'])) {
         foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+          if (strpos($key, '#') !== FALSE) {
+            $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+          }
+          else {
+            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+          }
           if ($key == $this->options['expose']['identifier']) {
             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
           }
@@ -663,12 +668,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
               $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
             }
           }
-          else {
-            error_log($key);
-          }
         }
+        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
       }
     }
+    $form = $form;
   }
 
 
