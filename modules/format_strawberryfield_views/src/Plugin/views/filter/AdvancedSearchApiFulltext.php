@@ -342,7 +342,10 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $flat_keys = [];
     $negation = FALSE;
     // Now do the actual query creation/composite thing
+    error_log(var_export($query_able_data, true));
+    $j = 0;
     foreach ($query_able_data as $query_able_datum_internal) {
+      $flat_key = '';
       if ($negation = $query_able_datum_internal['operator'] === 'not' ? TRUE
         : FALSE
       ) {
@@ -360,16 +363,24 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $manual_keys[0]['#negation'] = $negation;
       }
 
-      $flat_keys[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+      $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
         $manual_keys, $query_able_datum_internal['real_solr_fields'],
         $parse_mode->getPluginId()
       );
+      if ($j > 0) {
+        if ($query_able_datum_internal['interfield_operator'] == 'and') {
+          $flat_key = ' && '.$flat_key;
+        }
+      }
+      $flat_keys[] = $flat_key;
+      $j++;
     }
     if (count($flat_keys)) {
       /** @var \Drupal\search_api\ParseMode\ParseModeInterface $parse_mode */
       $parse_mode_direct = $this->getParseModeManager()
         ->createInstance('direct');
       $this->getQuery()->setParseMode($parse_mode_direct);
+
       $combined_keys = implode(" ", $flat_keys);
       $this->getQuery()->keys("({$combined_keys})");
       error_log($combined_keys);
