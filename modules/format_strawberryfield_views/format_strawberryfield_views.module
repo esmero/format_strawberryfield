@@ -135,6 +135,22 @@ function format_strawberryfield_views_block_view_views_exposed_filter_block_sbf_
   }
 }
 
+
+/**
+ * Implements hook_block_view_BASE_BLOCK_ID_alter() for 'views_exposed_filter_block_sbf'.
+ */
+function format_strawberryfield_views_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'views_exposed_form') {
+    foreach ($form as $key => $value) {
+      if (is_array($value) && isset ($value['#group']) && isset($value['#type']) && $value['#group'] == 'actions' && $value['#type'] == 'submit') {
+        $form['actions'][$key] = $value;
+        unset($form[$key]);
+      }
+    }
+  }
+
+}
+
 /**
  * Implements hook_views_data_alter().
  */

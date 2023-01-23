@@ -372,6 +372,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $this->getQuery()->setParseMode($parse_mode_direct);
       $combined_keys = implode(" ", $flat_keys);
       $this->getQuery()->keys("({$combined_keys})");
+      error_log($combined_keys);
       // This is just to avoid Search API rewriting the query
       $this->getQuery()->setOption('solr_param_defType', 'edismax');
       // This will allow us to remove the edismax processor on a hook/event subscriber.
@@ -428,7 +429,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // If there were fulltext keys set, we take care to combine them in a
       // meaningful way (especially with negated keys).
       if ($old) {
-
         $keys = &$query->getKeys();
         // Array-valued keys are combined.
         if (is_array($keys)) {
@@ -624,6 +624,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $enable_less = $realcount > 1;
     // This fails on Preview (because of competing Ajax and replace calls)
     // @TODO Re-test without the IF bc of Sunday refactor that should have fixed it?
+
     if (empty($this->view->live_preview)) {
       $form[$this->options['id'].'_addone'] = [
         '#type' => 'submit',
@@ -632,8 +633,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           '@label' => $this->options['exposed']['advanced_search_fields_add_one_label'] ?? 'add one'
         ]),
         '#access' => $enable_more,
-        '#weight' => '100',
+        '#weight' => '-100',
+        '#group' => 'actions',
       ];
+      /* Note: #group does not work for buttons but we use this to bring them into
+      'actions' key in a form alter */
       $form[$this->options['id'].'_delone'] = [
         '#type' => 'submit',
         '#op' => $this->options['id'] . '_delone',
@@ -641,7 +645,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           '@label' => $this->options['exposed']['advanced_search_fields_remove_one_label'] ?? 'remove one'
         ]),
         '#access' => $enable_less,
-        '#weight' => '100',
+        '#weight' => '-101',
+        '#group' => 'actions',
       ];
     }
 
@@ -708,9 +713,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $current_count = &$form_state->getValue(
       $this->options['id'] . '_advanced_search_fields_count', 1
     );
-    if (($triggering_element = $form_state->getTriggeringElement()['#op'] ??
-        NULL == $this->options['id'] . '_addone')
-      && ($form_state->getUserInput()['op'] ?? NULL == "add one")
+    if ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
+        NULL) == $this->options['id'] . '_addone')
+      && ($form_state->getUserInput()['op'] ?? NULL == $this->options['expose']['advanced_search_fields_add_one_label'])
       && $this->options['expose']['advanced_search_fields_multiple']
     ) {
       $this->searchedFieldsCount = $this->searchedFieldsCount
@@ -720,6 +725,19 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // Check if the state was set already
       $current_count++;
     }
+    elseif ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
+          NULL) == $this->options['id'] . '_delone')
+      && ($form_state->getUserInput()['op'] ?? NULL == $this->options['expose']['advanced_search_fields_remove_one_label'])
+      && $this->options['expose']['advanced_search_fields_multiple']
+    ) {
+      $this->searchedFieldsCount = $this->searchedFieldsCount
+      > ($this->options['expose']['advanced_search_fields_count'] ?? 1)
+        ? $this->searchedFieldsCount--
+        : ($this->options['expose']['advanced_search_fields_count'] ?? 1);
+      // Check if the state was set already
+      $current_count--;
+    }
+
     if ($this->options['expose']['advanced_search_fields_multiple']) {
       for ($i = 1; $i < $current_count; $i++) {
         if (!empty($this->options['expose']['advanced_search_use_operator'])
