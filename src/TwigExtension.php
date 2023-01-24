@@ -459,10 +459,6 @@ class TwigExtension extends AbstractExtension {
         $query->setFulltextFields($fulltext);
       }
 
-      $allfields_translated_to_solr = $search_api_index->getServerInstance()
-        ->getBackend()
-        ->getSolrFieldNames($query->getIndex());
-
       $query->setOption('search_api_retrieved_field_values', ['id']);
       foreach ($filters as $field => $condition) {
         $query->addCondition($field, $condition);
