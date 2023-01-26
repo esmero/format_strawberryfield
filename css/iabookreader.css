@@ -73,3 +73,7 @@ div.viewpLeft, div.viewpRight {
 	display: inline-block;
 	padding: 1%;
 }
+/* jquery mmenu */
+#BRmobileMenu.mm-menu {
+    --mm-color-background: #c3d5d1;
+}
