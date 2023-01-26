@@ -75,5 +75,12 @@ div.viewpLeft, div.viewpRight {
 }
 /* jquery mmenu */
 #BRmobileMenu.mm-menu {
-    --mm-color-background: #c3d5d1;
+    --mm-color-background: #b4b7c1;
+    --mm-navbar-size: 65px;
+}
+#BRmobileMenu .mm-navbars_top {
+    padding-bottom: calc(var(--mm-navbar-size) * .25);
+}
+#BRmobileMenu.mm-menu_navbar_top-1 .mm-panels {
+    top: calc(var(--mm-navbar-size) * 1.2);
 }
