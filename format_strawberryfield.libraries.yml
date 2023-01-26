@@ -37,6 +37,7 @@ iiif_iabookreader:
     component:
       css/iabookreader.css: {}
       https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/BookReader.css: { external: true}
+      https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/jquery.mmenu.all.css: { external: true}
   js:
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
     https://cdn.jsdelivr.net/npm/jquery.dragscrollable@1.0.0/dragscrollable.min.js: { external: true, minified: true, preprocess: false}
