@@ -148,7 +148,6 @@ function format_strawberryfield_views_form_alter(&$form, FormStateInterface $for
       }
     }
   }
-
 }
 
 /**
