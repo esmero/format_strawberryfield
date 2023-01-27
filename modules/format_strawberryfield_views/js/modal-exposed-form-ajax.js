@@ -116,7 +116,7 @@
     $('.block-modalformviews-ajax').each(function (index) {
       var block_id_start = 'js-modal-form-views-block-id-';
       var block_id = $.map($(this).attr('class').split(' '), function (v, i) {
-        if (v.indexOf(block_id_start) > -1) {
+        if (v.hasOwnProperty(indexOf) && v.indexOf(block_id_start) > -1) {
           return v.slice(block_id_start.length, v.length);
         }
       }).join();
