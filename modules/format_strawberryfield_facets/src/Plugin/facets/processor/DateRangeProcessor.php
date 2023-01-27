@@ -68,12 +68,13 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       }
       elseif (is_array($item)) {
 
-        /*   $item = [
-              $matches[1],
-              $matches[2],
-              'min' => $matches[1],
-              'max' => $matches[2],
-            ];
+        /*
+        $item = [
+           $matches[1],
+           $matches[2],
+           'min' => $matches[1],
+           'max' => $matches[2],
+        ];
         */
         // Inverse min max if min > max
         if (isset($item[0]) && isset($item[1]) && $item[0] > $item[1]) {
