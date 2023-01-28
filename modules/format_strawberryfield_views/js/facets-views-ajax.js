@@ -127,16 +127,20 @@
 
     // Update facets summary block.
     if (this.updateFacetsSummaryBlock()) {
-      var facet_summary_wrapper_id = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']').attr('id');
-      var facet_summary_block_id = '';
-      if (facet_summary_wrapper_id.indexOf('--') !== -1) {
-        facet_summary_block_id = facet_summary_wrapper_id.substring(0, facet_summary_wrapper_id.indexOf('--')).replace('block-', '');
-      } else {
-        facet_summary_block_id = facet_summary_wrapper_id.replace('block-', '');
+
+      var $facet_summary_wrapper = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']');
+      if ($facet_summary_wrapper.length > 0) {
+        var facet_summary_wrapper_id = $facet_summary_wrapper.attr('id');
+        var facet_summary_block_id = '';
+        if (facet_summary_wrapper_id.indexOf('--') !== -1) {
+          facet_summary_block_id = facet_summary_wrapper_id.substring(0, facet_summary_wrapper_id.indexOf('--')).replace('block-', '');
+        } else {
+          facet_summary_block_id = facet_summary_wrapper_id.replace('block-', '');
+        }
+        facet_settings.submit.update_summary_block = true;
+        facet_settings.submit.facet_summary_block_id = facet_summary_block_id;
+        facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
       }
-      facet_settings.submit.update_summary_block = true;
-      facet_settings.submit.facet_summary_block_id = facet_summary_block_id;
-      facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
     }
     Drupal.ajax(facet_settings).execute();
   };
