@@ -8,6 +8,7 @@ use Drupal\facets\FacetInterface;
 use Drupal\facets\Processor\PreQueryProcessorInterface;
 use Drupal\facets\Processor\ProcessorPluginBase;
 use Drupal\facets\Processor\BuildProcessorInterface;
+use Drupal\facets\Result\Result;
 
 /**
  * Provides a processor that show all values between a range of dates.
@@ -67,22 +68,13 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
       }
       elseif (is_array($item)) {
-
-        /*
-        $item = [
-           $matches[1],
-           $matches[2],
-           'min' => $matches[1],
-           'max' => $matches[2],
-        ];
-        */
         // Inverse min max if min > max
         if (isset($item[0]) && isset($item[1]) && $item[0] > $item[1]) {
           $item = [
-            $item[1],
-            $item[0],
-            'min' => $item[1],
-            'max' => $item[0],
+            (int) $item[1],
+            (int) $item[0],
+            'min' => (int) $item[1],
+            'max' => (int) $item[0],
             ];
         }
         else {
@@ -93,6 +85,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         $item = [];
       }
     });
+
     $facet->setActiveItems($active_items);
   }
 
@@ -104,7 +97,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
     $url_processor_handler = $facet->getProcessors()['url_processor_handler'];
     $url_processor = $url_processor_handler->getProcessor();
     $filter_key = $url_processor->getFilterKey();
-
+    $url = NULL;
     /** @var \Drupal\facets\Result\ResultInterface[] $results */
     foreach ($results as &$result) {
       $url = $result->getUrl();
@@ -123,7 +116,87 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       $url->setOption('query', $query);
       $result->setUrl($url);
     }
+    if (count($results)) {
+      $urlProcessorManager = \Drupal::service('plugin.manager.facets.url_processor');
+      $url_processor = $urlProcessorManager->createInstance($facet->getFacetSourceConfig()->getUrlProcessorName(), ['facet' => $facet]);
+      $active_filters = $url_processor->getActiveFilters();
+      unset($active_filters[$facet->id()]);
+      $urlGenerator = \Drupal::service('facets.utility.url_generator');
+      if ($active_filters) {
+        $url_active = $urlGenerator->getUrl($active_filters, FALSE);
+      }
+      else {
+        $request = \Drupal::request();
+        $facet_source = $facet->getFacetSource();
+        $url_active = $urlGenerator->getUrlForRequest($request, $facet_source ? $facet_source->getPath() : NULL);
+        $params = $request->query->all();
+        unset($params[$url_processor->getFilterKey()]);
+        $url_active->setRouteParameter('facets_query', '');
+        $url_active->setOption('query', $params);
+      }
+      $range = [];
+      $range[] = $this->getRangeFromResults($results);
+      if (count($range) == 0) {
+        // Means we are already are not inside a valid range, give this a 0 count
+        // Just to allow people to reset this.
+        $range = $facet->getActiveItems();
+        if (isset($range[0])) {
+          $range[0]['count'] = 0;
+        }
+      }
+      // generate an active value for the active facet
+      foreach ($range as $range_entry) {
+        $min_unix = (int) $range_entry['min'] ?? 0;
+        $max_unix = (int) $range_entry['max'] ?? 0;
+        $date_min = date("Y", $min_unix);
+        $date_max = date("Y", $max_unix);
+        if ($date_min == $date_max) {
+          $date_min = date("Y/m/d", $min_unix);
+          $date_max = date("Y/m/d", $max_unix);
+        }
+        $label = $date_min . ' - ' . $date_max;
+        if ($date_min == $date_max) {
+          $label = $date_min;
+        }
+
+        $result_item_active = new Result(
+          $facet, 'summary_date_facet', $label, $range_entry['count']
+        );
+        $result_item_active->setActiveState(TRUE);
+        $result_item_active->setUrl($url_active);
+        $results[] = $result_item_active;
+      }
+    }
     return $results;
+  }
+
+  protected function getRangeFromResults(array $results) {
+    /* @var \Drupal\facets\Result\ResultInterface[] $results */
+    $min = NULL;
+    $max = NULL;
+    $count = 0;
+    foreach ($results as $result) {
+      if ($result->getRawValue() == 'summary_date_facet') {
+        continue;
+      }
+      $min = $min ?? $result->getRawValue();
+      $max = $max ?? $result->getRawValue();
+      if ($result->getRawValue() >= $min) {
+        $count = $count + $result->getCount();
+      }
+      if ($result->getRawValue() <= $max) {
+        $count = $count + $result->getCount();
+      }
+
+      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
+      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
+    }
+    if ($min && $max && $count) {
+      return ['min' => $min, 'max' => $max, 'count' => $count];
+    }
+    else {
+      return [];
+    }
   }
 
 }

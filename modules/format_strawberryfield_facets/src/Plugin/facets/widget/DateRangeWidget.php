@@ -90,13 +90,6 @@ class DateRangeWidget extends WidgetPluginBase {
           'data-type' => 'date-range-max',
         ],
       ],
-      /*'filter' => [
-        '#type' => 'link',
-        '#url' => $url,
-        '#title' => t('Filter'),
-        '#options' => ['attributes' => ['class' => ['block-demo-backlink']]],
-        '#weight' => -10,
-      ],*/
     ];
     if ($this->getConfiguration()['show_reset_link'] && (!$this->getConfiguration()['hide_reset_when_no_selection'] || $facet->getActiveItems())) {
       // Add reset link even  if there are no results. Given that user might bypass completely the values
@@ -237,6 +230,9 @@ class DateRangeWidget extends WidgetPluginBase {
     $min = NULL;
     $max = NULL;
     foreach ($results as $result) {
+      if ($result->getRawValue() == 'summary_date_facet') {
+        continue;
+      }
       $min = $min ?? $result->getRawValue();
       $max = $max ?? $result->getRawValue();
       $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
