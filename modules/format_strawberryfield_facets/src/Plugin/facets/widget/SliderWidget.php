@@ -11,7 +11,7 @@ use Drupal\facets\Widget\WidgetPluginBase;
  *
  * @FacetsWidget(
  *   id = "sbf_date_slider",
- *   label = @Translation("Format Strawberryfield Date Range slider"),
+ *   label = @Translation("Format Strawberryfield Date slider"),
  *   description = @Translation("A widget that shows a slider for Dates."),
  * )
  */

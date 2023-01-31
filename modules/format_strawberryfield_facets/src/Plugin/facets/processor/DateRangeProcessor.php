@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\processor;
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
 use Drupal\facets\Processor\PreQueryProcessorInterface;
 use Drupal\facets\Processor\ProcessorPluginBase;
@@ -148,15 +149,25 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       foreach ($range as $range_entry) {
         $min_unix = (int) $range_entry['min'] ?? 0;
         $max_unix = (int) $range_entry['max'] ?? 0;
-        $date_min = date("Y", $min_unix);
-        $date_max = date("Y", $max_unix);
-        if ($date_min == $date_max) {
-          $date_min = date("Y/m/d", $min_unix);
-          $date_max = date("Y/m/d", $max_unix);
+        if ($this->getConfiguration()['variable_granularity']) {
+          $date_min = gmdate("Y", $min_unix);
+          $date_max = gmdate("Y", $max_unix);
+          if ($date_min == $date_max) {
+            $date_min = gmdate("Y/m/d", $min_unix);
+            $date_max = gmdate("Y/m/d", $max_unix);
+          }
+          $label = $date_min . ' - ' . $date_max;
+          if ($date_min == $date_max) {
+            $label = $date_min;
+          }
         }
-        $label = $date_min . ' - ' . $date_max;
-        if ($date_min == $date_max) {
-          $label = $date_min;
+        else {
+          $date_min = gmdate("Y/m/d", $min_unix);
+          $date_max = gmdate("Y/m/d", $max_unix);
+          $label = $date_min . ' - ' . $date_max;
+          if ($date_min == $date_max) {
+            $label = $date_min;
+          }
         }
 
         $result_item_active = new Result(
@@ -199,4 +210,26 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultConfiguration() {
+    return [
+        'variable_granularity' => TRUE,
+      ] + parent::defaultConfiguration();
+  }
+
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state, FacetInterface $facet) {
+    $configuration = $this->getConfiguration();
+
+    $build['variable_granularity'] = [
+      '#type'          => 'checkbox',
+      '#title'         => $this->t('Variable Date Granularity for Facet Summary/active Range'),
+      '#default_value' => $configuration['variable_granularity'],
+      '#description'   => $this->t(
+        'When enabled Facet Summaries (coming from the currently Active result label) will change to years when the range spans more than a single year, or full dates if otherwise. Disabled means the input dates as passed by the user will be used directly.'
+      ),
+    ];
+    return $build;
+  }
 }
