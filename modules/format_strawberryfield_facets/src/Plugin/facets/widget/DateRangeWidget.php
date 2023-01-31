@@ -34,10 +34,11 @@ class DateRangeWidget extends WidgetPluginBase {
   public function build(FacetInterface $facet): array {
     $build = parent::build($facet);
     $results = $facet->getResults();
-    $range = $this->getRangeFromResults($results);
     if (empty($results)) {
       return $build;
     }
+    $range = $this->getRangeFromResults($results);
+
 
     ksort($results);
 
@@ -55,10 +56,10 @@ class DateRangeWidget extends WidgetPluginBase {
     }
 
     if (isset($min) && !empty($min)) {
-      $min = date('Y-m-d', (int) $min);
+      $min = gmdate('Y-m-d', (int) $min);
     }
     if (isset($max) && !empty($max)) {
-      $max = date('Y-m-d', (int) $max);
+      $max = gmdate('Y-m-d', (int) $max);
     }
 
 
@@ -91,20 +92,19 @@ class DateRangeWidget extends WidgetPluginBase {
         ],
       ],
     ];
+    // We will reuse this for the form submit url
+    $urlProcessorManager = \Drupal::service('plugin.manager.facets.url_processor');
+    $url_processor = $urlProcessorManager->createInstance($facet->getFacetSourceConfig()->getUrlProcessorName(), ['facet' => $facet]);
+    $urlGenerator = \Drupal::service('facets.utility.url_generator');
+
     if ($this->getConfiguration()['show_reset_link'] && (!$this->getConfiguration()['hide_reset_when_no_selection'] || $facet->getActiveItems())) {
       // Add reset link even  if there are no results. Given that user might bypass completely the values
       // By using the GET arguments.
       $max_items = array_sum(array_map(function ($item) {
         return $item->getCount();
       }, $results));
-
-      $urlProcessorManager = \Drupal::service('plugin.manager.facets.url_processor');
-      $url_processor = $urlProcessorManager->createInstance($facet->getFacetSourceConfig()->getUrlProcessorName(), ['facet' => $facet]);
       $active_filters = $url_processor->getActiveFilters();
-
       unset($active_filters[$facet->id()]);
-
-      $urlGenerator = \Drupal::service('facets.utility.url_generator');
       if ($active_filters) {
         $url = $urlGenerator->getUrl($active_filters, FALSE);
       }
@@ -151,12 +151,10 @@ class DateRangeWidget extends WidgetPluginBase {
     }
 
 
-
     $url = array_shift($results)->getUrl()->toString();
+    $build['#items']['min']['#attributes']['data-drupal-url'] = $url;
     $build['#attached']['library'][] = 'format_strawberryfield_facets/date-range';
-    $build['#attached']['drupalSettings']['facets']['sbfdaterange'][$facet->id()] = [
-      'url' => $url,
-    ];
+    // Drupal never updates the drupalSettings after the first load/after the Ajax call gets done.
     $build['#attributes']['class'][] = 'js-facets-links';
     $build['#attributes']['class'][] = 'js-facets-sbf-daterange';
     return $build;

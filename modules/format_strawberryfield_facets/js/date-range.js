@@ -18,11 +18,10 @@
 
       function autoSubmit($widget) {
         var facetId = $widget.attr("data-drupal-facet-id");
-        var daterange = settings.facets.sbfdaterange[facetId];
-        console.log($("input[id=".concat(facetId, "_min]")).val());
+        var submiturl = $("input[id=".concat(facetId, "_min]")).attr("data-drupal-url");
         var min = toTimestamp($("input[id=".concat(facetId, "_min]")).val()) || "";
         var max = toTimestamp($("input[id=".concat(facetId, "_max]")).val()) || "";
-        return daterange.url.replace("__date_range_min__", min).replace("__date_range_max__", max);
+        return submiturl.replace("__date_range_min__", min).replace("__date_range_max__", max);
       }
 
       if ($dateRangeFacets.length > 0) {
