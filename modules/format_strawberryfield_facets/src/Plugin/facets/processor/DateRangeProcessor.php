@@ -136,14 +136,16 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         $url_active->setOption('query', $params);
       }
       $range = [];
-      $range[] = $this->getRangeFromResults($results);
+      $range = $facet->getActiveItems();
+      if (isset($range[0])) {
+        $range[0]['count'] = array_sum(array_map(function ($item) {
+          return $item->getCount();
+        }, $results));
+      }
       if (count($range) == 0) {
         // Means we are already are not inside a valid range, give this a 0 count
         // Just to allow people to reset this.
-        $range = $facet->getActiveItems();
-        if (isset($range[0])) {
-          $range[0]['count'] = 0;
-        }
+        $range[] = $this->getRangeFromResults($results);
       }
       // generate an active value for the active facet
       foreach ($range as $range_entry) {
