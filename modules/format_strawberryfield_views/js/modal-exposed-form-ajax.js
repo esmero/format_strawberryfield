@@ -83,6 +83,23 @@
                       base: $(this).attr('id'),
                       element: this
                     });
+                    // We can't use the URL passed from the settings bc it might have the original
+                    // Arguments stuck and the Ajax Controller will not know if to enforce the GET
+                    // or POST ones.
+                    var inputs_in_form = {};
+                    $('input[type=select], input[type=hidden], input[type=text]', $modal_exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
+                        inputs_in_form[$(this).attr('name')] = $(this).attr('name');
+                      });
+                    var $clean_url_split = selfSettings.url.split('?');
+                    var $clean_url_base =  $clean_url_split.shift();
+                    var searchParams = new URLSearchParams(selfSettings.url.substring(selfSettings.url.indexOf('?')));
+                    Object.keys(inputs_in_form || {}).forEach(function (index) {
+                      if (searchParams.has(inputs_in_form[index])) {
+                        searchParams.delete(inputs_in_form[index]);
+                      }
+                    });
+                    var href = searchParams.toString();
+                    selfSettings.url = $clean_url_base + '?' + href;
                     selfSettings.submit.exposed_form_display = $exposed_form;
                     $modal_exposed_form.exposedFormAjax[index] = Drupal.ajax(selfSettings);
                   });
