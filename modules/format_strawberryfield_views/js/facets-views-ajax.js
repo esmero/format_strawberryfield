@@ -69,6 +69,8 @@
     // Refresh view.
     if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
       var views_parameters = Drupal.Views.parseQueryString(href);
+      // Note this is wrong. Assumes the Views Path is 'search'
+      // We should use view_path!
       var views_arguments = Drupal.Views.parseViewArgs(href, 'search');
       var views_settings = $.extend(
         {},
@@ -76,7 +78,7 @@
         views_arguments,
         views_parameters
       );
-
+      // Not even needed here if we are using the original element settings ....mmmm
       // Update View.
       var views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
       views_ajax_settings.submit = views_settings;
