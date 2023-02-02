@@ -26,20 +26,27 @@
           if(copyButtonContainers !== undefined) {
             for(var i = 0; i < copyButtonContainers.length; i++) {
               var copyButtonContainer = copyButtonContainers[i];
-              var copyContentContainer = copyContentContainers[i];
-              if(!copyContentContainer.hasAttribute('id')) {
-                copyContentContainer.id = 'clipboard-copy-content-' + i;
+              var userCopyButton = copyButtonContainer.querySelector('clipboard-copy');
+              if (userCopyButton) {
+                copyButtonContainer.addEventListener('click', function () {
+                  userCopyButton.click();
+                });
+              } else {
+                var copyContentContainer = copyContentContainers[i];
+                if(!copyContentContainer.hasAttribute('id')) {
+                  copyContentContainer.id = 'clipboard-copy-content-' + i;
+                }
+                var copyButtonWrapper = document.createElement('button');
+                var copyButton = document.createElement('clipboard-copy');
+                copyButton.setAttribute('for', copyContentContainer.id);
+                copyButton.innerHTML = copyButtonText;
+                copyButtonWrapper.appendChild(copyButton);
+                for (var i = 0; i < copyButtonClasses.length; i++) {
+                  var copyButtonClassAppend = copyButtonClasses[i];
+                  copyButtonWrapper.classList.add(copyButtonClassAppend);
+                }
+                copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
               }
-              var copyButtonWrapper = document.createElement('button');
-              var copyButton = document.createElement('clipboard-copy');
-              copyButton.setAttribute('for', copyContentContainer.id);
-              copyButton.innerHTML = copyButtonText;
-              copyButtonWrapper.appendChild(copyButton);
-              for (var i = 0; i < copyButtonClasses.length; i++) {
-                var copyButtonClassAppend = copyButtonClasses[i];
-                copyButtonWrapper.classList.add(copyButtonClassAppend);
-              }
-              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
             }
           }
         });
