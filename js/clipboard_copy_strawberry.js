@@ -4,9 +4,11 @@
     attach: function (context, settings) {
       $('.clipboard-copy-data').once('attach_clipboard')
         .each(function (index, value) {
-          var theid = '#' + $(this).attr("id");
+          var theid = '#' + $(this).attr('id');
           var copyContainer = document.querySelector(theid);
-          var copyButtonClass = copyContainer.dataset.clipboardCopyButton;
+          var copyButtonClassData = copyContainer.dataset.clipboardCopyButton;
+          var copyButtonClasses = copyButtonClassData.split(' ');
+          var copyButtonClass = copyButtonClasses[0];
           var copyContentClass = copyContainer.dataset.clipboardCopyContent;
           var copyButtonText = copyContainer.dataset.clipboardCopyButtonText;
           var copyButtonContainers;
@@ -33,7 +35,10 @@
               copyButton.setAttribute('for', copyContentContainer.id);
               copyButton.innerHTML = copyButtonText;
               copyButtonWrapper.appendChild(copyButton);
-              copyButtonWrapper.classList.add(copyButtonClass);
+              for (var i = 0; i < copyButtonClasses.length; i++) {
+                var copyButtonClassAppend = copyButtonClasses[i];
+                copyButtonWrapper.classList.add(copyButtonClassAppend);
+              }
               copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
             }
           }
