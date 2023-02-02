@@ -4,7 +4,7 @@
 
     Drupal.behaviors.format_strawberryfield_iabookreader_initiate = {
         attach: function(context, settings) {
-            $('.strawberry-iabook-item[data-iiif-infojson]').once('attache_iab').each(function (index, value) {
+            $('.strawberry-iabook-item[data-iiif-infojson]').once('attach_iab').each(function (index, value) {
               // Get the node uuid for this element
               var element_id = $(this).attr("id");
               var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
@@ -50,12 +50,161 @@
                 });
 
               }
-          })}}
+            });
+        }
+    }
 })(jQuery, Drupal, drupalSettings);
 
 // override setupTooltips()
 // to enable system tooltip
 BookReader.prototype.setupTooltips = function() {
+};
+
+BookReader.prototype.buildShareDiv = function(e) {
+  var bookTitle = this.bookTitle;
+  var sharePageLocation = document.URL;
+  var shareBookLocation = sharePageLocation.replace(/#.*/, "");
+  var mobileId = '';
+  if (e[0].classList.contains('BRmobileShare')) {
+    mobileId = '-mm';
+  }
+  var shareTitle = document.createElement('div');
+  shareTitle.classList.add('share-title');
+  shareTitle.textContent = 'Share this book';
+
+  var shareBody = document.createElement('div');
+  shareBody.classList.add('share-social');
+
+  var shareCheck = document.createElement('div');
+  shareCheck.classList.add('form-check');
+  var shareCheckInput = document.createElement('input');
+  shareCheckInput.type = 'checkbox';
+  var shareCheckInputId = 'page-book-check' + mobileId;
+  shareCheckInput.id = shareCheckInputId;
+  shareCheckInput.classList.add('thispage-social', 'form-check-input');
+  var shareUrl = shareBookLocation;
+  shareCheckInput.addEventListener('click', function () {
+    if (this.checked) {
+      shareUrl = sharePageLocation;
+    } else {
+      shareUrl = shareBookLocation;
+    }
+    var shareLinks = document.getElementsByClassName('page-book-update');
+    for (var i = 0; i < shareLinks.length; i++) {
+      var shareLink = shareLinks[i];
+      var shareLinkUrl = new URL(shareLink.href);
+      var shareLinksearchParams = shareLinkUrl.searchParams;
+      if (shareLink.classList.contains('share-twitter')) {
+        shareLinksearchParams.set('url', shareUrl);
+      } else if (shareLink.classList.contains('share-facebook')) {
+        shareLinksearchParams.set('u', shareUrl);
+      } else if (shareLink.classList.contains('share-email')) {
+        shareLinksearchParams.set('body', encodeURI(bookTitle + '\n\n' + shareUrl));
+      }
+      shareLinkUrl.search = shareLinksearchParams.toString();
+      shareLink.href = shareLinkUrl.toString();
+    }
+  });
+  var shareCheckLabel = document.createElement('label');
+  shareCheckLabel.classList.add('sub', 'open-to-this-page', 'form-check-label');
+  shareCheckLabel.htmlFor = shareCheckInputId;
+  shareCheckLabel.textContent = 'Open to this page?';
+  shareCheck.append(shareCheckInput, shareCheckLabel);
+
+  var shareButtonContainer = document.createElement('div');
+  shareButtonContainer.classList.add('container', 'share-buttons');
+  var shareButtonRow = document.createElement('div');
+  shareButtonRow.classList.add('row');
+
+  var shareTwitterContainer = document.createElement('div');
+  shareTwitterContainer.classList.add('col-sm-12', 'col-md-4');
+  var shareTwitterButton = document.createElement('a')
+  shareTwitterButton.target = '_blank';
+  shareTwitterButton.rel = 'noopener noreferrer';
+  shareTwitterButton.classList.add('btn', 'btn-primary', 'btn-sm', 'share-twitter', 'page-book-update');
+  var twitterShareUrl = 'https://twitter.com/intent/tweet?text=' + bookTitle + '&url=';
+  shareTwitterButton.href = encodeURI(twitterShareUrl + shareUrl);
+  var shareTwitterIcon = document.createElement('i');
+  shareTwitterIcon.classList.add('BRicon', 'twitter');
+  shareTwitterButton.append(shareTwitterIcon, 'Twitter');
+  shareTwitterContainer.append(shareTwitterButton);
+
+  var shareFacebookContainer = document.createElement('div');
+  shareFacebookContainer.classList.add('col-sm-12', 'col-md-4');
+  var shareFacebookButton = document.createElement('a')
+  shareFacebookButton.target = '_blank';
+  shareFacebookButton.rel = 'noopener noreferrer';
+  shareFacebookButton.classList.add('btn', 'btn-primary', 'btn-sm', 'share-facebook', 'page-book-update');
+  var FacebookShareUrl = 'https://www.facebook.com/sharer.php?u=';
+  shareFacebookButton.href = FacebookShareUrl + shareUrl;
+  var shareFacebookIcon = document.createElement('i');
+  shareFacebookIcon.classList.add('BRicon', 'fb');
+  shareFacebookButton.append(shareFacebookIcon, 'Facebook');
+  shareFacebookContainer.append(shareFacebookButton);
+
+  var shareEmailContainer = document.createElement('div');
+  shareEmailContainer.classList.add('col-sm-12', 'col-md-4');
+  var shareEmailButton = document.createElement('a')
+  shareEmailButton.classList.add('btn', 'btn-primary', 'btn-sm', 'share-email', 'page-book-update');
+  shareEmailButton.target = '_blank';
+  shareEmailButton.rel = 'noopener noreferrer';
+  var EmailShareUrl = 'mailto:?subject=' + encodeURI(bookTitle) + '&body=' + encodeURI(bookTitle + '\n\n' + shareUrl);
+  shareEmailButton.href = EmailShareUrl;
+  var shareEmailIcon = document.createElement('i');
+  shareEmailIcon.classList.add('BRicon', 'email');
+  shareEmailButton.append(shareEmailIcon, 'Email');
+  shareEmailContainer.append(shareEmailButton);
+
+  var sharePage = document.createElement('div');
+  sharePage.id = 'share-social-page' + mobileId;
+  sharePage.classList.add('clipboard-copy-data', 'hidden');
+  sharePage.dataset.clipboardCopyContent = 'copy-content-page' + mobileId;
+  sharePage.dataset.clipboardCopyButton = 'btn';
+  sharePage.dataset.clipboardCopyButtonText = 'Copy Link to Page';
+
+  var sharePageInput = document.createElement('input');
+  sharePageInput.id = 'share-social-page-copy' + mobileId;
+  sharePageInput.type = 'text';
+  sharePageInput.name = 'pageview';
+  sharePageInput.classList.add('BRpageviewValue', 'copy-content-page' + mobileId, 'form-control');
+  sharePageInput.readOnly = true;
+  sharePageInput.value = sharePageLocation;
+
+  var sharePageContainer = document.createElement('div');
+  sharePageContainer.classList.add('col-12');
+  sharePageContainer.append(sharePage, sharePageInput);
+
+  var sharePageRow = document.createElement('div');
+  sharePageRow.classList.add('row');
+  sharePageRow.append(sharePageContainer);
+
+  var shareBook = document.createElement('div');
+  shareBook.id = 'share-social-book' + mobileId;
+  shareBook.classList.add('clipboard-copy-data', 'hidden');
+  shareBook.dataset.clipboardCopyContent = 'copy-content-book' + mobileId;
+  shareBook.dataset.clipboardCopyButton = 'btn';
+  shareBook.dataset.clipboardCopyButtonText = 'Copy Link to Book';
+
+  var shareBookInput = document.createElement('input');
+  shareBookInput.id = 'share-social-book-copy' + mobileId;
+  shareBookInput.type = 'text';
+  shareBookInput.name = 'booklink';
+  shareBookInput.classList.add('BRbooklinkValue', 'copy-content-book' + mobileId, 'form-control');
+  shareBookInput.readOnly = true;
+  shareBookInput.value = shareBookLocation;
+
+  var shareBookContainer = document.createElement('div');
+  shareBookContainer.classList.add('col-12');
+  shareBookContainer.append(shareBook, shareBookInput);
+
+  var shareBookRow = document.createElement('div');
+  shareBookRow.classList.add('row');
+  shareBookRow.append(shareBookContainer);
+
+  shareButtonRow.append(shareTwitterContainer, shareFacebookContainer, shareEmailContainer);
+  shareButtonContainer.append(shareButtonRow, sharePageRow, shareBookRow);
+  shareBody.append(shareCheck, shareButtonContainer);
+  e.append(shareTitle, shareBody);
 };
 
 // Extend buildToolbarElement: add ZoomPage button

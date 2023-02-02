@@ -73,6 +73,7 @@ div.viewpLeft, div.viewpRight {
 	display: inline-block;
 	padding: 1%;
 }
+
 /* jquery mmenu */
 #BRmobileMenu.mm-menu {
     --mm-color-background: #b4b7c1;
@@ -83,4 +84,86 @@ div.viewpLeft, div.viewpRight {
 }
 #BRmobileMenu.mm-menu_navbar_top-1 .mm-panels {
     top: calc(var(--mm-navbar-size) * 1.2);
+}
+
+/* social share */
+.BRshare .share-social .form-check {
+    line-height: 1.5em;
+}
+.BRshare .form-check .form-check-input {
+    float: none;
+}
+.BRfloat label.sub.open-to-this-page.form-check-label {
+    padding: 0;
+    display: inline-block;
+    margin: 0 5px;
+}
+.BRshare .share-twitter, .BRshare a.btn.btn-primary.share-twitter, .BRmobileShare a.btn.share-twitter {
+    background-color: #429aff !important;
+    border-color: #429aff !important;
+    color: #fff !important;
+    white-space: nowrap;
+}
+.BRshare .share-facebook, .BRshare a.btn.share-facebook, .BRmobileShare a.btn.share-facebook {
+    background-color: #3a5998 !important;
+    border-color: #3a5998 !important;
+    color: #fff !important;
+    white-space: nowrap;
+}
+.BRshare .share-email, .BRshare a.btn.share-email, .BRmobileShare a.btn.share-email {
+    background-color: #c1c1c1 !important;
+    border-color: #c1c1c1 !important;
+    color: #fff !important;
+    white-space: nowrap;
+}
+.BRshare a.btn.btn-primary.share-twitter:hover, .BRmobileShare a.btn.share-twitter:hover {
+    border-color: #429aff !important;
+}
+.BRshare a.btn.share-facebook:hover, .BRmobileShare a.btn.share-facebook:hover {
+    border-color: #3a5998 !important;
+}
+.BRshare a.btn.share-email:hover, .BRmobileShare a.btn.share-email:hover {
+    border-color: #c1c1c1 !important;
+}
+.BRshare .row {
+    margin-top: 15px;
+}
+.BRshare a.btn.btn-primary, .BRmobileShare a.btn.btn-primary {
+    width: 125px;
+}
+.BRmobileShare .col-sm-12 {
+    margin-bottom: 15px;
+}
+.BRshare .share-social button {
+    background-color: #c1c1c1;
+    margin-top: 15px;
+}
+.BRshare .share-social button {
+    border-color: #c1c1c1;
+}
+.BRmobileMenu div.share-social button {
+    background-color: #8a8f9e;
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+.BRmobileMenu div.share-social button:hover {
+    border-color: #8a8f9e;
+}
+@media (max-width: 800px) {
+    .BRmobileShare i.BRicon.fb {
+        width: 34px;
+        height: 34px;
+        background-position: -1603px center;
+    }
+    .BRmobileShare i.BRicon.twitter {
+        width: 34px;
+        height: 34px;
+        background-position: -1643px center;
+    }
+    .BRmobileShare i.BRicon.email {
+        width: 34px;
+        height: 34px;
+        background-position: -1683px center;
+    }
+
 }
