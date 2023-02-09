@@ -66,7 +66,7 @@ format_strawberryfield.iiifbinary:
     _entity_access: 'node.view'
 
 # Direct File access for SBF managed files via UUID.
-format_strawberryfield.iiifbinary_uuid:
+format_strawberryfield.binary:
   path: '/do/{node}/file/{uuid}/download/{format}'
   methods: [GET,HEAD]
   defaults:
