@@ -65,6 +65,23 @@ format_strawberryfield.iiifbinary:
     format: .+
     _entity_access: 'node.view'
 
+# Direct File access for SBF managed files via UUID.
+format_strawberryfield.binary:
+  path: '/do/{node}/file/{uuid}/download/{format}'
+  methods: [GET,HEAD]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifBinaryController::servefile'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    format: .+
+    _entity_access: 'node.view'
+
 # Direct File access for owner to Temporary files.
 format_strawberryfield.tempiiifbinary:
   path: '/domedia/iiif/{uuid}/full/full/0/{format}'
