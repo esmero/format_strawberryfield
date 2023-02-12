@@ -118,8 +118,6 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       $result->setUrl($url);
     }
     if (count($results)) {
-      $urlProcessorManager = \Drupal::service('plugin.manager.facets.url_processor');
-      $url_processor = $urlProcessorManager->createInstance($facet->getFacetSourceConfig()->getUrlProcessorName(), ['facet' => $facet]);
       $active_filters = $url_processor->getActiveFilters();
       unset($active_filters[$facet->id()]);
       $urlGenerator = \Drupal::service('facets.utility.url_generator');
