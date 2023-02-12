@@ -126,25 +126,19 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     }
 
     if ($config['settings']['enable_query'] ?? FALSE) {
-      $facet_filter_keys = [];
-      foreach ($facets as $facet) {
-        /** @var \Drupal\facets\UrlProcessor\UrlProcessorInterface $urlProcessor */
-        $urlProcessor = $facet->getProcessors(
-        )['url_processor_handler']->getProcessor();
-        $facet_filter_keys[] = $urlProcessor->getFilterKey();
-      }
-      $facet_filter_keys = array_unique($facet_filter_keys);
-      // The original View?
+      // The original View
       /** @var \Drupal\views\ViewExecutable $view */
       $view = $results_query->getQuery()->getOptions()['search_api_view'];
       if ($view->getDisplay()->displaysExposed()) {
         $exposed_input = $view->getExposedInput();
         $view->getRequest()->getRequestUri();
         $keys_to_filter = [];
+        $key_with_search_value = [] ;
         foreach ($view->getDisplay()->options['filters'] as $filter) {
-          if ($filter['plugin_id'] == 'search_api_fulltext') {
+          if ($filter['plugin_id'] == 'search_api_fulltext' && $filter['exposed']) {
             $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
             $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
+            $key_with_search_value[] = $filter['expose']['identifier'] ?? NULL;
           }
           elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
             && $filter['exposed']
@@ -152,17 +146,21 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             $extra_keys_to_filter = [];
             $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
             $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
+            $key_with_search_value[] = $filter['expose']['identifier'] ?? NULL;
             $keys_to_filter[] = $filter['expose']['searched_fields_id'] ?? NULL;
             $keys_to_filter[] = $filter['expose']['advanced_search_operator_id']
               ?? NULL;
-
             foreach ($keys_to_filter as $key_to_filter) {
               for (
                 $i = 1;
                 $i < $filter['expose']['advanced_search_fields_count'] ?? 1;
                 $i++
               ) {
+
                 $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                if (in_array($key_to_filter, $key_with_search_value)){
+                  $key_with_search_value[] = $key_to_filter . '_' . $i;
+                }
               }
             }
             $keys_to_filter = array_filter($keys_to_filter);
@@ -173,28 +171,32 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         }
 
         $request = $view->getRequest();
-        $facet_source = $facet->getFacetSource();
+        $facet_source = $facets_summary->getFacetSource();
 
         $urlGenerator = \Drupal::service('facets.utility.url_generator');
         $url_active = $urlGenerator->getUrlForRequest(
           $request, $facet_source ? $facet_source->getPath() : NULL
         );
         $params = $request->query->all();
-        $search_term = [];
+        $search_terms = [];
         foreach ($params as $key => $param) {
           if (in_array($key, $keys_to_filter)) {
-            $search_term[] = $exposed_input[$key] ?? NULL;
+            $search_term = NULL;
+            if (in_array($key, $key_with_search_value)) {
+              $search_term = $exposed_input[$key] ?? NULL;
+              $search_terms[] = $search_term !== NULL ? '"'.$search_term.'"' : NULL;
+            }
             unset($params[$key]);
           }
         }
 
-        $search_term = array_filter($search_term);
+        $search_terms = array_filter($search_terms);
 
-        if (count($search_term)) {
+        if (count($search_terms)) {
           $url_active->setOption('query', $params);
           $item = [
             '#theme' => 'facets_result_item__summary',
-            '#value' => implode(" ", $search_term),
+            '#value' => implode(" ", $search_terms),
             '#show_count' => FALSE,
             '#count' => 0,
             '#is_active' => TRUE,
