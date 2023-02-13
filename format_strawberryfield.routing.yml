@@ -14,6 +14,7 @@ entity.metadatadisplay_entity.collection:
     _title: 'Metadata Display List'
   requirements:
     _permission: 'administer metadatadisplay entity'
+  _admin_route: TRUE
 
 format_strawberryfield.metadatadisplay_add:
   path: '/metadatadisplay/add'
@@ -264,12 +265,13 @@ format_strawberryfield.display_settings:
   path: '/node/{node}/{bundle}/display-settings/{view_mode_name}'
   defaults:
     _entity_form: 'entity_view_display.edit'
-    _title: 'Display settings'
+    _title: 'Active Display settings'
     entity_type_id: 'node'
   requirements:
     _entity_access: 'node.update'
     _permission: 'administer node display'
   options:
+    _admin_route: TRUE
     _node_operation_route: TRUE
     parameters:
       node:
