@@ -138,6 +138,9 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+    // Basically min 90px height if using VTT
+    $max_height_vtt_css = empty($max_height) || $max_height == 0 ? 'auto' : ($max_height <= 90 ? 90 : $max_height) .'px';
+
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
@@ -229,14 +232,6 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
             */
           if (count($vtt)) {
             // Yep, redundant but we have no longer these settings here
-            // and i need to add 30px (uff) to the top.
-
-            if ($max_height = $this->getSetting('max_height') <= 90) {
-              $max_width = $this->getSetting('max_width');
-              $max_height = 90;
-              $max_width_css = empty($max_width) || $max_width == 0 ? '100%'
-                : $max_width . 'px';
-            }
             // If $media is a single one, we will assume all VTTS belong to it, bypassing the dr:for grouping
 
             foreach ($media as $drforkey => $media_item) {
@@ -244,7 +239,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                 foreach ($media_item as $key => $media_entry) {
                   $elements[$delta]['audio_hmtl5_'
                   . $key]['audio']['#attributes']['style']
-                    = "width:{$max_width_css}; height:{$max_height}px";
+                    = "width:{$max_width_css}; height:{$max_height_vtt_css}";
                   foreach ($vtt as $vtt_drforkey => $vtt_entries) {
                     if (count($media) == 1 || $drforkey == $vtt_drforkey) {
                       foreach ($vtt_entries as $vtt_key => &$vtt_item) {
