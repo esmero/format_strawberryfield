@@ -134,39 +134,87 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         $view->getRequest()->getRequestUri();
         $keys_to_filter = [];
         $key_with_search_value = [] ;
-        foreach ($view->getDisplay()->options['filters'] as $filter) {
-          if ($filter['plugin_id'] == 'search_api_fulltext' && $filter['exposed']) {
-            $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
-            $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
-            $key_with_search_value[] = $filter['expose']['identifier'] ?? NULL;
-          }
-          elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
-            && $filter['exposed']
-          ) {
-            $extra_keys_to_filter = [];
-            $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
-            $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
-            $key_with_search_value[] = $filter['expose']['identifier'] ?? NULL;
-            $keys_to_filter[] = $filter['expose']['searched_fields_id'] ?? NULL;
-            $keys_to_filter[] = $filter['expose']['advanced_search_operator_id']
-              ?? NULL;
-            foreach ($keys_to_filter as $key_to_filter) {
-              for (
-                $i = 1;
-                $i < $filter['expose']['advanced_search_fields_count'] ?? 1;
-                $i++
-              ) {
+        // Oh gosh, blocks...
+        if (!$view->getDisplay()->isDefaultDisplay() && empty($view->getDisplay()->options['filters'] ?? [] )) {
+          $filters = $view->getDisplay()->handlers['filter'];
+          foreach ($filters as $filter) {
+            /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+            if ($filter->getPluginId() == 'search_api_fulltext' && $filter->isExposed()) {
+              $keys_to_filter[] = $filter->options['expose']['operator_id'] ?? NULL;
+              $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
+              $key_with_search_value[] = $filter->options['expose']['identifier'] ?? NULL;
+            }
+            elseif ($filter->getPluginId() == 'sbf_advanced_search_api_fulltext'
+              && $filter->isExposed()
+            ) {
+              $extra_keys_to_filter = [];
+              $keys_to_filter[] =$filter->options['expose']['operator_id'] ?? NULL;
+              $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
+              $key_with_search_value[] = $filter->options['expose']['identifier'] ?? NULL;
+              $keys_to_filter[] = $filter->options['expose']['searched_fields_id'] ?? NULL;
+              $keys_to_filter[] = $filter->options['expose']['advanced_search_operator_id']
+                ?? NULL;
+              foreach ($keys_to_filter as $key_to_filter) {
+                for (
+                  $i = 1;
+                  $i < $filter->options['expose']['advanced_search_fields_count'] ?? 1;
+                  $i++
+                ) {
 
-                $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
-                if (in_array($key_to_filter, $key_with_search_value)){
-                  $key_with_search_value[] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                  if (in_array($key_to_filter, $key_with_search_value)){
+                    $key_with_search_value[] = $key_to_filter . '_' . $i;
+                  }
                 }
               }
+              $keys_to_filter = array_filter($keys_to_filter);
+              $keys_to_filter = array_merge(
+                $keys_to_filter, $extra_keys_to_filter
+              );
             }
-            $keys_to_filter = array_filter($keys_to_filter);
-            $keys_to_filter = array_merge(
-              $keys_to_filter, $extra_keys_to_filter
-            );
+          }
+        }
+        else {
+          foreach ($view->getDisplay()->options['filters'] as $filter) {
+            if ($filter['plugin_id'] == 'search_api_fulltext'
+              && $filter['exposed']
+            ) {
+              $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
+              $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
+              $key_with_search_value[] = $filter['expose']['identifier'] ??
+                NULL;
+            }
+            elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
+              && $filter['exposed']
+            ) {
+              $extra_keys_to_filter = [];
+              $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
+              $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
+              $key_with_search_value[] = $filter['expose']['identifier'] ??
+                NULL;
+              $keys_to_filter[] = $filter['expose']['searched_fields_id'] ??
+                NULL;
+              $keys_to_filter[]
+                = $filter['expose']['advanced_search_operator_id']
+                ?? NULL;
+              foreach ($keys_to_filter as $key_to_filter) {
+                for (
+                  $i = 1;
+                  $i < $filter['expose']['advanced_search_fields_count'] ?? 1;
+                  $i++
+                ) {
+
+                  $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                  if (in_array($key_to_filter, $key_with_search_value)) {
+                    $key_with_search_value[] = $key_to_filter . '_' . $i;
+                  }
+                }
+              }
+              $keys_to_filter = array_filter($keys_to_filter);
+              $keys_to_filter = array_merge(
+                $keys_to_filter, $extra_keys_to_filter
+              );
+            }
           }
         }
 
