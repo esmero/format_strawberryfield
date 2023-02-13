@@ -342,7 +342,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $flat_keys = [];
     $negation = FALSE;
     // Now do the actual query creation/composite thing
-    error_log(var_export($query_able_data, true));
     $j = 0;
     foreach ($query_able_data as $query_able_datum_internal) {
       $flat_key = '';
@@ -383,7 +382,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
       $combined_keys = implode(" ", $flat_keys);
       $this->getQuery()->keys("({$combined_keys})");
-      error_log($combined_keys);
       // This is just to avoid Search API rewriting the query
       $this->getQuery()->setOption('solr_param_defType', 'edismax');
       // This will allow us to remove the edismax processor on a hook/event subscriber.
