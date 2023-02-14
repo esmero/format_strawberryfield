@@ -211,7 +211,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
     foreach ($this->value as $exposed_value_id => $exposed_value) {
       // Catch empty strings entered by the user, but not "0".
-      if ($exposed_value === '') {
+      if (trim($exposed_value) === '') {
         unset($this->value[$exposed_value_id]);
         unset($this->searchedFields[$exposed_value_id]);
       }
