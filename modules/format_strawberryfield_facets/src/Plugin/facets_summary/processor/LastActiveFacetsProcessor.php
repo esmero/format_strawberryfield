@@ -47,7 +47,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       );
     }
 
-    if ($results_count == 0) {
+    if ($results_count == 0 && $results_query) {
       $results = [];
       foreach ($facets as $facet) {
         $build_stage_processors = $facet->getProcessorsByStage(ProcessorInterface::STAGE_BUILD);
@@ -125,7 +125,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       }
     }
 
-    if ($config['settings']['enable_query'] ?? FALSE) {
+    if ($config['settings']['enable_query'] ?? FALSE && $results_query) {
       // The original View
       /** @var \Drupal\views\ViewExecutable $view */
       $view = $results_query->getQuery()->getOptions()['search_api_view'];
@@ -231,20 +231,24 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
           if (in_array($key, $keys_to_filter)) {
             $search_term = NULL;
             if (in_array($key, $key_with_search_value)) {
-              $search_term = $exposed_input[$key] ?? NULL;
-              $search_terms[] = $search_term !== NULL ? '"'.$search_term.'"' : NULL;
+              $search_terms[] = $exposed_input[$key] ?? NULL;
             }
             unset($params[$key]);
           }
         }
 
-        $search_terms = array_filter($search_terms);
+        $search_terms = array_filter($search_terms, function ($element) {
+          return ((is_string($element) && '' !== trim($element)) || is_numeric($element));
+        });
+
 
         if (count($search_terms)) {
           $url_active->setOption('query', $params);
           $item = [
             '#theme' => 'facets_result_item__summary',
-            '#value' => implode(" ", $search_terms),
+            '#value' =>  implode(" ", array_map(function($string) {
+              return '"' . $string . '"';
+            }, $search_terms)),
             '#show_count' => FALSE,
             '#count' => 0,
             '#is_active' => TRUE,
