@@ -4,6 +4,8 @@ namespace Drupal\format_strawberryfield\Entity;
 
 use Drupal\Core\Cache\Cache;
 use Twig\Node\ModuleNode;
+use Twig\Node\BodyNode;
+use Twig\Node\Node;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\ContentEntityBase;
@@ -429,29 +431,35 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param \Twig\Node\ModuleNode $nodes
    *   A Twig Module Nodes object.
    *
+   * @param \Twig\Node\BodyNode $nodes
+   *   A Twig Module Nodes object.
+   *
+   * @param \Twig\Node\Node $nodes
+   *   A Twig Module Nodes object.
+   *
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode $nodes): array {
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes): array {
     $variables = [];
     foreach ($nodes as $node) {
-      if ($node instanceof \Twig_Node_Expression_Name) {
+      if ($node instanceof \Twig\Node\Expression\NameExpression) {
         $name = $node->getAttribute('name');
         $variables[$name] = $name;
       }
-      elseif ($node instanceof \Twig_Node_Expression_Constant && $nodes instanceof \Twig_Node_Expression_GetAttr) {
+      elseif ($node instanceof \Twig\Node\Expression\ConstantExpression && $nodes instanceof \Twig\Node\Expression\GetAttrExpression) {
         $value = $node->getAttribute('value');
         if (!empty($value) && is_string($value)) {
           $variables[$value] = $value;
         }
       }
-      elseif ($node instanceof \Twig_Node_Expression_GetAttr) {
+      elseif ($node instanceof \Twig\Node\Expression\GetAttrExpression) {
         $path = implode('.', $this->getTwigVariableNames($node));
         if (!empty($path)) {
           $variables[$path] = $path;
         }
       }
-      elseif ($node instanceof \Twig_Node) {
+      elseif ($node instanceof \Twig\Node\Node) {
         $variables += $this->getTwigVariableNames($node);
       }
     }
