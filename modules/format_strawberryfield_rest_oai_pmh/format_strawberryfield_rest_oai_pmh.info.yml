@@ -1,0 +1,11 @@
+name: 'Format Strawberryfield Rest OAI-PMH'
+type: module
+description: 'Extends Rest OAI-PMH to support mapping via metadatadisplay templates'
+core_version_requirement: ^9
+package: 'Web services'
+dependencies:
+  - drupal:views
+  - drupal:rest_oai_pmh
+  - 'strawberryfield'
+  - 'format_strawberryfield'
+
