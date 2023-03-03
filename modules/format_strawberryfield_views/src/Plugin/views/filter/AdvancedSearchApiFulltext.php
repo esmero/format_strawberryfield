@@ -578,15 +578,18 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#default_value' => $form_state->getValue($searched_fields_identifier),
       ];
 
-      if (isset($form[$this->options['id'] . '_wrapper'])) {
-        $form[$this->options['id'] . '_wrapper'][$searched_fields_identifier]
-          = $newelements[$searched_fields_identifier];
+      if (empty($form[$this->options['id'] . '_wrapper'])) {
+        $form[$this->options['id'] . '_wrapper'] =
+          [
+            "#type" => "fieldset",
+            "#title" => t('Advanced Fulltext search'),
+            $this->options['id'] => $form[$this->options['id']],
+           ];
+        unset($form[$this->options['id']]);
+      }
+      $form[$this->options['id'] . '_wrapper'][$searched_fields_identifier]
+        = $newelements[$searched_fields_identifier];
 
-      }
-      else {
-        $form[$searched_fields_identifier]
-          = $newelements[$searched_fields_identifier];
-      }
     }
 
     $advanced_search_operator_id = $this->options['id'] . '_group_operator';
@@ -611,12 +614,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#access' => FALSE,
         '#default_value' => $form_state->getValue($advanced_search_operator_id,'or'),
       ];
-      if (isset($form[$this->options['id'].'_wrapper'])) {
-        $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
-      }
-      else {
-        $form[$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
-      }
+      $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
     }
 
     // Yes over complicated but so far the only way i found to keep the state
@@ -665,26 +663,24 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     ];
 
     for($i=1;$i < $realcount && $realcount > 1; $i++) {
-      if (isset($form[$this->options['id'].'_wrapper'])) {
-        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-          if (strpos($key, '#') !== FALSE) {
-            $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
-          }
-          else {
-            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
-          }
-          if ($key == $this->options['expose']['identifier']) {
-            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
-          }
-          elseif (is_array($value) && strpos($key, '#') === FALSE) {
-            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
-            if ($key == $advanced_search_operator_id) {
-              $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
-            }
+      foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
+        if (strpos($key, '#') !== FALSE) {
+          $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+        }
+        else {
+          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+        }
+        if ($key == $this->options['expose']['identifier']) {
+          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+        }
+        elseif (is_array($value) && strpos($key, '#') === FALSE) {
+          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
+          if ($key == $advanced_search_operator_id) {
+            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
           }
         }
-        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
       }
+      $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
     }
     $form = $form;
   }
