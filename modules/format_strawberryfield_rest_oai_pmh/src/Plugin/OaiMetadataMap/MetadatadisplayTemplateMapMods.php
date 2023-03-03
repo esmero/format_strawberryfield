@@ -62,7 +62,7 @@ class MetadatadisplayTemplateMapMods extends OaiMetadataMapBase {
    *
    */
   public function getMetadataWrapper() {
-    $config = $this->config('format_strawberryfield_rest_oai_pmh.settings');
+    $config = \Drupal::config('format_strawberryfield_rest_oai_pmh.settings');
     $elements =  $config->get('mods-wrapper-elements') ?? self::defaultMetadataWrapperElements();
     return [
       'mods' => $elements
