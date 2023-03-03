@@ -9,8 +9,8 @@ This is part of the Archipelago Commons Project.
 This module depends on having the [rest_oai_php](https://www.drupal.org/project/rest_oai_pmh) module installed.
 
 The steps to getting this module configured are:
-1. Enable this module and it's dependencies.
-2. Create a view with an entity reference display that selects the ADOs that you wish to be harvested through OAI.
+1. Enable this module and it's dependencies (format_strawberryfield, rest_oai_pmh).
+2. Create a view with an entity reference display that selects the ADOs that you wish to be harvested through OAI. Consult rest_oai_pmh module instructions for details. _Note that there is a bug in rest_oai_pmh that prevents it being used with search_api_solr views. See below for a workaround until that bug is fixed._
 3. Create metadatadisplay templates for MODS and/or Dublin Core that transform the native strawberryfield json into valid xml metadata that you wish to be harvested.
 4. Go to "Administration > Configuration > Web services > Rest > REST OAI-PMH Settings > Templates" and select the metadatadisplay templates created in the previous step for MODS and/or DC.
 5. At "Administration > Configuration > Web services > Rest > REST OAI-PMH Settings", under "What to expose to OAI-PMH", select the entity reference view you created earlier. In the "Metadata Mappings", select "MODS Metadatadisplay Template" and/or "Dublin Core Metadatadisplay Template".
