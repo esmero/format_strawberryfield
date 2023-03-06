@@ -6,11 +6,11 @@ This is part of the Archipelago Commons Project.
 
 ## How to install, configure, and use
 
-This module depends on having the [rest_oai_php](https://www.drupal.org/project/rest_oai_pmh) module installed.
+This module depends on having the [rest_oai_php](https://www.drupal.org/project/rest_oai_pmh) module installed. _Note that at this time there is a bugfix that is on the dev branch that this module depends on. Use `composer require drupal/rest_oai_pmh:2.0.x-dev`_
 
 The steps to getting this module configured are:
 1. Enable this module and it's dependencies (format_strawberryfield, rest_oai_pmh).
-2. Create a view with an entity reference display that selects the ADOs that you wish to be harvested through OAI. Consult rest_oai_pmh module instructions for details. _Note that there is a bug in rest_oai_pmh that prevents it being used with search_api_solr views. See below for a workaround until that bug is fixed._
+2. Create a view with an entity reference display that selects the ADOs that you wish to be harvested through OAI. Consult rest_oai_pmh module instructions for details.
 3. Create metadatadisplay templates for MODS and/or Dublin Core that transform the native strawberryfield json into valid xml metadata that you wish to be harvested.
 4. Go to "Administration > Configuration > Web services > Rest > REST OAI-PMH Settings > Templates" and select the metadatadisplay templates created in the previous step for MODS and/or DC.
 5. At "Administration > Configuration > Web services > Rest > REST OAI-PMH Settings", under "What to expose to OAI-PMH", select the entity reference view you created earlier. In the "Metadata Mappings", select "MODS Metadatadisplay Template" and/or "Dublin Core Metadatadisplay Template".
@@ -30,26 +30,6 @@ Namespace and other OAI wrapper elements can be added/edited on the "Administrat
 
 ```"@attribute-name": "attribute value"```
 
-## CAVEAT: At this writing, rest_oai_pmh does not work with search_api_solr views.
-<details>
-  <summary>Click for details and a workaround:</summary>
-
-Explore this [issue](https://www.drupal.org/project/rest_oai_pmh/issues/3344748#comment-14949072) on drupal.org.
-
-We have submitted a [merge request](https://git.drupalcode.org/project/rest_oai_pmh/-/merge_requests/9) to fix the problem. To use this patched version of the module, you can edit your composer.json file as follows.
-- In the "repositories" section, add
-```yaml
-        {
-            "type": "vcs",
-            "url": "https://git.drupalcode.org/issue/rest_oai_pmh-3344748.git"
-        },
-```
-- In the "require" section, add
-```yaml
-        "drupal/rest_oai_pmh": "3344748-solr-views-fatal-error-dev",
-```
-Then you can run `composer update drupal/rest_oai_pmh`, and it should load the patched version of rest_oai_pmh.
-</details>
 
 ## Help
 
