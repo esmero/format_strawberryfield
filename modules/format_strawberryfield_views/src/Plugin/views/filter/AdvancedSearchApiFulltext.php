@@ -578,7 +578,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#default_value' => $form_state->getValue($searched_fields_identifier),
       ];
 
-      if (empty($form[$this->options['id'] . '_wrapper']) && !empty($form[$this->options['id']])) {
+      if (empty($form[$this->options['id'] . '_wrapper'])) {
         $this->buildValueWrapper($form, $this->options['id'] . '_wrapper');
         $form[$this->options['id'] . '_wrapper'][$this->options['id']] = $form[$this->options['id']];
         unset($form[$this->options['id']]);
