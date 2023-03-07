@@ -1,0 +1,6 @@
+format_strawberryfield_rest_oai_pmh.settings_form:
+  title: 'OAI-PMH Settings'
+  route_name: format_strawberryfield_rest_oai_pmh.settings_form
+  description: 'Format Strawberryfield settings for OAI-PMH endpoint'
+  weight: 99
+  parent: system.admin_config_services.rest_oai_pmh
