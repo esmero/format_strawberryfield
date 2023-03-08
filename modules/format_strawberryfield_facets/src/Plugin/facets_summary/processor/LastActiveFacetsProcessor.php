@@ -125,7 +125,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       }
     }
 
-    if ($config['settings']['enable_query'] ?? FALSE && $results_query) {
+    if (($config['settings']['enable_query'] ?? FALSE) && $results_query) {
       // The original View
       /** @var \Drupal\views\ViewExecutable $view */
       $view = $results_query->getQuery()->getOptions()['search_api_view'];
