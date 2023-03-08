@@ -1,6 +1,21 @@
-# Config schema for slider, you can find the implementation in
-# Drupal\facets_range\Plugin\facets\widget\SliderWidget.
-facet.widget.config.format_strawberryfield_dateslider:
+facet.widget.config.sbf_date_range:
+  type: facet.widget.default_config
+  label: 'List of range widget configuration'
+  mapping:
+    set_defaults_from_results:
+      type: integer
+      label: 'Use default max/min from reslts'
+    show_reset_link:
+      type: integer
+      label: 'Show Reset Link'
+    reset_text:
+      type: string
+      label: 'Text to be used in the reset button'
+    hide_reset_when_no_selection:
+      type: integer
+      label: 'Hide Reset when no selection'
+
+facet.widget.config.sbf_range_date_slider:
   type: facet.widget.default_config
   label: 'List of range widget configuration'
   mapping:
@@ -26,28 +41,42 @@ facet.widget.config.format_strawberryfield_dateslider:
       type: float
       label: 'Step'
 
-facet.widget.config.format_strawberryfield_daterange_slider:
-  type: facet.widget.default_config
-  label: 'List of range widget configuration'
+plugin.plugin_configuration.facets_processor.sbf_exclude_specified_items:
+  type: mapping
+  label: 'Format Strawberryfield Exclude specified items'
   mapping:
-    prefix:
-      type: label
-      label: 'Prefix'
-    suffix:
-      type: label
-      label: 'Suffix'
-    min_type:
+    exclude:
       type: string
-      label: 'Minimum type'
-    min_value:
-      type: float
-      label: 'Minimum value'
-    max_type:
-      type: string
-      label: 'Maximum type'
-    max_value:
-      type: float
-      label: 'Maximum value'
-    step:
-      type: float
-      label: 'Step'
+      label: Exclude
+    regex:
+      type: boolean
+      label: Regex
+    invert:
+      type: boolean
+      label: Invert
+    exclude_case_insensitive:
+      type: boolean
+      label: Use Case insensitive comparison
+# inherited from the facet_summary module
+plugin.plugin_configuration.facets_summary_processor.sbf_last_active_facets:
+  type: mapping
+  label: 'Last Active Processor Facet Summary'
+  mapping:
+    enable:
+      type: integer
+      label: Enabled
+    enable_empty_message:
+      type: integer
+      label: Enable Empty Message
+    enable_query:
+      type: integer
+      label: Enable Full text search terms as Facet Summary Entry
+    text:
+      type: mapping
+      mapping:
+        format:
+          type: string
+          label: Text format
+        value:
+          type: string
+          label: The Text used for Empty
