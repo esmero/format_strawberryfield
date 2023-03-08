@@ -566,6 +566,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           = $this->options['expose']['searched_fields_id'];
       }
 
+
       // Remove the group operator if found
       unset($form[$searched_fields_identifier]);
       $multiple_exposed_fields = $this->options['expose']['multiple'] ?? FALSE ? min(count($fields), 5) : 1;
