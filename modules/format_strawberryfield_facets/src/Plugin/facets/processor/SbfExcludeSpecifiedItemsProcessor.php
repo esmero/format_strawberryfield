@@ -41,20 +41,24 @@ class SbfExcludeSpecifiedItemsProcessor extends ProcessorPluginBase implements B
         }
       }
       else {
-        $exclude_items = explode("\n", $exclude_item);
-        foreach ($exclude_items as $item) {
+        $exclude_items = array_filter(explode(PHP_EOL, $exclude_item));
+        foreach ($exclude_items as $key => $item) {
+          // Why not an array_map? Bc we might want to preserve spaces.. facet values might have trailing spaces!
+          $item_trimmed = trim($item, "\n\r\t\v\x00");
           if ($config['exclude_case_insensitive']) {
-            if (strtolower($result->getRawValue()) == strtolower($item)
-              || strtolower($result->getDisplayValue()) == strtolower($item)
+            if (strtolower($result->getRawValue()) == strtolower($item_trimmed)
+              || strtolower($result->getDisplayValue()) == strtolower($item_trimmed)
             ) {
               $is_excluded = TRUE;
+              unset($exclude_items[$key]);
             }
           }
           else {
-            if ($result->getRawValue() == $item
-              || $result->getDisplayValue() == $item
+            if ($result->getRawValue() == $item_trimmed
+              || $result->getDisplayValue() == $item_trimmed
             ) {
               $is_excluded = TRUE;
+              unset($exclude_items[$key]);
             }
           }
         }
