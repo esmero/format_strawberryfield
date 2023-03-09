@@ -13,7 +13,7 @@ use Drupal\facets_summary\Processor\BuildProcessorInterface;
 use Drupal\facets_summary\Processor\ProcessorPluginBase;
 
 /**
- * Provides a processor that adds Date ranges as a facet summary.
+ * Empty Results and Search Query Facet Summary Processor.
  *
  * @SummaryProcessor(
  *   id = "sbf_last_active_facets",
@@ -125,7 +125,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       }
     }
 
-    if ($config['settings']['enable_query'] ?? FALSE && $results_query) {
+    if (($config['settings']['enable_query'] ?? FALSE) && $results_query) {
       // The original View
       /** @var \Drupal\views\ViewExecutable $view */
       $view = $results_query->getQuery()->getOptions()['search_api_view'];

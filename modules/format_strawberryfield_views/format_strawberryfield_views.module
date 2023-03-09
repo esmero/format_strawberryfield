@@ -240,7 +240,7 @@ function format_strawberryfield_views_search_api_solr_converted_query_alter(Sola
 /**
  * Implements hook_library_info_alter().
  */
-function  format_strawberryfield_views_library_info_alter(&$libraries, $extension) {
+function format_strawberryfield_views_library_info_alter(&$libraries, $extension) {
   if ($extension === 'facets' && isset($libraries['drupal.facets.views-ajax'])) {
 
       $libraries['drupal.facets.views-ajax']['version'] = '1.x';

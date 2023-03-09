@@ -262,7 +262,7 @@ format_strawberryfield.deletetmp_webannotations:
 
 # Display settings for each ADO
 format_strawberryfield.display_settings:
-  path: '/node/{node}/{bundle}/display-settings/{view_mode_name}'
+  path: '/node/{node}/display-settings/{bundle}/{view_mode_name}'
   defaults:
     _entity_form: 'entity_view_display.edit'
     _title: 'Active Display settings'
