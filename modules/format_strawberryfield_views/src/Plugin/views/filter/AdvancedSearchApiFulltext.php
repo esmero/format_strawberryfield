@@ -176,9 +176,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Set the query
     // Celebrate
 
-    /*while (is_array($this->value)) {
-      $this->value = $this->value ? reset($this->value) : '';
-    }*/
     if (!is_array($this->value)) {
       return;
     }
@@ -223,10 +220,16 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $chosen_fields = isset($this->searchedFields[$searched_fields_identifier
           . $valid_suffix]) ? (array) $this->searchedFields[$searched_fields_identifier
         . $valid_suffix] : [];
+        // Make sure Operator is either OR or AND
+        $operator = ($valid_suffix == '') ? $this->operator : ($this->operatorAdv[$exposed_value_id] ?? $this->operator);
+        if (!in_array($operator, ['or', 'and', 'not'])) {
+          $operator = 'and';
+        }
+        // Parse mode needs operators in Upper case, Views passes them as lowercase.
+        $operator = strtoupper($operator);
         $query_able_data[] = [
           'value'               => $this->value[$exposed_value_id],
-          'operator'            => ($valid_suffix == '') ? $this->operator
-            : ($this->operatorAdv[$exposed_value_id] ?? $this->operator),
+          'operator'            => $operator,
           'interfield_operator' => $this->searchedFieldsOp[$advanced_search_operator_id
             . $valid_suffix] ?? 'or',
           'fields'              => $chosen_fields,
@@ -345,7 +348,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $j = 0;
     foreach ($query_able_data as $query_able_datum_internal) {
       $flat_key = '';
-      if ($negation = $query_able_datum_internal['operator'] === 'not' ? TRUE
+      if ($negation = $query_able_datum_internal['operator'] === 'NOT' ? TRUE
         : FALSE
       ) {
         $parse_mode->setConjunction('OR');
