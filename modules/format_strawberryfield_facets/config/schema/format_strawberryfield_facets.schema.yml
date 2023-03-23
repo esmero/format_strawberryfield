@@ -84,7 +84,7 @@ plugin.plugin_configuration.facets_summary_processor.sbf_last_active_facets:
       label: 'Enable Full text search terms as Facet Summary Entry'
     quote_query:
       type: boolean
-      label: 'If Fulll Text search terms will be surrounded by Double Quotes or not'
+      label: 'If Full Text search terms will be surrounded by Double Quotes or not'
     text:
       type: mapping
       mapping:
