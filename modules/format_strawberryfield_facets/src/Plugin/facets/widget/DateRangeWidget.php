@@ -227,7 +227,7 @@ class DateRangeWidget extends WidgetPluginBase {
     ];
     $form += parent::buildConfigurationForm($form, $form_state, $facet);
 
-    $message = $this->t('The Format Strawberryfield Date Range Picker Widget requires you to check the facet setting below <em>"Format Strawberryfield Date Range Picker" and inside it check "enabled" it.</em>.');
+    $message = $this->t('The Format Strawberryfield Date Range Picker Widget requires you to check the facet setting below <em>"Format Strawberryfield Date Range Picker" and check "enabled" inside it.</em>.');
     $form['warning'] = [
       '#markup' => '<div class="messages messages--warning">' . $message . '</div>',
     ];
