@@ -4,13 +4,15 @@
     attach: function (context, settings) {
       $('.clipboard-copy-data').once('attach_clipboard')
         .each(function (index, value) {
-          var theid = '#' + $(this).attr("id");
-          var copyContainer = document.querySelector(theid);
-          var copyButtonClass = copyContainer.dataset.clipboardCopyButton;
-          var copyContentClass = copyContainer.dataset.clipboardCopyContent;
-          var copyButtonText = copyContainer.dataset.clipboardCopyButtonText;
-          var copyButtonContainers;
-          var copyContentContainers = document.querySelectorAll('.' + copyContentClass);
+          const theid = '#' + this.id;
+          const copyContainer = document.querySelector(theid);
+          const copyButtonClassData = copyContainer.dataset.clipboardCopyButton;
+          const copyButtonClasses = copyButtonClassData.split(' ');
+          const copyButtonClass = copyButtonClasses[0];
+          const copyContentClass = copyContainer.dataset.clipboardCopyContent;
+          const copyButtonText = copyContainer.dataset.clipboardCopyButtonText;
+          let copyButtonContainers;
+          const copyContentContainers = document.querySelectorAll('.' + copyContentClass);
           if(copyContentContainers.length == 0) {
             console.log('Class provided by Twig function is not available. Clipboard Copy was not initiated.');
           } else if(copyButtonClass == 'clipboard-copy-button') {
@@ -22,19 +24,29 @@
             }
           }
           if(copyButtonContainers !== undefined) {
-            for(var i = 0; i < copyButtonContainers.length; i++) {
-              var copyButtonContainer = copyButtonContainers[i];
-              var copyContentContainer = copyContentContainers[i];
-              if(!copyContentContainer.hasAttribute('id')) {
-                copyContentContainer.id = 'clipboard-copy-content-' + i;
+            for(let i = 0; i < copyButtonContainers.length; i++) {
+              let copyButtonContainer = copyButtonContainers[i];
+              let userCopyButton = copyButtonContainer.querySelector('clipboard-copy');
+              if (userCopyButton) {
+                copyButtonContainer.addEventListener('click', function () {
+                  userCopyButton.click();
+                });
+              } else {
+                let copyContentContainer = copyContentContainers[i];
+                if(!copyContentContainer.hasAttribute('id')) {
+                  copyContentContainer.id = 'clipboard-copy-content-' + i;
+                }
+                const copyButtonWrapper = document.createElement('button');
+                const copyButton = document.createElement('clipboard-copy');
+                copyButton.setAttribute('for', copyContentContainer.id);
+                copyButton.innerHTML = copyButtonText;
+                copyButtonWrapper.appendChild(copyButton);
+                for (let j = 0; j < copyButtonClasses.length; j++) {
+                  let copyButtonClassAppend = copyButtonClasses[j];
+                  copyButtonWrapper.classList.add(copyButtonClassAppend);
+                }
+                copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
               }
-              var copyButtonWrapper = document.createElement('button');
-              var copyButton = document.createElement('clipboard-copy');
-              copyButton.setAttribute('for', copyContentContainer.id);
-              copyButton.innerHTML = copyButtonText;
-              copyButtonWrapper.appendChild(copyButton);
-              copyButtonWrapper.classList.add(copyButtonClass);
-              copyButtonContainer.parentElement.insertBefore(copyButtonWrapper, copyButtonContainer.nextSibling);
             }
           }
         });
