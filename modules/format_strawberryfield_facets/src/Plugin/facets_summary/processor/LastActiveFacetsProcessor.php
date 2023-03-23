@@ -50,7 +50,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     if ($results_count == 0 && $results_query) {
       $results = [];
       foreach ($facets as $facet) {
-        $build_stage_processors = $facet->getProcessorsByStage(ProcessorInterface::STAGE_BUILD);
+        $build_stage_processors = $facet->getProcessorsByStage(ProcessorInterface::STAGE_BUILD, TRUE);
         $active_values = $facet->getActiveItems();
         // Need to reset this bc each facet might have a different Query processor.
         $facet_results = [];
@@ -244,11 +244,23 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
 
         if (count($search_terms)) {
           $url_active->setOption('query', $params);
+          $display_value = '';
+          if ($config['settings']['quote_query'] ?? FALSE) {
+            $display_value = implode(
+              " ", array_map(
+                function ($string) {
+                  return '"' . $string . '"';
+                }, $search_terms
+              )
+            );
+          }
+          else {
+            $display_value =  implode(" ", $search_terms);
+          }
+
           $item = [
             '#theme' => 'facets_result_item__summary',
-            '#value' =>  implode(" ", array_map(function($string) {
-              return '"' . $string . '"';
-            }, $search_terms)),
+            '#value' =>  $display_value,
             '#show_count' => FALSE,
             '#count' => 0,
             '#is_active' => TRUE,
@@ -288,6 +300,16 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       '#title' => $this->t('Provide a Summary for the associated Facet Source Query Terms. This might be enabled even if no Results'),
       '#default_value' => $config['enable_query'],
     ];
+    $build['quote_query'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes'),
+      '#default_value' => $config['quote_query'],
+      '#states' => [
+        'visible' => [
+          ':input[name="facets_summary_settings[sbf_last_active_facets][settings][enable_query]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
 
     $build['enable_empty_message'] = [
       '#type' => 'checkbox',
@@ -314,6 +336,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       'enable' => TRUE,
       'enable_empty_message' => TRUE,
       'enable_query' => FALSE,
+      'quote_query' => TRUE,
       'text' => [
         'format' => 'plain_text',
         'value' => $this->t('No results found.'),

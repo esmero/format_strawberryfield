@@ -76,7 +76,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
             (int) $item[0],
             'min' => (int) $item[1],
             'max' => (int) $item[0],
-            ];
+          ];
         }
         else {
           $item = $item;
@@ -119,12 +119,27 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
     }
     if (count($results)) {
       $active_filters = $url_processor->getActiveFilters();
-      unset($active_filters[$facet->id()]);
+      /* @var \Drupal\facets\Utility\FacetsUrlGenerator $urlGenerator */
       $urlGenerator = \Drupal::service('facets.utility.url_generator');
       if ($active_filters) {
         $url_active = $urlGenerator->getUrl($active_filters, FALSE);
+        unset($active_filters[$facet->id()]);
+        if (!count($active_filters)){
+          $options = $url_active->getOptions();
+          if ($options['query']) {
+            unset($options['query'][$url_processor->getFilterKey()]);
+            $url_active->setOptions($options);
+          }
+        }
+        else {
+          // Calculate again by passing active_filter without the current facet
+          $url_active = $urlGenerator->getUrl($active_filters, FALSE);
+        }
       }
       else {
+        // This has core issues and we hope it won't ever match
+        // Core issue is that ::getUrlForRequest does not work well
+        // And fetches for a View the wrong Display and then caches it!
         $request = \Drupal::request();
         $facet_source = $facet->getFacetSource();
         $url_active = $urlGenerator->getUrlForRequest($request, $facet_source ? $facet_source->getPath() : NULL);
@@ -216,11 +231,26 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
   public function defaultConfiguration() {
     return [
         'variable_granularity' => TRUE,
+        'enabled' => FALSE,
       ] + parent::defaultConfiguration();
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state, FacetInterface $facet) {
     $configuration = $this->getConfiguration();
+
+    $build['enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Use Format Strawberryfield Date Range Picker'),
+      '#default_value' => $configuration['enabled'],
+      '#states' => [
+        'required' => [
+          ':input[name="facet_settings[sbf_date_range][status]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
 
     $build['variable_granularity'] = [
       '#type'          => 'checkbox',
@@ -229,6 +259,11 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       '#description'   => $this->t(
         'When enabled Facet Summaries (coming from the currently Active result label) will change to years when the range spans more than a single year, or full dates if otherwise. Disabled means the input dates as passed by the user will be used directly.'
       ),
+      '#states' => [
+        'visible' => [
+          ':input[name="facet_settings[sbf_date_range][settings][enabled]"]' => ['checked' => TRUE],
+        ],
+      ],
     ];
     return $build;
   }

@@ -15,6 +15,17 @@ facet.widget.config.sbf_date_range:
       type: integer
       label: 'Hide Reset when no selection'
 
+plugin.plugin_configuration.facets_processor.sbf_date_range:
+  type: mapping
+  label: 'Format Strawberryfield Date Range Picker'
+  mapping:
+    enabled:
+      type: integer
+      label: 'If enabled'
+    variable_granularity:
+      type: integer
+      label: 'If Variable granularity is going to be used'
+
 facet.widget.config.sbf_range_date_slider:
   type: facet.widget.default_config
   label: 'List of range widget configuration'
@@ -64,13 +75,16 @@ plugin.plugin_configuration.facets_summary_processor.sbf_last_active_facets:
   mapping:
     enable:
       type: integer
-      label: Enabled
+      label: 'Enabled'
     enable_empty_message:
       type: integer
-      label: Enable Empty Message
+      label: 'Enable Empty Message'
     enable_query:
       type: integer
-      label: Enable Full text search terms as Facet Summary Entry
+      label: 'Enable Full text search terms as Facet Summary Entry'
+    quote_query:
+      type: boolean
+      label: 'If Full Text search terms will be surrounded by Double Quotes or not'
     text:
       type: mapping
       mapping:
