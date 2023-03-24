@@ -364,3 +364,31 @@ function format_strawberryfield_cron() {
 
 }
 
+/**
+ * Provides custom PHP error handling when processing ajax previews.
+ *
+ * Converts trigger_error() to WARNING so that an exceptions can be thrown
+ * and caught by
+ * \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview().
+ *
+ * @param int $error_level
+ *   The level of the error raised.
+ * @param string $message
+ *   The error message.
+ * @param string $filename
+ *   (optional) The filename that the error was raised in.
+ * @param string $line
+ *   (optional) The line number the error was raised at.
+ * @param array $context
+ *   (optional) An array that points to the active symbol table at the point the
+ *   error occurred.
+ *
+ * @throws \ErrorException
+ *   Throw ErrorException for all errors passed from trigger_error().
+ *
+ * @see \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview()
+ */
+function _format_strawberryfield_metadata_preview_error_handler($error_level, $message, $filename = NULL, $line = NULL, $context = NULL) {
+    _drupal_error_handler(E_WARNING, $message, $filename, $line, $context);
+    throw new ErrorException($message, $error_level, 0, $filename, $line);
+}

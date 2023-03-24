@@ -178,11 +178,13 @@ class MetadataDisplayForm extends ContentEntityForm {
    * AJAX callback.
    */
   public static function ajaxPreview($form, FormStateInterface $form_state) {
+    set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
     $response = new AjaxResponse();
 
     /** @var \Drupal\format_strawberryfield\MetadataDisplayInterface $entity */
     $entity = $form_state->getFormObject()->getEntity();
 
+    $used_vars = $entity->getTwigVariablesUsed();
     // Attach the library necessary for using the OpenOffCanvasDialogCommand and
     // set the attachments for this Ajax response.
     $form['#attached']['library'][] = 'core/drupal.dialog.off_canvas';
@@ -251,6 +253,31 @@ class MetadataDisplayForm extends ContentEntityForm {
           'readOnly' => TRUE,
           'mode' => 'application/json',
         ],
+      ];
+      sort($used_vars);
+      $json_keys = array_keys($jsondata);
+      $data_json = array_map(function($key) {
+        return 'data.' . $key;
+      }, $json_keys);
+      $unused_vars = array_diff($data_json,$used_vars);
+      sort($unused_vars);
+      $used_rows = array_map(function($used) {
+        return [$used];
+      }, $used_vars);
+      $unused_rows = array_map(function($unused) {
+        return [$unused];
+      }, $unused_vars);
+      $var_table = [
+        '#type' => 'table',
+        '#header' => [t('Used Variables')],
+        '#rows' => $used_rows,
+        '#empty' => t('No content has been found.'),
+      ];
+      $json_table = [
+        '#type' => 'table',
+        '#header' => [t('Unused JSON keys')],
+        '#rows' => $unused_rows,
+        '#empty' => t('No content has been found.'),
       ];
 
       // Try to Ensure we're using the twig from user's input instead of the entity's
@@ -337,6 +364,22 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
+        $output['twig_vars'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'Twig Variables',
+          'render' => [
+            'table' => $var_table
+          ],
+        ];
+        $output['json_unused'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'Unused JSON keys',
+          'render' => [
+            'table' => $json_table
+          ],
+        ];
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
@@ -354,7 +397,25 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#markup' => $message,
           ]
         ];
+        $output['twig_vars'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'Twig Variables',
+          'render' => [
+            'table' => $var_table
+          ],
+        ];
+        $output['json_unused'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'Unused JSON keys',
+          'render' => [
+            'table' => $json_table
+          ],
+        ];
       }
+      restore_error_handler();
+      restore_exception_handler();
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
     // Always refresh the Preview Element too.

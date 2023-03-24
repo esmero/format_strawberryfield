@@ -404,6 +404,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $twigtemplate,
       $context
     );
+
     return $rendered;
   }
 
