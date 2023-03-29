@@ -5,11 +5,7 @@ namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
-use Drupal\search_api\Entity\Index;
-use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\search_api_solr\Utility\Utility;
-use Drupal\views\Plugin\views\filter\FilterPluginBase;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\search_api\Plugin\views\filter\SearchApiFilterTrait;
 use Drupal\search_api\Plugin\views\filter\SearchApiFulltext;
 
@@ -270,7 +266,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Humble attempt at doing this manually since we have multiple fields with varying operators.
     // A direct query won't work until we have the actual Solr Field names via \Drupal\search_api_solr\Plugin\search_api\backend\SearchApiSolrBackend::getQueryFulltextFields
     // See why https://www.drupal.org/project/search_api/issues/3049097
-    // If the backend is Solr we can do this, if not we default to either the basics (single query + filters) or just filtes
+    // If the backend is Solr we can do this, if not we default to either the basics (single query + filters) or just filters
     $backend = $query->getIndex()->getServerInstance()->getBackend();
     $index_fields = $query->getIndex()->getFields();
 
