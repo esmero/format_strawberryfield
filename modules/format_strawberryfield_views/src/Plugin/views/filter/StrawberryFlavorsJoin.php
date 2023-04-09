@@ -51,7 +51,8 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     $options['operator']['default'] = 'or';
     $options['join_fields'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
-    $options['expose']['sbf_type'] = ['default' => []];
+    $options['negation_default'] = ['default' => ['omit']];
+    $options['sbf_type'] = ['default' => []];
     return $options;
   }
 
@@ -113,6 +114,26 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
       '#default_value' => $this->options['join_fields'],
       '#required' => TRUE,
     ];
+    $form['negation_default'] = [
+      '#type' => 'select',
+      '#title' => $this->t('How/if at all to query Flavors when a negation is present.'),
+      '#description' => $this->t('Because the nature of many to one of Strawberry Flavors (e.g many pages of a book) a
+      negation in the query string might still bring up some pages where that negation does not apply ending in ADOs/Nodes (because of the join) being added to the results that -in the
+       strict sense of something not being present in a book- might be missleading. This setting allows to decide what to do on a negation'),
+      '#options' => [
+        'omit' => $this->t('Do not join Flavors in the presence of a negation'),
+        'include' => $this->t('Join Flavors in the presence of a negation even if that brings more results back'),
+      ],
+      '#default_value' => $this->options['negation_default'],
+      '#required' => TRUE,
+    ];
+    $form['sbf_type'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Comma separeted list of processor ids to join.'),
+      '#description' => $this->t('If empty all Strawberry Flavor types will be searched. You can limit that by e.g adding here <em>ocr,text</em> to limit it to those two Strawberry Runner processors'),
+      '#default_value' => $this->options['sbf_type'],
+      '#required' => FALSE,
+    ];
 
   }
 
@@ -161,14 +182,15 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
         // at the end the total.
         $subquery = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
         // check the conjunctions, remove the #negations, change the ANDs to ORs.
-
-
+        // processor_id
+        $negation = FALSE;
         if (strlen($subquery) > 0 ) {
           // only if we have a subquery
           foreach ($full_text as $key => &$entry) {
             if (is_array($entry)) {
               if ($entry['#negation'] ?? FALSE) {
                 unset($full_text[$key]);
+                $negation = TRUE;
               }
               elseif (($entry['#conjunction'] ?? FALSE) == 'AND') {
                 // Make it OR. could move the search term up but that would add
@@ -179,6 +201,10 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
             elseif ($key == "#conjunction" && $entry == 'AND') {
               $entry = 'OR';
             }
+          }
+          if ($this->options['negation_default'] == 'omit' && $negation) {
+            // In case of negation AND decision to return on negation return;
+            return;
           }
           $subquery_hl = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
 
