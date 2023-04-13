@@ -114,7 +114,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#type' => 'textfield',
       '#default_value' => $this->options['expose']['advanced_search_fields_add_one_label'] ?? "add one",
       '#title' => $this->t('Label to be used for the "add one" button'),
-      '#description' => $this->t('"Label to be used for the "add more" button. By default it is "add one" if left empty'),
+      '#description' => $this->t('Label to be used for the "add more" button. By default it is "add one" if left empty'),
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
@@ -126,7 +126,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#type' => 'textfield',
       '#default_value' => $this->options['expose']['advanced_search_fields_remove_one_label'] ?? "remove one",
       '#title' => $this->t('Label to be used for the "remove one" button'),
-      '#description' => $this->t('"Label to be used for the "add one" button. By default it is "remove one" if left empty'),
+      '#description' => $this->t('Label to be used for the "remove one" button. By default it is "remove one" if left empty'),
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
@@ -395,9 +395,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           // We set a placeholder that will be added to the main query to be replaced at the end.
           $query_able_data[$j]['join_placeholder'] = '%placeholder'.$j;
         }
-        else {
-          unset($query_able_data[$j]);
-        }
       }
       $use_conditions = FALSE;
     }
@@ -437,7 +434,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         );
       }
 
-      if ($query_able_datum_internal['join_placeholder']) {
+      if (isset($query_able_datum_internal['join_placeholder'])) {
         if ($flat_key!= '') {
           $flat_key = $flat_key . ' '
             . $query_able_datum_internal['join_placeholder'];
@@ -497,9 +494,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $flat_keys_join['%placeholder'.$i] = $flat_key;
       $j++;
     }
-
-
-
 
 
     if (count($flat_keys)) {
