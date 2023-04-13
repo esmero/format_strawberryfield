@@ -6,6 +6,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
 use Drupal\search_api\Entity\Index;
+use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\search_api_solr\Utility\Utility;
 use Drupal\views\Plugin\views\filter\FilterPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -114,7 +115,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#type' => 'textfield',
       '#default_value' => $this->options['expose']['advanced_search_fields_add_one_label'] ?? "add one",
       '#title' => $this->t('Label to be used for the "add one" button'),
-      '#description' => $this->t('Label to be used for the "add more" button. By default it is "add one" if left empty'),
+      '#description' => $this->t('"Label to be used for the "add more" button. By default it is "add one" if left empty'),
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
@@ -126,7 +127,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#type' => 'textfield',
       '#default_value' => $this->options['expose']['advanced_search_fields_remove_one_label'] ?? "remove one",
       '#title' => $this->t('Label to be used for the "remove one" button'),
-      '#description' => $this->t('Label to be used for the "remove one" button. By default it is "remove one" if left empty'),
+      '#description' => $this->t('"Label to be used for the "add one" button. By default it is "remove one" if left empty'),
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
@@ -202,35 +203,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         = $this->options['expose']['advanced_search_operator_id'];
     }
 
-    /* Join Awareness
-     If A Join filter is present in this View and it comes after us
-    We will do some DataSource Separation here since reverse engineering the
-    The Direct Query this little Critter generates makes no sense.
-    We will separate from the main query the Flavor Sources and put then in a spot
-    Where the Join Solarium Alter can use them correctly
-    For this we will use some clever %pattern replace
-    Based on a pregenerated Query here. Here we go!
-    */
-    $filters = $this->view->getHandlers('filter', NULL);
-    $notyetme = TRUE;
-    $isjoin = FALSE;
-    foreach ($filters as $filter_name => $filter) {
-      if ($this->options['id'] == $filter_name || $notyetme) {
-        // This is myself, continue but track me
-        if ($this->options['id'] == $filter_name) {
-          $notyetme = FALSE;
-        }
-        continue;
-      }
-      if ($filter['plugin_id'] == 'sbf_flavors_join') {
-        // IN the presence of mighty Join.
-        $isjoin = TRUE;
-        break;
-      }
-    }
-
-    // Accumulator/grouper of all input/passed options for joins
-    $query_able_data_join = [];
     // Accumulator/grouper of all input/passed options
     $query_able_data = [];
 
@@ -271,8 +243,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
     $fields = $this->options['fields'];
     $fields = $fields ?: array_keys($this->getFulltextFields());
-    // Fields will contain all fields as values.
-    // If JOIN is present we want to separate SBFlavor from Content/General ones.
 
     // Override the search fields, if exposed for each of the exposed searches.
     foreach ($query_able_data as &$query_able_datum) {
@@ -337,8 +307,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
       $query_fields_boosted = [];
 
-      foreach ($query_able_data as $j => &$query_able_datum_fields) {
-        foreach ($query_able_datum['fields'] ?? [] as $i => $field) {
+      foreach ($query_able_data as &$query_able_datum_fields) {
+        foreach ($query_able_datum_fields['fields'] ?? [] as $field) {
           if (isset($solr_field_names[$field])
             && 'twm_suggest' !== $solr_field_names[$field] & strpos(
               $solr_field_names[$field], 'spellcheck'
@@ -347,60 +317,27 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
             $index_field = $index_fields[$field];
             $boost = $index_field->getBoost() ? '^' . $index_field->getBoost()
               : '';
-            $names = $names_join = [];
+            $names = [];
             $first_name = reset($field_names[$field]);
             if (strpos($first_name, 't') === 0) {
               // Add all language-specific field names. This should work for
               // non Drupal Solr Documents as well which contain only a single
               // name.
-              if ($isjoin && $index_field->getDatasourceId() == 'strawberryfield_flavor_datasource') {
-                // We remove the Flavor one from here.
-                unset($query_able_datum_fields['fields'][$i]);
-                // We track at what position it should have gone $j
-                // Or reuse if already set in case of multi fields
-                $query_able_data_join[$j] = $query_able_data_join[$j] ?? $query_able_data[$j];
-                // And we set the fields to be queried into the Join Structure
-                $query_able_data_join[$j]['fields'][] = $field;
-                $names_join = array_values($field_names[$field]);
-              }
-              else {
-                $names = array_values($field_names[$field]);
-              }
+              $names = array_values($field_names[$field]);
             }
             else {
-              if ($isjoin && $index_field->getDatasourceId() == 'strawberryfield_flavor_datasource') {
-                unset($query_able_datum_fields['fields'][$i]);
-                $query_able_data_join[$j] = $query_able_data_join[$j] ?? $query_able_data[$j];
-                // And we set the fields to be queried into the Join Structure
-                $query_able_data_join[$j]['fields'][] = $field;
-                $names_join[] = $first_name;
-              }
-              else {
-                $names[] = $first_name;
-              }
+              $names[] = $first_name;
             }
 
             foreach (array_unique($names) as $name) {
               $query_able_datum_fields['real_solr_fields'][] = $name . $boost;
             }
-            foreach (array_unique($names_join) as $name_join) {
-              $query_able_data_join[$j]['real_solr_fields'][] = $name_join . $boost;
-            }
           }
-        }
-        // Means there were no Solr fields available so no query possible
-        // OR all fields for this entry were SBFlavor ones and we are in a join
-        if (isset($query_able_data_join[$j])) {
-          // If we have now a JOIN structure in place instead of the old one
-          // We set a placeholder that will be added to the main query to be replaced at the end.
-          $query_able_data[$j]['join_placeholder'] = '%placeholder'.$j;
         }
       }
       $use_conditions = FALSE;
     }
     else {
-      // We can not join on conditions yet
-      // @TODO explore this even more complex scenario for JOINS
       // We need to use conditions/query filters if the Index is not Solr.
       $use_conditions = TRUE;
     }
@@ -427,75 +364,19 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       if ($negation) {
         $manual_keys[0]['#negation'] = $negation;
       }
-      if (!empty($query_able_datum_internal['real_solr_fields'])) {
-        $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
-          $manual_keys, $query_able_datum_internal['real_solr_fields'],
-          $parse_mode->getPluginId()
-        );
-      }
 
-      if (isset($query_able_datum_internal['join_placeholder'])) {
-        if ($flat_key!= '') {
-          $flat_key = $flat_key . ' '
-            . $query_able_datum_internal['join_placeholder'];
-        }
-        else  {
-          $flat_key = $query_able_datum_internal['join_placeholder'];
-        }
-      }
-
-
+      $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+        $manual_keys, $query_able_datum_internal['real_solr_fields'],
+        $parse_mode->getPluginId()
+      );
       if ($j > 0) {
         if ($query_able_datum_internal['interfield_operator'] == 'and') {
-          if ($flat_key!= '') {
-            $flat_key = ' && ' . $flat_key;
-          }
+          $flat_key = ' && '.$flat_key;
         }
       }
       $flat_keys[] = $flat_key;
       $j++;
     }
-
-    // Now deal with the JOIN flattening keys.
-    $j = 0;
-    $flat_keys_join = [];
-    foreach ($query_able_data_join as $i => $query_able_datum_internal) {
-      $flat_key = '';
-      if ($negation = $query_able_datum_internal['operator'] === 'NOT' ? TRUE
-        : FALSE
-      ) {
-        $parse_mode->setConjunction('OR');
-      }
-      else {
-        $parse_mode->setConjunction($query_able_datum_internal['operator']);
-      }
-
-      $parsed_value = $parse_mode->parseInput($query_able_datum_internal['value']);
-      $manual_keys = [
-        $parsed_value,
-      ];
-      if ($negation) {
-        $manual_keys[0]['#negation'] = $negation;
-      }
-      if (!empty($query_able_datum_internal['real_solr_fields'])) {
-        $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
-          $manual_keys, $query_able_datum_internal['real_solr_fields'],
-          $parse_mode->getPluginId()
-        );
-      }
-
-      if ($j > 0) {
-        if ($query_able_datum_internal['interfield_operator'] == 'and') {
-          if ($flat_key!= '') {
-            $flat_key = ' && ' . $flat_key;
-          }
-        }
-      }
-      $flat_keys_join['%placeholder'.$i] = $flat_key;
-      $j++;
-    }
-
-
     if (count($flat_keys)) {
       /** @var \Drupal\search_api\ParseMode\ParseModeInterface $parse_mode */
       $parse_mode_direct = $this->getParseModeManager()
@@ -508,9 +389,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $this->getQuery()->setOption('solr_param_defType', 'edismax');
       // This will allow us to remove the edismax processor on a hook/event subscriber.
       $this->getQuery()->setOption('sbf_advanced_search_filter', TRUE);
-      if ($isjoin && count($flat_keys_join)) {
-        $this->getQuery()->setOption('sbf_advanced_search_filter_join', $flat_keys_join);
-      }
       //$parse_mode_direct->setConjunction('OR');
       // This can't be null nor a field we need truly an empty array.
       // Only that works.
@@ -939,29 +817,4 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Building groups here makes no sense. We disable it.
     return FALSE;
   }
-
-  /**
-   * Retrieves a list of all available fulltext fields.
-   *
-   * @return string[]
-   *   An options list of fulltext field identifiers mapped to their prefixed
-   *   labels.
-   */
-  protected function getFulltextFieldsByDataSource() {
-    $fields = [];
-    /** @var \Drupal\search_api\IndexInterface $index */
-    $index = Index::load(substr($this->table, 17));
-
-    $fields_info = $index->getFields();
-    foreach ($index->getFulltextFields() as $field_id) {
-      if ($fields_info[$field_id]->getDatasourceId() == 'strawberryfield_flavor_datasource') {
-        $fields['sbf'][$field_id] = $fields_info[$field_id]->getPrefixedLabel() . '('.  $fields_info[$field_id]->getFieldIdentifier() .')';
-      }
-      else {
-        $fields['content'][$field_id] = $fields_info[$field_id]->getPrefixedLabel() . '('.  $fields_info[$field_id]->getFieldIdentifier() .')';
-      }
-    }
-    return $fields;
-  }
-
 }
