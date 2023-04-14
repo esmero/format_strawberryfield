@@ -257,5 +257,11 @@
     return href.split('?')[0] + '?' + $.param(params);
   };
 
+  Drupal.AjaxCommands.prototype.SbfSetBrowserUrl = function (ajax, response) {
+    console.log(response.url);
+    window.history.replaceState(null, '', response.url);
+  }
+
 
 })(jQuery, Drupal, once, drupalSettings);
+

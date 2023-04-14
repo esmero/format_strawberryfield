@@ -221,15 +221,41 @@ function format_strawberryfield_views_search_api_solr_converted_query_alter(Sola
   if ($query->getOption('sbf_advanced_search_filter')) {
     $components = $solarium_query->getComponents();
     if (isset($components['edismax'])) {
-      $solarium_query->removeComponent(
-        ComponentAwareQueryInterface::COMPONENT_EDISMAX
-      );
-      $solarium_query->addParam('defType', 'lucene');
+      $solarium_query->removeComponent(ComponentAwareQueryInterface::COMPONENT_EDISMAX);
+      $solarium_query->addParam('defType','lucene');
     }
   }
   if ($query->getOption('sbf_join_flavor')) {
     $options = $query->getOption('sbf_join_flavor');
     if (is_array($options) &&
+      !empty($options['from']) &&
+      !empty($options['to']) &&
+      !empty($options['v'])) {
+      // Options might contain more data used for HL/Advanced search etc.
+      // see \Drupal\format_strawberryfield_views\Plugin\views\filter\StrawberryFlavorsJoin::query
+      $conjunction = $options['#conjunction'] ?? 'OR'; // Used to connect the join with the main one
+      $join_term['from'] = $options['from'];
+      $join_term['to'] = $options['to'];
+      $subquery = $options['v'];
+      $join_term['v'] = '$subquery';
+      // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
+      // This is desired because it will be faster
+      // Also adding $options['score'] = 'none' even faster.
+      // @TODO enable extra UUID type Solr field to be used as joined ones
+      $join = $solarium_query->getHelper()->qparser(
+        'join',
+        $join_term
+      );
+      $new_query_string = $solarium_query->getQuery() . " {$conjunction} " . $join;
+      $solarium_query->setQuery($new_query_string);
+      $solarium_query->addParam(
+        'subquery', $subquery
+      );
+    }
+  }
+  elseif ($query->getOption('sbf_join_flavor_advanced')) {
+    $substitutions = $query->getOption('sbf_join_flavor_advanced');
+    if (is_array($substitutions) &&
       !empty($options['from']) &&
       !empty($options['to']) &&
       !empty($options['v'])) {
@@ -257,33 +283,30 @@ function format_strawberryfield_views_search_api_solr_converted_query_alter(Sola
  */
 function format_strawberryfield_views_library_info_alter(&$libraries, $extension) {
   if ($extension === 'facets' && isset($libraries['drupal.facets.views-ajax'])) {
-
-      $libraries['drupal.facets.views-ajax']['version'] = '1.x';
-
-      $old_path = 'js';
-
-      // Since the replaced library files are no longer located in a directory
-      // relative to the original extension, specify an absolute path (relative
-      // to DRUPAL_ROOT / base_path()) to the new location.
-      $new_path = '/' . \Drupal::service('extension.list.module')
-          ->getPath('format_strawberryfield_views') . '/js';
-      $new_js = [];
-      $replacements = [
-        $old_path . '/facets-views-ajax.js' => $new_path . '/facets-views-ajax.js',
-      ];
-      foreach ($libraries['drupal.facets.views-ajax']['js'] as $source => $options) {
-        if (isset($replacements[$source])) {
-          $new_js[$replacements[$source]] = $options;
-        }
-        else {
-          $new_js[$source] = $options;
-        }
+    $libraries['drupal.facets.views-ajax']['version'] = '1.x';
+    $old_path = 'js';
+    // Since the replaced library files are no longer located in a directory
+    // relative to the original extension, specify an absolute path (relative
+    // to DRUPAL_ROOT / base_path()) to the new location.
+    $new_path = '/' . \Drupal::service('extension.list.module')
+        ->getPath('format_strawberryfield_views') . '/js';
+    $new_js = [];
+    $replacements = [
+      $old_path . '/facets-views-ajax.js' => $new_path . '/facets-views-ajax.js',
+    ];
+    foreach ($libraries['drupal.facets.views-ajax']['js'] as $source => $options) {
+      if (isset($replacements[$source])) {
+        $new_js[$replacements[$source]] = $options;
       }
-      $libraries['drupal.facets.views-ajax']['js'] = $new_js;
-      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
-      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.dropdown-widget';
-      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.link-widget';
-      $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.checkbox-widget';
-      array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
+      else {
+        $new_js[$source] = $options;
+      }
+    }
+    $libraries['drupal.facets.views-ajax']['js'] = $new_js;
+    $libraries['drupal.facets.views-ajax']['dependencies'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
+    $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.dropdown-widget';
+    $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.link-widget';
+    $libraries['drupal.facets.views-ajax']['dependencies'][] = 'facets/drupal.facets.checkbox-widget';
+    array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }

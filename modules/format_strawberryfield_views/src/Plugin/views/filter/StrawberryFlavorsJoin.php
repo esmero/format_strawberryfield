@@ -51,7 +51,8 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     $options['operator']['default'] = 'or';
     $options['join_fields'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
-    $options['expose']['sbf_type'] = ['default' => []];
+    $options['negation_default'] = ['default' => ['omit']];
+    $options['sbf_type'] = ['default' => []];
     return $options;
   }
 
@@ -113,6 +114,26 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
       '#default_value' => $this->options['join_fields'],
       '#required' => TRUE,
     ];
+    $form['negation_default'] = [
+      '#type' => 'select',
+      '#title' => $this->t('How/if at all to query Flavors when a negation is present.'),
+      '#description' => $this->t('Because the nature of many to one of Strawberry Flavors (e.g many pages of a book) a
+      negation in the query string might still bring up some pages where that negation does not apply ending in ADOs/Nodes (because of the join) being added to the results that -in the
+       strict sense of something not being present in a book- might be missleading. This setting allows to decide what to do on a negation'),
+      '#options' => [
+        'omit' => $this->t('Do not join Flavors in the presence of a negation'),
+        'include' => $this->t('Join Flavors in the presence of a negation even if that brings more results back'),
+      ],
+      '#default_value' => $this->options['negation_default'],
+      '#required' => TRUE,
+    ];
+    $form['sbf_type'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Comma separeted list of processor ids to join.'),
+      '#description' => $this->t('If empty all Strawberry Flavor types will be searched. You can limit that by e.g adding here <em>ocr,text</em> to limit it to those two Strawberry Runner processors'),
+      '#default_value' => $this->options['sbf_type'],
+      '#required' => FALSE,
+    ];
 
   }
 
@@ -121,6 +142,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     $query = $this->getQuery();
     $backend = $query->getIndex()->getServerInstance()->getBackend();
     $full_text = NULL;
+    $type = NULL;
     // We only know how to join on Solr. All rest is bad poetry
     if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
       $index_fields = $query->getIndex()->getFields(TRUE);
@@ -139,6 +161,11 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
             $op = $filter['operator'];
           }
           $full_text = $query->getKeys();
+          $type = 'fulltext';
+        }
+        elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext') {
+          $full_text = $query->getKeys();
+          $type = 'advanced_fulltext';
         }
         if ($this->options['id'] == $filter_name) {
           // This is myself, break out.
@@ -146,15 +173,62 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
         }
       }
       // If value == "" do nothing, no need to JOIN SBF for that.
-      if ($full_text && ((is_scalar($full_text) && strlen($full_text) > 0) || (is_array($full_text) && count($full_text) > 0 ))) {
-        $subquery = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'],$full_text);
+      if ($type == 'fulltext' && $full_text && ((is_scalar($full_text) && strlen($full_text) > 0) || (is_array($full_text) && count($full_text) > 0 ))) {
+
+        // Never ever make it easy Solr!
+        // This is the Join Subquery, sadly not useful "directly" for Flavor Highlights IF the conjunction is AND
+        // Because the AND implies matches across the union/intersection of main query and the Join
+        // but OCR might only contain a few of these. the Idea is that the combination of all keys + searched against fields match
+        // at the end the total.
+        $subquery = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
+        // check the conjunctions, remove the #negations, change the ANDs to ORs.
+        // processor_id
+        $negation = FALSE;
         if (strlen($subquery) > 0 ) {
+          // only if we have a subquery
+          foreach ($full_text as $key => &$entry) {
+            if (is_array($entry)) {
+              if ($entry['#negation'] ?? FALSE) {
+                unset($full_text[$key]);
+                $negation = TRUE;
+              }
+              elseif (($entry['#conjunction'] ?? FALSE) == 'AND') {
+                // Make it OR. could move the search term up but that would add
+                // an extra foreach loop. I'm cheap.
+                $entry['#conjunction'] = 'OR';
+              }
+            }
+            elseif ($key == "#conjunction" && $entry == 'AND') {
+              $entry = 'OR';
+            }
+          }
+          if ($this->options['negation_default'] == 'omit' && $negation) {
+            // In case of negation AND decision to return on negation return;
+            return;
+          }
+          $subquery_hl = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
+
           $join_structure = [
             'from' => 'its_parent_id',
             'to'   => 'its_nid',
-            'v'    => $subquery
+            'v'    => $subquery,
+            'hl'   => $subquery_hl,
           ];
+          // 'hl' will be used by
+          // \Drupal\strawberryfield\Plugin\search_api\processor\StrawberryFieldHighlight::highlightFlavorsFromIndex
           $this->getQuery()->setOption('sbf_join_flavor', $join_structure);
+        }
+      }
+      elseif ($type == 'advanced_fulltext') {
+        if ($subtitutions = $this->getQuery()->getOption('sbf_advanced_search_filter_join', NULL)) {
+          foreach ($subtitutions as $placeholder => $subquery) {
+            $join_structure[$placeholder] = [
+              'from' => 'its_parent_id',
+              'to'   => 'its_nid',
+              'v'    => $subquery
+            ];
+          }
+          $this->getQuery()->setOption('sbf_join_flavor_advanced', $join_structure);
         }
       }
     }
