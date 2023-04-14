@@ -306,6 +306,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $field_names = $backend->getSolrFieldNamesKeyedByLanguage($language_ids, $query->getIndex());
 
       $query_fields_boosted = [];
+      // If an aggregated field is found in the query, we will keep track
+      // of the source SBF fields we need to highlight using JUST the keys
+      // used to query the Aggregated field.
+      $sbf_highligh_solr_fields = [];
+      $flat_key_sbf_highlight = [];
 
       foreach ($query_able_data as &$query_able_datum_fields) {
         foreach ($query_able_datum_fields['fields'] ?? [] as $field) {
@@ -331,6 +336,44 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
             foreach (array_unique($names) as $name) {
               $query_able_datum_fields['real_solr_fields'][] = $name . $boost;
+            }
+            // We keep track here of the aggregated ones which
+            // will lead to a special Query for the Advanced Highlighter
+            // To only fetch/highlight from SBFlavors these specific keys.
+            // But never for exclusion OK? How would you Highlight the absence (of you)
+            if ($index_field->getPropertyPath() == 'sbf_aggregated_items' &&
+              $query_able_datum_fields['operator'] !== 'NOT') {
+              if (empty($sbf_highligh_solr_fields)) {
+                foreach ($index_fields as $sbf_field => $index_field_item) {
+                  if ($index_field_item->getDatasourceId()
+                    == 'strawberryfield_flavor_datasource'
+                    && $index_field_item->getPropertyPath() == 'plaintext'
+                  ) {
+                    $sbf_names = [];
+                    $sbf_first_name = reset($field_names[$sbf_field]);
+                    if (strpos($sbf_first_name, 't') === 0) {
+                      // Add all language-specific field names. This should work for
+                      // non Drupal Solr Documents as well which contain only a single
+                      // name.
+                      $sbf_names = array_values($field_names[$sbf_field]);
+                    }
+                    else {
+                      $sbf_names[] = $sbf_first_name;
+                    }
+                    foreach (array_unique($sbf_names) as $sbf_name) {
+                      $sbf_highligh_solr_fields[] = $sbf_name
+                        . ($index_field_item->getBoost() ? '^'
+                          . $index_field_item->getBoost() : '');
+
+                    }
+                    break;
+                  }
+                }
+              }
+              $query_able_datum_fields['aggregated'] = $sbf_highligh_solr_fields;
+            }
+            else {
+              $query_able_datum_fields['aggregated'] = FALSE;
             }
           }
         }
@@ -369,6 +412,17 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $manual_keys, $query_able_datum_internal['real_solr_fields'],
         $parse_mode->getPluginId()
       );
+
+      // Generate the special Highlight query for the Advanced Highligther
+      if ($query_able_datum_internal['aggregated'] ?? FALSE) {
+        // These little babies are always OR bc it is a highlight.. no need to go
+        // Boolean here folks.
+        $flat_key_sbf_highlight[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+          $manual_keys, $query_able_datum_fields['aggregated'],
+          $parse_mode->getPluginId()
+        );
+      }
+
       if ($j > 0) {
         if ($query_able_datum_internal['interfield_operator'] == 'and') {
           $flat_key = ' && '.$flat_key;
@@ -393,6 +447,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // This can't be null nor a field we need truly an empty array.
       // Only that works.
       $this->getQuery()->setFulltextFields([]);
+      if (count($flat_key_sbf_highlight)) {
+        $this->getQuery()->setOption('sbf_advanced_search_filter_flavor_hl', implode(" ", $flat_key_sbf_highlight));
+      }
     }
     else {
       //@TODO get old fields, old keys, parse same as the rest, so we can
