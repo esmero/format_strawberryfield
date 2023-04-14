@@ -22,6 +22,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Drupal\views\Controller\ViewAjaxController;
+use Drupal\Core\Path\PathValidatorInterface;
+use Drupal\format_strawberryfield_views\Ajax\SbfSetBrowserUrl;
 
 /**
  * Defines a controller to load a view via AJAX.
@@ -64,6 +66,11 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
   protected $redirectDestination;
 
   /**
+   * @var \Drupal\Core\Path\PathValidatorInterface
+   */
+  protected PathValidatorInterface $pathValidator;
+
+  /**
    * Constructs a ViewAjaxController object.
    *
    * @param \Drupal\Core\Entity\EntityStorageInterface $storage
@@ -76,13 +83,16 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
    *   The current path.
    * @param \Drupal\Core\Routing\RedirectDestinationInterface $redirect_destination
    *   The redirect destination.
+   * @param \Drupal\Core\Path\PathValidatorInterface $path_validator
+   *   The Core Path validator.
    */
-  public function __construct(EntityStorageInterface $storage, ViewExecutableFactory $executable_factory, RendererInterface $renderer, CurrentPathStack $current_path, RedirectDestinationInterface $redirect_destination) {
+  public function __construct(EntityStorageInterface $storage, ViewExecutableFactory $executable_factory, RendererInterface $renderer, CurrentPathStack $current_path, RedirectDestinationInterface $redirect_destination, PathValidatorInterface $path_validator) {
     $this->storage = $storage;
     $this->executableFactory = $executable_factory;
     $this->renderer = $renderer;
     $this->currentPath = $current_path;
     $this->redirectDestination = $redirect_destination;
+    $this->pathValidator = $path_validator;
   }
 
   /**
@@ -94,7 +104,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       $container->get('views.executable'),
       $container->get('renderer'),
       $container->get('path.current'),
-      $container->get('redirect.destination')
+      $container->get('redirect.destination'),
+      $container->get('path.validator')
     );
   }
 
@@ -124,6 +135,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }, $args);
 
       $path = $request->request->get('view_path');
+      $target_url = $this->pathValidator->getUrlIfValid($path);
       $dom_id = $request->request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
       $pager_element = $request->request->get('pager_element');
@@ -181,6 +193,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
           $origin_destination .= '?' . $query;
+          $target_url->setOption('query', $used_query_parameters);
         }
         $this->redirectDestination->set($origin_destination);
 
@@ -203,6 +216,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             ->applyTo($preview);
         }
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
+        //@TODO revisit in Drupal 10
+        //@See https://www.drupal.org/project/drupal/issues/343535
+        $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
         // Only <div> containing view is refreshed. ReplaceCommand is fixing
