@@ -174,6 +174,32 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
+  public static function flattenKeys($array, $recursive_key = '', $recursive_type = '') {
+    $return = [];
+    if (is_array($array)) {
+      foreach($array as $key=>$value) {
+        $value_type = gettype($value) == empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
+        if (is_string($key)) {
+          $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
+          $value_type = empty($recursive_type) ? $value_type : $recursive_type;
+        } else {
+          $key = empty($recursive_key) ? $key : $recursive_key;
+          $value_type = empty($recursive_type) ? $value_type : $recursive_type;
+        }
+        if (is_array($value)) {
+          $return['data.' . $key]['type'] = $value_type;
+          $return['data.' . $key]['used'] = '';
+          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value,$key,$value_type));
+        }
+        else {
+          $return['data.' . $key]['type'] = $value_type;
+          $return['data.' . $key]['used'] = '';
+        }
+      }
+    }
+    return $return;
+  }
+
   /**
    * AJAX callback.
    */
@@ -254,28 +280,68 @@ class MetadataDisplayForm extends ContentEntityForm {
           'mode' => 'application/json',
         ],
       ];
-      sort($used_vars);
-      $json_keys = array_keys($jsondata);
-      $data_json = array_map(function($key) {
-        return 'data.' . $key;
-      }, $json_keys);
-      $unused_vars = array_diff($data_json,$used_vars);
-      sort($unused_vars);
+      $flattened_keys = MetadataDisplayForm::flattenKeys($jsondata);
+      $data_json = $flattened_keys;
+      ksort($data_json);
+      $used_keys = [];
+      $used_vars_other = [];
+      foreach($used_vars as $used_var) {
+        $used_var_path = $used_var['path'];
+        $used_var_line = $used_var['line'];
+        $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
+        if(str_starts_with($used_var_path, 'data.')) {
+          array_push($used_keys, $used_var_path);
+          if(array_key_exists($used_var_path,$data_json)) {
+            $data_json[$used_var_path]['used'] = 'Used';
+            $data_json[$used_var_path]['line'] = $used_var_line;
+          }
+        } else {
+          if(!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, '.data') && array_key_exists($used_var_parent_path, $data_json)) {
+            $data_json[$used_var_parent_path]['used'] = 'used';
+            $data_json[$used_var_parent_path]['line'] = $used_var_line;
+          }
+          array_push($used_vars_other, [
+            'path' => $used_var_path,
+            'line' => $used_var_line,
+            'parent_path' => $used_var_parent_path
+            ]);
+        }
+      }
+      $unused_vars = $data_json;
+
       $used_rows = array_map(function($used) {
-        return [$used];
-      }, $used_vars);
-      $unused_rows = array_map(function($unused) {
-        return [$unused];
-      }, $unused_vars);
+        return [
+          $used['path'],
+          isset($used['line']) ? implode(', ', $used['line']) : '',
+          $used['parent_path']
+        ];
+      }, $used_vars_other);
+      $unused_keys = array_keys($unused_vars);
+      $unused_rows = array_map(function($unused_key, $unused_value) {
+        return [
+          $unused_key,
+          $unused_value['type'],
+          $unused_value['used'],
+          isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+        ];
+      }, $unused_keys,$unused_vars);
       $var_table = [
         '#type' => 'table',
-        '#header' => [t('Used Variables')],
+        '#header' => [
+          t('Other Used Variable'),
+          t('Line No.'),
+          t('Referenced Variable')
+        ],
         '#rows' => $used_rows,
         '#empty' => t('No content has been found.'),
       ];
       $json_table = [
         '#type' => 'table',
-        '#header' => [t('Unused JSON keys')],
+        '#header' => [
+          t('JSON key'),
+          t('Type'), t('Used'),
+          t('Line No.')
+        ],
         '#rows' => $unused_rows,
         '#empty' => t('No content has been found.'),
       ];
@@ -364,20 +430,20 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        $output['twig_vars'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Twig Variables',
-          'render' => [
-            'table' => $var_table
-          ],
-        ];
         $output['json_unused'] = [
           '#type' => 'details',
           '#open' => FALSE,
-          '#title' => 'Unused JSON keys',
+          '#title' => 'JSON keys',
           'render' => [
             'table' => $json_table
+          ],
+        ];
+        $output['twig_vars'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'Other Twig Variables',
+          'render' => [
+            'table' => $var_table
           ],
         ];
       } catch (\Exception $exception) {

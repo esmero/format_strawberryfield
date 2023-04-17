@@ -419,7 +419,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $source = new Source($twigtemplate, $this->label(), '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
-      $used_vars = $this->getTwigVariableNames($nodes);
+      $used_vars = $this->getTwigVariableNames($nodes,[]);
+      ksort($used_vars);
       $this->usedTwigVars = $used_vars;
     }
     return $this->usedTwigVars;
@@ -441,27 +442,47 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes): array {
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, $all_variables): array {
     $variables = [];
     foreach ($nodes as $node) {
-      if ($node instanceof \Twig\Node\Expression\NameExpression) {
-        $name = $node->getAttribute('name');
-        $variables[$name] = $name;
+      $lineno = [$node->getTemplateLine()];
+      $variable_key = '';
+      $parent_path = '';
+      if ($node instanceof \Twig\Node\Expression\NameExpression && !$nodes instanceof \Twig\Node\Expression\Unary\NotUnary) {
+        $variable_key = $node->getAttribute('name');
+        if($variable_key == '_key') {
+          $seq = $nodes->getNode('seq');
+          $seq_name = $seq->hasNode('node') ? $seq->getNode('node')->getAttribute('name') : $seq->getAttribute('name');
+          $seq_value = $seq->hasNode('attribute') ? $seq->getNode('attribute')->getAttribute('value') : '';
+          $variable_key = $nodes->getNode('value_target')->getAttribute('name');
+          $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
+        }
       }
       elseif ($node instanceof \Twig\Node\Expression\ConstantExpression && $nodes instanceof \Twig\Node\Expression\GetAttrExpression) {
-        $value = $node->getAttribute('value');
-        if (!empty($value) && is_string($value)) {
-          $variables[$value] = $value;
-        }
+        $variable_key = $node->getAttribute('value');
       }
       elseif ($node instanceof \Twig\Node\Expression\GetAttrExpression) {
-        $path = implode('.', $this->getTwigVariableNames($node));
-        if (!empty($path)) {
-          $variables[$path] = $path;
-        }
+        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
+        $variable_key = implode('.', array_map(function($name) {
+          return $name['path'];
+        }, $variable_names));
       }
       elseif ($node instanceof \Twig\Node\Node) {
-        $variables += $this->getTwigVariableNames($node);
+        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
+        $variables = array_replace_recursive($variables, $add_variables);
+      }
+      if (!empty($variable_key) && is_string($variable_key)) {
+        $variables[$variable_key]['path'] = $variable_key;
+        if(isset($all_variables[$variable_key]['line'])) {
+          $variables[$variable_key]['line']     = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
+          $all_variables[$variable_key]['line'] = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
+        }
+        if(!isset($variables[$variable_key]['line'])) {
+          $variables[$variable_key]['line'] = $lineno;
+        }
+        if (!empty($parent_path)) {
+          $variables[$variable_key]['parent_path'] = $parent_path;
+        }
       }
     }
     return $variables;
