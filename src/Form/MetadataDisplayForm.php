@@ -289,15 +289,27 @@ class MetadataDisplayForm extends ContentEntityForm {
         $used_var_path = $used_var['path'];
         $used_var_line = $used_var['line'];
         $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
-        if(str_starts_with($used_var_path, 'data.')) {
+        if (str_starts_with($used_var_path, 'data.')) {
+          $used_var_exploded = explode('.', $used_var_path);
           array_push($used_keys, $used_var_path);
-          if(array_key_exists($used_var_path,$data_json)) {
+          if (array_key_exists($used_var_path,$data_json)) {
             $data_json[$used_var_path]['used'] = 'Used';
             $data_json[$used_var_path]['line'] = $used_var_line;
           }
-        } else {
-          if(!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, '.data') && array_key_exists($used_var_parent_path, $data_json)) {
-            $data_json[$used_var_parent_path]['used'] = 'used';
+          if (count($used_var_exploded) > 2) {
+            $used_var_parts = array_slice($used_var_exploded,0, 2);
+            $used_var_part = implode('.', $used_var_parts);
+            if (array_key_exists($used_var_part,$data_json)) {
+              $data_json[$used_var_part]['used'] = 'Used';
+              $data_json[$used_var_part]['line'] = $used_var_line;
+
+            }
+
+          }
+        }
+        else {
+          if (!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, 'data.') && array_key_exists($used_var_parent_path, $data_json)) {
+            $data_json[$used_var_parent_path]['used'] = 'Used';
             $data_json[$used_var_parent_path]['line'] = $used_var_line;
           }
           array_push($used_vars_other, [
