@@ -15,6 +15,10 @@ use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
 use Drupal\user\UserInterface;
 use Twig\Source;
+use Twig\Node\Expression\NameExpression;
+use Twig\Node\Expression\Unary\NotUnary;
+use Twig\Node\Expression\ConstantExpression;
+use Twig\Node\Expression\GetAttrExpression;
 
 /**
  * Defines the Metadata Display Content entity.
@@ -448,7 +452,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
       $parent_path = '';
-      if ($node instanceof \Twig\Node\Expression\NameExpression && !$nodes instanceof \Twig\Node\Expression\Unary\NotUnary) {
+      if ($node instanceof NameExpression && !$nodes instanceof NotUnary) {
         $variable_key = $node->getAttribute('name');
         if($variable_key == '_key') {
           $seq = $nodes->getNode('seq');
@@ -458,16 +462,16 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
         }
       }
-      elseif ($node instanceof \Twig\Node\Expression\ConstantExpression && $nodes instanceof \Twig\Node\Expression\GetAttrExpression) {
+      elseif ($node instanceof ConstantExpression && $nodes instanceof GetAttrExpression) {
         $variable_key = $node->getAttribute('value');
       }
-      elseif ($node instanceof \Twig\Node\Expression\GetAttrExpression) {
+      elseif ($node instanceof GetAttrExpression) {
         $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
         $variable_key = implode('.', array_map(function($name) {
           return $name['path'];
         }, $variable_names));
       }
-      elseif ($node instanceof \Twig\Node\Node) {
+      elseif ($node instanceof Node) {
         $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
         $variables = array_replace_recursive($variables, $add_variables);
       }
