@@ -174,7 +174,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
-  public static function flattenKeys($array, $recursive_key = '', $recursive_type = '') {
+  public static function flattenKeys(array $array, string $recursive_key = '', string $recursive_type = '') {
     $return = [];
     if (is_array($array)) {
       foreach($array as $key=>$value) {
