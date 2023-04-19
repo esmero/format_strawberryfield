@@ -210,7 +210,12 @@ class MetadataDisplayForm extends ContentEntityForm {
     /** @var \Drupal\format_strawberryfield\MetadataDisplayInterface $entity */
     $entity = $form_state->getFormObject()->getEntity();
 
-    $used_vars = $entity->getTwigVariablesUsed();
+    // Try to Ensure we're using the twig from user's input instead of the entity's
+    // default.
+    $input = $form_state->getUserInput();
+    $preview_template = $input['twig'];
+
+    $used_vars = $entity->getTwigVariablesUsed($preview_template);
     // Attach the library necessary for using the OpenOffCanvasDialogCommand and
     // set the attachments for this Ajax response.
     $form['#attached']['library'][] = 'core/drupal.dialog.off_canvas';
@@ -358,11 +363,8 @@ class MetadataDisplayForm extends ContentEntityForm {
         '#empty' => t('No content has been found.'),
       ];
 
-      // Try to Ensure we're using the twig from user's input instead of the entity's
-      // default.
       try {
-        $input = $form_state->getUserInput();
-        $entity->set('twig', $input['twig'][0], FALSE);
+        $entity->set('twig', $preview_template[0], FALSE);
         $render = $entity->renderNative($context);
         if ($show_render_native) {
           $message = '';

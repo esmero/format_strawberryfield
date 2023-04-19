@@ -415,9 +415,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
   /**
    * {@inheritdoc}
    */
-  public function getTwigVariablesUsed() {
+  public function getTwigVariablesUsed(array $twigtemplate) {
     if ($this->usedTwigVars == NULL) {
-      $twigtemplate = $this->get('twig')->getValue();
+      $twigtemplate = empty($twigtemplate) ? $this->get('twig')->getValue() : $twigtemplate;
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
       // Create a \Twig Source first.
       $source = new Source($twigtemplate, $this->label(), '');
