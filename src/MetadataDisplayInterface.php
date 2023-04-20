@@ -43,6 +43,6 @@ interface MetadataDisplayInterface extends ContentEntityInterface, EntityOwnerIn
    * @return array
    * @throws \Twig\Error\SyntaxError
    */
-  public function getTwigVariablesUsed(array $twigtemplate);
+  public function getTwigVariablesUsed();
 
 }

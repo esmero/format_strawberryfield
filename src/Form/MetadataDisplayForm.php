@@ -109,7 +109,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     $form['preview']['render_native'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
-      '#title' => 'Show Preview using native Output Format (e.g HTML)',
+      '#title' => 'Show Preview using native Output Format (e.g HTML) and output errors if there are any.',
       '#states' => [
         'visible' => ['input[name="ado_context_preview"' => ['filled' => true]],
       ],
@@ -204,18 +204,11 @@ class MetadataDisplayForm extends ContentEntityForm {
    * AJAX callback.
    */
   public static function ajaxPreview($form, FormStateInterface $form_state) {
-    set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
     $response = new AjaxResponse();
 
     /** @var \Drupal\format_strawberryfield\MetadataDisplayInterface $entity */
     $entity = $form_state->getFormObject()->getEntity();
 
-    // Try to Ensure we're using the twig from user's input instead of the entity's
-    // default.
-    $input = $form_state->getUserInput();
-    $preview_template = $input['twig'];
-
-    $used_vars = $entity->getTwigVariablesUsed($preview_template);
     // Attach the library necessary for using the OpenOffCanvasDialogCommand and
     // set the attachments for this Ajax response.
     $form['#attached']['library'][] = 'core/drupal.dialog.off_canvas';
@@ -235,6 +228,16 @@ class MetadataDisplayForm extends ContentEntityForm {
       $mimetype = $form_state->getValue('mimetype');
       $mimetype = !empty($mimetype) ? $mimetype[0]['value'] : 'text/html';
       $show_render_native = $form_state->getValue('render_native');
+
+      if ($show_render_native) {
+        set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
+      }
+      // Try to Ensure we're using the twig from user's input instead of the entity's
+      // default.
+      $input = $form_state->getUserInput();
+      $preview_template = $input['twig'];
+      $entity->set('twig', $preview_template[0], FALSE);
+      $used_vars = $entity->getTwigVariablesUsed();
 
       $sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($preview_node);
@@ -494,8 +497,10 @@ class MetadataDisplayForm extends ContentEntityForm {
           ],
         ];
       }
-      restore_error_handler();
-      restore_exception_handler();
+      if ($show_render_native) {
+        restore_error_handler();
+        restore_exception_handler();
+      }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
     // Always refresh the Preview Element too.
