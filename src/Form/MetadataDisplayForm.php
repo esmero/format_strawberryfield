@@ -236,8 +236,6 @@ class MetadataDisplayForm extends ContentEntityForm {
       if ($show_render_native) {
         set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
       }
-      // Try to Ensure we're using the twig from user's input instead of the entity's
-      // default.
 
       $sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($preview_node);
@@ -292,6 +290,8 @@ class MetadataDisplayForm extends ContentEntityForm {
       $var_table = [];
 
       try {
+        // Try to Ensure we're using the twig from user's input instead of the entity's
+        // default.
         $input = $form_state->getUserInput();
         $preview_template = $input['twig'];
         $entity->set('twig', $preview_template[0], FALSE);
