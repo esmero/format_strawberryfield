@@ -449,7 +449,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, $all_variables): array {
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $all_variables): array {
     $variables = [];
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
