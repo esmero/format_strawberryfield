@@ -306,14 +306,14 @@ class MetadataDisplayForm extends ContentEntityForm {
           if (str_starts_with($used_var_path, 'data.')) {
             $used_var_exploded = explode('.', $used_var_path);
             array_push($used_keys, $used_var_path);
-            if (array_key_exists($used_var_path,$data_json)) {
+            if (isset($data_json[$used_var_path])) {
               $data_json[$used_var_path]['used'] = 'Used';
               $data_json[$used_var_path]['line'] = $used_var_line;
             }
             if (count($used_var_exploded) > 2) {
               $used_var_parts = array_slice($used_var_exploded,0, 2);
               $used_var_part = implode('.', $used_var_parts);
-              if (array_key_exists($used_var_part,$data_json)) {
+              if (isset($data_json[$used_var_part])) {
                 $data_json[$used_var_part]['used'] = 'Used';
                 $data_json[$used_var_part]['line'] = $used_var_line;
 
