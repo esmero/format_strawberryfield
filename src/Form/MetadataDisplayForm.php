@@ -322,7 +322,7 @@ class MetadataDisplayForm extends ContentEntityForm {
             }
           }
           else {
-            if (!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, 'data.') && array_key_exists($used_var_parent_path, $data_json)) {
+            if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
               $data_json[$used_var_parent_path]['used'] = 'Used';
               $data_json[$used_var_parent_path]['line'] = $used_var_line;
             }
