@@ -174,9 +174,11 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
-  public static function flattenKeys(array $array, string $recursive_key = '', string $recursive_type = '') {
+  public static function flattenKeys(array $array, string $recursive_key = '', string $recursive_type = '', int $array_depth = 0) {
     $return = [];
+    $array_depth_max = 10;
     if (is_array($array)) {
+      ++$array_depth;
       foreach($array as $key=>$value) {
         $value_type = gettype($value) == empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
         if (is_string($key)) {
@@ -189,7 +191,9 @@ class MetadataDisplayForm extends ContentEntityForm {
         if (is_array($value)) {
           $return['data.' . $key]['type'] = $value_type;
           $return['data.' . $key]['used'] = '';
-          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value,$key,$value_type));
+          if ($array_depth <= $array_depth_max) {
+            $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $value_type, $array_depth));
+          }
         }
         else {
           $return['data.' . $key]['type'] = $value_type;
@@ -293,8 +297,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         $entity->set('twig', $preview_template[0], FALSE);
         $render = $entity->renderNative($context);
         $used_vars = $entity->getTwigVariablesUsed();
-        $flattened_keys = MetadataDisplayForm::flattenKeys($jsondata);
-        $data_json = $flattened_keys;
+        $data_json = MetadataDisplayForm::flattenKeys($jsondata);
         ksort($data_json);
         $used_keys = [];
         $used_vars_other = [];
