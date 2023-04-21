@@ -177,28 +177,26 @@ class MetadataDisplayForm extends ContentEntityForm {
   public static function flattenKeys(array $array, string $recursive_key = '', string $recursive_type = '', int $array_depth = 0) {
     $return = [];
     $array_depth_max = 10;
-    if (is_array($array)) {
-      ++$array_depth;
-      foreach($array as $key=>$value) {
-        $value_type = gettype($value) == empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
-        if (is_string($key)) {
-          $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
-          $value_type = empty($recursive_type) ? $value_type : $recursive_type;
-        } else {
-          $key = empty($recursive_key) ? $key : $recursive_key;
-          $value_type = empty($recursive_type) ? $value_type : $recursive_type;
+    ++$array_depth;
+    foreach($array as $key=>$value) {
+      $value_type = gettype($value) == empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
+      if (is_string($key)) {
+        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
+        $value_type = empty($recursive_type) ? $value_type : $recursive_type;
+      } else {
+        $key = empty($recursive_key) ? $key : $recursive_key;
+        $value_type = empty($recursive_type) ? $value_type : $recursive_type;
+      }
+      if (is_array($value)) {
+        $return['data.' . $key]['type'] = $value_type;
+        $return['data.' . $key]['used'] = '';
+        if ($array_depth <= $array_depth_max) {
+          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $value_type, $array_depth));
         }
-        if (is_array($value)) {
-          $return['data.' . $key]['type'] = $value_type;
-          $return['data.' . $key]['used'] = '';
-          if ($array_depth <= $array_depth_max) {
-            $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $value_type, $array_depth));
-          }
-        }
-        else {
-          $return['data.' . $key]['type'] = $value_type;
-          $return['data.' . $key]['used'] = '';
-        }
+      }
+      else {
+        $return['data.' . $key]['type'] = $value_type;
+        $return['data.' . $key]['used'] = '';
       }
     }
     return $return;
