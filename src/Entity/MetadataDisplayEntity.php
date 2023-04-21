@@ -443,6 +443,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param \Twig\Node\Node $nodes
    *   A Twig Module Nodes object.
    *
+   * @param array $all_variables
+   *   An array to track the variables during recursion to return the accumulated line numbers.
+   *
    * @return array
    *   A list of used $variables by this template.
    */
@@ -466,13 +469,13 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         $variable_key = $node->getAttribute('value');
       }
       elseif ($node instanceof GetAttrExpression) {
-        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
+        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables));
         $variable_key = implode('.', array_map(function($name) {
           return $name['path'];
         }, $variable_names));
       }
       elseif ($node instanceof Node) {
-        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables,$variables));
+        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables));
         $variables = array_replace_recursive($variables, $add_variables);
       }
       if (!empty($variable_key) && is_string($variable_key)) {
