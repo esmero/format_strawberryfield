@@ -234,10 +234,6 @@ class MetadataDisplayForm extends ContentEntityForm {
       }
       // Try to Ensure we're using the twig from user's input instead of the entity's
       // default.
-      $input = $form_state->getUserInput();
-      $preview_template = $input['twig'];
-      $entity->set('twig', $preview_template[0], FALSE);
-      $used_vars = $entity->getTwigVariablesUsed();
 
       $sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($preview_node);
@@ -288,87 +284,92 @@ class MetadataDisplayForm extends ContentEntityForm {
           'mode' => 'application/json',
         ],
       ];
-      $flattened_keys = MetadataDisplayForm::flattenKeys($jsondata);
-      $data_json = $flattened_keys;
-      ksort($data_json);
-      $used_keys = [];
-      $used_vars_other = [];
-      foreach($used_vars as $used_var) {
-        $used_var_path = $used_var['path'];
-        $used_var_line = $used_var['line'];
-        $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
-        if (str_starts_with($used_var_path, 'data.')) {
-          $used_var_exploded = explode('.', $used_var_path);
-          array_push($used_keys, $used_var_path);
-          if (array_key_exists($used_var_path,$data_json)) {
-            $data_json[$used_var_path]['used'] = 'Used';
-            $data_json[$used_var_path]['line'] = $used_var_line;
-          }
-          if (count($used_var_exploded) > 2) {
-            $used_var_parts = array_slice($used_var_exploded,0, 2);
-            $used_var_part = implode('.', $used_var_parts);
-            if (array_key_exists($used_var_part,$data_json)) {
-              $data_json[$used_var_part]['used'] = 'Used';
-              $data_json[$used_var_part]['line'] = $used_var_line;
-
-            }
-
-          }
-        }
-        else {
-          if (!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, 'data.') && array_key_exists($used_var_parent_path, $data_json)) {
-            $data_json[$used_var_parent_path]['used'] = 'Used';
-            $data_json[$used_var_parent_path]['line'] = $used_var_line;
-          }
-          array_push($used_vars_other, [
-            'path' => $used_var_path,
-            'line' => $used_var_line,
-            'parent_path' => $used_var_parent_path
-            ]);
-        }
-      }
-      $unused_vars = $data_json;
-
-      $used_rows = array_map(function($used) {
-        return [
-          $used['path'],
-          isset($used['line']) ? implode(', ', $used['line']) : '',
-          $used['parent_path']
-        ];
-      }, $used_vars_other);
-      $unused_keys = array_keys($unused_vars);
-      $unused_rows = array_map(function($unused_key, $unused_value) {
-        return [
-          $unused_key,
-          $unused_value['type'],
-          $unused_value['used'],
-          isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
-        ];
-      }, $unused_keys,$unused_vars);
-      $var_table = [
-        '#type' => 'table',
-        '#header' => [
-          t('Other Used Variable'),
-          t('Line No.'),
-          t('Referenced Variable')
-        ],
-        '#rows' => $used_rows,
-        '#empty' => t('No content has been found.'),
-      ];
-      $json_table = [
-        '#type' => 'table',
-        '#header' => [
-          t('JSON key'),
-          t('Type'), t('Used'),
-          t('Line No.')
-        ],
-        '#rows' => $unused_rows,
-        '#empty' => t('No content has been found.'),
-      ];
+      $json_table = [];
+      $var_table = [];
 
       try {
+        $input = $form_state->getUserInput();
+        $preview_template = $input['twig'];
         $entity->set('twig', $preview_template[0], FALSE);
         $render = $entity->renderNative($context);
+        $used_vars = $entity->getTwigVariablesUsed();
+        $flattened_keys = MetadataDisplayForm::flattenKeys($jsondata);
+        $data_json = $flattened_keys;
+        ksort($data_json);
+        $used_keys = [];
+        $used_vars_other = [];
+        foreach($used_vars as $used_var) {
+          $used_var_path = $used_var['path'];
+          $used_var_line = $used_var['line'];
+          $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
+          if (str_starts_with($used_var_path, 'data.')) {
+            $used_var_exploded = explode('.', $used_var_path);
+            array_push($used_keys, $used_var_path);
+            if (array_key_exists($used_var_path,$data_json)) {
+              $data_json[$used_var_path]['used'] = 'Used';
+              $data_json[$used_var_path]['line'] = $used_var_line;
+            }
+            if (count($used_var_exploded) > 2) {
+              $used_var_parts = array_slice($used_var_exploded,0, 2);
+              $used_var_part = implode('.', $used_var_parts);
+              if (array_key_exists($used_var_part,$data_json)) {
+                $data_json[$used_var_part]['used'] = 'Used';
+                $data_json[$used_var_part]['line'] = $used_var_line;
+
+              }
+
+            }
+          }
+          else {
+            if (!empty($used_var_parent_path) && str_starts_with($used_var_parent_path, 'data.') && array_key_exists($used_var_parent_path, $data_json)) {
+              $data_json[$used_var_parent_path]['used'] = 'Used';
+              $data_json[$used_var_parent_path]['line'] = $used_var_line;
+            }
+            array_push($used_vars_other, [
+              'path' => $used_var_path,
+              'line' => $used_var_line,
+              'parent_path' => $used_var_parent_path
+            ]);
+          }
+        }
+        $unused_vars = $data_json;
+
+        $used_rows = array_map(function($used) {
+          return [
+            $used['path'],
+            isset($used['line']) ? implode(', ', $used['line']) : '',
+            $used['parent_path']
+          ];
+        }, $used_vars_other);
+        $unused_keys = array_keys($unused_vars);
+        $unused_rows = array_map(function($unused_key, $unused_value) {
+          return [
+            $unused_key,
+            $unused_value['type'],
+            $unused_value['used'],
+            isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+          ];
+        }, $unused_keys,$unused_vars);
+        $var_table = [
+          '#type' => 'table',
+          '#header' => [
+            t('Other Used Variable'),
+            t('Line No.'),
+            t('Referenced Variable')
+          ],
+          '#rows' => $used_rows,
+          '#empty' => t('No content has been found.'),
+        ];
+        $json_table = [
+          '#type' => 'table',
+          '#header' => [
+            t('JSON key'),
+            t('Type'), t('Used'),
+            t('Line No.')
+          ],
+          '#rows' => $unused_rows,
+          '#empty' => t('No content has been found.'),
+        ];
         if ($show_render_native) {
           $message = '';
           switch ($mimetype) {
@@ -480,22 +481,26 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#markup' => $message,
           ]
         ];
-        $output['twig_vars'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Twig Variables',
-          'render' => [
-            'table' => $var_table
-          ],
-        ];
-        $output['json_unused'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Unused JSON keys',
-          'render' => [
-            'table' => $json_table
-          ],
-        ];
+        if (!empty($json_table)) {
+          $output['json_unused'] = [
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => 'JSON keys',
+            'render' => [
+              'table' => $json_table
+            ],
+          ];
+        }
+        if (!empty($var_table)) {
+          $output['twig_vars'] = [
+            '#type'  => 'details',
+            '#open'  => FALSE,
+            '#title' => 'Other Twig Variables',
+            'render' => [
+              'table' => $var_table
+            ],
+          ];
+        }
       }
       if ($show_render_native) {
         restore_error_handler();
