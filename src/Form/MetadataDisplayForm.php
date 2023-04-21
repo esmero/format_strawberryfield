@@ -103,7 +103,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         'callback' => [$this, 'ajaxPreview'],
       ],
       '#states' => [
-        'visible' => ['input[name="ado_context_preview"' => ['filled' => true]],
+        'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
     ];
     $form['preview']['render_native'] = [
@@ -111,7 +111,7 @@ class MetadataDisplayForm extends ContentEntityForm {
       '#defaut_value' => FALSE,
       '#title' => 'Show Preview using native Output Format (e.g HTML)',
       '#states' => [
-        'visible' => ['input[name="ado_context_preview"' => ['filled' => true]],
+        'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
     ];
 
