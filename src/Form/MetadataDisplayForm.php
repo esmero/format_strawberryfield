@@ -284,8 +284,6 @@ class MetadataDisplayForm extends ContentEntityForm {
           'mode' => 'application/json',
         ],
       ];
-      $json_table = [];
-      $var_table = [];
 
       try {
         // Try to Ensure we're using the twig from user's input instead of the entity's
@@ -482,26 +480,6 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#markup' => $message,
           ]
         ];
-        if (!empty($json_table)) {
-          $output['json_unused'] = [
-            '#type' => 'details',
-            '#open' => FALSE,
-            '#title' => 'JSON keys',
-            'render' => [
-              'table' => $json_table
-            ],
-          ];
-        }
-        if (!empty($var_table)) {
-          $output['twig_vars'] = [
-            '#type'  => 'details',
-            '#open'  => FALSE,
-            '#title' => 'Other Twig Variables',
-            'render' => [
-              'table' => $var_table
-            ],
-          ];
-        }
       }
       if ($show_render_native) {
         restore_error_handler();
