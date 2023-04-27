@@ -175,18 +175,16 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
-  public static function flattenKeys(array $array, string $recursive_key = '', string $recursive_type = '', int $array_depth = 0) {
+  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0) {
     $return = [];
     $array_depth_max = 10;
     ++$array_depth;
     foreach($array as $key=>$value) {
-      $value_type = gettype($value) == empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
+      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
       if (is_string($key)) {
         $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
-        $value_type = empty($recursive_type) ? $value_type : $recursive_type;
       } else {
         $key = empty($recursive_key) ? $key : $recursive_key;
-        $value_type = empty($recursive_type) ? $value_type : $recursive_type;
       }
       if (is_array($value)) {
         $return['data.' . $key]['type'] = $value_type;
