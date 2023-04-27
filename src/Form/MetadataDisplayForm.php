@@ -190,7 +190,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         $return['data.' . $key]['type'] = $value_type;
         $return['data.' . $key]['used'] = '';
         if ($array_depth <= $array_depth_max) {
-          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $value_type, $array_depth));
+          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $array_depth));
         }
       }
       else {
