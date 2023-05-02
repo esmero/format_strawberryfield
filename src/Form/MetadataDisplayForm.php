@@ -295,7 +295,6 @@ class MetadataDisplayForm extends ContentEntityForm {
         $data_json = MetadataDisplayForm::flattenKeys($jsondata);
         ksort($data_json);
         $used_keys = [];
-        $used_vars_other = [];
         foreach($used_vars as $used_var) {
           $used_var_path = $used_var['path'];
           $used_var_line = $used_var['line'];
@@ -318,27 +317,13 @@ class MetadataDisplayForm extends ContentEntityForm {
 
             }
           }
-          else {
-            if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
-              $data_json[$used_var_parent_path]['used'] = 'Used';
-              $data_json[$used_var_parent_path]['line'] = $used_var_line;
-            }
-            array_push($used_vars_other, [
-              'path' => $used_var_path,
-              'line' => $used_var_line,
-              'parent_path' => $used_var_parent_path
-            ]);
+          else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
+            $data_json[$used_var_parent_path]['used'] = 'Used';
+            $data_json[$used_var_parent_path]['line'] = $used_var_line;
           }
         }
         $unused_vars = $data_json;
 
-        $used_rows = array_map(function($used) {
-          return [
-            $used['path'],
-            isset($used['line']) ? implode(', ', $used['line']) : '',
-            $used['parent_path']
-          ];
-        }, $used_vars_other);
         $unused_keys = array_keys($unused_vars);
         $unused_rows = array_map(function($unused_key, $unused_value) {
           return [
@@ -348,16 +333,6 @@ class MetadataDisplayForm extends ContentEntityForm {
             isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
           ];
         }, $unused_keys,$unused_vars);
-        $var_table = [
-          '#type' => 'table',
-          '#header' => [
-            t('Other Used Variable'),
-            t('Line No.'),
-            t('Referenced Variable')
-          ],
-          '#rows' => $used_rows,
-          '#empty' => t('No content has been found.'),
-        ];
         $json_table = [
           '#type' => 'table',
           '#header' => [
@@ -452,14 +427,6 @@ class MetadataDisplayForm extends ContentEntityForm {
           '#title' => 'JSON keys',
           'render' => [
             'table' => $json_table
-          ],
-        ];
-        $output['twig_vars'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Other Twig Variables',
-          'render' => [
-            'table' => $var_table
           ],
         ];
       } catch (\Exception $exception) {

@@ -446,10 +446,16 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param array $all_variables
    *   An array to track the variables during recursion to return the accumulated line numbers.
    *
+   * @param array $set_var
+   *   A string to track variables that reference JSON keys.
+   *
+   * @param array $set_source
+   *   An string to track the referenced JSON key for the above.
+   *
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $all_variables): array {
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $all_variables, string $set_var = '', string $set_source = ''): array {
     $variables = [];
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
@@ -463,19 +469,26 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           $seq_value = $seq->hasNode('attribute') ? $seq->getNode('attribute')->getAttribute('value') : '';
           $variable_key = $nodes->getNode('value_target')->getAttribute('name');
           $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
+          $set_var = $variable_key;
+          $set_source = $parent_path;
         }
       }
       elseif ($node instanceof ConstantExpression && $nodes instanceof GetAttrExpression) {
         $variable_key = $node->getAttribute('value');
       }
       elseif ($node instanceof GetAttrExpression) {
-        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables));
-        $variable_key = implode('.', array_map(function($name) {
-          return $name['path'];
+        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
+        $variable_key = implode('.', array_map(function ($name) use ($set_var, $set_source) {
+          if ($name['path'] == $set_var) {
+            return $set_source;
+          }
+          else {
+            return $name['path'];
+          }
         }, $variable_names));
       }
       elseif ($node instanceof Node) {
-        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables));
+        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
         $variables = array_replace_recursive($variables, $add_variables);
       }
       if (!empty($variable_key) && is_string($variable_key)) {
