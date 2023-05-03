@@ -478,14 +478,19 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       }
       elseif ($node instanceof GetAttrExpression) {
         $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
-        $variable_key = implode('.', array_map(function ($name) use ($set_var, $set_source) {
-          if ($name['path'] == $set_var) {
-            return $set_source;
+        $variable_names_flat = [];
+        $prev_name = null;
+        foreach ($variable_names as $name) {
+          $name_check = $prev_name ? $prev_name['path'] . '.' . $name['path']:'';
+          if (($name['path'] == $set_var) && !($set_source == $name_check)) {
+            array_push($variable_names_flat, $set_source);
           }
           else {
-            return $name['path'];
+            array_push($variable_names_flat, $name['path']);
           }
-        }, $variable_names));
+          $prev_name = $name;
+        }
+        $variable_key = implode('.', $variable_names_flat);
       }
       elseif ($node instanceof Node) {
         $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);

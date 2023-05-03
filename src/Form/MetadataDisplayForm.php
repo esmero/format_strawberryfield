@@ -175,11 +175,24 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
-  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0) {
+  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, $excludepaths = []) {
     $return = [];
     $array_depth_max = 10;
     ++$array_depth;
+    // The below is copied from StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths to deal with arrays,
+    // but maybe for the next iteration, it would be better to add options to
+    // that existing function and import here.
+    // Blacklist paths. Strip the last dot in case this was called recursively.
+    if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
+      return $flat;
+    }
     foreach($array as $key=>$value) {
+      if(filter_var($key, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
+        $key = "*";
+      } elseif (is_integer($key)) {
+        $key = '[*]';
+        //@TODO research implications of $.field[*] versus $.field.[*]
+      }
       $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
       if (is_string($key)) {
         $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
@@ -190,7 +203,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         $return['data.' . $key]['type'] = $value_type;
         $return['data.' . $key]['used'] = '';
         if ($array_depth <= $array_depth_max) {
-          $return = array_merge($return, MetadataDisplayForm::flattenKeys($value, $key, $array_depth));
+          $return = array_merge($return, static::flattenKeys($value, $key, $array_depth));
         }
       }
       else {
@@ -302,9 +315,20 @@ class MetadataDisplayForm extends ContentEntityForm {
           if (str_starts_with($used_var_path, 'data.')) {
             $used_var_exploded = explode('.', $used_var_path);
             array_push($used_keys, $used_var_path);
+            $last_dot_pos = strrpos($used_var_path,'.');
+            $used_var_path_wildcard = substr_replace($used_var_path, '.[*].', $last_dot_pos, 1);
+            $used_var_path_wildcard_end = $used_var_path . '.[*]';
             if (isset($data_json[$used_var_path])) {
               $data_json[$used_var_path]['used'] = 'Used';
               $data_json[$used_var_path]['line'] = $used_var_line;
+            }
+            else if (isset($data_json[$used_var_path_wildcard])) {
+              $data_json[$used_var_path_wildcard]['used'] = 'Used';
+              $data_json[$used_var_path_wildcard]['line'] = $used_var_line;
+            }
+            if (isset($data_json[$used_var_path_wildcard_end])) {
+              $data_json[$used_var_path_wildcard_end]['used'] = 'Used';
+              $data_json[$used_var_path_wildcard_end]['line'] = $used_var_line;
             }
             if (count($used_var_exploded) > 2) {
               $used_var_parts = array_slice($used_var_exploded,0, 2);
