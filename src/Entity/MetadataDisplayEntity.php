@@ -496,7 +496,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
         $variables = array_replace_recursive($variables, $add_variables);
       }
-      if (!empty($variable_key) && is_string($variable_key)) {
+      if (!empty($variable_key)) {
         $variables[$variable_key]['path'] = $variable_key;
         if(isset($all_variables[$variable_key]['line'])) {
           $variables[$variable_key]['line']     = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
