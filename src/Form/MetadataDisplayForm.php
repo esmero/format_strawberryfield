@@ -183,7 +183,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     // but maybe for the next iteration, it would be better to add options to
     // that existing function and import here.
     if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
-      return $flat;
+      return $return;
     }
     foreach($array as $key=>$value) {
       if(filter_var($key, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
@@ -299,8 +299,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         // Try to Ensure we're using the twig from user's input instead of the entity's
         // default.
         $input = $form_state->getUserInput();
-        $preview_template = $input['twig'];
-        $entity->set('twig', $preview_template[0], FALSE);
+        $entity->set('twig', $input['twig'][0], FALSE);
         $render = $entity->renderNative($context);
         $used_vars = $entity->getTwigVariablesUsed();
         $data_json = MetadataDisplayForm::flattenKeys($jsondata);
