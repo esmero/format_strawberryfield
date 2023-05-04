@@ -499,8 +499,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       if (!empty($variable_key)) {
         $variables[$variable_key]['path'] = $variable_key;
         if(isset($all_variables[$variable_key]['line'])) {
-          $variables[$variable_key]['line']     = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
-          $all_variables[$variable_key]['line'] = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
+          $variables[$variable_key]['line'] = $all_variables[$variable_key]['line'] = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
         }
         if(!isset($variables[$variable_key]['line'])) {
           $variables[$variable_key]['line'] = $lineno;
