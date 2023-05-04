@@ -483,10 +483,10 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         foreach ($variable_names as $name) {
           $name_check = $prev_name ? $prev_name['path'] . '.' . $name['path']:'';
           if (($name['path'] == $set_var) && !($set_source == $name_check)) {
-            array_push($variable_names_flat, $set_source);
+            $variable_names_flat[] = $set_source;
           }
           else {
-            array_push($variable_names_flat, $name['path']);
+            $variable_names_flat[] = $name['path'];
           }
           $prev_name = $name;
         }
