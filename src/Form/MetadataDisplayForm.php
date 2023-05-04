@@ -182,7 +182,6 @@ class MetadataDisplayForm extends ContentEntityForm {
     // The below is copied from StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths to deal with arrays,
     // but maybe for the next iteration, it would be better to add options to
     // that existing function and import here.
-    // Blacklist paths. Strip the last dot in case this was called recursively.
     if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
       return $flat;
     }
@@ -191,7 +190,6 @@ class MetadataDisplayForm extends ContentEntityForm {
         $key = "*";
       } elseif (is_integer($key)) {
         $key = '[*]';
-        //@TODO research implications of $.field[*] versus $.field.[*]
       }
       $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
       if (is_string($key)) {
