@@ -477,6 +477,12 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         $variable_key = $node->getAttribute('value');
       }
       elseif ($node instanceof GetAttrExpression) {
+        // The array_unique/array_merge pattern below can't be used here because
+        // they don't work on multidimensional arrays. Instead the lines from
+        // $all_variables is passed to $variables below, and then the merged
+        // lines replace the old values and pass them thru the recursion.
+        // @todo: Look deeper into this and find a simpler, cleaner way if possible.
+        // At the very least some of this is overkill.
         $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
         $variable_names_flat = [];
         $prev_name = null;
@@ -493,13 +499,18 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         $variable_key = implode('.', $variable_names_flat);
       }
       elseif ($node instanceof Node) {
+        // See above comment about the recursion.
         $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
         $variables = array_replace_recursive($variables, $add_variables);
       }
       if (!empty($variable_key)) {
         $variables[$variable_key]['path'] = $variable_key;
         if(isset($all_variables[$variable_key]['line'])) {
-          $variables[$variable_key]['line'] = $all_variables[$variable_key]['line'] = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
+          // Since $variables is lost with each return and $all_variables accumulates
+          // line numbers across recursions we need to merge the current line
+          // number with those passed thru recursions, and since duplicate
+          // values can occur because it's an array, we need unique values.
+          $variables[$variable_key]['line']  = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
         }
         if(!isset($variables[$variable_key]['line'])) {
           $variables[$variable_key]['line'] = $lineno;
