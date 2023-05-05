@@ -175,13 +175,16 @@ class MetadataDisplayForm extends ContentEntityForm {
     return $status;
   }
 
+  /**
+   * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
+   * but adds some extra properties for reporting and returns an array of the properties.
+   * @todo: add the extra property functionality as an option to the existing
+   * function and import here.
+   */
   public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, $excludepaths = []) {
     $return = [];
     $array_depth_max = 10;
     ++$array_depth;
-    // The below is copied from StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths to deal with arrays,
-    // but maybe for the next iteration, it would be better to add options to
-    // that existing function and import here.
     if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
       return $return;
     }
@@ -192,10 +195,10 @@ class MetadataDisplayForm extends ContentEntityForm {
         $key = '[*]';
       }
       $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
-      if (is_string($key)) {
-        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
+      if ($key == '[*]' || $key == '*') {
+        $key = empty($recursive_key) ? $key : $recursive_key  . $key;
       } else {
-        $key = empty($recursive_key) ? $key : $recursive_key;
+        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
       }
       if (is_array($value)) {
         $return['data.' . $key]['type'] = $value_type;
@@ -210,6 +213,24 @@ class MetadataDisplayForm extends ContentEntityForm {
       }
     }
     return $return;
+  }
+
+  /**
+   * Takes a provided property path and inserts one for URLs and arrays
+   * and returns an array of modified paths to check against.
+   */
+  public static function addPropertyPath(string $property_path) {
+    $last_dot_pos = strrpos($property_path,'.');
+    $url_property_path = substr_replace($property_path, '*.', $last_dot_pos, 1);
+    $url_property_path_end = $property_path . '*';
+    $array_property_path = substr_replace($property_path, '[*].', $last_dot_pos, 1);
+    $array_property_path_end = $property_path . '[*]';
+    return [
+      $url_property_path,
+      $url_property_path_end,
+      $array_property_path,
+      $array_property_path_end
+    ];
   }
 
   /**
@@ -312,20 +333,16 @@ class MetadataDisplayForm extends ContentEntityForm {
           if (str_starts_with($used_var_path, 'data.')) {
             $used_var_exploded = explode('.', $used_var_path);
             array_push($used_keys, $used_var_path);
-            $last_dot_pos = strrpos($used_var_path,'.');
-            $used_var_path_wildcard = substr_replace($used_var_path, '.[*].', $last_dot_pos, 1);
-            $used_var_path_wildcard_end = $used_var_path . '.[*]';
+            $wildcard_paths = static::addPropertyPath($used_var_path);
             if (isset($data_json[$used_var_path])) {
               $data_json[$used_var_path]['used'] = 'Used';
               $data_json[$used_var_path]['line'] = $used_var_line;
             }
-            else if (isset($data_json[$used_var_path_wildcard])) {
-              $data_json[$used_var_path_wildcard]['used'] = 'Used';
-              $data_json[$used_var_path_wildcard]['line'] = $used_var_line;
-            }
-            if (isset($data_json[$used_var_path_wildcard_end])) {
-              $data_json[$used_var_path_wildcard_end]['used'] = 'Used';
-              $data_json[$used_var_path_wildcard_end]['line'] = $used_var_line;
+            foreach($wildcard_paths as $wildcard_path) {
+              if (isset($data_json[$wildcard_path])) {
+                $data_json[$wildcard_path]['used'] = 'Used';
+                $data_json[$wildcard_path]['line'] = $used_var_line;
+              }
             }
             if (count($used_var_exploded) > 2) {
               $used_var_parts = array_slice($used_var_exploded,0, 2);
@@ -333,9 +350,7 @@ class MetadataDisplayForm extends ContentEntityForm {
               if (isset($data_json[$used_var_part])) {
                 $data_json[$used_var_part]['used'] = 'Used';
                 $data_json[$used_var_part]['line'] = $used_var_line;
-
               }
-
             }
           }
           else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
