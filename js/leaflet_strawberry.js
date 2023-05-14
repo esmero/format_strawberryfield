@@ -118,11 +118,26 @@
             console.log('initializing leaflet 1.6.0')
             console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
             document.addEventListener('sbf:ado:change', (e) => {
-              if (markerObject_interaction.hasOwnProperty(e.detail.nodeid)) {
-                map.flyTo(markerObject_interaction[e.detail.nodeid].getLatLng(), $maxzoom - 1);
+              if (Array.isArray(e.detail.nodeid)) {
+                // We can not fly to all NodeIds (and e.detail.nodeid is an array now)
+                // but we can fly to the first one!
+                // For many we fit to the bounds of all.
+                let multinodeid = [];
+                e.detail.nodeid.forEach(element => {
+                if (markerObject_interaction.hasOwnProperty(element)) {
+                  multinodeid.push(markerObject_interaction[element].getLatLng());
+                }});
+                if (multinodeid.length > 1) {
+                  const bounds = new L.LatLngBounds(multinodeid);
+                  map.fitBounds(bounds);
+                } else if (multinodeid.length == 1) {
+                  map.flyTo(markerObject_interaction[multinodeid[0]].getLatLng(), $maxzoom - 1);
                 }
               }
-            );
+              else if (markerObject_interaction.hasOwnProperty(e.detail.nodeid)) {
+                map.flyTo(markerObject_interaction[e.detail.nodeid].getLatLng(), $maxzoom - 1);
+              }
+            });
           }
         })}}
 })(jQuery, Drupal, drupalSettings, window.L);
