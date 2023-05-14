@@ -96,8 +96,8 @@
               action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
             ) {
               const { windowId } = action
-              console.log(windowId);
-              let { visibleCanvases, view } = action
+              let { visibleCanvases, view, canvasId } = action
+              const el = document.getElementById(windowId);
               if (
                 !visibleCanvases &&
                 (action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
@@ -107,7 +107,8 @@
                   .visibleCanvases
               }
               console.log(Mirador.actions);
-              const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId })
+              const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
+              const manifestUrl = manifest.id;
               console.log(manifest);
               if (!manifest.json) {
                 return
@@ -120,13 +121,32 @@
               }
               console.log(manifest.json);
               var canvasIds = [];
+              var currentCanvasMetadata = [];
               // This will depend on IIIF v2 versus V3.
               if (manifest.json["@context"].includes('http://iiif.io/api/presentation/3/context.json')) {
                 console.log('IIIF Presentation Manifest V3');
                 canvasIds = manifest.json.items.map(
                   item => item['id']
                 );
+                currentCanvasMetadata = manifest.json.items.filter(item => {
+                  return item['id'] === canvasId
+                }).map(item => {
+                  console.log(item);
+                if (item.hasOwnProperty('dr:nid')) {
+                  return {"dr:nid": item["dr:nid"]}
+                }
+                else {
+                  return null;
+                }
+              });
                 console.log(canvasIds);
+                console.log(currentCanvasMetadata);
+                // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
+
+                if (currentCanvasMetadata.hasOwnProperty('dr:nid')) {
+                  Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentCanvasMetadata['dr:nid']);
+                }
+                Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl);
               }
               else {
                 console.log('IIIF Presentation Manifest V2');
