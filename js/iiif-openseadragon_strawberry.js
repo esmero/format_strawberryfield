@@ -130,34 +130,39 @@
 
   var GeoMappingSelectorWidget = function(args) {
     // 1. Find a current color setting in the annotation, if any
-    var currentColorBody = args.annotation ?
+    var currentGeoReferenceBody = args.annotation ?
       args.annotation.bodies.find(function(b) {
-        return b.purpose == 'tagging' && b.type== 'Feature';
+        return b.purpose == 'georeferencing' && b.type== 'Feature';
       }) : null;
 
     // 2. Keep the value in a variable
-    var currentColorValue = currentColorBody ? currentColorBody.value : null;
+    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.value : null;
 
     // 3. Triggers callbacks on user action
-    var addTag = function(evt) {
-      if (currentColorBody) {
-        args.onUpdateBody(currentColorBody, {
+    var addGeoTag = function(evt) {
+      if (currentGeoReferenceBody) {
+        args.onUpdateBody(currentGeoReferenceBody, {
           type: 'Feature',
-          purpose: 'tagging',
-          value: evt.target.dataset.tag
+          purpose: 'georeferencing',
+          value: evt.target.dataset.feature
         });
       } else {
         args.onAppendBody({
           type: 'Feature',
-          purpose: 'tagging',
-          value: evt.target.dataset.tag
+          purpose: 'georeferencing',
+          value: evt.target.dataset.feature
         });
       }
     }
 
+    var createGeoButton = function(value) {
+      var button = document.createElement('button');
+      button.innerHTML = "Save Feature";
+      button.addEventListener('click', addGeoTag);
+      return button;
+    }
+
     var showMap = function(evt) {
-      console.log(evt.target.dataset.source);
-      console.log(evt.target.dataset.bound);
 
       /* i need to transform xywh=pixel:217.31248474121094,240.13888549804688,2412.823989868164,1761.0184631347656
       into a valid IIIF Image URL.
@@ -180,7 +185,10 @@
       const iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
       // This where i should scale instead of full, request the proper Zoom/level pixel size.
       const iiif_image_url = evt.target.dataset.source + "/" + iiif_region + "/full/0/default.jpg";
-      let container = document.getElementById('someId');
+      let container = document.getElementById('AnnotoriousGeoMapWidget');
+      var button_add_geo = createGeoButton();
+      container.appendChild(button_add_geo);
+
       container.style.cssText = 'width:100%;height:200px;';
       let mapcontainer = document.createElement('div');
       mapcontainer.id = "geoTag";
@@ -221,6 +229,12 @@
         marker.setLatLng(new Leaflet.LatLng(position.lat, position.lng),{draggable:'true'});
         imageOverlay.reposition(markerLT.getLatLng(), markerRT.getLatLng(), markerRB.getLatLng(), markerLB.getLatLng());
         map.panTo(new Leaflet.LatLng(position.lat, position.lng))
+        button_add_geo.dataset.feature = [
+          [markerLT.getLatLng().lng,markerLT.getLatLng().lat],
+          [markerRT.getLatLng().lng,markerRT.getLatLng().lat],
+          [markerRB.getLatLng().lng,markerRB.getLatLng().lat],
+          [markerLB.getLatLng().lng,markerLB.getLatLng().lat]
+        ];
       };
 
       /* we will create for dragable markers */
@@ -242,13 +256,14 @@
       let bound = args.annotation.underlying.target.selector.value;
       button.dataset.source = source;
       button.dataset.bound = bound;
+      button.dataset.feature = currentGeoReferenceBody;
       button.addEventListener('click', showMap);
       return button;
     }
 
     var container = document.createElement('div');
 
-    container.id = 'someId';
+    container.id = 'AnnotoriousGeoMapWidget';
 
     container.className = 'geomapping-widget';
     var button_show = createButtonShowMap(args);
