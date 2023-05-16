@@ -31,6 +31,7 @@ iiif_openseadragon_strawberry:
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/annotoriousopenseadragon
     - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - format_strawberryfield/leaflet_ajax
   css:
     component:
       css/osd.css: { }
@@ -272,6 +273,12 @@ leaflet_core:
     component:
       https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css: { external: true}
 
+
+leaftleft_iiif_bound:
+  version: 1.0
+  js:
+    js/Leaflet.ImageOverlay.iiifBounded.js: {minified: false}
+
 leaflet_ajax:
   version: 2.1.0
   license:
@@ -284,6 +291,7 @@ leaflet_ajax:
     - format_strawberryfield/leaflet_core
     - format_strawberryfield/leaflet_markercluster
     - format_strawberryfield/leaflet_subgroup
+    - format_strawberryfield/leaftleft_iiif_bound
 
 leaflet_strawberry:
   version: 1.0

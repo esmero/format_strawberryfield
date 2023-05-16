@@ -1,4 +1,4 @@
-(function ($, Drupal,  OpenSeadragonAnnotorious, drupalSettings) {
+(function ($, Drupal,  OpenSeadragonAnnotorious, drupalSettings, Leaflet) {
 
   'use strict';
 
@@ -128,6 +128,135 @@
   }
 
 
+  var GeoMappingSelectorWidget = function(args) {
+    // 1. Find a current color setting in the annotation, if any
+    var currentColorBody = args.annotation ?
+      args.annotation.bodies.find(function(b) {
+        return b.purpose == 'tagging' && b.type== 'Feature';
+      }) : null;
+
+    // 2. Keep the value in a variable
+    var currentColorValue = currentColorBody ? currentColorBody.value : null;
+
+    // 3. Triggers callbacks on user action
+    var addTag = function(evt) {
+      if (currentColorBody) {
+        args.onUpdateBody(currentColorBody, {
+          type: 'Feature',
+          purpose: 'tagging',
+          value: evt.target.dataset.tag
+        });
+      } else {
+        args.onAppendBody({
+          type: 'Feature',
+          purpose: 'tagging',
+          value: evt.target.dataset.tag
+        });
+      }
+    }
+
+    var showMap = function(evt) {
+      console.log(evt.target.dataset.source);
+      console.log(evt.target.dataset.bound);
+
+      /* i need to transform xywh=pixel:217.31248474121094,240.13888549804688,2412.823989868164,1761.0184631347656
+      into a valid IIIF Image URL.
+      @TODO make this an extra argument of L.ImageOverlay.iiifBounded and let that function deal with it?
+       */
+      const IIIFragment = evt.target.dataset.bound.split("=");
+      if (IIIFragment.length == 0) {
+        return;
+      }
+      if (IIIFragment[0] !== "xywh") {
+        return;
+      }
+      const IIIFragmentCoords = IIIFragment[1].split(":");
+      // @TODO what if using %percentage here?
+      const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
+      const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
+      const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
+      const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[0]) + Math.round(IIIFragmentCoordsIndividual[2]);
+      const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[1]) + Math.round(IIIFragmentCoordsIndividual[3]);
+      const iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+      // This where i should scale instead of full, request the proper Zoom/level pixel size.
+      const iiif_image_url = evt.target.dataset.source + "/" + iiif_region + "/full/0/default.jpg";
+      let container = document.getElementById('someId');
+      container.style.cssText = 'width:100%;height:200px;';
+      let mapcontainer = document.createElement('div');
+      mapcontainer.id = "geoTag";
+      mapcontainer.style.cssText = 'width:100%;height:200px;';
+      container.appendChild(mapcontainer);
+      /* This will throw and error if initialized twice, Diego find a solution */
+      let map = Leaflet.map(mapcontainer.id).setView([40.1, -100], 1);
+      const $tilemap = {
+        url:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+      }
+      const $minzoom = 1;
+      const $maxzoom = 15;
+      Leaflet.tileLayer($tilemap.url,
+        {
+          attribution: $tilemap.attribution,
+          maxZoom: $maxzoom,
+          minZoom: $minzoom
+        }).addTo(map);
+     map.on('zoomend', function(){
+       console.log(map.getPixelWorldBounds());
+       console.log(map.latLngToContainerPoint(new Leaflet.LatLng(41,-66)));
+      });
+
+     var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, [41,-70], [41,-66], [39,-66], [39,-70], {
+       opacity: 0.4,
+       interactive: true
+     });
+      var markerLT = new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'});
+      var markerRT = new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'});
+      var markerRB = new Leaflet.marker(new Leaflet.LatLng(39,-66), {draggable:'true'});
+      var markerLB = new Leaflet.marker(new Leaflet.LatLng(39,-70), {draggable:'true'});
+
+      const dragMarker = function(event) {
+        console.log(event);
+        var marker = event.target;
+        var position = marker.getLatLng();
+        marker.setLatLng(new Leaflet.LatLng(position.lat, position.lng),{draggable:'true'});
+        imageOverlay.reposition(markerLT.getLatLng(), markerRT.getLatLng(), markerRB.getLatLng(), markerLB.getLatLng());
+        map.panTo(new Leaflet.LatLng(position.lat, position.lng))
+      };
+
+      /* we will create for dragable markers */
+
+      markerLT.on('dragend', dragMarker);
+      markerRT.on('dragend', dragMarker);
+      markerRB.on('dragend', dragMarker);
+      markerLB.on('dragend', dragMarker);
+      var positionGroup = Leaflet.layerGroup([markerLT, markerRT, markerRB, markerLB]);
+      map.addLayer(imageOverlay);
+      map.addLayer(positionGroup);
+    }
+
+
+    var createButtonShowMap = function(args) {
+      const button = document.createElement('button');
+      button.innerHTML = "Position Annotation Target on Map";
+      let source = args.annotation.underlying.target.source;
+      let bound = args.annotation.underlying.target.selector.value;
+      button.dataset.source = source;
+      button.dataset.bound = bound;
+      button.addEventListener('click', showMap);
+      return button;
+    }
+
+    var container = document.createElement('div');
+
+    container.id = 'someId';
+
+    container.className = 'geomapping-widget';
+    var button_show = createButtonShowMap(args);
+    container.appendChild(button_show);
+    return container;
+  }
+
+
   /**
    * Init required object for classification when worker is ready.
    */
@@ -196,7 +325,6 @@
             const py = y2 + (xy[1] / ky2) / imageZoom2;
             return [ px, py ];
           }));
-
         });
 
         // Turn coords to W3C WebAnnotation
@@ -367,6 +495,7 @@
             "readOnly":$readonly,
             "widgets": [
               ColorSelectorWidget,
+              GeoMappingSelectorWidget,
               'COMMENT',
               'TAG'
             ],
@@ -654,4 +783,4 @@
       });
     }
   };
-})(jQuery, Drupal, window.OpenSeadragon.Annotorious, drupalSettings);
+})(jQuery, Drupal, window.OpenSeadragon.Annotorious, drupalSettings, window.L);
