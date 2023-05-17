@@ -179,28 +179,78 @@
       /* i need to transform xywh=pixel:217.31248474121094,240.13888549804688,2412.823989868164,1761.0184631347656
       into a valid IIIF Image URL.
       @TODO make this an extra argument of L.ImageOverlay.iiifBounded and let that function deal with it?
+       "type": "SvgSelector", type can be an SvgSelector or a Fragment. Fragment allows me to fetch the portion of the image directly
+       but the SvgSelector needs to be decompositioned in parts and we need to get the max.x,max,y, min.x and min.y to call The IIIF API Image endpoint
+       "value": "<svg><polygon points=\"443.15740966796875,1675.254638671875 271.629638671875,1377.9398193359375 431.72222900390625,806.1805419921875 654.7083129882812,800.4629516601562 683.2962646484375,1480.8564453125 534.6388549804688,1823.9119873046875 528.9212646484375,1795.3240966796875\"><\/polygon><\/svg>"
        */
+
+      /* Note we are not using the "type" here not bc i'm lazy but bc
+      we are moving data around in Dom Documents dataset properties. So we parse the string
+       */
+
+
+
+
       const IIIFragment = evt.target.dataset.bound.split("=");
       if (IIIFragment.length == 0) {
         return;
       }
-      if (IIIFragment[0] !== "xywh") {
+      let iiif_region = null;
+      let clip_path = [];
+      let clip_path_string = null;
+      if (IIIFragment[0] === "xywh") {
+        const IIIFragmentCoords = IIIFragment[1].split(":");
+        // @TODO what if using %percentage here?
+        const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
+        const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
+        const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
+        const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[0]) + Math.round(IIIFragmentCoordsIndividual[2]);
+        const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[1]) + Math.round(IIIFragmentCoordsIndividual[3]);
+        iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+      }
+      else if (IIIFragment[0] == "<svg><polygon points") {
+        try {
+          let svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          let svgElementNoNamespace = new DOMParser().parseFromString(evt.target.dataset.bound, 'text/xml').documentElement;
+          const points = svgElementNoNamespace.firstChild.getAttribute('points');
+          let polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          polygon.setAttribute("points", points);
+          svgElement.appendChild(polygon);
+          const toRemove = evt.target.insertAdjacentElement("beforeend", svgElement);
+          const bounds = toRemove.firstChild.getBBox();
+          toRemove?.remove();
+          iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.x + bounds.width) + "," + Math.floor(bounds.y + bounds.height);
+          const allpoints = polygon.points;
+          for (let step = 0; step < allpoints.length; step++) {
+            let point = allpoints.getItem(step);
+            let percentx = ((point.x-bounds.x)/bounds.width) * 100;
+            let percenty = ((point.y-bounds.y)/bounds.height) * 100
+            if (percentx !== 0) { percentx = percentx + "%"}
+            if (percenty !== 0) { percenty = percenty + "%"}
+            clip_path.push(percentx + " " + percenty);
+          };
+          if (clip_path.length) {
+            clip_path_string = "polygon(" + clip_path.join(",") + ")";
+          }
+        }
+       catch (error) {
+         alert('Sorry, we could not process your Annotation into valid region for Geographic Annotations');
+         return;
+       }
+      }
+      else {
+        alert('Sorry, we do not support yet this type of IIIF selector as target yet');
         return;
       }
-      const IIIFragmentCoords = IIIFragment[1].split(":");
-      // @TODO what if using %percentage here?
-      const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
-      const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
-      const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
-      const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[0]) + Math.round(IIIFragmentCoordsIndividual[2]);
-      const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[1]) + Math.round(IIIFragmentCoordsIndividual[3]);
-      const iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+      if (!iiif_region) {
+        alert('Sorry, no IIIF Image API region could be computed');
+        return;
+      }
       // This where i should scale instead of full, request the proper Zoom/level pixel size.
       const iiif_image_url = evt.target.dataset.source + "/" + iiif_region + "/full/0/default.jpg";
       let container = document.getElementById('AnnotoriousGeoMapWidget');
       var button_add_geo = createGeoButton();
       container.appendChild(button_add_geo);
-
       container.style.cssText = 'width:100%;height:200px;';
       let mapcontainer = document.createElement('div');
       mapcontainer.id = "geoTag";
@@ -227,7 +277,8 @@
 
      var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, [41,-70], [41,-66], [39,-66], [39,-70], {
        opacity: 0.4,
-       interactive: true
+       interactive: true,
+       clip_path: clip_path_string,
      });
       var markerLT = new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'});
       var markerRT = new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'});

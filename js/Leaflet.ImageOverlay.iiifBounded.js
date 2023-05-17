@@ -159,6 +159,9 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
     const t = "translate3d(" + (-1 * (transformMatrix[12] - pxTopLeftInDiv.x)) + "px," + (-1 * (transformMatrix[13] - pxTopLeftInDiv.y))+ "px, 0)" + " matrix3d(" + transformMatrix.join(", ") + ")";
     this._rawImage.style.transformOrigin = '0 0';
     this._rawImage.style.transform = t;
+    if (this.options.clip_path) {
+      this._rawImage.style.clipPath = this.options.clip_path;
+    }
   },
 
   _general2DProjection: function(
