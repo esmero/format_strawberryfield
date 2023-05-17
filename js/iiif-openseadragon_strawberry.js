@@ -21,7 +21,7 @@
     var setOpenCV = function(evt) {
       // annotorious will be here already.
       $(evt.target.parentElement).find('> button').each(function () {
-          $(this).removeClass('active');
+        $(this).removeClass('active');
       });
 
       if (annotorious[evt.target.getAttribute('data-annotorious-id')]._env.hasOwnProperty('openCV')) {
@@ -136,33 +136,56 @@
       }) : null;
 
     // 2. Keep the value in a variable
-    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features.geometry.coordinates: null;
+    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features: null;
 
     // 3. Triggers callbacks on user action
     var addGeoTag = function(evt) {
+      // Process from dataset pro the proper georeference IIIF structure
+      /*
+      {
+        "type": "Feature",
+        "properties": {
+        "resourceCoords": [5085, 782]
+      },
+        "geometry": {
+        "type": "Point",
+          "coordinates": [4.4885839, 51.9101828]
+      }
+      }
+      */
+      const features = JSON.parse(evt.target.dataset.feature)
+      const sourcecoords = JSON.parse(evt.target.dataset.sourcecoords)
+      let feature_collection = [];
+      if (Array.isArray(features)) {
+        feature_collection = features.map((value, key ) => {
+          return (
+            {
+              type: "Feature",
+              properties: {
+                resourceCoords: sourcecoords[key]
+              },
+              geometry: {
+                type: "Point",
+                coordinates: value
+              }
+            }
+          );
+        }
+      );
+      }
       if (currentGeoReferenceBody) {
+        args.onSetProperty("motivation", "georeferencing");
         args.onUpdateBody(currentGeoReferenceBody, {
           type: 'FeatureCollection',
           purpose: 'georeferencing',
-          features: {
-            type: "feature",
-            geometry: {
-              type: "Polygon",
-              coordinates: JSON.parse(evt.target.dataset.feature),
-            }
-          }
+          features: feature_collection,
         });
       } else {
+        args.onSetProperty("motivation", "georeferencing");
         args.onAppendBody({
           type: 'FeatureCollection',
           purpose: 'georeferencing',
-          features: {
-            type: "feature",
-            geometry: {
-              type: "Polygon",
-              coordinates: JSON.parse(evt.target.dataset.feature),
-            }
-          }
+          features: feature_collection,
         });
       }
     }
@@ -182,14 +205,10 @@
        "type": "SvgSelector", type can be an SvgSelector or a Fragment. Fragment allows me to fetch the portion of the image directly
        but the SvgSelector needs to be decompositioned in parts and we need to get the max.x,max,y, min.x and min.y to call The IIIF API Image endpoint
        "value": "<svg><polygon points=\"443.15740966796875,1675.254638671875 271.629638671875,1377.9398193359375 431.72222900390625,806.1805419921875 654.7083129882812,800.4629516601562 683.2962646484375,1480.8564453125 534.6388549804688,1823.9119873046875 528.9212646484375,1795.3240966796875\"><\/polygon><\/svg>"
-       */
-
-      /* Note we are not using the "type" here not bc i'm lazy but bc
+      Also all the IIIF target parsing could be a separate reusable function!
+      Note we are not using the "type" here not bc i'm lazy but bc
       we are moving data around in Dom Documents dataset properties. So we parse the string
        */
-
-
-
 
       const IIIFragment = evt.target.dataset.bound.split("=");
       if (IIIFragment.length == 0) {
@@ -197,16 +216,23 @@
       }
       let iiif_region = null;
       let clip_path = [];
+      let iiif_geoextension_sourcecoords = [];
+      // For our not fancy mesh deforming reality this is always so
+      iiif_geoextension_sourcecoords.push([0,0]);
       let clip_path_string = null;
       if (IIIFragment[0] === "xywh") {
         const IIIFragmentCoords = IIIFragment[1].split(":");
+        console.log()
         // @TODO what if using %percentage here?
         const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
         const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
         const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
-        const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[0]) + Math.round(IIIFragmentCoordsIndividual[2]);
-        const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[1]) + Math.round(IIIFragmentCoordsIndividual[3]);
+        const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[2]);
+        const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[3]);
         iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+        iiif_geoextension_sourcecoords.push([Math.floor(iiif_coord_rx - iiif_coord_lx),0]);
+        iiif_geoextension_sourcecoords.push([Math.floor(iiif_coord_rx - iiif_coord_lx), Math.floor(iiif_coord_ry - iiif_coord_ly)]);
+        iiif_geoextension_sourcecoords.push([0, Math.floor(iiif_coord_ry - iiif_coord_ly)]);
       }
       else if (IIIFragment[0] == "<svg><polygon points") {
         try {
@@ -219,7 +245,10 @@
           const toRemove = evt.target.insertAdjacentElement("beforeend", svgElement);
           const bounds = toRemove.firstChild.getBBox();
           toRemove?.remove();
-          iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.x + bounds.width) + "," + Math.floor(bounds.y + bounds.height);
+          iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.width) + "," + Math.floor(bounds.height);
+          iiif_geoextension_sourcecoords.push([Math.floor(bounds.width),0]);
+          iiif_geoextension_sourcecoords.push([Math.floor(bounds.width), Math.floor(bounds.height)]);
+          iiif_geoextension_sourcecoords.push([0, Math.floor(bounds.height)]);
           const allpoints = polygon.points;
           for (let step = 0; step < allpoints.length; step++) {
             let point = allpoints.getItem(step);
@@ -233,10 +262,10 @@
             clip_path_string = "polygon(" + clip_path.join(",") + ")";
           }
         }
-       catch (error) {
-         alert('Sorry, we could not process your Annotation into valid region for Geographic Annotations');
-         return;
-       }
+        catch (error) {
+          alert('Sorry, we could not process your Annotation into valid region for Geographic Annotations');
+          return;
+        }
       }
       else {
         alert('Sorry, we do not support yet this type of IIIF selector as target yet');
@@ -246,15 +275,18 @@
         alert('Sorry, no IIIF Image API region could be computed');
         return;
       }
+      // We put the source coords into the dataset prop of the element;
+
       // This where i should scale instead of full, request the proper Zoom/level pixel size.
       const iiif_image_url = evt.target.dataset.source + "/" + iiif_region + "/full/0/default.jpg";
       let container = document.getElementById('AnnotoriousGeoMapWidget');
       var button_add_geo = createGeoButton();
+      button_add_geo.dataset.sourcecoords = JSON.stringify(iiif_geoextension_sourcecoords);
       container.appendChild(button_add_geo);
-      container.style.cssText = 'width:100%;height:200px;';
+      container.style.cssText = 'width:100%;height:250px;';
       let mapcontainer = document.createElement('div');
       mapcontainer.id = "geoTag";
-      mapcontainer.style.cssText = 'width:100%;height:200px;';
+      mapcontainer.style.cssText = 'width:100%;height:250px;';
       container.appendChild(mapcontainer);
       /* This will throw and error if initialized twice, Diego find a solution */
       let map = Leaflet.map(mapcontainer.id).setView([40.1, -100], 1);
@@ -270,23 +302,22 @@
           maxZoom: $maxzoom,
           minZoom: $minzoom
         }).addTo(map);
-     map.on('zoomend', function(){
-       console.log(map.getPixelWorldBounds());
-       console.log(map.latLngToContainerPoint(new Leaflet.LatLng(41,-66)));
+      map.on('zoomend', function(){
+        console.log(map.getPixelWorldBounds());
+        console.log(map.latLngToContainerPoint(new Leaflet.LatLng(41,-66)));
       });
 
-     var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, [41,-70], [41,-66], [39,-66], [39,-70], {
-       opacity: 0.4,
-       interactive: true,
-       clip_path: clip_path_string,
-     });
+      var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, [41,-70], [41,-66], [39,-66], [39,-70], {
+        opacity: 0.4,
+        interactive: true,
+        clip_path: clip_path_string,
+      });
       var markerLT = new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'});
       var markerRT = new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'});
       var markerRB = new Leaflet.marker(new Leaflet.LatLng(39,-66), {draggable:'true'});
       var markerLB = new Leaflet.marker(new Leaflet.LatLng(39,-70), {draggable:'true'});
 
       const dragMarker = function(event) {
-        console.log(event);
         var marker = event.target;
         var position = marker.getLatLng();
         marker.setLatLng(new Leaflet.LatLng(position.lat, position.lng),{draggable:'true'});
@@ -294,14 +325,25 @@
         map.panTo(new Leaflet.LatLng(position.lat, position.lng))
         /* Note to myself. This is hard. Every time a new IIIF spec comes out i see myself parsing extra JSON
         just to keep the specs gods pleased see https://iiif.io/api/extension/georef/?mc_cid=46c37da63d&mc_eid=f820ccac92#35-the-resourcecoords-property
+        in our case resourceCoords are the relative tl, tr, rb, lb pixel coordinates (starting from 0,0) of a IIIF resource.
+        {
+        "type": "Feature",
+        "properties": {
+          "resourceCoords": [5085, 782]
+        },
+        "geometry": {
+          "type": "Point",
+           "coordinates": [4.4885839, 51.9101828]
+        }
+        }
          */
+        // We put the geo coords into the dataset prop of the element;
         button_add_geo.dataset.feature = JSON.stringify([
           [markerLT.getLatLng().lng,markerLT.getLatLng().lat],
           [markerRT.getLatLng().lng,markerRT.getLatLng().lat],
           [markerRB.getLatLng().lng,markerRB.getLatLng().lat],
           [markerLB.getLatLng().lng,markerLB.getLatLng().lat]
         ]);
-
       };
 
       /* we will create for dragable markers */
@@ -715,8 +757,8 @@
             });
 
             let toggle = ThreeWaySwitchElement(element_id, groupssettings[group].annotations_opencv);
-              // #toolbar-'+ element_id is passed as a div at the same level of the OSD viewer by
-              // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
+            // #toolbar-'+ element_id is passed as a div at the same level of the OSD viewer by
+            // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::generateElementForItem
             $('#toolbar-' + element_id).prepend(toggle);
             if (groupssettings[group].annotations_tool == 'both') {
               window.Annotorious.Toolbar(annotorious[element_id], document.getElementById(element_id + '-annon-toolbar'));
