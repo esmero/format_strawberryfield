@@ -132,25 +132,37 @@
     // 1. Find a current color setting in the annotation, if any
     var currentGeoReferenceBody = args.annotation ?
       args.annotation.bodies.find(function(b) {
-        return b.purpose == 'georeferencing' && b.type== 'Feature';
+        return b.purpose == 'georeferencing' && b.type== 'FeatureCollection';
       }) : null;
 
     // 2. Keep the value in a variable
-    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.value : null;
+    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features.geometry.coordinates: null;
 
     // 3. Triggers callbacks on user action
     var addGeoTag = function(evt) {
       if (currentGeoReferenceBody) {
         args.onUpdateBody(currentGeoReferenceBody, {
-          type: 'Feature',
+          type: 'FeatureCollection',
           purpose: 'georeferencing',
-          value: evt.target.dataset.feature
+          features: {
+            type: "feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: JSON.parse(evt.target.dataset.feature),
+            }
+          }
         });
       } else {
         args.onAppendBody({
-          type: 'Feature',
+          type: 'FeatureCollection',
           purpose: 'georeferencing',
-          value: evt.target.dataset.feature
+          features: {
+            type: "feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: JSON.parse(evt.target.dataset.feature),
+            }
+          }
         });
       }
     }
@@ -229,12 +241,16 @@
         marker.setLatLng(new Leaflet.LatLng(position.lat, position.lng),{draggable:'true'});
         imageOverlay.reposition(markerLT.getLatLng(), markerRT.getLatLng(), markerRB.getLatLng(), markerLB.getLatLng());
         map.panTo(new Leaflet.LatLng(position.lat, position.lng))
-        button_add_geo.dataset.feature = [
+        /* Note to myself. This is hard. Every time a new IIIF spec comes out i see myself parsing extra JSON
+        just to keep the specs gods pleased see https://iiif.io/api/extension/georef/?mc_cid=46c37da63d&mc_eid=f820ccac92#35-the-resourcecoords-property
+         */
+        button_add_geo.dataset.feature = JSON.stringify([
           [markerLT.getLatLng().lng,markerLT.getLatLng().lat],
           [markerRT.getLatLng().lng,markerRT.getLatLng().lat],
           [markerRB.getLatLng().lng,markerRB.getLatLng().lat],
           [markerLB.getLatLng().lng,markerLB.getLatLng().lat]
-        ];
+        ]);
+
       };
 
       /* we will create for dragable markers */

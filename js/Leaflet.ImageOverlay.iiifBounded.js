@@ -89,8 +89,7 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
     }
     L.DomUtil.addClass(img, 'leaflet-image-layer');
     var div = this._image = L.DomUtil.create('div',
-      'leaflet-image-layer ' + (this._zoomAnimated ? 'leaflet-zoom-animated' : ''));
-
+      'leaflet-image-layer' + (this._zoomAnimated ? 'leaflet-zoom-animated' : ''));
     this._updateZIndex(); // apply z-index style setting to the div (if defined)
     div.appendChild(img);
     div.onselectstart = L.Util.falseFn;
@@ -110,6 +109,7 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
     if (!this._map) {
       return;
     }
+
     // Project control points to container-pixel coordinates
     var pxTopLeft    = this._map.latLngToLayerPoint(this._topLeft);
     var pxTopRight   = this._map.latLngToLayerPoint(this._topRight);
@@ -137,15 +137,13 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
       return;
     }
 
-    var vectorX = pxTopRight.subtract(pxTopLeft);
-    var vectorY = pxBottomLeft.subtract(pxTopLeft);
     var w = imgW;
     var h = imgH;
     // matrix(a, b, c, d, tx, ty) is a shorthand for
     // matrix3d(a, b, 0, 0, c, d, 0, 0, 0, 0, 1, 0, tx, ty, 0, 1).
-    // a = (vectorX.x/imgW)
+    // a = (vectorX.x/imgW) with vectorX = pxTopRight.subtract(pxTopLeft);
     // b = (vectorX.y/imgW)
-    // c = (vectorY.x/imgH)
+    // c = (vectorY.x/imgH) with vectorY = pxBottomLeft.subtract(pxTopLef
     // d = (vectorY.y/imgH)
     // tx = pxTopLeftInDiv.x
     // ty =  pxTopLeftInDiv.y
@@ -158,7 +156,7 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
     var transformMatrix = this._general2DProjection(0, 0, pxTopLeft.x, pxTopLeft.y, w, 0, pxTopRight.x, pxTopRight.y, 0, h, pxBottomLeft.x, pxBottomLeft.y, w, h, pxBottomRight.x, pxBottomRight.y);//var transformMatrix = this._general2DProjection(0, 0, pxTopLeft.x, pxTopLeft.y, vectorX.x, 0, pxTopRight.x, pxTopRight.y, 0, vectorX.y, pxBottomRight.x, pxBottomRight.y, vectorX.x, vectorX.y, pxBottomLeft.x, pxBottomLeft.y);
     for(i = 0; i != 9; ++i) { transformMatrix[i] = transformMatrix[i]/transformMatrix[8]; }
     transformMatrix = [transformMatrix[0], transformMatrix[3], 0, transformMatrix[6], transformMatrix[1], transformMatrix[4], 0, transformMatrix[7], 0 , 0 , 1, 0 , transformMatrix[2] /*pxTopLeftInDiv.x*/, transformMatrix[5]/* pxTopLeftInDiv.y*/, 0, transformMatrix[8]];
-    const t = "translate3d(" + (-1 * (transformMatrix[12] + pxTopLeftInDiv.x)) + "px," + (-1 * (transformMatrix[13] - pxTopLeftInDiv.y))+ "px, 0)" + " matrix3d(" + transformMatrix.join(", ") + ")";
+    const t = "translate3d(" + (-1 * (transformMatrix[12] - pxTopLeftInDiv.x)) + "px," + (-1 * (transformMatrix[13] - pxTopLeftInDiv.y))+ "px, 0)" + " matrix3d(" + transformMatrix.join(", ") + ")";
     this._rawImage.style.transformOrigin = '0 0';
     this._rawImage.style.transform = t;
   },
