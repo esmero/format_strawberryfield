@@ -174,14 +174,20 @@
       );
       }
       if (currentGeoReferenceBody) {
-        args.onSetProperty("motivation", "georeferencing");
+        // This should work but does not: args.onSetProperty("motivation", "georeferencing");
+        args.annotation.underlaying["motivation"] = "georeferencing";
+        // Why we set this twice? Purpose and motivation? Bc in out structure
+        // The same Image fragment might have multiple Bodies
+        // ON IIIF Manifest generation we will separate this body into its own annotation
+        // To please the Specs gods
         args.onUpdateBody(currentGeoReferenceBody, {
           type: 'FeatureCollection',
           purpose: 'georeferencing',
           features: feature_collection,
         });
       } else {
-        args.onSetProperty("motivation", "georeferencing");
+        // This should work but does not: args.onSetProperty("motivation", "georeferencing");
+        args.annotation.underlaying["motivation"] = "georeferencing";
         args.onAppendBody({
           type: 'FeatureCollection',
           purpose: 'georeferencing',
