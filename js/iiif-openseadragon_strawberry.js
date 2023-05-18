@@ -136,7 +136,7 @@
       }) : null;
 
     // 2. Keep the value in a variable
-    var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features: null;
+    //var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features: null;
 
     // 3. Triggers callbacks on user action
     var addGeoTag = function(evt) {
@@ -158,24 +158,24 @@
       let feature_collection = [];
       if (Array.isArray(features)) {
         feature_collection = features.map((value, key ) => {
-          return (
-            {
-              type: "Feature",
-              properties: {
-                resourceCoords: sourcecoords[key]
-              },
-              geometry: {
-                type: "Point",
-                coordinates: value
+            return (
+              {
+                type: "Feature",
+                properties: {
+                  resourceCoords: sourcecoords[key]
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: value
+                }
               }
-            }
-          );
-        }
-      );
+            );
+          }
+        );
       }
       if (currentGeoReferenceBody) {
-        // This should work but does not: args.onSetProperty("motivation", "georeferencing");
-        args.annotation.underlaying["motivation"] = "georeferencing";
+        args.onSetProperty("motivation", "georeferencing");
+        args.annotation.underlying["motivation"] = "georeferencing";
         // Why we set this twice? Purpose and motivation? Bc in out structure
         // The same Image fragment might have multiple Bodies
         // ON IIIF Manifest generation we will separate this body into its own annotation
@@ -186,8 +186,8 @@
           features: feature_collection,
         });
       } else {
-        // This should work but does not: args.onSetProperty("motivation", "georeferencing");
-        args.annotation.underlaying["motivation"] = "georeferencing";
+        args.onSetProperty("motivation", "georeferencing");
+        args.annotation.underlying["motivation"] = "georeferencing";
         args.onAppendBody({
           type: 'FeatureCollection',
           purpose: 'georeferencing',
@@ -228,7 +228,6 @@
       let clip_path_string = null;
       if (IIIFragment[0] === "xywh") {
         const IIIFragmentCoords = IIIFragment[1].split(":");
-        console.log()
         // @TODO what if using %percentage here?
         const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
         const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
@@ -308,26 +307,40 @@
           maxZoom: $maxzoom,
           minZoom: $minzoom
         }).addTo(map);
+
       map.on('zoomend', function(){
         console.log(map.getPixelWorldBounds());
         console.log(map.latLngToContainerPoint(new Leaflet.LatLng(41,-66)));
       });
 
-      var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, [41,-70], [41,-66], [39,-66], [39,-70], {
+
+      console.log(currentGeoReferenceBody);
+      let allmarkers = [];
+      allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'}));
+      allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'}));
+      allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(39,-66), {draggable:'true'}));
+      allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(39,-70), {draggable:'true'}));
+      if (currentGeoReferenceBody?.type == "FeatureCollection"  && Array.isArray(currentGeoReferenceBody?.features)) {
+        currentGeoReferenceBody.features.forEach((entry, index) => {
+            if (entry?.geometry?.coordinates) {
+              // Reversing lat/long bc source is GEOJSON.
+              allmarkers[index] = new Leaflet.marker(new Leaflet.LatLng(entry?.geometry?.coordinates[1], entry?.geometry?.coordinates[0]), {draggable: 'true'})
+              console.log(index);
+            }
+          }
+        )
+      }
+      var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, allmarkers[0].getLatLng(), allmarkers[1].getLatLng(), allmarkers[2].getLatLng(), allmarkers[3].getLatLng(), {
         opacity: 0.4,
         interactive: true,
         clip_path: clip_path_string,
       });
-      var markerLT = new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'});
-      var markerRT = new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'});
-      var markerRB = new Leaflet.marker(new Leaflet.LatLng(39,-66), {draggable:'true'});
-      var markerLB = new Leaflet.marker(new Leaflet.LatLng(39,-70), {draggable:'true'});
 
       const dragMarker = function(event) {
         var marker = event.target;
         var position = marker.getLatLng();
         marker.setLatLng(new Leaflet.LatLng(position.lat, position.lng),{draggable:'true'});
-        imageOverlay.reposition(markerLT.getLatLng(), markerRT.getLatLng(), markerRB.getLatLng(), markerLB.getLatLng());
+        imageOverlay.reposition(allmarkers[0].getLatLng(), allmarkers[1].getLatLng(), allmarkers[2].getLatLng(), allmarkers[3].getLatLng());
         map.panTo(new Leaflet.LatLng(position.lat, position.lng))
         /* Note to myself. This is hard. Every time a new IIIF spec comes out i see myself parsing extra JSON
         just to keep the specs gods pleased see https://iiif.io/api/extension/georef/?mc_cid=46c37da63d&mc_eid=f820ccac92#35-the-resourcecoords-property
@@ -345,20 +358,18 @@
          */
         // We put the geo coords into the dataset prop of the element;
         button_add_geo.dataset.feature = JSON.stringify([
-          [markerLT.getLatLng().lng,markerLT.getLatLng().lat],
-          [markerRT.getLatLng().lng,markerRT.getLatLng().lat],
-          [markerRB.getLatLng().lng,markerRB.getLatLng().lat],
-          [markerLB.getLatLng().lng,markerLB.getLatLng().lat]
+          [allmarkers[0].getLatLng().lng,allmarkers[0].getLatLng().lat],
+          [allmarkers[1].getLatLng().lng,allmarkers[1].getLatLng().lat],
+          [allmarkers[2].getLatLng().lng,allmarkers[2].getLatLng().lat],
+          [allmarkers[3].getLatLng().lng,allmarkers[3].getLatLng().lat]
         ]);
       };
 
       /* we will create for dragable markers */
-
-      markerLT.on('dragend', dragMarker);
-      markerRT.on('dragend', dragMarker);
-      markerRB.on('dragend', dragMarker);
-      markerLB.on('dragend', dragMarker);
-      var positionGroup = Leaflet.layerGroup([markerLT, markerRT, markerRB, markerLB]);
+      allmarkers.forEach(marker => {
+        marker.on('dragend', dragMarker);
+      });
+      var positionGroup = Leaflet.layerGroup(allmarkers);
       map.addLayer(imageOverlay);
       map.addLayer(positionGroup);
     }
@@ -371,7 +382,6 @@
       let bound = args.annotation.underlying.target.selector.value;
       button.dataset.source = source;
       button.dataset.bound = bound;
-      button.dataset.feature = currentGeoReferenceBody;
       button.addEventListener('click', showMap);
       return button;
     }
