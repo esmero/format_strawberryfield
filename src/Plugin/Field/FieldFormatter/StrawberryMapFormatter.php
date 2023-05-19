@@ -430,7 +430,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#default_value' => $this->getSetting('manifesturl_json_key_source'),
           '#states' => [
             'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
+              ':input[data-formatter-selector="overlaysource"][value="manifesturl"]' => ['checked' => TRUE],
             ],
           ],
         ],
