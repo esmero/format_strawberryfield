@@ -9,6 +9,7 @@ leaflet_strawberry_views:
     - core/drupalSettings
     - core/views
     - format_strawberryfield/leaflet_ajax
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 modal-exposed-form-views-ajax:
   js:

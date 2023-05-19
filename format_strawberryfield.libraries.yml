@@ -221,8 +221,6 @@ mirador_custom_strawberry:
     - format_strawberryfield/mirador_font
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
-
-
 uv_strawberry:
   version: 1.0
   js:
