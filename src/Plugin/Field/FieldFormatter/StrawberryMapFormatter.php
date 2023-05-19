@@ -886,7 +886,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         if (isset($iiifmanifests[$main_overlaysource]) && !empty($iiifmanifests[$main_overlaysource])) {
           // Take only the first since we could have more
           $main_iiifurl = array_shift($iiifmanifests[$main_mediasource]);
-          $all_iiifurl =  array_reduce($iiifmanifests,'array_merge',[]);
+          $all_iiifurls =  array_reduce($iiifmanifests,'array_merge',[]);
         } else {
           // reduce flattens and applies a merge. Basically we get a simple list.
           $all_iiifurls = array_reduce($iiifmanifests,'array_merge',[]);
@@ -923,7 +923,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['geojsonother'] = is_array($all_geojsonurl) ? $all_geojsonurl : [];
           /* IIIF Manifests */
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['iiifurl'] = $main_iiifurl ?? [];
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['iiifother'] = is_array($all_iiifurl) ? $all_iiifurl : [];
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['iiifother'] = is_array($all_iiifurls) ? $all_iiifurls : [];
 
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['width'] = $max_width_css;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['height'] = max(

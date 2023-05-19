@@ -3,8 +3,18 @@
   'use strict';
   var FormatStrawberryfieldIiifUtils = {
 
-    images_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}";
-    geoannotation_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"features\": items[?motivation == 'georeferencing'].body[].features, \"target\": items[?motivation == 'georeferencing'].target}}";
+    images_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
+    geoannotation_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"items\": items[?motivation == 'georeferencing'][]}}",
+    geoannotation_jmespath_pattern_split: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"features\": items[?motivation == 'georeferencing'].body[].features, \"target\": items[?motivation == 'georeferencing'].target}}",
+    images_jmespath_pattern_with_canvasids: "items[?type == 'Canvas' && id=='{{token1}}'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
+
+    JmesPathTemplate: function (jmespattern, obj) {
+      let s = jmespattern;
+      for(var prop in obj) {
+        s = s.replace(new RegExp('{{'+ prop +'}}','g'), obj[prop]);
+      }
+      return s;
+    },
 
     dispatchAdoChange: function(el, nodeids){
       /* el being a dom document via const el = document.getElementById(element_id);*/
@@ -31,8 +41,9 @@
       el.dispatchEvent(event);
       return this;
     },
-    fetchIIIFManifest: function (iiifmanifesturl) {
-      fetch(iiifmanifesturl)
+    fetchIIIFManifest: async function (iiifmanifesturl) {
+
+      const response = await fetch(iiifmanifesturl)
         .then(res => res.json())
         .then(function (res) {
           return res;
@@ -42,14 +53,29 @@
           console.log("Error fetching IIIF Manifest " + iiifmanifesturl);
           return {};
         });
+      return response;
     },
     getGeoAnnotations: function (iiifmanifest) {
       // this.items[0].annotations[0].items[0].motivation
+      /* you call this one
+      Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest("http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/metadata/iiifmanifest/default.jsonld").then(response => {Drupal.FormatStrawberryfieldIiifUtils.getGeoAnnotations(response)});
+       */
       let body = {};
-      target = {};
+      let target = {};
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
       // @by awesome https://github.com/digitaldogsbody Mike Bennet
-      $geoannotations = jmespath.search(iiifmanifest, geoannotation_jmespath_pattern);
+      const $geoannotations = jmespath.search(iiifmanifest, this.geoannotation_jmespath_pattern);
+      if (Array.isArray($geoannotations)) {
+        $geoannotations.forEach($entry => {
+          console.log($entry);
+          if ($entry?.canvas_id) {
+            let canvas_jmespath = this.JmesPathTemplate(this.images_jmespath_pattern_with_canvasids, {token1: $entry?.canvas_id});
+            const $images = jmespath.search(iiifmanifest, canvas_jmespath);
+            console.log($images);
+          }
+        });
+      }
+      return $geoannotations;
       /*
        [
          {
@@ -93,6 +119,5 @@
 
   /* Make it part of the Global Drupal Object */
   Drupal.FormatStrawberryfieldIiifUtils = FormatStrawberryfieldIiifUtils;
-
 
 })(jQuery, Drupal, drupalSettings, jmespath);

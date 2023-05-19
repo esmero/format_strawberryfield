@@ -2,11 +2,17 @@ iiif_formatstrawberryfield_utils:
   version: 1.0
   js:
     js/iiif-archipelago-interactions_utils.js: {minified: false}
-    https://cdn.jsdelivr.net/npm/jmespath@0.16.0/jmespath.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - core/jquery
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/jmespath_strawberry
+
+jmespath_strawberry:
+  js:
+    https://cdn.jsdelivr.net/npm/jmespath@0.16.0/jmespath.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - core/drupal
 
 iiif_openseadragon:
   remote: http://openseadragon.github.io
