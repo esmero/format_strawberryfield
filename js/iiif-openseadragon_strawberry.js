@@ -173,6 +173,8 @@
           }
         );
       }
+      // Add the new Extension Context;
+      args.onAddContext("https://iiif.io/api/extension/georef/1/context.json");
       if (currentGeoReferenceBody) {
         args.onSetProperty("motivation", "georeferencing");
         args.annotation.underlying["motivation"] = "georeferencing";
