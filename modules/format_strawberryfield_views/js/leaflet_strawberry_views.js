@@ -27,6 +27,7 @@
             $(this).width(drupalSettings.format_strawberryfield_views.leaflet[element_id]['width']);
             // Defines our basic options for leaflet GEOJSON
             var $initialzoom = 5;
+            var markerObject_interaction = {};
             // The tilemap url in /{z}/{x}/{y}.png format. Can have a key after a ? if provided by the user.
             // Defaults, should never be needed, in case wants to get around of restricted forms?
             // See https://operations.osmfoundation.org/policies/tiles/ and consider contributing if you
@@ -90,7 +91,14 @@
             var geojsonLayer  = L.geoJson.ajax(Object.values(urls),{
               onEachFeature: onEachFeature,
               pointToLayer: function (feature, latlng) {
-                return L.marker (latlng);
+                let newmarker = L.marker (latlng);
+                /* @TODO: Document this. Each Feature needs to have this property to enable interactions from
+                other viewers. Make sure the leaflet Views map does the same!
+                 */
+                if (feature.properties.hasOwnProperty('sbf:ado:change')) {
+                  markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
+                }
+                return newmarker;
               },
             });
 
@@ -110,7 +118,14 @@
                 let geojsonLayer_group  = L.geoJson.ajax(Object.values(value), {
                   onEachFeature: onEachFeature,
                   pointToLayer: function (feature, latlng) {
-                    return L.marker(latlng);
+                    let newmarker = L.marker (latlng);
+                    /* @TODO: Document this. Each Feature needs to have this property to enable interactions from
+                    other viewers. Make sure the leaflet Views map does the same!
+                     */
+                    if (feature.properties.hasOwnProperty('sbf:ado:change')) {
+                      markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
+                    }
+                    return newmarker;
                   },
                 });
                 geojsonLayer_group.on('data:loaded', function () {
@@ -148,7 +163,6 @@
             var $secondgeojson = drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsonother'].find(x=>x!==undefined);
 
             if (Array.isArray($allgeojsons) && $allgeojsons.length && typeof($secondgeojson) != 'undefined') {
-
               $allgeojsons.forEach(geojsonURL => {
                 // TODO Provider, rights, etc should be passed by metadata at
                 // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMapFormatter
@@ -158,7 +172,30 @@
                 geojsonLayer.addUrl("geojsonURL");//we now have 2 layers
               })
             }
+
             console.log('initializing leaflet 1.6.0')
+            console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
+            document.addEventListener('sbf:ado:change', (e) => {
+              if (Array.isArray(e.detail.nodeid)) {
+                // We can not fly to all NodeIds (and e.detail.nodeid is an array now)
+                // but we can fly to the first one!
+                // For many we fit to the bounds of all.
+                let multinodeid = [];
+                e.detail.nodeid.forEach(element => {
+                  if (markerObject_interaction.hasOwnProperty(element)) {
+                    multinodeid.push(markerObject_interaction[element].getLatLng());
+                  }});
+                if (multinodeid.length > 1) {
+                  const bounds = new L.LatLngBounds(multinodeid);
+                  map.fitBounds(bounds);
+                } else if (multinodeid.length == 1) {
+                  map.flyTo(markerObject_interaction[multinodeid[0]].getLatLng(), $maxzoom - 1);
+                }
+              }
+              else if (markerObject_interaction.hasOwnProperty(e.detail.nodeid)) {
+                map.flyTo(markerObject_interaction[e.detail.nodeid].getLatLng(), $maxzoom - 1);
+              }
+            });
           }
         })},
     detach: function(content, settings, trigger) {

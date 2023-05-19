@@ -47,6 +47,9 @@
                 //markerObject_interaction.feature.
                 let newmarker = L.marker (latlng);
                 markerArray.push(newmarker);
+                /* @TODO: Document this. Each Feature needs to have this property to enable interactions from
+                other viewers. Make sure the leaflet Views map does the same!
+                 */
                 if (feature.properties.hasOwnProperty('sbf:ado:change')) {
                   markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
                 }
