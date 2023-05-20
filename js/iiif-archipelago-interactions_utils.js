@@ -55,6 +55,90 @@
         });
       return response;
     },
+
+    calculateIIIFRegion: function(selector) {
+      const IIIFragment = selector.split("=");
+      let iiif_region = null;
+      let clip_path = [];
+      let clip_path_string = null;
+      if (IIIFragment.length > 1) {
+        if (IIIFragment[0].endsWith("xywh")) {
+          const IIIFragmentCoords = IIIFragment[1].split(":");
+          // @TODO what if using %percentage here?
+          const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
+          const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
+          const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
+          const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[2]);
+          const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[3]);
+          iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+        } else if (IIIFragment[0].startsWith("<svg")) {
+          // '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="' ~ mirador_path ~ '"/></g></svg>'
+          // or <svg><something>
+          // basically we have no idea if this is a polygon or a path. Damn Diego.
+
+          let svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          let svgElementNoNamespace = new DOMParser().parseFromString(selector, 'text/xml').documentElement;
+          // try first with path
+          let allpoints = [];
+          const svg_children_path = svgElementNoNamespace.getElementsByTagName('path');
+          for (const svg_child of svg_children_path) {
+            const path_d = svg_child.getAttribute('d');
+            let newpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            newpath.setAttribute("d", path_d);
+            const len = newpath.getTotalLength();
+            let p = newpath.getPointAtLength(0);
+            let seg = newpath.getPathSegAtLength(0);
+            allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
+            for(let i = 1; i < len; i++){
+              p = newpath.getPointAtLength(i);
+              if (newpath.getPathSegAtLength(i) > seg) {
+                allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
+                seg = newpath.getPathSegAtLength(i);
+              }
+            }
+            allpoints = allpoints.concat(allpoints);
+            svgElement.appendChild(newpath);
+          }
+          const svg_children_polygon = svgElementNoNamespace.getElementsByTagName('polygon');
+          for (const svg_child of svg_children_polygon) {
+            const points = svg_child.getAttribute('points');
+            let newpolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            newpolygon.setAttribute("points",points);
+            svgElement.appendChild(newpolygon);
+            for (let step = 0; step < newpolygon.points.length; step++) {
+              const point = newpolygon.points.getItem(step);
+              allpoints.push(DOMPoint.fromPoint({ x: point.x , y: point.x}))
+            }
+          }
+
+          const toRemove = document.body.insertAdjacentElement("beforeend", svgElement);
+          const bounds = toRemove.firstChild.getBBox();
+          toRemove?.remove();
+          iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.width) + "," + Math.floor(bounds.height);
+          allpoints.forEach(point => {
+            let percentx = ((point.x - bounds.x) / bounds.width) * 100;
+            let percenty = ((point.y - bounds.y) / bounds.height) * 100
+            if (percentx !== 0) {
+              percentx = percentx + "%"
+            }
+            if (percenty !== 0) {
+              percenty = percenty + "%"
+            }
+            clip_path.push(percentx + " " + percenty);
+          });
+
+          if (clip_path.length) {
+            clip_path_string = "polygon(" + clip_path.join(",") + ")";
+          }
+        }
+      }
+
+      return {
+        iiif_region: iiif_region,
+        clip_path_string: clip_path_string,
+      }
+    },
+
     getGeoAnnotations: function (iiifmanifest) {
       // this.items[0].annotations[0].items[0].motivation
       /* you call this one
@@ -65,17 +149,65 @@
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
       // @by awesome https://github.com/digitaldogsbody Mike Bennet
       const $geoannotations = jmespath.search(iiifmanifest, this.geoannotation_jmespath_pattern);
-
+      /* if it worked will give you this
+      [
+  {
+    "canvas_id": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/canvas/p1",
+    "annotations": [
+      {
+        "id": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/comments/p1",
+        "annotation": [
+          {
+            "features": [
+              {
+                "type": "Feature",
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [
+                    "-73.63037109375001",
+                    "41.85319643776675"
+                  ]
+                },
+       ....
+            ],
+            "target": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/canvas/p1#xywh=1941.1666259765625,57.175926208496094,365.9259033203125,480.27774810791016"
+          }
+        ]
+      }
+    ]
+  }
+]
+       */
       if (Array.isArray($geoannotations)) {
         $geoannotations.forEach($entry => {
           console.log($entry);
           if ($entry?.canvas_id) {
             let canvas_jmespath = this.JmesPathTemplate(this.images_jmespath_pattern_with_canvasids, {token1: $entry?.canvas_id});
             const $images = jmespath.search(iiifmanifest, canvas_jmespath);
+
             if (Array.isArray($entry?.annotations)) {
-              $entry?.annotations.forEach(items => {
+              $entry?.annotations.forEach(annotations_percanvas => {
                 // @see https://www.w3.org/TR/annotation-model/#cardinality-of-bodies-and-targets
-                console.log(item?.body?.features)
+                if (Array.isArray(annotations_percanvas?.annotation)) {
+                  annotations_percanvas?.annotation.forEach(body => {
+                    let fragment = null;
+                    console.log(body.features);
+                    console.log(body.target);
+                    // Target can be so many
+                    // A direct fragment URL to the Canvas
+                    // An Object with type/source/selector. Oh JS.. checking if it is a string!
+                    if (body?.target) {
+                      if (Object.prototype.toString.call(body?.target) === "[object String]") {
+                        fragment = body?.target
+                      } else {
+                        fragment = body?.target?.selector?.value;
+                      }
+                    }
+                    if (fragment) {
+                      console.log(this.calculateIIIFRegion(fragment));
+                    }
+                  });
+                };
               });
             }
             console.log($images);
