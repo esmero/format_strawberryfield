@@ -195,8 +195,9 @@
                     if (fragment) {
                       // Now let's bring Annotation, the target Image together to allow Leaflet to process these little beasts
                       leaflet_overlays.push({
-                        target: image_service_for_canvas,
-                        args: this.calculateIIIFRegion(fragment)
+                        source: image_service_for_canvas,
+                        region: this.calculateIIIFRegion(fragment),
+                        leafletbounds: body?.features.map(entry => { return entry?.geometry?.coordinates })
                       });
                     }
                   });
