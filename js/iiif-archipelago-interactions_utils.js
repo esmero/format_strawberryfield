@@ -144,7 +144,6 @@
         }
       }
 
-
       return {
         iiif_region: iiif_region,
         clip_path_string: clip_path_string,
@@ -156,48 +155,26 @@
       /* you call this one
       Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest("http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/metadata/iiifmanifest/default.jsonld").then(response => {Drupal.FormatStrawberryfieldIiifUtils.getGeoAnnotations(response)});
        */
-      let body = {};
-      let target = {};
+      let leaflet_overlays = [];
+
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
       // @by awesome https://github.com/digitaldogsbody Mike Bennet
       const $geoannotations = jmespath.search(iiifmanifest, this.geoannotation_jmespath_pattern);
-      /* if it worked will give you this
-      [
-  {
-    "canvas_id": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/canvas/p1",
-    "annotations": [
-      {
-        "id": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/comments/p1",
-        "annotation": [
-          {
-            "features": [
-              {
-                "type": "Feature",
-                "geometry": {
-                  "type": "Point",
-                  "coordinates": [
-                    "-73.63037109375001",
-                    "41.85319643776675"
-                  ]
-                },
-       ....
-            ],
-            "target": "http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/iiif/canvas/p1#xywh=1941.1666259765625,57.175926208496094,365.9259033203125,480.27774810791016"
-          }
-        ]
-      }
-    ]
-  }
-]
-       */
       if (Array.isArray($geoannotations)) {
         $geoannotations.forEach($entry => {
-          console.log($entry);
           if ($entry?.canvas_id) {
             let canvas_jmespath = this.JmesPathTemplate(this.images_jmespath_pattern_with_canvasids, {token1: $entry?.canvas_id});
-            const $images = jmespath.search(iiifmanifest, canvas_jmespath);
-
-            if (Array.isArray($entry?.annotations)) {
+            const $imagesObjectArray = jmespath.search(iiifmanifest, canvas_jmespath);
+            const $imageObject = $imagesObjectArray.find(e => !!e);
+            let image_service_for_canvas = null;
+            if (Array.isArray($imageObject?.items)) {
+              $imageObject?.items.forEach($item => {
+                // WE can only for now deal with a single image
+                // @TODO we need a way of calculating Canvas offsets based on multi painting annotation on a single Canvas
+                image_service_for_canvas = $item?.service_ids.find(e => !!e);
+              });
+            };
+            if (Array.isArray($entry?.annotations) && image_service_for_canvas) {
               $entry?.annotations.forEach(annotations_percanvas => {
                 // @see https://www.w3.org/TR/annotation-model/#cardinality-of-bodies-and-targets
                 if (Array.isArray(annotations_percanvas?.annotation)) {
@@ -216,59 +193,28 @@
                       }
                     }
                     if (fragment) {
-                      console.log(this.calculateIIIFRegion(fragment));
+                      // Now let's bring Annotation, the target Image together to allow Leaflet to process these little beasts
+                      leaflet_overlays.push({
+                        target: image_service_for_canvas,
+                        args: this.calculateIIIFRegion(fragment)
+                      });
                     }
                   });
-                };
+                }
+                ;
               });
             }
-            console.log($images);
           }
         });
       }
-      // Now let's bring Annotation, the target Image together to allow Leaflet to process these little beasts
-
-
-
-      return $geoannotations;
-      /*
-       [
-         {
-           "canvas_id": "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/canvas/p1",
-           "annotations": [
-             {
-               "id": "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/comments/p1",
-               "features": [
-                 ....
-               ],
-               "target": [
-                 {
-                   "source": "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/canvas/p1",
-                   "selector": {
-                     "type": "SvgSelector",
-                     "value": "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><g><path d=\"M1016.273193359375,150.29629516601562L903.5509643554688,126.8125L729.7708740234375,183.17361450195312L574.77783203125,324.0763854980469L527.8101806640625,361.65045166015625L466.7523498535156,371.0439758300781L316.4560546875,638.75927734375L335.2430725097656,723.3009033203125L307.0625305175781,901.7777709960938L640.5324096679688,1418.4212646484375L692.19677734375,1526.44677734375L884.763916015625,1526.44677734375L1016.273193359375,1437.208251953125L1086.724609375,1545.2337646484375L1175.9630126953125,1352.6666259765625L988.0925903320312,681.0300903320312L898.8541870117188,774.9652709960938L706.2870483398438,638.75927734375L673.4097290039062,544.8240356445312L1072.63427734375,253.625L1053.8472900390625,187.870361328125L1053.8472900390625,187.870361328125 z\"/></g></svg>"
-                   },
-                   ....
-                 }
-               ]
-             }
-           ]
-         },*/
-      // Now i have to choices.
-      // Fetch all images and then iterate over to match the canvas
-      // Or make a very specific /canvas id targeted JMESPATH.
-      if (iiifmanifest?.items) {
-        iiifmanifest?.items.forEach(items => {
-          if (Array.isArray(items?.annotations)) {
-            items.annotations.find(function (b) {
-              if (b?.motivation == 'georeferencing') {
-                body = b?.body;
-                target = b?.target; // will contain selector and source
-              }
-            });
-          }
-        });
-      }
+      /* If working leaflet_overlays is
+       [{
+          args: {iiif_region: "231,268,1658,1377", clip_path_string: "polygon(4.482759731344009% 23.651453927119423%,4.5…91295%,0.015004781652589198% 41.434052619917836%)"}
+          target: "http://localhost:8183/iiif/2/dc1%2Fimage-a49b6c9a0442084d577f7594775b4e6d-view-e89ae3c9-d0fc-4cb7-a6e1-9120975248c6.jpeg"
+        }]
+        */
+      console.log(leaflet_overlays);
+      return leaflet_overlays;
     }
   };
 
