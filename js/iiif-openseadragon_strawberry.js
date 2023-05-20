@@ -182,6 +182,8 @@
         // The same Image fragment might have multiple Bodies
         // ON IIIF Manifest generation we will separate this body into its own annotation
         // To please the Specs gods
+        // @see https://www.w3.org/TR/annotation-model/#cardinality-of-bodies-and-targets
+        // Bodies can be multiples/default in our case.
         args.onUpdateBody(currentGeoReferenceBody, {
           type: 'FeatureCollection',
           purpose: 'georeferencing',

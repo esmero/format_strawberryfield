@@ -4,7 +4,7 @@
   var FormatStrawberryfieldIiifUtils = {
 
     images_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
-    geoannotation_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"items\": items[?motivation == 'georeferencing'][]}}",
+    geoannotation_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id, \"annotation\": items[?motivation == 'georeferencing'].{\"features\": not_null(body[].features[], body.features), \"target\": target}}}",
     geoannotation_jmespath_pattern_split: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"features\": items[?motivation == 'georeferencing'].body[].features, \"target\": items[?motivation == 'georeferencing'].target}}",
     images_jmespath_pattern_with_canvasids: "items[?type == 'Canvas' && id=='{{token1}}'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
 
@@ -65,16 +65,27 @@
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
       // @by awesome https://github.com/digitaldogsbody Mike Bennet
       const $geoannotations = jmespath.search(iiifmanifest, this.geoannotation_jmespath_pattern);
+
       if (Array.isArray($geoannotations)) {
         $geoannotations.forEach($entry => {
           console.log($entry);
           if ($entry?.canvas_id) {
             let canvas_jmespath = this.JmesPathTemplate(this.images_jmespath_pattern_with_canvasids, {token1: $entry?.canvas_id});
             const $images = jmespath.search(iiifmanifest, canvas_jmespath);
+            if (Array.isArray($entry?.annotations)) {
+              $entry?.annotations.forEach(items => {
+                // @see https://www.w3.org/TR/annotation-model/#cardinality-of-bodies-and-targets
+                console.log(item?.body?.features)
+              });
+            }
             console.log($images);
           }
         });
       }
+      // Now let's bring Annotation, the target Image together to allow Leaflet to process these little beasts
+
+
+
       return $geoannotations;
       /*
        [
