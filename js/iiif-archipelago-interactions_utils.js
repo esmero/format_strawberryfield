@@ -57,81 +57,93 @@
     },
 
     calculateIIIFRegion: function(selector) {
+      // Selectors can be many. How to fetch/divide is a mess (yes a mess)
+      /*
+      1- A URL with a fragment
+      2.- an SVG with polygon
+      3.- an SVG with paths
+       */
+      let IIIFragmentCoords = null;
+      let IIIFragmentCoordsIndividual = null;
       const IIIFragment = selector.split("=");
+      if (IIIFragment.length > 1 && IIIFragment[0].endsWith("xywh")) {
+        if (IIIFragment[1].startsWith("pixel:")) {
+          IIIFragmentCoords = IIIFragment[1].split(":");
+          IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
+        }
+        else {
+          IIIFragmentCoordsIndividual = IIIFragment[1].split(",");
+        }
+      };
       let iiif_region = null;
       let clip_path = [];
       let clip_path_string = null;
-      if (IIIFragment.length > 1) {
-        if (IIIFragment[0].endsWith("xywh")) {
-          const IIIFragmentCoords = IIIFragment[1].split(":");
-          // @TODO what if using %percentage here?
-          const IIIFragmentCoordsIndividual = IIIFragmentCoords[1].split(",");
-          const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
-          const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
-          const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[2]);
-          const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[3]);
-          iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
-        } else if (IIIFragment[0].startsWith("<svg")) {
-          // '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="' ~ mirador_path ~ '"/></g></svg>'
-          // or <svg><something>
-          // basically we have no idea if this is a polygon or a path. Damn Diego.
-
-          let svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          let svgElementNoNamespace = new DOMParser().parseFromString(selector, 'text/xml').documentElement;
-          // try first with path
-          let allpoints = [];
-          const svg_children_path = svgElementNoNamespace.getElementsByTagName('path');
-          for (const svg_child of svg_children_path) {
-            const path_d = svg_child.getAttribute('d');
-            let newpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            newpath.setAttribute("d", path_d);
-            const len = newpath.getTotalLength();
-            let p = newpath.getPointAtLength(0);
-            let seg = newpath.getPathSegAtLength(0);
-            allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
-            for(let i = 1; i < len; i++){
-              p = newpath.getPointAtLength(i);
-              if (newpath.getPathSegAtLength(i) > seg) {
-                allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
-                seg = newpath.getPathSegAtLength(i);
-              }
-            }
-            allpoints = allpoints.concat(allpoints);
-            svgElement.appendChild(newpath);
-          }
-          const svg_children_polygon = svgElementNoNamespace.getElementsByTagName('polygon');
-          for (const svg_child of svg_children_polygon) {
-            const points = svg_child.getAttribute('points');
-            let newpolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-            newpolygon.setAttribute("points",points);
-            svgElement.appendChild(newpolygon);
-            for (let step = 0; step < newpolygon.points.length; step++) {
-              const point = newpolygon.points.getItem(step);
-              allpoints.push(DOMPoint.fromPoint({ x: point.x , y: point.x}))
+      if (IIIFragmentCoordsIndividual) {
+        // @TODO what if using %percentage here?
+        const iiif_coord_lx = Math.round(IIIFragmentCoordsIndividual[0]);
+        const iiif_coord_ly = Math.round(IIIFragmentCoordsIndividual[1]);
+        const iiif_coord_rx = Math.round(IIIFragmentCoordsIndividual[2]);
+        const iiif_coord_ry = Math.round(IIIFragmentCoordsIndividual[3]);
+        iiif_region = iiif_coord_lx + "," + iiif_coord_ly + "," + iiif_coord_rx + "," + iiif_coord_ry;
+      } else if (selector.startsWith("<svg")) {
+        // '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="' ~ mirador_path ~ '"/></g></svg>'
+        // or <svg><something>
+        // basically we have no idea if this is a polygon or a path. Damn Diego.
+        let svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        let svgElementNoNamespace = new DOMParser().parseFromString(selector, 'text/xml').documentElement;
+        // try first with path
+        let allpoints = [];
+        const svg_children_path = svgElementNoNamespace.getElementsByTagName('path');
+        for (const svg_child of svg_children_path) {
+          const path_d = svg_child.getAttribute('d');
+          let newpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          newpath.setAttribute("d", path_d);
+          const len = newpath.getTotalLength();
+          let p = newpath.getPointAtLength(0);
+          let seg = newpath.getPathSegAtLength(0);
+          allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
+          for(let i = 1; i < len; i++){
+            p = newpath.getPointAtLength(i);
+            if (newpath.getPathSegAtLength(i) > seg) {
+              allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
+              seg = newpath.getPathSegAtLength(i);
             }
           }
-
-          const toRemove = document.body.insertAdjacentElement("beforeend", svgElement);
-          const bounds = toRemove.firstChild.getBBox();
-          toRemove?.remove();
-          iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.width) + "," + Math.floor(bounds.height);
-          allpoints.forEach(point => {
-            let percentx = ((point.x - bounds.x) / bounds.width) * 100;
-            let percenty = ((point.y - bounds.y) / bounds.height) * 100
-            if (percentx !== 0) {
-              percentx = percentx + "%"
-            }
-            if (percenty !== 0) {
-              percenty = percenty + "%"
-            }
-            clip_path.push(percentx + " " + percenty);
-          });
-
-          if (clip_path.length) {
-            clip_path_string = "polygon(" + clip_path.join(",") + ")";
+          allpoints = allpoints.concat(allpoints);
+          svgElement.appendChild(newpath);
+        }
+        const svg_children_polygon = svgElementNoNamespace.getElementsByTagName('polygon');
+        for (const svg_child of svg_children_polygon) {
+          const points = svg_child.getAttribute('points');
+          let newpolygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          newpolygon.setAttribute("points",points);
+          svgElement.appendChild(newpolygon);
+          for (let step = 0; step < newpolygon.points.length; step++) {
+            const point = newpolygon.points.getItem(step);
+            allpoints.push(DOMPoint.fromPoint({ x: point.x , y: point.x}))
           }
         }
+        const toRemove = document.body.insertAdjacentElement("beforeend", svgElement);
+        const bounds = toRemove.firstChild.getBBox();
+        toRemove?.remove();
+        iiif_region = Math.floor(bounds.x) + "," + Math.floor(bounds.y) + "," + Math.floor(bounds.width) + "," + Math.floor(bounds.height);
+        allpoints.forEach(point => {
+          let percentx = ((point.x - bounds.x) / bounds.width) * 100;
+          let percenty = ((point.y - bounds.y) / bounds.height) * 100
+          if (percentx !== 0) {
+            percentx = percentx + "%"
+          }
+          if (percenty !== 0) {
+            percenty = percenty + "%"
+          }
+          clip_path.push(percentx + " " + percenty);
+        });
+
+        if (clip_path.length) {
+          clip_path_string = "polygon(" + clip_path.join(",") + ")";
+        }
       }
+
 
       return {
         iiif_region: iiif_region,
