@@ -115,6 +115,32 @@
                 geojsonLayer.addUrl("geojsonURL");//we now have 2 layers
               })
             }
+            // Now deal with the new Fancy IIIF Manifest based Image overlays!
+
+            var $firstiiifjson = [drupalSettings.format_strawberryfield.leaflet[element_id]['iiifurl']];
+            var $alliiifjsons = $firstiiifjson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['iiifother']);
+            if (Array.isArray($alliiifjsons) && $alliiifjsons.length) {
+              $alliiifjsons.forEach(iiifjsonurl => {
+                const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest(iiifjsonurl);
+                $iiifmanifest.then(iiifmanifest_promise_resolved => {
+                  const leaflet_image_overlay_arguments = Drupal.FormatStrawberryfieldIiifUtils.getGeoAnnotations(iiifmanifest_promise_resolved);
+                  console.log(leaflet_image_overlay_arguments);
+                  leaflet_image_overlay_arguments.forEach(leaflet_image_overlay_argument => {
+                    // vary the `full` based on Zoom levels? Until i figure out if i should or not tile?
+                    const iiif_image_url = leaflet_image_overlay_argument.source + "/" + leaflet_image_overlay_argument.region.iiif_region + "/full/0/default.jpg";
+                    const imageOverlay = new L.ImageOverlay.iiifBounded(iiif_image_url, L.GeoJSON.coordsToLatLng(leaflet_image_overlay_argument.bounds[0]), L.GeoJSON.coordsToLatLng(leaflet_image_overlay_argument.bounds[1]), L.GeoJSON.coordsToLatLng(leaflet_image_overlay_argument.bounds[2]), L.GeoJSON.coordsToLatLng(leaflet_image_overlay_argument.bounds[3]), {
+                      opacity: 0.8,
+                      interactive: true,
+                      clip_path: leaflet_image_overlay_argument.region?.clip_path_string,
+                    });
+                    map.addLayer(imageOverlay);
+                  });
+                });
+              });
+            };
+
+
+
             //@TODO add an extra geojsons key with every other one so people can select the others.
             // load a tile layer
             geojsonLayer.addTo(map);
@@ -127,9 +153,9 @@
                 // For many we fit to the bounds of all.
                 let multinodeid = [];
                 e.detail.nodeid.forEach(element => {
-                if (markerObject_interaction.hasOwnProperty(element)) {
-                  multinodeid.push(markerObject_interaction[element].getLatLng());
-                }});
+                  if (markerObject_interaction.hasOwnProperty(element)) {
+                    multinodeid.push(markerObject_interaction[element].getLatLng());
+                  }});
                 if (multinodeid.length > 1) {
                   const bounds = new L.LatLngBounds(multinodeid);
                   map.fitBounds(bounds);

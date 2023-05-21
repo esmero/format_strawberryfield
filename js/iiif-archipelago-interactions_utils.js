@@ -43,7 +43,13 @@
     },
     fetchIIIFManifest: async function (iiifmanifesturl) {
 
-      const response = await fetch(iiifmanifesturl)
+      const response = await fetch(iiifmanifesturl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data;
+      /*
         .then(res => res.json())
         .then(function (res) {
           return res;
@@ -52,8 +58,7 @@
           // Die as silent as possible but still log a thing.
           console.log("Error fetching IIIF Manifest " + iiifmanifesturl);
           return {};
-        });
-      return response;
+        });*/
     },
 
     calculateIIIFRegion: function(selector) {
@@ -98,15 +103,25 @@
           const path_d = svg_child.getAttribute('d');
           let newpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           newpath.setAttribute("d", path_d);
+          let control_points = Math.floor((path_d.split(",").length * 2) + 1);
           const len = newpath.getTotalLength();
-          let p = newpath.getPointAtLength(0);
-          let seg = newpath.getPathSegAtLength(0);
-          allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
-          for(let i = 1; i < len; i++){
-            p = newpath.getPointAtLength(i);
-            if (newpath.getPathSegAtLength(i) > seg) {
-              allpoints.push(DOMPoint.fromPoint({ x: p.x , y: p.y}));
-              seg = newpath.getPathSegAtLength(i);
+          if (len > 0) {
+       /*     for (let i = 0; i < control_points; i++) {
+              var p = newpath.getPointAtLength(i * len / (control_points - 1));
+              allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
+              //points.push([pt.x, pt.y]);
+            }
+*/
+
+            let p = newpath.getPointAtLength(0);
+            let seg = newpath.getPathSegAtLength(0);
+            allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
+            for (let i = 1; i < len; i++) {
+              p = newpath.getPointAtLength(i);
+              if (newpath.getPathSegAtLength(i) > seg) {
+                allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
+                seg = newpath.getPathSegAtLength(i);
+              }
             }
           }
           allpoints = allpoints.concat(allpoints);
@@ -180,8 +195,6 @@
                 if (Array.isArray(annotations_percanvas?.annotation)) {
                   annotations_percanvas?.annotation.forEach(body => {
                     let fragment = null;
-                    console.log(body.features);
-                    console.log(body.target);
                     // Target can be so many
                     // A direct fragment URL to the Canvas
                     // An Object with type/source/selector. Oh JS.. checking if it is a string!
@@ -197,7 +210,7 @@
                       leaflet_overlays.push({
                         source: image_service_for_canvas,
                         region: this.calculateIIIFRegion(fragment),
-                        leafletbounds: body?.features.map(entry => { return entry?.geometry?.coordinates })
+                        bounds: body?.features.map(entry => { return entry?.geometry?.coordinates })
                       });
                     }
                   });
@@ -210,11 +223,11 @@
       }
       /* If working leaflet_overlays is
        [{
-          args: {iiif_region: "231,268,1658,1377", clip_path_string: "polygon(4.482759731344009% 23.651453927119423%,4.5…91295%,0.015004781652589198% 41.434052619917836%)"}
-          target: "http://localhost:8183/iiif/2/dc1%2Fimage-a49b6c9a0442084d577f7594775b4e6d-view-e89ae3c9-d0fc-4cb7-a6e1-9120975248c6.jpeg"
+          region: {iiif_region: "231,268,1658,1377", clip_path_string: "polygon(4.482759731344009% 23.651453927119423%,4.5…91295%,0.015004781652589198% 41.434052619917836%)"}
+          source: "http://localhost:8183/iiif/2/dc1%2Fimage-a49b6c9a0442084d577f7594775b4e6d-view-e89ae3c9-d0fc-4cb7-a6e1-9120975248c6.jpeg",
+          bounds: [[long,lat],...]
         }]
         */
-      console.log(leaflet_overlays);
       return leaflet_overlays;
     }
   };

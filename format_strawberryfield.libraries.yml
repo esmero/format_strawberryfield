@@ -7,6 +7,13 @@ iiif_formatstrawberryfield_utils:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/jmespath_strawberry
+    - format_strawberryfield/svgpath_polyfull
+
+svgpath_polyfull:
+  version: 1.0
+  js:
+    js/polyfills/pathseg.js: {minified: true}
+
 
 jmespath_strawberry:
   js:
