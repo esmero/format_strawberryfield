@@ -56,6 +56,8 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
         'thumbnails' => TRUE,
         'icons_prefixurl' => '',
         'viewer_overrides' => '',
+        'mediasource' => NULL,
+        'main_mediasource' => NULL,
       ] + parent::defaultSettings();
   }
 
