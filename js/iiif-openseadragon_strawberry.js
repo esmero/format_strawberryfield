@@ -278,10 +278,10 @@
       button_add_geo.className = 'r6o-btn';
       button_add_geo.dataset.sourcecoords = JSON.stringify(iiif_geoextension_sourcecoords);
       container.appendChild(button_add_geo);
-      container.style.cssText = 'width:100%;height:250px;';
+      container.style.cssText = 'width:100%;height:450px;';
       let mapcontainer = document.createElement('div');
       mapcontainer.id = "geoTag";
-      mapcontainer.style.cssText = 'width:100%;height:210px;';
+      mapcontainer.style.cssText = 'width:100%;height:410px;';
       container.appendChild(mapcontainer);
       /* This will throw and error if initialized twice, Diego find a solution */
       let map = Leaflet.map(mapcontainer.id).setView([40.1, -100], 1);
