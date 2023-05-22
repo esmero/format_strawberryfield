@@ -683,8 +683,10 @@
               }
               infojson.forEach($tile => {tiles.push($tile);viewers[element_id].addTiledImage({tileSource: $tile });});
               viewers[element_id].tileSources = viewers[element_id].tileSources.concat(infojson);
-              if (infojson.length > 1) {
-                viewers[element_id].addReferenceStrip();
+              if (infojson.length >= 1) {
+                if (infojson.length > 1) {
+                  viewers[element_id].addReferenceStrip();
+                }
                 current_openseadragon_tile[element_id] = infojson[0];
                 loadFirstAnnotationOfGroup(group);
                 viewers[element_id].goToPage(0);
