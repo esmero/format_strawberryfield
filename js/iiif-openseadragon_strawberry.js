@@ -312,11 +312,6 @@
           minZoom: $minzoom
         }).addTo(map);
 
-      map.on('zoomend', function(){
-        console.log(map.getPixelWorldBounds());
-        console.log(map.latLngToContainerPoint(new Leaflet.LatLng(41,-66)));
-      });
-
 
       console.log(currentGeoReferenceBody);
       let allmarkers = [];
@@ -329,7 +324,6 @@
             if (entry?.geometry?.coordinates) {
               // Reversing lat/long bc source is GEOJSON.
               allmarkers[index] = new Leaflet.marker(new Leaflet.LatLng(entry?.geometry?.coordinates[1], entry?.geometry?.coordinates[0]), {draggable: 'true'})
-              console.log(index);
             }
           }
         )
@@ -521,6 +515,7 @@
       var current_openseadragon_tile = [];
       var groupsinfojsons =  {};
       var groupssettings = {};
+      var groupsinfomanifests = {};
       var groupsid =  {};
       var showthumbs = false
       var nodeuuid = null;
@@ -553,11 +548,10 @@
           var showthumbs = $(this).data("iiif-thumbnails");
           if (!groupsinfojsons.hasOwnProperty(group)) {
             groupsinfojsons[group] = [infojson];
-
+            groupsinfomanifests[group] = [drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl];
             if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
               icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
             }
-
             groupssettings[group] = {
               "default_width": default_width,
               "default_height": default_height,
@@ -590,6 +584,7 @@
           }
           else {
             groupsinfojsons[group].push(infojson);
+            groupsinfomanifests[group].push(drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl);
             // hide other strawberry-media-items
             $(this).height(0);
             $(this).width(0);
@@ -598,17 +593,16 @@
 
       $.each(groupsid, function (group, element_id)  {
 
-        var tiles = groupsinfojsons[group];
+        var tiles = groupsinfojsons[group].filter(n => n);
+        var iiifmanifest = groupsinfomanifests[group].filter(n => n);
         var sequence = false;
         var thumbs = false
-        if (tiles.length > 1) {
+        if (tiles.length > 1 || iiifmanifest.length > 0) {
           sequence = true;
           thumbs = groupssettings[group].showthumbs;
         }
 
-        if (tiles.length == 0) return false;
-
-        current_openseadragon_tile[element_id] = tiles[0];
+        if (tiles.length == 0 && iiifmanifest.length == 0) return false;
 
         viewers[element_id] = OpenSeadragon({
           showRotationControl: true,
@@ -629,8 +623,66 @@
           referenceStripScroll: 'horizontal',
         });
 
+
+        // We always start with the first Sequence (0)
+        function loadFirstAnnotationOfGroup(group) {
+          console.log('calling loadFirstAnnotationOfGroup');
+          jQuery.ajax({
+            url: '/do/' + groupssettings[group].nodeuuid + '/webannon/read',
+            type: "GET",
+            dataType: 'json',
+            element_id: element_id,
+            data: {
+              'target_resource': current_openseadragon_tile[element_id],
+              'keystoreid': groupssettings[group].keystoreid,
+            },
+            success: function (pagedata) {
+              console.log('Webannotations Loaded form Source');
+              annotorious[this.element_id].setAnnotations(pagedata);
+              annotorious_annotations[this.element_id] = [pagedata];
+              console.log(annotorious_annotations[this.element_id]);
+            }
+          });
+        }
+
+        /* Deal with async IIIF Manifest
+        Load only  syncronious if there is a first static info.json.
+        If not we will use the Promise to do this once they are in. */
+        if (iiifmanifest.length == 0) {
+          current_openseadragon_tile[element_id] = tiles[0];
+          if (typeof groupssettings[group].webannotations != "undefined" && groupssettings[group].webannotations == true) {
+            loadFirstAnnotationOfGroup(group);
+          }
+        }
+        else {
+          iiifmanifest.forEach($manifest => {
+            let infojson = [];
+            const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest($manifest);
+            $iiifmanifest.then(iiifmanifest_promise_resolved => {
+              let $iiif_parsed = Drupal.FormatStrawberryfieldIiifUtils.getIIIFServices(iiifmanifest_promise_resolved);
+              if (Array.isArray($iiif_parsed)) {
+                $iiif_parsed = $iiif_parsed.map($canvas_structure => {
+                  const first_image_service = $canvas_structure.items.map($item => $item.service_ids[0]);
+                  infojson.push(first_image_service[0]+'/info.json');
+                  // this is async so it should have started already
+                });
+              }
+              infojson.forEach($tile => {tiles.push($tile);viewers[element_id].addTiledImage({tileSource: $tile });});
+              viewers[element_id].tileSources = viewers[element_id].tileSources.concat(infojson);
+              if (infojson.length > 1) {
+                viewers[element_id].addReferenceStrip();
+                current_openseadragon_tile[element_id] = infojson[0];
+                loadFirstAnnotationOfGroup(group);
+                viewers[element_id].goToPage(0);
+              }
+            });
+          });
+        }
+
+        /* Attach Annotations if present */
         if (typeof groupssettings[group].webannotations != "undefined" && groupssettings[group].webannotations == true) {
           console.log("Attaching W3C Annotations");
+
           var $readonly = true;
           if (settings.user.uid != 0) {
             $readonly = false;
@@ -751,25 +803,6 @@
             });
           });
 
-          // We always start with the first Sequence (0)
-
-          jQuery.ajax({
-            url: '/do/'+ groupssettings[group].nodeuuid + '/webannon/read',
-            type: "GET",
-            dataType: 'json',
-            element_id: element_id,
-            data: {
-              'target_resource': current_openseadragon_tile[element_id],
-              'keystoreid': groupssettings[group].keystoreid,
-            },
-            success:  function(pagedata){
-              console.log('Webannotations Loaded form Source');
-              annotorious[this.element_id].setAnnotations(pagedata);
-              annotorious_annotations[this.element_id] = [pagedata];
-              console.log(annotorious_annotations[this.element_id]);
-            }
-          });
-
           if (settings.user.uid > 0) {
             annotorious[element_id].setAuthInfo({
               id: current_user['url'],
@@ -808,7 +841,6 @@
                 },
                 success: function (pagedata) {
                   annotorious[this.element_id].setAnnotations(pagedata);
-                  console.log(this.page);
                   annotorious_annotations[this.element_id][this.page] = pagedata;
                 }
               });
@@ -816,6 +848,7 @@
             else {
               // Reads from local copy
               console.log('Reading annotations for sequence ' + data.page + ' from cached data');
+              console.log()
               annotorious[element_id].setAnnotations(annotorious_annotations[element_id][data.page]);
             }
           });

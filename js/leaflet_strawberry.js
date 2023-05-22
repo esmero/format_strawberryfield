@@ -124,7 +124,6 @@
                 const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest(iiifjsonurl);
                 $iiifmanifest.then(iiifmanifest_promise_resolved => {
                   const leaflet_image_overlay_arguments = Drupal.FormatStrawberryfieldIiifUtils.getGeoAnnotations(iiifmanifest_promise_resolved);
-                  console.log(leaflet_image_overlay_arguments);
                   leaflet_image_overlay_arguments.forEach(leaflet_image_overlay_argument => {
                     // vary the `full` based on Zoom levels? Until i figure out if i should or not tile?
                     const iiif_image_url = leaflet_image_overlay_argument.source + "/" + leaflet_image_overlay_argument.region.iiif_region + "/full/0/default.jpg";

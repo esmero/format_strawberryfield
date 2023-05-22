@@ -42,23 +42,12 @@
       return this;
     },
     fetchIIIFManifest: async function (iiifmanifesturl) {
-
       const response = await fetch(iiifmanifesturl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
       return data;
-      /*
-        .then(res => res.json())
-        .then(function (res) {
-          return res;
-        })
-        .catch(function() {
-          // Die as silent as possible but still log a thing.
-          console.log("Error fetching IIIF Manifest " + iiifmanifesturl);
-          return {};
-        });*/
     },
 
     calculateIIIFRegion: function(selector) {
@@ -229,6 +218,15 @@
         }]
         */
       return leaflet_overlays;
+    },
+
+
+  getIIIFServices: function (iiifmanifest) {
+
+    // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
+    // @by awesome https://github.com/digitaldogsbody Mike Bennet
+    const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
+    return image_services;
     }
   };
 
