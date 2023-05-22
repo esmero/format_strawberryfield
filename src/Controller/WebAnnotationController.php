@@ -390,7 +390,6 @@ class WebAnnotationController extends ControllerBase {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
         // It would have set initial values so we do not need to read/iterate everytime
         $existingannotations = $this->tempStore->get($keystoreid);
-
         if ($existingannotations == null) {
           foreach ($sbf_fields as $field_name) {
             /* @var $field \Drupal\Core\Field\FieldItemInterface */

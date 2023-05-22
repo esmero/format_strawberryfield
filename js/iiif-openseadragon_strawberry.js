@@ -135,24 +135,7 @@
         return b.purpose == 'georeferencing' && b.type== 'FeatureCollection';
       }) : null;
 
-    // 2. Keep the value in a variable
-    //var currentGeoReferenceBody = currentGeoReferenceBody ? currentGeoReferenceBody.features: null;
-
-    // 3. Triggers callbacks on user action
     var addGeoTag = function(evt) {
-      // Process from dataset pro the proper georeference IIIF structure
-      /*
-      {
-        "type": "Feature",
-        "properties": {
-        "resourceCoords": [5085, 782]
-      },
-        "geometry": {
-        "type": "Point",
-          "coordinates": [4.4885839, 51.9101828]
-      }
-      }
-      */
       const features = JSON.parse(evt.target.dataset.feature)
       const sourcecoords = JSON.parse(evt.target.dataset.sourcecoords)
       let feature_collection = [];
@@ -173,8 +156,9 @@
           }
         );
       }
-      // Add the new Extension Context;
-      args.onAddContext("https://iiif.io/api/extension/georef/1/context.json");
+      // Add the new Extension Context? Documented but does not work.
+      // NOTE: We might have to add this on our IIIF templates.
+      //args.onAddContext("https://iiif.io/api/extension/georef/1/context.json");
       if (currentGeoReferenceBody) {
         args.onSetProperty("motivation", "georeferencing");
         args.annotation.underlying["motivation"] = "georeferencing";
@@ -219,7 +203,8 @@
       Note we are not using the "type" here not bc i'm lazy but bc
       we are moving data around in Dom Documents dataset properties. So we parse the string
        */
-
+      evt.target.disabled = true;
+      evt.target.className ='r6o-btn outline';
       const IIIFragment = evt.target.dataset.bound.split("=");
       if (IIIFragment.length == 0) {
         return;
@@ -290,12 +275,13 @@
       const iiif_image_url = evt.target.dataset.source + "/" + iiif_region + "/full/0/default.jpg";
       let container = document.getElementById('AnnotoriousGeoMapWidget');
       var button_add_geo = createGeoButton();
+      button_add_geo.className = 'r6o-btn';
       button_add_geo.dataset.sourcecoords = JSON.stringify(iiif_geoextension_sourcecoords);
       container.appendChild(button_add_geo);
       container.style.cssText = 'width:100%;height:250px;';
       let mapcontainer = document.createElement('div');
       mapcontainer.id = "geoTag";
-      mapcontainer.style.cssText = 'width:100%;height:250px;';
+      mapcontainer.style.cssText = 'width:100%;height:210px;';
       container.appendChild(mapcontainer);
       /* This will throw and error if initialized twice, Diego find a solution */
       let map = Leaflet.map(mapcontainer.id).setView([40.1, -100], 1);
@@ -312,13 +298,12 @@
           minZoom: $minzoom
         }).addTo(map);
 
-
-      console.log(currentGeoReferenceBody);
       let allmarkers = [];
       allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(41,-70), {draggable:'true'}));
       allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(41,-66), {draggable:'true'}));
       allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(39,-66), {draggable:'true'}));
       allmarkers.push(new Leaflet.marker(new Leaflet.LatLng(39,-70), {draggable:'true'}));
+
       if (currentGeoReferenceBody?.type == "FeatureCollection"  && Array.isArray(currentGeoReferenceBody?.features)) {
         currentGeoReferenceBody.features.forEach((entry, index) => {
             if (entry?.geometry?.coordinates) {
@@ -328,6 +313,14 @@
           }
         )
       }
+      // Prime the dataset in case someone saves without any changes but loves the coast in front of NYC
+      button_add_geo.dataset.feature = JSON.stringify([
+        [allmarkers[0].getLatLng().lng,allmarkers[0].getLatLng().lat],
+        [allmarkers[1].getLatLng().lng,allmarkers[1].getLatLng().lat],
+        [allmarkers[2].getLatLng().lng,allmarkers[2].getLatLng().lat],
+        [allmarkers[3].getLatLng().lng,allmarkers[3].getLatLng().lat]
+      ]);
+
       var imageOverlay = new Leaflet.ImageOverlay.iiifBounded(iiif_image_url, allmarkers[0].getLatLng(), allmarkers[1].getLatLng(), allmarkers[2].getLatLng(), allmarkers[3].getLatLng(), {
         opacity: 0.4,
         interactive: true,
@@ -385,12 +378,13 @@
     }
 
     var container = document.createElement('div');
-
     container.id = 'AnnotoriousGeoMapWidget';
-
     container.className = 'geomapping-widget';
-    var button_show = createButtonShowMap(args);
-    container.appendChild(button_show);
+    if (args?.readOnly !== true) {
+      var button_show = createButtonShowMap(args);
+      button_show.className = 'r6o-btn';
+      container.appendChild(button_show);
+    }
     return container;
   }
 
@@ -567,7 +561,6 @@
               "showthumbs": showthumbs,
               "viewer_overrides": viewer_overrides,
               "icons_prefixurl" : icons_prefixurl,
-
             }
 
             if (typeof annotations != "undefined" && annotations == true) {
@@ -583,7 +576,6 @@
             if (typeof annotations_georeferencewidget != "undefined" && annotations_georeferencewidget == true) {
               groupssettings[group].annotations_georeferencewidget = true;
             }
-
 
             // We only need a single css id per group
             groupsid[group] = element_id;
@@ -612,8 +604,7 @@
         }
 
         if (tiles.length == 0 && iiifmanifest.length == 0) return false;
-
-        viewers[element_id] = OpenSeadragon({
+        let default_viewer_settings = {
           showRotationControl: true,
           gestureSettingsTouch: {
             pinchRotate: true
@@ -630,7 +621,21 @@
           ajaxWithCredentials: false,
           showReferenceStrip: thumbs,
           referenceStripScroll: 'horizontal',
-        });
+        };
+        // Allow a last minute override, exclude id, element and tileSources
+        if (typeof groupssettings[group].viewer_overrides == 'object' &&
+          !Array.isArray(groupssettings[group].viewer_overrides) &&
+          groupssettings[group].viewer_overrides !== null) {
+          delete groupssettings[group].viewer_overrides?.id;
+          delete groupssettings[group].viewer_overrides?.tileSources;
+          delete groupssettings[group].viewer_overrides?.element;
+          default_viewer_settings = {
+            ...default_viewer_settings,
+            ...groupssettings[group].viewer_overrides,
+          };
+        }
+
+        viewers[element_id] = OpenSeadragon(default_viewer_settings);
 
 
         // We always start with the first Sequence (0)
@@ -696,14 +701,18 @@
           if (settings.user.uid != 0) {
             $readonly = false;
           }
+          let $widgets =[
+            ColorSelectorWidget,
+            'COMMENT',
+            'TAG'
+          ];
+          if (groupssettings[group].annotations_georeferencewidget) {
+            $widgets.push(GeoMappingSelectorWidget)
+          }
+
           const $anonconfig = {
             "readOnly":$readonly,
-            "widgets": [
-              ColorSelectorWidget,
-              GeoMappingSelectorWidget,
-              'COMMENT',
-              'TAG'
-            ],
+            "widgets": $widgets,
           }
           // terminate the worker if the user can not add annotations
           if ($readonly || !groupssettings[group].annotations_opencv) { worker.terminate() };
