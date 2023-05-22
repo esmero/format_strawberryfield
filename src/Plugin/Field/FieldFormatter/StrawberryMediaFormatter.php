@@ -19,6 +19,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\Core\Url;
+use mysql_xdevapi\Exception;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -51,8 +52,10 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
         'webannotations_tool' => 'polygon',
         'webannotations_opencv' => FALSE,
         'webannotations_betterpolygon' => FALSE,
+        'webannotations_georeferencewidget' => FALSE,
         'thumbnails' => TRUE,
         'icons_prefixurl' => '',
+        'viewer_overrides' => '',
       ] + parent::defaultSettings();
   }
 
@@ -111,6 +114,17 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
             ],
           ],
         ],
+        'webannotations_georeferencewidget' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable the Georeference widget'),
+          '#description' => t('This defines if the user will be able to use the Georeference Widget to map/deform a fragment using 4 points.'),
+          '#default_value' => $this->getSetting('webannotations_georeferencewidget'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
         'webannotations_betterpolygon' => [
           '#type' => 'checkbox',
           '#title' => t('Enable Better Polygon Module'),
@@ -123,6 +137,17 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
               [':input[data-formatter-selector="webannotations-tool"]' =>  ['!value' => "rect"]],
             ],
           ],
+        ],
+        'viewer_overrides' => [
+          '#type' => 'textarea',
+          '#title' => $this->t('Advanced: a JSON with Open Seadragon Viewer Library config overrides.'),
+          '#description' => $this->t('See <a href="https://openseadragon.github.io/docs/OpenSeadragon.html#.Options">https://openseadragon.github.io/docs/OpenSeadragon.html#.Options</a>. Leave Empty to use defaults.
+Not all options can be overriden. `id`,`tileSources`, `element` and other might have unexpected consequences. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+  '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_media_formatter"=> ["options" => ["showRotationControl" => TRUE]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+          ]),
+          '#default_value' => $this->getSetting('viewer_overrides'),
+          '#element_validate' => [[$this, 'validateJSON']],
+          '#required' => FALSE,
         ],
         'icons_prefixurl' => [
           '#type' => 'textfield',
@@ -315,6 +340,20 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
     $webannotations_tool = $this->getSetting('webannotations_tool');
     $webannotations_opencv = $this->getSetting('webannotations_opencv');
     $webannotations_betterpolygon = $this->getSetting('webannotations_betterpolygon');
+    $webannotations_georeferencewidget = $this->getSetting('webannotations_georeferencewidget');
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
+
+
+
+
     $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";
 
     $nodeuuid = $items->getEntity()->uuid();
@@ -397,6 +436,8 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
       // This also never runs if cached. So after deletion we better
       // call the controller!
       if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
@@ -428,6 +469,18 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
     $webannotations_tool = $this->getSetting('webannotations_tool');
     $webannotations_opencv = $this->getSetting('webannotations_opencv');
     $webannotations_betterpolygon = $this->getSetting('webannotations_betterpolygon');
+    $webannotations_georeferencewidget = $this->getSetting('webannotations_georeferencewidget');
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
+
+
     $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";
 
     $nodeuuid = $items->getEntity()->uuid();
@@ -483,6 +536,9 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
+
       // This also never runs if cached. So after deletion we better
       // call the controller!
       if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {

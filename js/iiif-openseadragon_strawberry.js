@@ -540,6 +540,8 @@
           var annotations_tool = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_tool'];
           var annotations_opencv = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_opencv'];
           var annotations_betterpolygon = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_betterpolygon'];
+          var annotations_georeferencewidget = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_georeferencewidget'];
+          var viewer_overrides = drupalSettings.format_strawberryfield.openseadragon[element_id]['viewer_overrides'];
           var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
           var keystoreid = drupalSettings.format_strawberryfield.openseadragon[element_id]['keystoreid'];
           current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
@@ -563,7 +565,9 @@
               "file_uuid" : file_uuid,
               "keystoreid" : keystoreid,
               "showthumbs": showthumbs,
+              "viewer_overrides": viewer_overrides,
               "icons_prefixurl" : icons_prefixurl,
+
             }
 
             if (typeof annotations != "undefined" && annotations == true) {
@@ -575,6 +579,11 @@
             if (typeof annotations_betterpolygon != "undefined" && annotations_betterpolygon == true) {
               groupssettings[group].annotations_betterpolygon = true;
             }
+
+            if (typeof annotations_georeferencewidget != "undefined" && annotations_georeferencewidget == true) {
+              groupssettings[group].annotations_georeferencewidget = true;
+            }
+
 
             // We only need a single css id per group
             groupsid[group] = element_id;
