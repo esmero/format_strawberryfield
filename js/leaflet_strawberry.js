@@ -64,15 +64,18 @@
                 return newmarker;
               },
             });
-
-
+            var cluster_added = FALSE;
+            // Given that Image Overlays will trigger data:loaded again bc of the _reset function
+            // we need to make sure we don't keep adding the markers (clusters) over and over.
             geojsonLayer.on('data:loaded', function () {
-              markers.addLayer(geojsonLayer);
-              if (geojsonLayer.getLayers().length > 1) {
-                map.addLayer(markers).fitBounds(markers.getBounds());
-              }
-              else {
-                map.addLayer(markers).setView(markers.getBounds().getCenter(), $initialzoom);
+              if (!cluster_added) {
+                markers.addLayer(geojsonLayer);
+                if (geojsonLayer.getLayers().length > 1) {
+                  map.addLayer(markers).fitBounds(markers.getBounds());
+                } else {
+                  map.addLayer(markers).setView(markers.getBounds().getCenter(), $initialzoom);
+                }
+              cluster_added = TRUE;
               }
             });
 
