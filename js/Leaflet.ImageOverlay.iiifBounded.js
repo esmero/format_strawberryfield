@@ -158,7 +158,6 @@ L.ImageOverlay.iiifBounded = L.ImageOverlay.extend({
     transformMatrix = [transformMatrix[0], transformMatrix[3], 0, transformMatrix[6], transformMatrix[1], transformMatrix[4], 0, transformMatrix[7], 0 , 0 , 1, 0 , transformMatrix[2] /*pxTopLeftInDiv.x*/, transformMatrix[5]/* pxTopLeftInDiv.y*/, 0, transformMatrix[8]];
     const t = "translate3d(" + (-1 * (transformMatrix[12] - pxTopLeftInDiv.x)) + "px," + (-1 * (transformMatrix[13] - pxTopLeftInDiv.y))+ "px, 0)" + " matrix3d(" + transformMatrix.join(", ") + ")";
     let newmatrix = new DOMMatrix(t);
-    console.log(newmatrix);
     this._rawImage.style.transformOrigin = '0 0';
     this._rawImage.style.transform = newmatrix;
     if (this.options.clip_path) {

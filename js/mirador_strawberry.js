@@ -98,7 +98,6 @@
                 visibleCanvases = (yield effects.take(ActionTypes.UPDATE_WINDOW)).payload
                   .visibleCanvases
               }
-              console.log(Mirador.actions);
               const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
               const manifestUrl = manifest.id;
               if (!manifest.json) {
@@ -121,7 +120,6 @@
                 currentDrupalNodeId = manifest.json.items.filter(item => {
                   return item['id'] === canvasId
                 }).map(item => {
-                  console.log(item);
                 if (item.hasOwnProperty('dr:nid')) {
                   return item['dr:nid']
                 }
@@ -142,7 +140,6 @@
                 canvasIds = manifest.json.sequences[0].canvases.map(
                   canvas => canvas['@id']
                 );
-                console.log(canvasIds);
               }
 
               // Build page parameter
