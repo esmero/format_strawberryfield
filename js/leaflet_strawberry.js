@@ -112,7 +112,7 @@
                 minZoom: $minzoom
               }).addTo(map);
 
-            map.on('layeradd', function (e) {
+         /*   map.on('layeradd', function (e) {
               if (markerArray.length > 0) {
                 var geojsongroup = new L.featureGroup(markerArray);
                 if (markerArray.length == 1) {
@@ -122,7 +122,7 @@
                   map.fitBounds(geojsongroup.getBounds());
                 }
               }
-            });
+            }); */
 
             var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
             var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);

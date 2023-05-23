@@ -199,17 +199,12 @@
           }
         })},
     detach: function(content, settings, trigger) {
-      console.log(trigger);
-      console.log(settings);
-      console.log(content);
       if (trigger === 'unload') {
         $('.strawberry-leaflet-views-item[data-iiif-infojson]').each(function (index, value) {
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
           // Check if we got some data passed via Drupal settings.
           //drupalSettings.format_strawberryfield_views.leaflet[element_id]['geojsonurls'] = [];
-          console.log(settings.format_strawberryfield_views);
-          console.log(element_id);
         });
       }}
   }
