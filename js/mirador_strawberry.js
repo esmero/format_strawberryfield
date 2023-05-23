@@ -15,7 +15,6 @@
     DESELECT_ANNOTATION: 'mirador/DESELECT_ANNOTATION',
     SELECT_ANNOTATION: 'mirador/SELECT_ANNOTATION',
     TOGGLE_ANNOTATION_DISPLAY: 'mirador/TOGGLE_ANNOTATION_DISPLAY',
-
     FOCUS_WINDOW: 'mirador/FOCUS_WINDOW',
     SET_WORKSPACE_FULLSCREEN: 'mirador/SET_WORKSPACE_FULLSCREEN',
     SET_WORKSPACE_VIEWPORT_POSITION: 'mirador/SET_WORKSPACE_VIEWPORT_POSITION',
@@ -53,7 +52,6 @@
     UPDATE_WORKSPACE_MOSAIC_LAYOUT: 'mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT',
     UPDATE_VIEWPORT: 'mirador/UPDATE_VIEWPORT',
     UPDATE_ELASTIC_WINDOW_LAYOUT: 'mirador/UPDATE_ELASTIC_WINDOW_LAYOUT',
-
     ADD_AUTHENTICATION_REQUEST: 'mirador/ADD_AUTHENTICATION_REQUEST',
     RESOLVE_AUTHENTICATION_REQUEST: 'mirador/RESOLVE_AUTHENTICATION_REQUEST',
     REQUEST_ACCESS_TOKEN: 'mirador/REQUEST_ACCESS_TOKEN',
@@ -61,14 +59,11 @@
     RECEIVE_ACCESS_TOKEN_FAILURE: 'mirador/RECEIVE_ACCESS_TOKEN_FAILURE',
     RESET_AUTHENTICATION_STATE: 'mirador/RESET_AUTHENTICATION_STATE',
     CLEAR_ACCESS_TOKEN_QUEUE: 'mirador/CLEAR_ACCESS_TOKEN_QUEUE',
-
     REQUEST_SEARCH: 'mirador/REQUEST_SEARCH',
     RECEIVE_SEARCH: 'mirador/RECEIVE_SEARCH',
     RECEIVE_SEARCH_FAILURE: 'mirador/RECEIVE_SEARCH_FAILURE',
     REMOVE_SEARCH: 'mirador/REMOVE_SEARCH',
-
     SET_CONTENT_SEARCH_CURRENT_ANNOTATIONS: 'mirador/SET_CONTENT_SEARCH_CURRENT_ANNOTATIONS',
-
     UPDATE_LAYERS: 'mirador/UPDATE_LAYERS',
     ADD_RESOURCE: 'mirador/ADD_RESOURCE',
     REMOVE_RESOURCE: 'mirador/REMOVE_RESOURCE',
@@ -78,18 +73,15 @@
 
     Drupal.behaviors.format_strawberryfield_mirador_initiate = {
         attach: function(context, settings) {
-
           /* var sagaMiddleware = ReduxSaga.default() */
           /** Entry point for custom side-effects baseed on Mirador actions.  */
             //  Sagas
-
-          const effects = ReduxSaga.effects
+          const effects = ReduxSaga.effects;
 
         /* function* is a generator function thus the yield */
           function* formatStrawverryFieldReact(action) {
             console.log(action);
             const state = yield effects.select(Mirador.actions.getState);
-
             const newParams = Object.fromEntries(new URLSearchParams(location.search))
             if (
               action.type === ActionTypes.SET_CANVAS ||
@@ -109,7 +101,6 @@
               console.log(Mirador.actions);
               const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
               const manifestUrl = manifest.id;
-              console.log(manifest);
               if (!manifest.json) {
                 return
               }
@@ -119,7 +110,6 @@
                   manifestId: manifest.id,
                 })).view
               }
-              console.log(manifest.json);
               let canvasIds = [];
               let currentDrupalNodeId = [];
               // This will depend on IIIF v2 versus V3.
@@ -142,7 +132,6 @@
                 console.log(canvasIds);
                 console.log(currentDrupalNodeId);
                 // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
-
                 if (currentDrupalNodeId !== null) {
                   Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentDrupalNodeId);
                 }
@@ -155,7 +144,6 @@
                 );
                 console.log(canvasIds);
               }
-
 
               // Build page parameter
               const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
@@ -185,9 +173,6 @@
               `${window.location.pathname}?${requestParams}`
             )
           }
-
-
-
           function* rootSaga() {
             yield effects.takeEvery(
               [
@@ -215,7 +200,6 @@
                         if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
                             $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
                         }
-
                         // Defines our basic options for Mirador IIIF.
                         var $options = {
                             id: element_id,
@@ -247,7 +231,6 @@
                           isWorkspaceAddVisible: false,
                           allowNewWindows: true,
                         };
-
                       }
 
                         var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
@@ -277,7 +260,6 @@
                           const miradorInstance = Mirador.viewer($options, [formatStrawverryFieldReactPlugin]);
                           console.log('initializing Mirador 3.1.1')
                         }
-
 
                         // Work around https://github.com/ProjectMirador/mirador/issues/3486
                         const mirador_window = document.getElementById(element_id);

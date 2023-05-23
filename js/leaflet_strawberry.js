@@ -40,6 +40,14 @@
             // Use current's user lat/long
             // Does not work without HTTPS
             //  map.locate({setView: true, maxZoom: 8});
+            //
+            var markers = new L.MarkerClusterGroup({
+              showCoverageOnHover: true,
+              chunkedLoading: true,
+              maxClusterRadius: 80
+            });
+
+
 
             var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
               onEachFeature: onEachFeature,
@@ -56,6 +64,19 @@
                 return newmarker;
               },
             });
+
+
+            geojsonLayer.on('data:loaded', function () {
+              markers.addLayer(geojsonLayer);
+              if (geojsonLayer.getLayers().length > 1) {
+                map.addLayer(markers).fitBounds(markers.getBounds());
+              }
+              else {
+                map.addLayer(markers).setView(markers.getBounds().getCenter(), $initialzoom);
+              }
+            });
+
+
             // The tilemap url in /{z}/{x}/{y}.png format. Can have a key after a ? if provided by the user.
             // Defaults, should never be needed, in case wants to get around of restricted forms?
             // See https://operations.osmfoundation.org/policies/tiles/ and consider contributing if you
@@ -105,7 +126,6 @@
             var $secondgeojson = drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother'].find(x=>x!==undefined);
 
             if (Array.isArray($allgeojsons) && $allgeojsons.length && typeof($secondgeojson) != 'undefined') {
-
               $allgeojsons.forEach(geojsonURL => {
                 // TODO Provider, rights, etc should be passed by metadata at
                 // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMapFormatter
@@ -138,8 +158,6 @@
               });
             };
 
-
-
             //@TODO add an extra geojsons key with every other one so people can select the others.
             // load a tile layer
             geojsonLayer.addTo(map);
@@ -153,6 +171,7 @@
                 let multinodeid = [];
                 e.detail.nodeid.forEach(element => {
                   if (markerObject_interaction.hasOwnProperty(element)) {
+                    markerObject_interaction[element].openPopup();
                     multinodeid.push(markerObject_interaction[element].getLatLng());
                   }});
                 if (multinodeid.length > 1) {
@@ -163,6 +182,7 @@
                 }
               }
               else if (markerObject_interaction.hasOwnProperty(e.detail.nodeid)) {
+                markerObject_interaction[e.detail.nodeid].openPopup();
                 map.flyTo(markerObject_interaction[e.detail.nodeid].getLatLng(), $maxzoom - 1);
               }
             });

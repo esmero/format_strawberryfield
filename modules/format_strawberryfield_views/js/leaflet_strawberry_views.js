@@ -189,7 +189,7 @@
                   const bounds = new L.LatLngBounds(multinodeid);
                   map.fitBounds(bounds);
                 } else if (multinodeid.length == 1) {
-                  map.flyTo(markerObject_interaction[multinodeid[0]].getLatLng(), $maxzoom - 1);
+                  map.flyTo(multinodeid[0], $maxzoom - 1);
                 }
               }
               else if (markerObject_interaction.hasOwnProperty(e.detail.nodeid)) {
