@@ -110,6 +110,7 @@ class MetadataDisplayForm extends ContentEntityForm {
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
       '#title' => 'Show Preview using native Output Format (e.g HTML)',
+      '#description' => 'If errors are found Preview will fail.',
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
@@ -175,16 +176,72 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
+   * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
+   * but adds some extra properties for reporting and returns an array of the properties.
+   * @todo: add the extra property functionality as an option to the existing
+   * function and import here.
+   */
+  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, $excludepaths = []) {
+    $return = [];
+    $array_depth_max = 10;
+    ++$array_depth;
+    if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
+      return $return;
+    }
+    foreach($array as $key=>$value) {
+      if(filter_var($key, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
+        $key = "*";
+      } elseif (is_integer($key)) {
+        $key = '[*]';
+      }
+      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
+      if ($key == '[*]' || $key == '*') {
+        $key = empty($recursive_key) ? $key : $recursive_key  . $key;
+      } else {
+        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
+      }
+      if (is_array($value)) {
+        $return['data.' . $key]['type'] = $value_type;
+        $return['data.' . $key]['used'] = '';
+        if ($array_depth <= $array_depth_max) {
+          $return = array_merge($return, static::flattenKeys($value, $key, $array_depth));
+        }
+      }
+      else {
+        $return['data.' . $key]['type'] = $value_type;
+        $return['data.' . $key]['used'] = '';
+      }
+    }
+    return $return;
+  }
+
+  /**
+   * Takes a provided property path and inserts one for URLs and arrays
+   * and returns an array of modified paths to check against.
+   */
+  public static function addPropertyPath(string $property_path) {
+    $last_dot_pos = strrpos($property_path,'.');
+    $url_property_path = substr_replace($property_path, '*.', $last_dot_pos, 1);
+    $url_property_path_end = $property_path . '*';
+    $array_property_path = substr_replace($property_path, '[*].', $last_dot_pos, 1);
+    $array_property_path_end = $property_path . '[*]';
+    return [
+      $url_property_path,
+      $url_property_path_end,
+      $array_property_path,
+      $array_property_path_end
+    ];
+  }
+
+  /**
    * AJAX callback.
    */
   public static function ajaxPreview($form, FormStateInterface $form_state) {
-    set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
     $response = new AjaxResponse();
 
     /** @var \Drupal\format_strawberryfield\MetadataDisplayInterface $entity */
     $entity = $form_state->getFormObject()->getEntity();
 
-    $used_vars = $entity->getTwigVariablesUsed();
     // Attach the library necessary for using the OpenOffCanvasDialogCommand and
     // set the attachments for this Ajax response.
     $form['#attached']['library'][] = 'core/drupal.dialog.off_canvas';
@@ -204,6 +261,10 @@ class MetadataDisplayForm extends ContentEntityForm {
       $mimetype = $form_state->getValue('mimetype');
       $mimetype = !empty($mimetype) ? $mimetype[0]['value'] : 'text/html';
       $show_render_native = $form_state->getValue('render_native');
+
+      if ($show_render_native) {
+        set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
+      }
 
       $sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($preview_node);
@@ -254,38 +315,70 @@ class MetadataDisplayForm extends ContentEntityForm {
           'mode' => 'application/json',
         ],
       ];
-      sort($used_vars);
-      $json_keys = array_keys($jsondata);
-      $data_json = array_map(function($key) {
-        return 'data.' . $key;
-      }, $json_keys);
-      $unused_vars = array_diff($data_json,$used_vars);
-      sort($unused_vars);
-      $used_rows = array_map(function($used) {
-        return [$used];
-      }, $used_vars);
-      $unused_rows = array_map(function($unused) {
-        return [$unused];
-      }, $unused_vars);
-      $var_table = [
-        '#type' => 'table',
-        '#header' => [t('Used Variables')],
-        '#rows' => $used_rows,
-        '#empty' => t('No content has been found.'),
-      ];
-      $json_table = [
-        '#type' => 'table',
-        '#header' => [t('Unused JSON keys')],
-        '#rows' => $unused_rows,
-        '#empty' => t('No content has been found.'),
-      ];
 
-      // Try to Ensure we're using the twig from user's input instead of the entity's
-      // default.
       try {
+        // Try to Ensure we're using the twig from user's input instead of the entity's
+        // default.
         $input = $form_state->getUserInput();
         $entity->set('twig', $input['twig'][0], FALSE);
         $render = $entity->renderNative($context);
+        $used_vars = $entity->getTwigVariablesUsed();
+        $data_json = MetadataDisplayForm::flattenKeys($jsondata);
+        ksort($data_json);
+        $used_keys = [];
+        foreach($used_vars as $used_var) {
+          $used_var_path = $used_var['path'];
+          $used_var_line = $used_var['line'];
+          $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
+          if (str_starts_with($used_var_path, 'data.')) {
+            $used_var_exploded = explode('.', $used_var_path);
+            array_push($used_keys, $used_var_path);
+            $wildcard_paths = static::addPropertyPath($used_var_path);
+            if (isset($data_json[$used_var_path])) {
+              $data_json[$used_var_path]['used'] = 'Used';
+              $data_json[$used_var_path]['line'] = $used_var_line;
+            }
+            foreach($wildcard_paths as $wildcard_path) {
+              if (isset($data_json[$wildcard_path])) {
+                $data_json[$wildcard_path]['used'] = 'Used';
+                $data_json[$wildcard_path]['line'] = $used_var_line;
+              }
+            }
+            if (count($used_var_exploded) > 2) {
+              $used_var_parts = array_slice($used_var_exploded,0, 2);
+              $used_var_part = implode('.', $used_var_parts);
+              if (isset($data_json[$used_var_part])) {
+                $data_json[$used_var_part]['used'] = 'Used';
+                $data_json[$used_var_part]['line'] = $used_var_line;
+              }
+            }
+          }
+          else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
+            $data_json[$used_var_parent_path]['used'] = 'Used';
+            $data_json[$used_var_parent_path]['line'] = $used_var_line;
+          }
+        }
+        $unused_vars = $data_json;
+
+        $unused_keys = array_keys($unused_vars);
+        $unused_rows = array_map(function($unused_key, $unused_value) {
+          return [
+            $unused_key,
+            $unused_value['type'],
+            $unused_value['used'],
+            isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+          ];
+        }, $unused_keys,$unused_vars);
+        $json_table = [
+          '#type' => 'table',
+          '#header' => [
+            t('JSON key'),
+            t('Type'), t('Used'),
+            t('Line No.')
+          ],
+          '#rows' => $unused_rows,
+          '#empty' => t('No content has been found.'),
+        ];
         if ($show_render_native) {
           $message = '';
           switch ($mimetype) {
@@ -364,18 +457,10 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        $output['twig_vars'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Twig Variables',
-          'render' => [
-            'table' => $var_table
-          ],
-        ];
         $output['json_unused'] = [
           '#type' => 'details',
           '#open' => FALSE,
-          '#title' => 'Unused JSON keys',
+          '#title' => 'JSON keys',
           'render' => [
             'table' => $json_table
           ],
@@ -397,25 +482,11 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#markup' => $message,
           ]
         ];
-        $output['twig_vars'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Twig Variables',
-          'render' => [
-            'table' => $var_table
-          ],
-        ];
-        $output['json_unused'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'Unused JSON keys',
-          'render' => [
-            'table' => $json_table
-          ],
-        ];
       }
-      restore_error_handler();
-      restore_exception_handler();
+      if ($show_render_native) {
+        restore_error_handler();
+        restore_exception_handler();
+      }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
     // Always refresh the Preview Element too.
