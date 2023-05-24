@@ -413,12 +413,12 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $parse_mode->getPluginId()
       );
 
-      // Generate the special Highlight query for the Advanced Highligther
-      if ($query_able_datum_internal['aggregated'] ?? FALSE) {
+      // Generate the special Highlight query for the Advanced Highlighter
+      if (!empty($query_able_datum_internal['aggregated']) && is_array($query_able_datum_internal['aggregated'])) {
         // These little babies are always OR bc it is a highlight.. no need to go
         // Boolean here folks.
         $flat_key_sbf_highlight[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
-          $manual_keys, $query_able_datum_fields['aggregated'],
+          $manual_keys, $query_able_datum_internal['aggregated'],
           $parse_mode->getPluginId()
         );
       }
