@@ -21,6 +21,7 @@
           }
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
+          let element = document.getElementById(element_id);
           // Check if we got some data passed via Drupal settings.
           if (typeof(drupalSettings.format_strawberryfield.leaflet[element_id]) != 'undefined') {
 
@@ -61,6 +62,11 @@
                 if (feature.properties.hasOwnProperty('sbf:ado:change')) {
                   markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
                 }
+                newmarker.on('click', function(e) {
+                  console.log(e);
+                  if (feature.properties.hasOwnProperty('sbf:ado:view:change:dr:nid')) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change:dr:nid']);
+                  }});
                 return newmarker;
               },
             });

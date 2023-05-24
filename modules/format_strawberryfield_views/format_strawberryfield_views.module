@@ -310,3 +310,61 @@ function format_strawberryfield_views_library_info_alter(&$libraries, $extension
     array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
+
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function format_strawberryfield_views_views_pre_render(ViewExecutable $view) {
+    /*
+     * result = {Drupal\views\ViewExecutable} [58]
+ storage = {Drupal\views\Entity\View} [27]
+ built = true
+ executed = true
+ args = {array} [1]
+  0 = "8130"
+
+    and also ->argument->nid should be there...
+    ->element["#attached"]["drupalSettings"]
+    and
+
+    dom_id = 91a7e0aa3f86b11ba0270d36dc247d75b35f243b934697868d55db25b76f887b
+
+    or
+
+    ["serializationData'} = {array} [9]
+ storage = "testing_ados_via_ajax"
+ current_display = "block_1"
+ args = {array} [1]
+  0 = "8130"
+ current_page = null
+ exposed_input = {array} [0]
+ exposed_raw_input = {array} [2]
+ exposed_data = {array} [7]
+ dom_id = "91a7e0aa3f86b11ba0270d36dc247d75b35f243b934697868d55db25b76f887b"
+ executed = false
+  $view_config['display_options']['display_extenders']['sbf_ajax_interactions']
+    result = {array} [3]
+
+ sbf_ajax_interactions = {int} 1
+ sbf_ajax_interactions_arguments = {array} [1]
+  nid = "nid"
+
+    */
+  $current_display = $view->current_display;
+  $view_config = $view->storage->getDisplay($current_display);
+  if (!empty($view_config['display_options']['display_extenders']['sbf_ajax_interactions'])) {
+    /* $view_config['display_options']['display_extenders']['sbf_ajax_interactions'];
+    $view_config['display_options']['display_extenders']['sbf_ajax_interactions'];
+    $view_config['display_options']['display_extenders']['sbf_ajax_interactions_arguments']; */
+    if ($view_config['display_options']['display_extenders']['sbf_ajax_interactions']) {
+      $view->element['#attached']['library'][] = 'format_strawberryfield_views/view-ajax-interactions';
+      $view->element['#attached']['drupalSettings']['sbf_ajax_interactions'][$view->dom_id] = $view_config['display_options']['display_extenders']['sbf_ajax_interactions']['sbf_ajax_interactions_arguments'];
+    }
+    /* foreach ($libraries as $library) {
+      // Attach library to view.
+      $view->element['#attached']['library'][] = trim($library);
+    } */
+  }
+}
+

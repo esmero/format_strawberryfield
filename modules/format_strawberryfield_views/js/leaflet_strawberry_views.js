@@ -98,6 +98,10 @@
                 if (feature.properties.hasOwnProperty('sbf:ado:change')) {
                   markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
                 }
+                newmarker.on('click', function(e) {
+                  if (feature.properties.hasOwnProperty('sbf:ado:view:change:dr:nid')) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change:dr:nid']);
+                }});
                 return newmarker;
               },
             });

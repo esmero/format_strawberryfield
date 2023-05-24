@@ -32,6 +32,23 @@
       return this;
     },
 
+    dispatchAdoViewChange: function(el, nodeids){
+      /* el being a dom document via const el = document.getElementById(element_id);*/
+      /* nodeid being the ADO Node ID */
+      let nodeidsArray = [];
+      if (!Array.isArray(nodeids)) {
+        nodeidsArray = [nodeids]
+      }
+      else {
+        nodeidsArray = nodeids
+      }
+      const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {nodeid: nodeidsArray} });
+      console.log(event);
+      el.dispatchEvent(event);
+      return this;
+    },
+
+
     dispatchCanvasChange: function(el, canvasid, iiifmanifesturl){
       /* el being a dom document via const el = document.getElementById(element_id);*/
       /* canvasid being the ADO Node ID */
@@ -155,10 +172,6 @@
     },
 
     getGeoAnnotations: function (iiifmanifest) {
-      // this.items[0].annotations[0].items[0].motivation
-      /* you call this one
-      Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest("http://localhost:8001/do/17355bdb-d784-4037-96fe-5c160296e639/metadata/iiifmanifest/default.jsonld").then(response => {Drupal.FormatStrawberryfieldIiifUtils.getGeoAnnotations(response)});
-       */
       let leaflet_overlays = [];
 
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595

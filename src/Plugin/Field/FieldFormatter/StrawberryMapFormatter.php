@@ -135,9 +135,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
-        'overlaysource' => [
-          'metadataexposeentity' => 'metadataexposeentity',
-        ],
+        'overlaysource' => NULL,
         'main_mediasource' => 'metadataexposeentity',
         'main_overlaysource' => NULL,
         'metadataexposeentity_source' => NULL,
@@ -513,12 +511,6 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#max' => 22,
         ],
       ] + parent::settingsForm($form, $form_state);
-    if (empty($options_for_mainsource)) {
-      // let's give people a hint of what they are doing wrong
-      $settings_form['main_mediasource']['#empty_option'] = t(
-        '- No Source for your GeoJSON Urls. Please check at least one! -'
-      );
-    }
     return $settings_form;
   }
 

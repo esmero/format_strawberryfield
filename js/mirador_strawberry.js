@@ -147,10 +147,9 @@
               if (view === 'single') {
                 newParams.page = canvasIndices[0]
               } else if (canvasIndices.length == 1) {
-                newParams.page =
-                  canvasIndices[0] > 1 ? `${canvasIndices[0]},` : `,${canvasIndices[0]}`
+                newParams.page = canvasIndices[0]
               } else if (view === 'book') {
-                newParams.page = canvasIndices.join(',')
+                newParams.page = canvasIndices.find(e => !!e).join(',')
               }
             }
             else if (action.type === ActionTypes.RECEIVE_SEARCH) {

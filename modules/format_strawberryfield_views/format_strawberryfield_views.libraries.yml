@@ -13,7 +13,7 @@ leaflet_strawberry_views:
 
 modal-exposed-form-views-ajax:
   js:
-    js/modal-exposed-form-ajax.js: {}
+    js/modal-exposed-form-ajax.js: {minified: false}
   dependencies:
     - core/drupal
     - core/jquery
@@ -24,9 +24,21 @@ modal-exposed-form-views-ajax:
     - core/views.ajax
 modal-exposed-form-facet-views-ajax:
   js:
-    js/facets-views-ajax.js: {}
+    js/facets-views-ajax.js: {minified: false}
   dependencies:
     - facets/widget
     - core/drupalSettings
     - core/drupal.ajax
     - core/views.ajax
+
+view-ajax-interactions:
+  js:
+    js/sbf-views-ajax-interactions.js: {minified: false}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/once
+    - core/drupalSettings
+    - core/views
+    - core/views.ajax
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
