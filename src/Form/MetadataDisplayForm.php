@@ -217,10 +217,8 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
-   * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
-   * but adds some extra properties for reporting and returns an array of the properties.
-   * @todo: add the extra property functionality as an option to the existing
-   * function and import here.
+   * Takes a given MetadataDisplay entity and ADO JSON keys and generates
+   * a table to display in a MetadataDisplay Preview.
    */
   public static function generateJsonKeysTable( MetadataDisplayEntity $entity, array $jsondata) {
 
