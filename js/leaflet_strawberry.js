@@ -58,12 +58,15 @@
                 /* @TODO: Document this. Each Feature needs to have this property to enable interactions from
                 other viewers. Make sure the leaflet Views map does the same!
                  */
-                if (feature.properties.hasOwnProperty('sbf:ado:change')) {
-                  markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
+                if (feature.properties.hasOwnProperty('sbf:ado:change:react')) {
+                  markerObject_interaction[feature.properties['sbf:ado:change:react']] = newmarker;
                 }
                 newmarker.on('click', function(e) {
                   if (feature.properties.hasOwnProperty('sbf:ado:view:change')) {
                     Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change']);
+                  }
+                  if (feature.properties.hasOwnProperty('sbf:ado:change')) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(element, feature.properties['sbf:ado:change']);
                   }
                   if (feature.properties.hasOwnProperty('sbf:ado:canvas:change')) {
                     const canvasid = feature.properties['sbf:ado:canvas:change']?.canvasid;

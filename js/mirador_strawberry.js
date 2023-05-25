@@ -86,6 +86,29 @@
     }
   }
 
+  function CaptureAdoMiradorAdoChange(miradorInstance, this_id ,e) {
+    if (this_id === e.detail.caller_id) {
+      // Ignore calls from itself! or we will have an eternal loop
+      return;
+    }
+    for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
+      const data = miradorInstance.store.getState().windows[windowId];
+      if (data.manifestId) {
+        const manifest = miradorInstance.store.getState().manifests[data.manifestId]
+        let currentDrupalNodeId = manifest.json.items.find(item => {
+          let match = false;
+          if (item.hasOwnProperty('sbf:ado:change:react')) {
+            if (Array.isArray(e.detail.nodeid)) {
+              e.detail.nodeid.forEach(nodeid => match = (item['sbf:ado:change:react'] == nodeid))
+            }
+          }
+          return match;
+        });
+        console.log(currentDrupalNodeId);
+      }
+    }
+  }
+
   Drupal.behaviors.format_strawberryfield_mirador_initiate = {
     attach: function(context, settings) {
       const effects = ReduxSaga.effects;
@@ -271,7 +294,8 @@
                 // To allow bubling up we need to add this one to the document
                 // Multiple Miradors will replace each other?
                 // @TODO check on that diego..
-                document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(elem, miradorInstance, element_id));
+                document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
+                document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
               }
             }
 
