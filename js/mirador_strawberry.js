@@ -95,6 +95,7 @@
       const data = miradorInstance.store.getState().windows[windowId];
       if (data.manifestId) {
         const manifest = miradorInstance.store.getState().manifests[data.manifestId]
+        let canvasid = null;
         let currentDrupalNodeId = manifest.json.items.find(item => {
           let match = false;
           if (item.hasOwnProperty('sbf:ado:change:react')) {
@@ -102,9 +103,15 @@
               e.detail.nodeid.forEach(nodeid => match = (item['sbf:ado:change:react'] == nodeid))
             }
           }
+          if (match) {
+            canvasid = item['id'];
+          }
           return match;
         });
-        console.log(currentDrupalNodeId);
+        if (currentDrupalNodeId && canvasid) {
+          const action = Mirador.actions.setCanvas(windowId,canvasid);
+          miradorInstance.store.dispatch(action);
+        }
       }
     }
   }
