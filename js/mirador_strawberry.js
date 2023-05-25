@@ -146,6 +146,7 @@
           }
           let canvasIds = [];
           let currentDrupalNodeId = [];
+          let currentDrupalNodeForViews = [];
           // This will depend on IIIF v2 versus V3.
           if (manifest.json["@context"].includes('http://iiif.io/api/presentation/3/context.json')) {
             console.log('IIIF Presentation Manifest V3');
@@ -162,9 +163,24 @@
                 return null;
               }
             });
+            currentDrupalNodeForViews = manifest.json.items.filter(item => {
+              return item['id'] === canvasId
+            }).map(item => {
+              if (item.hasOwnProperty('sbf:ado:view:change')) {
+                return item['sbf:ado:view:change']
+              }
+              else {
+                return null;
+              }
+            });
+            currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
+            currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
             // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
-            if (currentDrupalNodeId !== null) {
+            if (currentDrupalNodeId.length > 0) {
               Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentDrupalNodeId, state.config.id);
+            }
+            if (currentDrupalNodeForViews.length > 0) {
+              Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(el, currentDrupalNodeForViews);
             }
             Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl, state.config.id);
           }
