@@ -16,7 +16,7 @@
       return s;
     },
 
-    dispatchAdoChange: function(el, nodeids){
+    dispatchAdoChange: function(el, nodeids, caller_id){
       /* el being a dom document via const el = document.getElementById(element_id);*/
       /* nodeid being the ADO Node ID */
       let nodeidsArray = [];
@@ -26,13 +26,15 @@
       else {
         nodeidsArray = nodeids
       }
-      const event = new CustomEvent('sbf:ado:change', { bubbles: true, detail: {nodeid: nodeidsArray} });
+      const event = new CustomEvent('sbf:ado:change', { bubbles: true, detail: {nodeid: nodeidsArray, caller_id:caller_id} });
       console.log(event);
       el.dispatchEvent(event);
       return this;
     },
 
     dispatchAdoViewChange: function(el, nodeids){
+      // We don't need the caller here.
+      // we will use the element itself to fetch who called.
       /* el being a dom document via const el = document.getElementById(element_id);*/
       /* nodeid being the ADO Node ID */
       let nodeidsArray = [];
@@ -49,11 +51,11 @@
     },
 
 
-    dispatchCanvasChange: function(el, canvasid, iiifmanifesturl){
+    dispatchCanvasChange: function(el, canvasid, manifestId, caller_id){
       /* el being a dom document via const el = document.getElementById(element_id);*/
       /* canvasid being the ADO Node ID */
       /* iiifmanifestUrl the URL that contains the canvasid */
-      const event = new CustomEvent('sbf:canvas:change', { bubbles: true, detail: {canvasid: canvasid, iiifmanifesturl: iiifmanifesturl} });
+      const event = new CustomEvent('sbf:canvas:change', { bubbles: true, detail: {canvasid: canvasid, manifestId: manifestId, caller_id: caller_id} });
       console.log(event);
       el.dispatchEvent(event);
       return this;

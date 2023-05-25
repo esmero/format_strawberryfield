@@ -1,6 +1,6 @@
 (function ($, Drupal, drupalSettings, Mirador) {
 
-    'use strict';
+  'use strict';
   const ActionTypes = {
     ADD_COMPANION_WINDOW: 'mirador/ADD_COMPANION_WINDOW',
     UPDATE_COMPANION_WINDOW: 'mirador/UPDATE_COMPANION_WINDOW',
@@ -71,216 +71,232 @@
     HIDE_COLLECTION_DIALOG: 'mirador/HIDE_COLLECTION_DIALOG',
   };
 
-    Drupal.behaviors.format_strawberryfield_mirador_initiate = {
-        attach: function(context, settings) {
-          /* var sagaMiddleware = ReduxSaga.default() */
-          /** Entry point for custom side-effects baseed on Mirador actions.  */
-            //  Sagas
-          const effects = ReduxSaga.effects;
+  function CaptureAdoMiradorCanvasChange(miradorInstance, this_id ,e) {
+    if (this_id === e.detail.caller_id) {
+      // Ignore calls from itself! or we will have an eternal loop
+      return;
+    }
 
-        /* function* is a generator function thus the yield */
-          function* formatStrawverryFieldReact(action) {
-            console.log(action);
-            const state = yield effects.select(Mirador.actions.getState);
-            const newParams = Object.fromEntries(new URLSearchParams(location.search))
-            if (
-              action.type === ActionTypes.SET_CANVAS ||
-              action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
-            ) {
-              const { windowId } = action
-              let { visibleCanvases, view, canvasId } = action
-              const el = document.getElementById(windowId);
-              if (
-                !visibleCanvases &&
-                (action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
-                )) {
-                // For view changes, get the visible canvases from the next updateWindow action
-                visibleCanvases = (yield effects.take(ActionTypes.UPDATE_WINDOW)).payload
-                  .visibleCanvases
-              }
-              const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
-              const manifestUrl = manifest.id;
-              if (!manifest.json) {
-                return
-              }
-              if (!view) {
-                view = (yield effects.select(Mirador.selectors.getWindowConfig, {
-                  windowId,
-                  manifestId: manifest.id,
-                })).view
-              }
-              let canvasIds = [];
-              let currentDrupalNodeId = [];
-              // This will depend on IIIF v2 versus V3.
-              if (manifest.json["@context"].includes('http://iiif.io/api/presentation/3/context.json')) {
-                console.log('IIIF Presentation Manifest V3');
-                canvasIds = manifest.json.items.map(
-                  item => item['id']
-                );
-                currentDrupalNodeId = manifest.json.items.filter(item => {
-                  return item['id'] === canvasId
-                }).map(item => {
-                if (item.hasOwnProperty('dr:nid')) {
-                  return item['dr:nid']
-                }
-                else {
-                  return null;
-                }
-              });
-                console.log(canvasIds);
-                console.log(currentDrupalNodeId);
-                // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
-                if (currentDrupalNodeId !== null) {
-                  Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentDrupalNodeId);
-                }
-                Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl);
+    for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
+      const data = miradorInstance.store.getState().windows[windowId];
+      if (e.detail.manifestId ==  data.manifestId) {
+        const action = Mirador.actions.setCanvas(windowId, e.detail.canvasid);
+        miradorInstance.store.dispatch(action);
+      }
+    }
+  }
+
+  Drupal.behaviors.format_strawberryfield_mirador_initiate = {
+    attach: function(context, settings) {
+      const effects = ReduxSaga.effects;
+
+      /* function* is a generator function thus the yield */
+      function* formatStrawverryFieldReact(action) {
+
+        const state = yield effects.select(Mirador.actions.getState);
+        const newParams = Object.fromEntries(new URLSearchParams(location.search))
+        if (
+          action.type === ActionTypes.SET_CANVAS ||
+          action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
+        ) {
+          const { windowId } = action
+          let { visibleCanvases, view, canvasId } = action
+          const el = document.getElementById(windowId);
+          if (
+            !visibleCanvases &&
+            (action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
+            )) {
+            // For view changes, get the visible canvases from the next updateWindow action
+            visibleCanvases = (yield effects.take(ActionTypes.UPDATE_WINDOW)).payload
+              .visibleCanvases
+          }
+          const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
+          const manifestUrl = manifest.id;
+          if (!manifest.json) {
+            return
+          }
+          if (!view) {
+            view = (yield effects.select(Mirador.selectors.getWindowConfig, {
+              windowId,
+              manifestId: manifest.id,
+            })).view
+          }
+          let canvasIds = [];
+          let currentDrupalNodeId = [];
+          // This will depend on IIIF v2 versus V3.
+          if (manifest.json["@context"].includes('http://iiif.io/api/presentation/3/context.json')) {
+            console.log('IIIF Presentation Manifest V3');
+            canvasIds = manifest.json.items.map(
+              item => item['id']
+            );
+            currentDrupalNodeId = manifest.json.items.filter(item => {
+              return item['id'] === canvasId
+            }).map(item => {
+              if (item.hasOwnProperty('dr:nid')) {
+                return item['dr:nid']
               }
               else {
-                console.log('IIIF Presentation Manifest V2');
-                canvasIds = manifest.json.sequences[0].canvases.map(
-                  canvas => canvas['@id']
-                );
+                return null;
               }
-
-              // Build page parameter
-              const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
-              if (view === 'single') {
-                newParams.page = canvasIndices[0]
-              } else if (canvasIndices.length == 1) {
-                newParams.page = canvasIndices[0]
-              } else if (view === 'book') {
-                newParams.page = canvasIndices.find(e => !!e).join(',')
-              }
+            });
+            // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
+            if (currentDrupalNodeId !== null) {
+              Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentDrupalNodeId, state.config.id);
             }
-            else if (action.type === ActionTypes.RECEIVE_SEARCH) {
-              const { windowId, companionWindowId } = action
-              const query = yield effects.select(getSearchQuery, { companionWindowId, windowId })
-              newParams.q = query
-            }
-            else if (action.type === ActionTypes.REMOVE_SEARCH) {
-              delete newParams.q
-            }
-            const requestParams = new URLSearchParams(newParams)
-              .toString()
-              .replaceAll('%2C', ',')
-            history.replaceState(
-              { searchParams: newParams },
-              '',
-              `${window.location.pathname}?${requestParams}`
-            )
+            Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl, state.config.id);
           }
-          function* rootSaga() {
-            yield effects.takeEvery(
-              [
-                ActionTypes.SET_CANVAS,
-                ActionTypes.RECEIVE_SEARCH,
-                ActionTypes.REMOVE_SEARCH,
-                ActionTypes.SET_WINDOW_VIEW_TYPE,
-              ],
-              formatStrawverryFieldReact
-            )
+          else {
+            console.log('IIIF Presentation Manifest V2');
+            canvasIds = manifest.json.sequences[0].canvases.map(
+              canvas => canvas['@id']
+            );
           }
 
-          const formatStrawverryFieldReactPlugin = {
-            component: () => null,
-            saga: rootSaga,
-          };
+          // Build page parameter
+          const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
+          if (view === 'single' || canvasIndices.length == 1) {
+            newParams.page = canvasIndices[0]
+          } else if (view === 'book') {
+            newParams.page = canvasIndices.find(e => !!e).join(',')
+          }
+        }
+        else if (action.type === ActionTypes.RECEIVE_SEARCH) {
+          const { windowId, companionWindowId } = action
+          const query = yield effects.select(getSearchQuery, { companionWindowId, windowId })
+          newParams.search = query
+        }
+        else if (action.type === ActionTypes.REMOVE_SEARCH) {
+          delete newParams.search
+        }
 
-            $('.strawberry-mirador-item[data-iiif-infojson]').once('attache_mirador')
-                .each(function (index, value) {
-                    // Get the node uuid for this element
-                    var element_id = $(this).attr("id");
-                    // Check if we got some data passed via Drupal settings.
-                    if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
-                        $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
-                        if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
-                            $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
-                        }
-                        // Defines our basic options for Mirador IIIF.
-                        var $options = {
-                            id: element_id,
-                            windows: [{
-                                manifestId: drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl'],
-                                thumbnailNavigationPosition: 'far-bottom',
-                            }]
-                        };
+        let $fragment = '';
+        for (const [p, val] of new URLSearchParams(newParams).entries()) {
+          $fragment += `${p}/${val}/`;
+        };
+        $fragment = $fragment.slice(0, -1);
 
-                      if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-                        $options.window = {
-                          workspaceControlPanel: {
-                            enabled: false
-                          },
-                          allowClose: false,
-                          imageToolsEnabled: true,
-                          imageToolsOpen: true,
-                          views: [
-                            { key: 'single', behaviors: [null, 'individuals'] },
-                            { key: 'book', behaviors: [null, 'paged'] },
-                            { key: 'scroll', behaviors: ['continuous'] },
-                            { key: 'gallery' },
-                          ],
-                        };
-                        $options.windows[0].workspaceControlPanel = {
-                          enabled: false
-                        };
-                        $options.windows[0].workspace = {
-                          isWorkspaceAddVisible: false,
-                          allowNewWindows: true,
-                        };
-                      }
+        history.replaceState(
+          { searchParams: newParams },
+          '',
+          `${window.location.pathname}#${$fragment}`
+        );
+      }
+      function* rootSaga() {
+        yield effects.takeEvery(
+          [
+            ActionTypes.SET_CANVAS,
+            ActionTypes.RECEIVE_SEARCH,
+            ActionTypes.REMOVE_SEARCH,
+            ActionTypes.SET_WINDOW_VIEW_TYPE,
+          ],
+          formatStrawverryFieldReact
+        )
+      }
 
-                        var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
-                        var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
-                        var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
+      const formatStrawverryFieldReactPlugin = {
+        component: () => null,
+        saga: rootSaga,
+      };
 
-                        if (Array.isArray($allmanifests) && $allmanifests.length && typeof($secondmanifest) != 'undefined') {
-                            var $secondwindow = new Object();
-                            $secondwindow.manifestId = $secondmanifest;
-                            $secondwindow.thumbnailNavigationPosition = 'far-bottom';
-                            $options.windows.push($secondwindow);
-                            var $manifests = new Object();
-                            $allmanifests.forEach(manifestURL => {
-                                // TODO Provider should be passed by metadata at
-                                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter::viewElements
-                                // Deal with this for Beta3
-                                $manifests[manifestURL] = new Object({'provider':'See Metadata'});
-                            })
-                            $options.manifests = $manifests;
-                        }
-                        //@TODO add an extra Manifests key with every other one so people can select the others.
-                        if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-                          const miradorInstance = renderMirador($options);
-                          console.log('initializing Custom Mirador 3.3.0')
-                        }
-                        else {
-                          const miradorInstance = Mirador.viewer($options, [formatStrawverryFieldReactPlugin]);
-                          console.log('initializing Mirador 3.1.1')
-                        }
+      $('.strawberry-mirador-item[data-iiif-infojson]').once('attache_mirador')
+        .each(function (index, value) {
+          // Get the node uuid for this element
+          var element_id = $(this).attr("id");
+          // Check if we got some data passed via Drupal settings.
+          if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
+            $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
+            if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
+              $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+            }
+            // Defines our basic options for Mirador IIIF.
+            var $options = {
+              id: element_id,
+              windows: [{
+                manifestId: drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl'],
+                thumbnailNavigationPosition: 'far-bottom',
+              }]
+            };
 
-                        // Work around https://github.com/ProjectMirador/mirador/issues/3486
-                        const mirador_window = document.getElementById(element_id);
-                        var observer = new MutationObserver(function(mutations) {
-                            let mirador_videos = document.querySelectorAll(".mirador-viewer video source");
-                            if (mirador_videos.length) {
-                                mutations.forEach(function (mutation) {
-                                    if ((mutation.target.localName == "video") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
-                                        mutation.target.src = mutation.target.lastChild.getAttribute('src');
-                                    }
-                                });
-                            }
-                            let mirador_audios = document.querySelectorAll(".mirador-viewer audio source");
-                            if (mirador_audios.length) {
-                                mutations.forEach(function (mutation) {
-                                    if ((mutation.target.localName == "audio") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
-                                        mutation.target.src = mutation.target.lastChild.getAttribute('src');
-                                    }
-                                });
-                            }
-                        });
-                        observer.observe(mirador_window, {
-                            childList: true,
-                            subtree: true,
-                        });
-                    }
-                })}}
+            if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+              $options.window = {
+                workspaceControlPanel: {
+                  enabled: false
+                },
+                allowClose: false,
+                imageToolsEnabled: true,
+                imageToolsOpen: true,
+                views: [
+                  { key: 'single', behaviors: [null, 'individuals'] },
+                  { key: 'book', behaviors: [null, 'paged'] },
+                  { key: 'scroll', behaviors: ['continuous'] },
+                  { key: 'gallery' },
+                ],
+              };
+              $options.windows[0].workspaceControlPanel = {
+                enabled: false
+              };
+              $options.windows[0].workspace = {
+                isWorkspaceAddVisible: false,
+                allowNewWindows: true,
+              };
+            }
+
+            var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
+            var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
+            var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
+
+            if (Array.isArray($allmanifests) && $allmanifests.length && typeof($secondmanifest) != 'undefined') {
+              var $secondwindow = new Object();
+              $secondwindow.manifestId = $secondmanifest;
+              $secondwindow.thumbnailNavigationPosition = 'far-bottom';
+              $options.windows.push($secondwindow);
+              var $manifests = new Object();
+              $allmanifests.forEach(manifestURL => {
+                // TODO Provider should be passed by metadata at
+                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter::viewElements
+                // Deal with this for Beta3
+                $manifests[manifestURL] = new Object({'provider':'See Metadata'});
+              })
+              $options.manifests = $manifests;
+            }
+            //@TODO add an extra Manifests key with every other one so people can select the others.
+            if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+              const miradorInstance = renderMirador($options);
+              console.log('initializing Custom Mirador 3.3.0')
+            }
+            else {
+              const miradorInstance = Mirador.viewer($options, [formatStrawverryFieldReactPlugin]);
+              console.log('initializing Mirador 3.1.1')
+              if (miradorInstance) {
+                let elem = document.getElementById(element_id);
+                elem.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(elem, miradorInstance, element_id));
+              }
+            }
+
+            // Work around https://github.com/ProjectMirador/mirador/issues/3486
+            const mirador_window = document.getElementById(element_id);
+            var observer = new MutationObserver(function(mutations) {
+              let mirador_videos = document.querySelectorAll(".mirador-viewer video source");
+              if (mirador_videos.length) {
+                mutations.forEach(function (mutation) {
+                  if ((mutation.target.localName == "video") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                    mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                  }
+                });
+              }
+              let mirador_audios = document.querySelectorAll(".mirador-viewer audio source");
+              if (mirador_audios.length) {
+                mutations.forEach(function (mutation) {
+                  if ((mutation.target.localName == "audio") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                    mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                  }
+                });
+              }
+            });
+            observer.observe(mirador_window, {
+              childList: true,
+              subtree: true,
+            });
+          }
+        })}}
 })(jQuery, Drupal, drupalSettings, window.Mirador, ReduxSaga);

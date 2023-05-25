@@ -114,11 +114,8 @@
              && Object.keys(groupedurls).length > 0) {
               // Only add to map if groups present.
               controlLayers.addTo(map);
-              console.log(groupedurls);
               Object.entries(groupedurls).forEach(([key, value], index) => {
-                console.log(`${index}: ${key} = ${value}`);
                 if (Array.isArray(value) && Object.values(value).length > 0) {
-                  console.log(value);
                 let geojsonLayer_group  = L.geoJson.ajax(Object.values(value), {
                   onEachFeature: onEachFeature,
                   pointToLayer: function (feature, latlng) {
@@ -138,8 +135,6 @@
                     console.log(layer);
                     layer.addTo(subgroup);
                   });
-                  console.log(key);
-                  console.log(subgroup);
                   controlLayers.addOverlay(subgroup, key);
                   //markers.addLayer(geojsonLayer_group);
                 });
@@ -181,6 +176,10 @@
             console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
             document.addEventListener('sbf:ado:change', (e) => {
               if (Array.isArray(e.detail.nodeid)) {
+                // Don't capture events sent by itself */
+                if (element_id === e.detail.caller_id) {
+                  return;
+                }
                 // We can not fly to all NodeIds (and e.detail.nodeid is an array now)
                 // but we can fly to the first one!
                 // For many we fit to the bounds of all.
