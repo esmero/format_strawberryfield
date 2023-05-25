@@ -62,8 +62,8 @@
                   markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
                 }
                 newmarker.on('click', function(e) {
-                  if (feature.properties.hasOwnProperty('sbf:ado:view:change:dr:nid')) {
-                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change:dr:nid']);
+                  if (feature.properties.hasOwnProperty('sbf:ado:view:change')) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change']);
                   }
                   if (feature.properties.hasOwnProperty('sbf:ado:canvas:change')) {
                     const canvasid = feature.properties['sbf:ado:canvas:change']?.canvasid;

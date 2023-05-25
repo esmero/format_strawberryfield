@@ -132,8 +132,8 @@
             currentDrupalNodeId = manifest.json.items.filter(item => {
               return item['id'] === canvasId
             }).map(item => {
-              if (item.hasOwnProperty('dr:nid')) {
-                return item['dr:nid']
+              if (item.hasOwnProperty('sbf:ado:change')) {
+                return item['sbf:ado:change']
               }
               else {
                 return null;
