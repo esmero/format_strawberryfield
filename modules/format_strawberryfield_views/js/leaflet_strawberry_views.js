@@ -136,7 +136,6 @@
                     layer.addTo(subgroup);
                   });
                   controlLayers.addOverlay(subgroup, key);
-                  //markers.addLayer(geojsonLayer_group);
                 });
               }});
             }

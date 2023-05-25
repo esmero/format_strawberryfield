@@ -53,7 +53,6 @@
             var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
               onEachFeature: onEachFeature,
               pointToLayer: function (feature, latlng) {
-                //markerObject_interaction.feature.
                 let newmarker = L.marker (latlng);
                 markerArray.push(newmarker);
                 /* @TODO: Document this. Each Feature needs to have this property to enable interactions from
@@ -63,10 +62,17 @@
                   markerObject_interaction[feature.properties['sbf:ado:change']] = newmarker;
                 }
                 newmarker.on('click', function(e) {
-                  console.log(e);
                   if (feature.properties.hasOwnProperty('sbf:ado:view:change:dr:nid')) {
                     Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change:dr:nid']);
-                  }});
+                  }
+                  if (feature.properties.hasOwnProperty('sbf:ado:canvas:change')) {
+                    const canvasid = feature.properties['sbf:ado:canvas:change']?.canvasid;
+                    const manifestid = feature.properties['sbf:ado:canvas:change']?.manifestid;
+                    if (canvasid && manifestid) {
+                      Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(element, canvasid, manifestid, element_id);
+                    }
+                  }
+                });
                 return newmarker;
               },
             });
@@ -118,17 +124,6 @@
                 minZoom: $minzoom
               }).addTo(map);
 
-         /*   map.on('layeradd', function (e) {
-              if (markerArray.length > 0) {
-                var geojsongroup = new L.featureGroup(markerArray);
-                if (markerArray.length == 1) {
-                  map.setView(geojsongroup.getBounds().getCenter(), $initialzoom);
-                }
-                else {
-                  map.fitBounds(geojsongroup.getBounds());
-                }
-              }
-            }); */
 
             var $firstgeojson = [drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl']];
             var $allgeojsons = $firstgeojson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonother']);
@@ -173,6 +168,10 @@
             console.log('initializing leaflet 1.6.0')
             console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
             document.addEventListener('sbf:ado:change', (e) => {
+              // Don't react to its own events.
+              if (element_id === e.detail.caller_id) {
+                return;
+              }
               if (Array.isArray(e.detail.nodeid)) {
                 // We can not fly to all NodeIds (and e.detail.nodeid is an array now)
                 // but we can fly to the first one!

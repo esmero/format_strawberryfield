@@ -1,8 +1,6 @@
 (function ($, Drupal, drupalSettings) {
 
   function CaptureAdoViewChange(e) {
-    console.log('capturing ADO to ADO views change');
-    console.log(e);
     let nodeid = null;
     if (Array.isArray(e.detail.nodeid)) {
       nodeid = e.detail.nodeid.join("+");
@@ -34,7 +32,6 @@
 
   Drupal.behaviors.sbf_views_ajax_interactions = {
     attach: function (context, settings) {
-      console.log(settings['sbf_ajax_interactions']);
       once('listen-ado-view-change', 'div.view', context).forEach(function (value, index) {
         console.log("initializing 'sbf:ado:view:change' event listener on ADO changes");
         // Because this is a single Listener for all views that have this enabled

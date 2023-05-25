@@ -27,7 +27,6 @@
         nodeidsArray = nodeids
       }
       const event = new CustomEvent('sbf:ado:change', { bubbles: true, detail: {nodeid: nodeidsArray, caller_id:caller_id} });
-      console.log(event);
       el.dispatchEvent(event);
       return this;
     },
@@ -45,18 +44,16 @@
         nodeidsArray = nodeids
       }
       const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {nodeid: nodeidsArray} });
-      console.log(event);
       el.dispatchEvent(event);
       return this;
     },
 
 
-    dispatchCanvasChange: function(el, canvasid, manifestId, caller_id){
+    dispatchCanvasChange: function(el, canvasid, manifestid, caller_id){
       /* el being a dom document via const el = document.getElementById(element_id);*/
       /* canvasid being the ADO Node ID */
       /* iiifmanifestUrl the URL that contains the canvasid */
-      const event = new CustomEvent('sbf:canvas:change', { bubbles: true, detail: {canvasid: canvasid, manifestId: manifestId, caller_id: caller_id} });
-      console.log(event);
+      const event = new CustomEvent('sbf:canvas:change', { bubbles: true, detail: {canvasid: canvasid, manifestid: manifestid, caller_id: caller_id} });
       el.dispatchEvent(event);
       return this;
     },

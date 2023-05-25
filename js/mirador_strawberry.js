@@ -79,7 +79,7 @@
 
     for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
       const data = miradorInstance.store.getState().windows[windowId];
-      if (e.detail.manifestId ==  data.manifestId) {
+      if (e.detail.manifestid == data.manifestId && e.detail?.canvasid) {
         const action = Mirador.actions.setCanvas(windowId, e.detail.canvasid);
         miradorInstance.store.dispatch(action);
       }
@@ -268,8 +268,10 @@
               const miradorInstance = Mirador.viewer($options, [formatStrawverryFieldReactPlugin]);
               console.log('initializing Mirador 3.1.1')
               if (miradorInstance) {
-                let elem = document.getElementById(element_id);
-                elem.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(elem, miradorInstance, element_id));
+                // To allow bubling up we need to add this one to the document
+                // Multiple Miradors will replace each other?
+                // @TODO check on that diego..
+                document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(elem, miradorInstance, element_id));
               }
             }
 
