@@ -162,8 +162,8 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       }
       // generate an active value for the active facet
       foreach ($range as $range_entry) {
-        $min_unix = (int) $range_entry['min'] ?? 0;
-        $max_unix = (int) $range_entry['max'] ?? 0;
+        $min_unix = (int) ($range_entry['min'] ?? 0);
+        $max_unix = (int) ($range_entry['max'] ?? 0);
         if ($this->getConfiguration()['variable_granularity']) {
           $date_min = gmdate("Y", $min_unix);
           $date_max = gmdate("Y", $max_unix);
