@@ -62,6 +62,7 @@
                   markerObject_interaction[feature.properties['sbf:ado:change:react']] = newmarker;
                 }
                 newmarker.on('click', function(e) {
+                  this.openPopup();
                   if (feature.properties.hasOwnProperty('sbf:ado:view:change')) {
                     Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(element, feature.properties['sbf:ado:view:change']);
                   }
