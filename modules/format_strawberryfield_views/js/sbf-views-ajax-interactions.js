@@ -20,7 +20,7 @@
             // I'm assuming or drupalSettings['sbf_ajax_interactions']['sbf_ajax_interactions_arguments'] list of arguments
             // Has the same order as the arguments passed. But if there are many and currently only one is assigned we
             // assume the one currently assigned is the first?
-            if (view_instance?.settings?.view_args) {
+            if (view_instance?.settings?.view_args !== null) {
               view_instance.settings.view_args = nodeid;
               view_instance.$view.trigger("RefreshView");
             }
