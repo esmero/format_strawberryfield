@@ -180,6 +180,12 @@
                 return null;
               }
             });
+            if (Array.isArray(currentDrupalNodeId) && Array.isArray(currentDrupalNodeId[0])) {
+              currentDrupalNodeId = currentDrupalNodeId[0];
+            }
+            if (Array.isArray(currentDrupalNodeForViews) && Array.isArray(currentDrupalNodeForViews[0])) {
+              currentDrupalNodeForViews = currentDrupalNodeForViews[0];
+            }
             currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
             currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
             // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
