@@ -19,16 +19,17 @@
             if (layer instanceof L.Polyline) {
               layer.setStyle({
                   color: 'black',
-                  weight : 3,
-                  dashArray : '20, 20',
-                  dashOffset : 0
+                  weight : 2,
+                  dashArray : '5, 5',
+                  dashOffset : 0,
+                  lineCap: 'square'
               });
             }
             else {
               popUpFeature(feature, layer);
             }
           }
-          
+
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
           let element = document.getElementById(element_id);
