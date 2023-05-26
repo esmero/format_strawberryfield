@@ -8,7 +8,6 @@
         .each(function (index, value) {
 
           var $featurecount = 0;
-
           function popUpFeature(feature, layer){
             var popupText = feature.properties.name +"<br>";
             layer.bindPopup(popupText);
@@ -17,8 +16,19 @@
           var markerObject_interaction = {};
 
           function onEachFeature(feature, layer) {
-            popUpFeature(feature, layer);
+            if (layer instanceof L.Polyline) {
+              layer.setStyle({
+                  color: 'black',
+                  weight : 3,
+                  dashArray : '20, 20',
+                  dashOffset : 0
+              });
+            }
+            else {
+              popUpFeature(feature, layer);
+            }
           }
+          
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
           let element = document.getElementById(element_id);
