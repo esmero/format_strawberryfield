@@ -384,13 +384,16 @@ class MetadataDisplayForm extends ContentEntityForm {
           switch ($mimetype) {
             case 'application/ld+json':
             case 'application/json':
-              json_decode((string) $render);
+              $render_encoded = json_decode((string) $render);
               if (JSON_ERROR_NONE !== json_last_error()) {
                 throw new \Exception(
                   'Error parsing JSON: ' . json_last_error_msg(),
                   0,
                   null
                 );
+              }
+              else {
+                $render = json_encode($render_encoded, PRETTY_PRINT);
               }
               break;
             case 'text/html':
