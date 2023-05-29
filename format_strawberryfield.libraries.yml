@@ -390,6 +390,9 @@ code_mirror_autosave:
   version: 1.0
   js:
     js/code_mirror_autosave.js: { minified: false }
+  css:
+    component:
+      css/metadatapreview.css: { }
   dependencies:
     - core/jquery
     - core/drupal

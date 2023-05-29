@@ -1,0 +1,16 @@
+/* using row here allows us to not interfer with non Bootstrap themes */
+.path-metadatadisplay .row #metadata-preview-container {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index:100;
+}
+
+.path-metadatadisplay .row #edit-actions.form-actions {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index:200;
+  padding-top: 1rem;
+  padding-top: 0.5rem;
+}
