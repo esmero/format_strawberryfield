@@ -1,7 +1,7 @@
 /* using row here allows us to not interfer with non Bootstrap themes */
 .path-metadatadisplay .row #metadata-preview-container {
   position: sticky;
-  bottom: 0;
+  top: 0;
   background: white;
   z-index:200;
 }
