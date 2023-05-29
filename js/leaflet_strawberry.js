@@ -155,9 +155,17 @@
               })
             }
             // Now deal with the new Fancy IIIF Manifest based Image overlays!
+            let $firstiiifjson = drupalSettings.format_strawberryfield.leaflet[element_id]['iiifurl'];
+            let $otheriiifjsons = drupalSettings.format_strawberryfield.leaflet[element_id]['iiifother'];
+            if (!Array.isArray($firstiiifjson)){
+              $firstiiifjson = [$firstiiifjson];
+            }
+            if (!Array.isArray($otheriiifjsons)){
+              $otheriiifjsons = [$otheriiifjsons];
+            }
+            let $alliiifjsons = $firstiiifjson.concat($otheriiifjsons);
+            $alliiifjsons = $alliiifjsons.filter(x => x);
 
-            var $firstiiifjson = [drupalSettings.format_strawberryfield.leaflet[element_id]['iiifurl']];
-            var $alliiifjsons = $firstiiifjson.concat(drupalSettings.format_strawberryfield.leaflet[element_id]['iiifother']);
             if (Array.isArray($alliiifjsons) && $alliiifjsons.length) {
               $alliiifjsons.forEach(iiifjsonurl => {
                 const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest(iiifjsonurl);
@@ -173,6 +181,9 @@
                     });
                     map.addLayer(imageOverlay);
                   });
+                }).catch((error) => {
+                  console.error('Failed to load IIIF Manifest for Leaflet Map:' + iiifjsonurl);
+                  console.error(error);
                 });
               });
             };
