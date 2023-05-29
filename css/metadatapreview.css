@@ -11,4 +11,6 @@
   bottom: 0;
   background: white;
   z-index:200;
+  padding-top: 1rem;
+  padding-top: 0.5rem;
 }
