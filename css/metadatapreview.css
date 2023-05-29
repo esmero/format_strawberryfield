@@ -6,7 +6,7 @@
   z-index:100;
 }
 
-.path-metadatadisplay .row .form-actions {
+.path-metadatadisplay .row #edit-actions.form-actions {
   position: sticky;
   bottom: 0;
   background: white;
