@@ -1,3 +1,26 @@
+iiif_formatstrawberryfield_utils:
+  version: 1.0
+  js:
+    js/iiif-archipelago-interactions_utils.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/jmespath_strawberry
+    - format_strawberryfield/svgpath_polyfull
+
+svgpath_polyfull:
+  version: 1.0
+  js:
+    js/polyfills/pathseg.js: {minified: true}
+
+
+jmespath_strawberry:
+  js:
+    https://cdn.jsdelivr.net/npm/jmespath@0.16.0/jmespath.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - core/drupal
+
 iiif_openseadragon:
   remote: http://openseadragon.github.io
   version: 2.4.2
@@ -21,6 +44,8 @@ iiif_openseadragon_strawberry:
     - core/drupalSettings
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/annotoriousopenseadragon
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - format_strawberryfield/leaflet_ajax
   css:
     component:
       css/osd.css: { }
@@ -77,6 +102,8 @@ iiif_iabookreader_strawberry:
     - core/modernizr
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
 pannellum:
   version: 2.5.6
   css:
@@ -101,6 +128,7 @@ iiif_pannellum_strawberry:
     - format_strawberryfield/jsm_modeler
     - format_strawberryfield/pdfs_strawberry
     - format_strawberryfield/av_strawberry
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 av_strawberry:
   version: 1.0
@@ -128,6 +156,7 @@ jsm_model_strawberry:
     - core/jquery.ui
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 pdfs_mozilla:
   version: 2.2.228
@@ -148,6 +177,7 @@ pdfs_strawberry:
     - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/pdfs_mozilla
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_projectmirador:
   version: 3.1.1
@@ -157,6 +187,7 @@ mirador_projectmirador:
     gpl-compatible: true
   js:
     https://cdn.jsdelivr.net/npm/mirador@3.1.1/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_font:
   css:
@@ -186,6 +217,7 @@ mirador_strawberry:
     - core/drupalSettings
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_custom_strawberry:
   version: 1.0
@@ -201,8 +233,7 @@ mirador_custom_strawberry:
     - core/drupalSettings
     - format_strawberryfield/mirador_archipelago_custom
     - format_strawberryfield/mirador_font
-
-
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 uv_strawberry:
   version: 1.0
@@ -215,6 +246,7 @@ uv_strawberry:
     - core/jquery.once
     - core/drupalSettings
     - format_strawberryfield/universalviewer
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 leaflet_markercluster:
   version: 1.4.1
@@ -253,6 +285,12 @@ leaflet_core:
     component:
       https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css: { external: true}
 
+
+leaftleft_iiif_bound:
+  version: 1.0
+  js:
+    js/Leaflet.ImageOverlay.iiifBounded.js: {minified: false}
+
 leaflet_ajax:
   version: 2.1.0
   license:
@@ -265,6 +303,7 @@ leaflet_ajax:
     - format_strawberryfield/leaflet_core
     - format_strawberryfield/leaflet_markercluster
     - format_strawberryfield/leaflet_subgroup
+    - format_strawberryfield/leaftleft_iiif_bound
 
 leaflet_strawberry:
   version: 1.0
@@ -276,6 +315,7 @@ leaflet_strawberry:
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!

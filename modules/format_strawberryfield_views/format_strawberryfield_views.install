@@ -1,0 +1,47 @@
+<?php
+/**
+ * @file
+ * Install hooks for format_strawberryfield_views.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function format_strawberryfield_views_install() {
+  // Enable Our ADO to ADO interaction extender for Views.
+  $config = \Drupal::service('config.factory')->getEditable('views.settings');
+  $display_extenders = $config->get('display_extenders') ?: [];
+  $display_extenders[] = 'sbf_ajax_interactions';
+  $config->set('display_extenders', $display_extenders);
+  $config->save();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function format_strawberryfield_views_uninstall() {
+  // Disable the sbf_ajax_interactions plugin.
+  $config = \Drupal::service('config.factory')->getEditable('views.settings');
+  $display_extenders = $config->get('display_extenders') ?: [];
+  $key = array_search('sbf_ajax_interactions', $display_extenders);
+  if ($key !== FALSE) {
+    unset($display_extenders[$key]);
+    $config->set('display_extenders', $display_extenders);
+    $config->save();
+  }
+}
+
+/**
+ * Update Views extenders to use our ADO to ADO one.
+ */
+function format_strawberryfield_views_update_8001() {
+  $config = \Drupal::service('config.factory')->getEditable('views.settings');
+  $display_extenders = $config->get('display_extenders') ?: [];
+  $key = array_search('sbf_ajax_interactions', $display_extenders);
+  if ($key === FALSE) {
+    $display_extenders[] = 'sbf_ajax_interactions';
+    $config->set('display_extenders', $display_extenders);
+    $config->save();
+  }
+}
+

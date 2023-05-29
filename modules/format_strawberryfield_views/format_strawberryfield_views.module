@@ -310,3 +310,19 @@ function format_strawberryfield_views_library_info_alter(&$libraries, $extension
     array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
+
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function format_strawberryfield_views_views_pre_render(ViewExecutable $view) {
+  $current_display = $view->current_display;
+  $view_config = $view->storage->getDisplay($current_display);
+  if (!empty($view_config['display_options']['display_extenders']['sbf_ajax_interactions'])) {
+    if ($view_config['display_options']['display_extenders']['sbf_ajax_interactions']) {
+      $view->element['#attached']['library'][] = 'format_strawberryfield_views/view-ajax-interactions';
+      $view->element['#attached']['drupalSettings']['sbf_ajax_interactions'][$view->dom_id] = $view_config['display_options']['display_extenders']['sbf_ajax_interactions']['sbf_ajax_interactions_arguments'];
+    }
+  }
+}
+

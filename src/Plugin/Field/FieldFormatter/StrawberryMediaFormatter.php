@@ -19,6 +19,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\Core\Url;
+use mysql_xdevapi\Exception;
 
 /**
  * Simplistic Strawberry Field formatter.
@@ -35,14 +36,15 @@ use Drupal\Core\Url;
  *   }
  * )
  */
-class StrawberryMediaFormatter extends StrawberryBaseFormatter {
+class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
 
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    return [
         'iiif_group' => TRUE,
+        'metadataexposeentity_source_required' => FALSE,
         'json_key_source' => 'as:image',
         'max_width' => 720,
         'max_height' => 480,
@@ -50,9 +52,13 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
         'webannotations_tool' => 'polygon',
         'webannotations_opencv' => FALSE,
         'webannotations_betterpolygon' => FALSE,
+        'webannotations_georeferencewidget' => FALSE,
         'thumbnails' => TRUE,
         'icons_prefixurl' => '',
-      ];
+        'viewer_overrides' => '',
+        'mediasource' => NULL,
+        'main_mediasource' => NULL,
+      ] + parent::defaultSettings();
   }
 
   /**
@@ -60,7 +66,7 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     //@TODO document that 2 base urls are just needed when developing (localhost syndrom)
-    return [
+    $settings_form = [
         'iiif_group' => [
           '#type' => 'checkbox',
           '#title' => t('Group all Media files in a single viewer?'),
@@ -110,6 +116,17 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
             ],
           ],
         ],
+        'webannotations_georeferencewidget' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable the Georeference widget'),
+          '#description' => t('This defines if the user will be able to use the Georeference Widget to map/deform a fragment using 4 points.'),
+          '#default_value' => $this->getSetting('webannotations_georeferencewidget'),
+          '#states' => [
+            'visible' => [
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
         'webannotations_betterpolygon' => [
           '#type' => 'checkbox',
           '#title' => t('Enable Better Polygon Module'),
@@ -123,16 +140,28 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
             ],
           ],
         ],
+        'viewer_overrides' => [
+          '#type' => 'textarea',
+          '#title' => $this->t('Advanced: a JSON with Open Seadragon Viewer Library config overrides.'),
+          '#description' => $this->t('See <a href="https://openseadragon.github.io/docs/OpenSeadragon.html#.Options">https://openseadragon.github.io/docs/OpenSeadragon.html#.Options</a>. Leave Empty to use defaults.
+Not all options can be overriden. `id`,`tileSources`, `element` and other might have unexpected consequences. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+  '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_media_formatter"=> ["options" => ["showRotationControl" => TRUE]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+          ]),
+          '#default_value' => $this->getSetting('viewer_overrides'),
+          '#element_validate' => [[$this, 'validateJSON']],
+          '#required' => FALSE,
+        ],
         'icons_prefixurl' => [
           '#type' => 'textfield',
-          '#title' => t('based URL from where to fetch the OpenSeadragon UI/UX Icons'),
-          '#description' => t('E.g <b>https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/</b>. Leave Empty to use the defaults.'),
+          '#title' => $this->t('based URL from where to fetch the OpenSeadragon UI/UX Icons'),
+          '#description' => $this->t('E.g <b>https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/</b>. Leave Empty to use the defaults.'),
           '#default_value' => $this->getSetting('icons_prefixurl'),
           '#required' => FALSE,
         ],
         'json_key_source' => [
           '#type' => 'textfield',
-          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#title' => $this->t('JSON Key from where to fetch Media URLs.'),
+          '#description'=> $this->t('When used in conjunction with IIIF Manifest Sources this setting will be <em>ignored</em> even if all IIIF manifests are wrongly structured or empty..'),
           '#default_value' => $this->getSetting('json_key_source'),
           '#required' => TRUE,
         ],
@@ -158,6 +187,9 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
           '#required' => TRUE,
         ],
       ] + parent::settingsForm($form, $form_state);
+
+    return $settings_form;
+    // @see \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryBaseFormatter::settingsForm
   }
 
   /**
@@ -263,13 +295,23 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
       if (!$embargoed || !empty($embargo_upload_keys_string)) {
 
-
         // We need to load main Library on each page for views to see it.
         $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
-        $ordersubkey = 'sequence';
-        $media = $this->fetchMediaFromJsonWithFilter($delta, $items, $elements,
-          TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys);
 
+
+        $mediasource = is_array($this->getSetting('mediasource'))
+          ? $this->getSetting('mediasource') : [];
+        $main_mediasource = $this->getSetting('main_mediasource');
+        if (!empty($mediasource) && ($main_mediasource)) {
+          $this->generateElementForIIIFManifests($delta,$items,$elements, $jsondata);
+        }
+        else {
+          $ordersubkey = 'sequence';
+          $media = $this->fetchMediaFromJsonWithFilter(
+            $delta, $items, $elements,
+            TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys
+          );
+        }
         if (empty($elements[$delta])) {
           $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
         }
@@ -300,6 +342,20 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
     $webannotations_tool = $this->getSetting('webannotations_tool');
     $webannotations_opencv = $this->getSetting('webannotations_opencv');
     $webannotations_betterpolygon = $this->getSetting('webannotations_betterpolygon');
+    $webannotations_georeferencewidget = $this->getSetting('webannotations_georeferencewidget');
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
+
+
+
+
     $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";
 
     $nodeuuid = $items->getEntity()->uuid();
@@ -382,6 +438,8 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
       // This also never runs if cached. So after deletion we better
       // call the controller!
       if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
@@ -400,4 +458,108 @@ class StrawberryMediaFormatter extends StrawberryBaseFormatter {
 
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
   }
+
+
+  protected function generateElementForIIIFManifests($delta, FieldItemListInterface $items, array &$elements, array $jsondata) {
+
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) ? '100%' : $max_width . 'px';
+    $max_height = $this->getSetting('max_height');
+    $grouped = $this->getSetting('iiif_group');
+    $thumbnails = $this->getSetting('thumbnails');
+    $webannotations = $this->getSetting('webannotations');
+    $webannotations_tool = $this->getSetting('webannotations_tool');
+    $webannotations_opencv = $this->getSetting('webannotations_opencv');
+    $webannotations_betterpolygon = $this->getSetting('webannotations_betterpolygon');
+    $webannotations_georeferencewidget = $this->getSetting('webannotations_georeferencewidget');
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
+
+
+    $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";
+
+    $nodeuuid = $items->getEntity()->uuid();
+    $groupid = 'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+    $uniqueid = $groupid;
+    $elements[$delta]['toolbar'] = [
+      '#type' => 'container',
+      '#default_value' => 'toolbar-'. $uniqueid,
+      '#attributes' => [
+        'id' => 'toolbar-'. $uniqueid,
+        'class' => [
+          'toolbar-wrapper',
+        ],
+        'style' => "display:inline-flex",
+      ],
+    ];
+    $elements[$delta]['media'] = [
+      '#type' => 'container',
+      '#default_value' => $uniqueid,
+      '#attributes' => [
+        'id' => $uniqueid,
+        'class' => [
+          'strawberry-media-item',
+          'field-iiif',
+        ],
+        'data-iiif-infojson' => 'iiifmanifest',
+        'data-iiif-group' => $grouped ? $groupid : $uniqueid,
+        'data-iiif-thumbnails' => $thumbnails ? "true" : "false",
+        'style' => "width:{$max_width_css}; height:{$max_height}px",
+      ],
+      //@ TODO recheck cache tags here, since we are not really using
+      // the file itself.
+    ];
+
+    if (isset($item->_attributes)) {
+      $elements[$delta] += ['#attributes' => []];
+      $elements[$delta]['#attributes'] += $item->_attributes;
+      // Unset field item attributes since they have been included
+      // in the formatter output and should not be rendered in the
+      // field template.
+      unset($item->_attributes);
+    }
+    $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['path'] = \Drupal::service('extension.path.resolver')->getPath('module', 'format_strawberryfield');
+    $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon']['innode'][$uniqueid] = $nodeuuid;
+    $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
+    $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['icons_prefixurl'] = $icons_prefixurl;
+    // Used to keep annotations around during edit.
+    // Note: Since View modes are cached, if no change to the NODE
+    // this will be served from a cache! mmm.
+    if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($items->getName(), $delta, $nodeuuid);
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
+
+      // This also never runs if cached. So after deletion we better
+      // call the controller!
+      if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
+        $keystoreid = $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'];
+        WebAnnotationController::primeKeyStore($items[$delta], $keystoreid);
+      }
+    }
+    if ($this->currentUser) {
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+    }
+    else {
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['url'] = null;
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['user']['name'] = 'anonymous';
+    }
+
+    $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['height'] = max($max_height, 480);
+    $this->fetchIIIF($delta, $items, $elements, $jsondata, $uniqueid, 'openseadragon');
+  }
+
+
 }

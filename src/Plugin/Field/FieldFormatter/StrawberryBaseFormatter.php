@@ -17,6 +17,7 @@ use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use mysql_xdevapi\Exception;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -272,6 +273,32 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         $form_state->setErrorByName(implode('][', $parents), t("We could not contact your @urltype IIIF server", [
           '@urltype' => $url_type,
         ]));
+      }
+    }
+  }
+
+  /**
+   * Validates a JSON.
+   *
+   * @param array $element
+   *   The Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The Form State Object.
+   * @param array $complete_form
+   *   The complete form structure.
+   */
+  public function validateJSON(array &$element, FormStateInterface $form_state, array &$complete_form) {
+    $parents = $element['#parents'];
+    if (strlen(trim($element['#value'])) > 0) {
+      try {
+        $json = json_decode($element['#value'], TRUE);
+        $json_error = json_last_error();
+        if ($json_error != JSON_ERROR_NONE) {
+          $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
+        }
+      }
+      catch (Exception $e) {
+        $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
       }
     }
   }
