@@ -393,7 +393,7 @@ class MetadataDisplayForm extends ContentEntityForm {
                 );
               }
               else {
-                $render = json_encode($render_encoded, PRETTY_PRINT);
+                $render = json_encode($render_encoded, JSON_PRETTY_PRINT);
               }
               break;
             case 'text/html':
