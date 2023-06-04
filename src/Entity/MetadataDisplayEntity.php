@@ -462,12 +462,27 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $variable_key = '';
       $parent_path = '';
       if ($node instanceof NameExpression && !$nodes instanceof NotUnary) {
+        if (!$node->hasAttribute('name')) {
+          continue;
+        }
         $variable_key = $node->getAttribute('name');
-        if($variable_key == '_key') {
+        if ($variable_key == '_key') {
           $seq = $nodes->getNode('seq');
-          $seq_name = $seq->hasNode('node') ? $seq->getNode('node')->getAttribute('name') : $seq->getAttribute('name');
+          if ($seq->hasNode('node') && $seq->getNode('node')->hasAttribute('name')) {
+            $seq_name = $seq->getNode('node')->getAttribute('name');
+          }
+          elseif ($seq->hasAttribute('name')) {
+            $seq_name = $seq->getAttribute('name');
+          }
+          else {
+            continue;
+          }
           $seq_value = $seq->hasNode('attribute') ? $seq->getNode('attribute')->getAttribute('value') : '';
-          $variable_key = $nodes->getNode('value_target')->getAttribute('name');
+          $value_target = $nodes->getNode('value_target');
+          if (!$value_target->hasAttribute('name')) {
+            continue;
+          }
+          $variable_key = $value_target->getAttribute('name');
           $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
           $set_var = $variable_key;
           $set_source = $parent_path;
