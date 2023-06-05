@@ -420,8 +420,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $twigtemplate = $this->get('twig')->getValue();
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
       // Create a \Twig Source first.
-      $label = $this->label() ?? '';
-      $source = new Source($twigtemplate, $label, '');
+      $source = new Source($twigtemplate, $this->label() ?? '', '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
       $used_vars = $this->getTwigVariableNames($nodes,[]);
