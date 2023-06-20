@@ -202,6 +202,7 @@ mirador_archipelago_custom:
     gpl-compatible: true
   js:
     js/mirador-archipelago.js: {minified: false, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_strawberry:
   version: 1.0
