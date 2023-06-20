@@ -644,7 +644,6 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     }
     // Bit convoluted but the cache tags are cached using almost the same cache tags calculated. Means if a View used here changes, we need to recalculate the cache tags
     $this->cacheSet($cache_id, $cache_tags, CacheBackendInterface::CACHE_PERMANENT,  Cache::mergeTags(Cache::mergeTags([$this->entityTypeId . ':' . $this->id()], $cache_tags), [$cache_id]));
-    error_log(var_export($cache_tags,true));
     return $cache_tags;
   }
 
