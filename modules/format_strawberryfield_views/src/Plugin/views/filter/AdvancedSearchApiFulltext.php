@@ -690,23 +690,29 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
     if (empty($this->view->live_preview)) {
       $form[$this->options['id'].'_addone'] = [
-        '#type' => 'submit',
+        '#type' => 'button',
         '#op' => $this->options['id'] . '_addone',
         '#value' => $this->t('@label', [
           '@label' => $this->options['exposed']['advanced_search_fields_add_one_label'] ?? 'add one'
         ]),
+        '#name' => 'addone',
         '#access' => $enable_more,
+        '#attributes' => ['data-disable-refocus' => "true", 'tabindex' => 2],
+        '#executes_submit_callback' => TRUE,
         '#weight' => '-100',
         '#group' => 'actions',
       ];
       /* Note: #group does not work for buttons but we use this to bring them into
       'actions' key in a form alter */
       $form[$this->options['id'].'_delone'] = [
-        '#type' => 'submit',
+        '#type' => 'button',
+        '#name' => 'delone',
         '#op' => $this->options['id'] . '_delone',
         '#value' => $this->t('@label', [
           '@label' => $this->options['exposed']['advanced_search_fields_remove_one_label'] ?? 'remove one'
         ]),
+        '#executes_submit_callback' => TRUE,
+        '#attributes' => ['data-disable-refocus' => "true", 'tabindex' => 3],
         '#access' => $enable_less,
         '#weight' => '-101',
         '#group' => 'actions',
