@@ -64,7 +64,7 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
       else {
         $viewmode = $this->viewModeResolver->get($node);
       }
-      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(),'view_mode_name' => $viewmode];
+      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(), 'view_mode_name' => $viewmode];
     }
     return $params;
   }
