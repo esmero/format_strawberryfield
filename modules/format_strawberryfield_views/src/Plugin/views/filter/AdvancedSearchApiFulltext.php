@@ -407,7 +407,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       if ($negation) {
         $manual_keys[0]['#negation'] = $negation;
       }
-
+      // @TODO: Check that manual_keys is an array;, that $query_able_datum_internal['real_solr_fields'] exists.
+      // if not abort the query.
       $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
         $manual_keys, $query_able_datum_internal['real_solr_fields'],
         $parse_mode->getPluginId()
@@ -544,18 +545,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   public function submitExposed(&$form, FormStateInterface $form_state) {
-    /*
-    if ($form_state->getTriggeringElement()['#op'] ?? NULL == $this->options['id'] . '_addone') {
-      $current_count = &$form_state->getValue($this->options['id'].'_advanced_search_fields_count',1);
-      $form_state->setRebuild(TRUE);
-    }
-    */
+
     if (!$form_state->isValueEmpty('op') &&
       ((($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_addone') ||
       (($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_delone'))
     ){
       $form_state->setRebuild(TRUE);
     }
+    elseif (!$form_state->isValueEmpty('op') && !empty($this->options['exposed'])) {
+      if ($form_state->getTriggeringElement()['#parents'] ?? NULL &&
+        isset($form_state->getTriggeringElement()['#parents'][0]) == 'reset') {
+          error_log('reset pressed');
+      }
+    }
+
     // OR HOW THE RESET BUTTON DOES IT
     //if (!$form_state->isValueEmpty('op') && $form_state->getValue('op') == $this->options['reset_button_label'])
     parent::submitExposed(
@@ -591,6 +594,25 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Value in our case needs to be multiple values (bc of the multiple options)
     if ($return && $realcount = $input[$this->options['expose']['identifier'].'_advanced_search_fields_count']) {
       $this->value = [];
+      // On add one/delete one (means not submit.. check if this will affect other exposed input? )
+      if (isset($input['op']) &&
+        isset($input['submit']) &&
+        $input['op'] != $input['submit'] &&
+        \Drupal::request()->hasSession() &&
+        $this->getQuery() &&
+        !$this->getQuery()->shouldAbort()) {
+        $session = \Drupal::request()->getSession();
+        $display_id = ($this->view->display_handler->isDefaulted('filters'))
+          ? 'default' : $this->view->current_display;
+        $adv_search_session = $session->get('sbf_advanced_search_views', []);
+        if (isset($adv_search_session[$this->view->storage->id()][$display_id])) {
+          $input = $adv_search_session[$this->view->storage->id()][$display_id];
+          // $realcount needs to be the last one submitted/stored in the session.
+          $realcount = $input[$this->options['expose']['identifier']
+          . '_advanced_search_fields_count'];
+        }
+      }
+
       $this->value[$this->options['expose']['identifier']] = $input[$this->options['expose']['identifier']];
       for($i=1;$i < $realcount && $realcount > 1; $i++) {
         if (!empty($this->options['expose']['use_operator']) && !empty($this->options['expose']['operator_id']) && isset($input[$this->options['expose']['operator_id'].'_'.$i])) {
@@ -599,7 +621,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $this->value[$this->options['expose']['identifier'] . '_' . $i] =  $input[$this->options['expose']['identifier'].'_'.$i] ?? '';
       }
     }
-
     if (!$return) {
       // Override for the "(not) empty" operators.
       $operators = $this->operators();
@@ -687,6 +708,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $nextcount = (int) ($form_state->getUserInput()['sbf_advanced_search_api_fulltext_advanced_search_fields_count'] ?? 1);
     $prevcount = $this->view->exposed_raw_input[$this->options['id'].'_advanced_search_fields_count'] ?? NULL;
     $form_state_count = $form_state->getValue('sbf_advanced_search_api_fulltext_advanced_search_fields_count', NULL);
+
     $realcount = $prevcount ?? ($form_state_count ?? $nextcount);
     // Cap it to the max limit
     $realcount = ($realcount <= $this->options['expose']['advanced_search_fields_count']) ? $realcount : $this->options['expose']['advanced_search_fields_count'];
@@ -788,7 +810,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $current_count = &$form_state->getValue(
       $this->options['id'] . '_advanced_search_fields_count', 1
     );
-    error_log(var_export($form_state->getUserInput(),true));
     if ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
           NULL) == $this->options['id'] . '_addone')
       && (isset($form_state->getUserInput()['op']) && $form_state->getUserInput()['op'] == $form_state->getTriggeringElement()['#value'])
@@ -800,6 +821,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         : ($this->options['expose']['advanced_search_fields_count'] ?? 1);
       // Check if the state was set already
       $current_count++;
+      if (!empty($this->options['expose']['required']) && $this->getQuery()) {
+
+      }
     }
     elseif ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
           NULL) == $this->options['id'] . '_delone')
@@ -812,6 +836,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         : ($this->options['expose']['advanced_search_fields_count'] ?? 1);
       // Check if the state was set already
       $current_count--;
+      if (!empty($this->options['expose']['required']) && $this->getQuery()) {
+
+      }
     }
 
     if ($this->options['expose']['advanced_search_fields_multiple']) {
@@ -828,7 +855,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           = $form_state->getValue($searched_fields_identifier . '_' . $i, []);
       }
     }
-
 
     $identifiers[] = $this->options['expose']['identifier'];
     for ($i = 1; $i < $current_count; $i++) {
@@ -889,4 +915,39 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Building groups here makes no sense. We disable it.
     return FALSE;
   }
+
+  protected function prepareFilterSelectOptions(&$options) {
+    parent::prepareFilterSelectOptions(
+      $options
+    ); // TODO: Change the autogenerated stub
+  }
+
+  public function storeExposedInput($input, $status) {
+    $return = parent::storeExposedInput(
+      $input, $status
+    );
+    // In case of a proper submit (not addone/delone) we store all input in the session.
+    // This will be retrieved instead of the actual "form state/input submit on addone/delone
+    // So a previous search can be "replicated" and allowing added new fields to not be submited
+    // to the Views until the user decides so.
+    // @TODO make this an option, not the default (i like autosubmit).
+    if (!empty($this->options['exposed']) && isset($input['op']) && isset($input['submit']) && $input['op'] == $input['submit']) {
+      if (\Drupal::request()->hasSession() && $this->getQuery() && !$this->getQuery()->shouldAbort()) {
+        $session = \Drupal::request()->getSession();
+        $display_id = ($this->view->display_handler->isDefaulted('filters'))
+          ? 'default' : $this->view->current_display;
+        $adv_search_session = $session->get('sbf_advanced_search_views', []);
+        $exclude = ['submit', 'form_build_id', 'form_id', 'form_token', 'exposed_form_plugin', 'reset'];
+        foreach( $exclude as $key) {
+          unset($input[$key]);
+        }
+        $adv_search_session[$this->view->storage->id()][$display_id] = $input;
+        $session->set('sbf_advanced_search_views', $adv_search_session);
+      }
+    }
+
+    return $return;
+  }
+
+
 }
