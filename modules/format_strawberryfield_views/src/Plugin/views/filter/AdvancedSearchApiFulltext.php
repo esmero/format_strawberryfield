@@ -544,8 +544,16 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   public function submitExposed(&$form, FormStateInterface $form_state) {
+    /*
     if ($form_state->getTriggeringElement()['#op'] ?? NULL == $this->options['id'] . '_addone') {
       $current_count = &$form_state->getValue($this->options['id'].'_advanced_search_fields_count',1);
+      $form_state->setRebuild(TRUE);
+    }
+    */
+    if (!$form_state->isValueEmpty('op') &&
+      ((($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_addone') ||
+      (($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_delone'))
+    ){
       $form_state->setRebuild(TRUE);
     }
     // OR HOW THE RESET BUTTON DOES IT
@@ -695,7 +703,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#value' => $this->t('@label', [
           '@label' => $this->options['exposed']['advanced_search_fields_add_one_label'] ?? 'add one'
         ]),
-        '#name' => 'addone',
+        '#name' => 'op',
         '#access' => $enable_more,
         '#attributes' => ['data-disable-refocus' => "true", 'tabindex' => 2],
         '#executes_submit_callback' => TRUE,
@@ -706,7 +714,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       'actions' key in a form alter */
       $form[$this->options['id'].'_delone'] = [
         '#type' => 'button',
-        '#name' => 'delone',
+        '#name' => 'op',
         '#op' => $this->options['id'] . '_delone',
         '#value' => $this->t('@label', [
           '@label' => $this->options['exposed']['advanced_search_fields_remove_one_label'] ?? 'remove one'
@@ -780,9 +788,10 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $current_count = &$form_state->getValue(
       $this->options['id'] . '_advanced_search_fields_count', 1
     );
+    error_log(var_export($form_state->getUserInput(),true));
     if ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
           NULL) == $this->options['id'] . '_addone')
-      && ($form_state->getUserInput()['op'] ?? NULL == $this->options['expose']['advanced_search_fields_add_one_label'])
+      && (isset($form_state->getUserInput()['op']) && $form_state->getUserInput()['op'] == $form_state->getTriggeringElement()['#value'])
       && $this->options['expose']['advanced_search_fields_multiple']
     ) {
       $this->searchedFieldsCount = $this->searchedFieldsCount
@@ -794,7 +803,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
     elseif ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
           NULL) == $this->options['id'] . '_delone')
-      && ($form_state->getUserInput()['op'] ?? NULL == $this->options['expose']['advanced_search_fields_remove_one_label'])
+      && (isset($form_state->getUserInput()['op']) && $form_state->getUserInput()['op'] == $form_state->getTriggeringElement()['#value'])
       && $this->options['expose']['advanced_search_fields_multiple']
     ) {
       $this->searchedFieldsCount = $this->searchedFieldsCount
