@@ -62,12 +62,14 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $options = parent::defineOptions();
     $options['expose']['contains']['advanced_search_fields_multiple'] = ['default' => FALSE];
     $options['expose']['contains']['advanced_search_fields_count'] = ['default' => 2];
+    $options['expose']['contains']['advanced_search_fields_count_min'] = ['default' => 1];
     $options['expose']['contains']['advanced_search_use_operator'] = ['default' => FALSE];
     $options['expose']['contains']['advanced_search_operator_id'] = ['default' => ''];
     $options['expose']['contains']['advanced_search_fields_add_one_label'] = ['default' => 'add one'];
     $options['expose']['contains']['advanced_search_fields_remove_one_label'] = ['default' => 'remove one'];
     $options['advanced_search_fields_add_one_label'] = ['default' => ['add one']];
     $options['advanced_search_fields_remove_one_label'] = ['default' => ['remove one']];
+    $options['fields_label_replace'] = ['default' => NULL];
     return $options;
   }
 
@@ -76,6 +78,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     parent::defaultExposeOptions();
     $this->options['expose']['advanced_search_fields_multiple'] = FALSE;
     $this->options['expose']['advanced_search_fields_count'] = 2;
+    $this->options['expose']['advanced_search_fields_count_min'] = 1;
     $this->options['expose']['advanced_search_use_operator'] = FALSE;
     $this->options['expose']['advanced_search_operator_id'] = $this->options['id'] . '_group_operator';
     $this->options['expose']['advanced_search_fields_add_one_label'] = $this->options['advanced_search_fields_add_one_label'];
@@ -107,6 +110,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#min' => 2,
       '#max' => 10,
       '#description' => $this->t('The number of additional search Fields with the same general exposed settings the user will be able to expose.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+    $form['expose']['advanced_search_fields_count_min'] = [
+      '#type' => 'number',
+      '#default_value' => $this->options['expose']['advanced_search_fields_count_min'],
+      '#title' => $this->t('Min number of Multiple/add more Search Fields the user will see. Number must be less or equal to the max. If not it will cap automatically'),
+      '#size' => 5,
+      '#min' => 1,
+      '#max' => 10,
+      '#description' => $this->t('The number of search Fields with the same general exposed settings the user will see by default.'),
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
@@ -164,6 +181,28 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     ];
   }
 
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildOptionsForm(&$form, FormStateInterface $form_state) {
+    parent::buildOptionsForm($form, $form_state);
+
+    if (isset($form['fields']['#options'])) {
+      foreach ($form['fields']['#options'] as $key => $value) {
+        $replacement[] = $key . '|' . $value;
+      }
+      $replacement = implode("\n", $replacement);
+      $form['fields_label_replace'] = [
+        '#type' => 'textarea',
+        '#default_value' => $this->options['fields_label_replace'] ?? $replacement,
+        '#rows' => 8,
+        '#title' => $this->t('Replacement pattern for user facing Fields. '),
+        '#size' => 40,
+        '#description' => $this->t('Use a Pipe (|) to separate value from desired label. One per line'),
+      ];
+    }
+  }
   /**
    * {@inheritdoc}
    */
@@ -615,11 +654,15 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     if ($this->options['expose']['expose_fields']) {
       $fields = $this->getFulltextFields();
       $configured_fields = $this->options['fields'];
+
+
       // Only keep the configured fields.
       if (!empty($configured_fields)) {
         $configured_fields = array_flip($configured_fields);
         $fields = array_intersect_key($fields, $configured_fields);
       }
+      $fields = $this->rewriteFieldLabels($fields);
+
       //Now the searched fields if exposed.
       $searched_fields_identifier = $this->options['id'] . '_searched_fields';
       if (!empty($this->options['expose']['searched_fields_id'])) {
@@ -695,6 +738,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#attributes' => [
           'data-disable-refocus' => "true",
           'data-advanced-search-addone' => "true",
+          'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
           'data-advanced-search-prefix' => $this->options['id'],
           'tabindex' => 2,
           'class' => [
@@ -714,6 +758,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#attributes' => [
           'data-disable-refocus' => "true",
           'data-advanced-search-delone' => "true",
+          'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
           'data-advanced-search-prefix' => $this->options['id'],
           'tabindex' => 3,
           'class' => [
@@ -893,6 +938,21 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     parent::prepareFilterSelectOptions(
       $options
     ); // TODO: Change the autogenerated stub
+  }
+
+  private function rewriteFieldLabels($options) {
+    $lines = explode("\n", trim($this->options['fields_label_replace']));
+    foreach ($lines as $line) {
+      if (strpos($line, '|') !== FALSE) {
+        [$search, $replace] = array_map('trim', explode('|', $line));
+        if (!empty($search)) {
+          if (isset($options[$search])) {
+            $options[$search] = $replace;
+          }
+        }
+      }
+    }
+  return $options;
   }
 
 

@@ -145,6 +145,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
       $response = new ViewAjaxResponse();
 
+
+
       // Remove all of this stuff from the query of the request so it doesn't
       // end up in pagers and tablesort URLs.
       // @todo Remove this parsing once these are removed from the request in
@@ -172,11 +174,43 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }
       $view = $this->executableFactory->get($entity);
       if ($view && $view->access($display_id) && $view->setDisplay($display_id) && $view->display_handler->ajaxEnabled()) {
-        $response->setView($view);
+
         // Fix the current path for paging.
         if (!empty($path)) {
           $this->currentPath->setPath('/' . ltrim($path, '/'), $request);
         }
+
+        // Because Exposed filters use Get and our form is submitting via POST
+        // We end with stale old values.
+
+        // Let's check if our view has our advanced search filter
+
+        $filters = $view->getDisplay($display_id)->display['display_options']['filters'] ?? [];
+        foreach ($filters as $filter) {
+          /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+          if ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
+            && $filter['exposed'] == TRUE
+          ) {
+            if ($filter['expose']['identifier'] ?? NULL ) {
+              // At this stage the loaded View has already processed
+              // the whole GET bag as its own input based on the active request
+              // We need to alter that. Let's check if we have the id in both GET and POST
+              // If in POST, POST wins and replaces/needs to replace GET in the view
+              $views_post = $view->getRequest()->request->all();
+              unset($views_post['ajax_page_state']);
+              $views_get = $view->getRequest()->query->all();
+              if (isset($views_post[$filter['expose']['identifier']])) {
+                foreach ($views_get as $get_args_keys => $value) {
+                  if (strpos($get_args_keys, $filter->options['expose']['identifier']) === 0) {
+                    unset($views_get[$get_args_keys]);
+                  }
+                }
+              }
+            }
+            $view->getRequest()->query->replace($views_post + $views_get);
+          }
+        }
+
 
         // Add all POST data, because AJAX is always a post and many things,
         // such as tablesorts, exposed filters and paging assume GET.
@@ -185,6 +219,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $query_all = $request->query->all();
         $request->query->replace($request_all + $query_all);
 
+        $response->setView($view);
         // Overwrite the destination.
         // @see the redirect.destination service.
         $origin_destination = $path;
@@ -236,7 +271,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               ->merge($bubbleable_metadata)
               ->applyTo($exposed_form);
           }
-         $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
+          $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
         }
 
         return $response;
