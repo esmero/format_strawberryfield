@@ -588,9 +588,16 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   public function submitExposed(&$form, FormStateInterface $form_state) {
-    // OR HOW THE RESET BUTTON DOES IT
-    //if (!$form_state->isValueEmpty('op') && $form_state->getValue('op') == $this->options['reset_button_label'])
-    $form_state->setRebuild();
+    if (!$form_state->isValueEmpty('op') &&
+      !empty($this->options['exposed']) &&
+      $form_state->getTriggeringElement()['#parents'] ?? NULL &&
+      ($form_state->getTriggeringElement()['#parents'][0] ?? NULL) == 'reset') {
+      $form_state->setRebuild(FALSE);
+    }
+    elseif (!$form_state->isValueEmpty('op') &&
+      !empty($this->options['exposed'])) {
+      $form_state->setRebuild(TRUE);
+    }
     parent::submitExposed(
       $form, $form_state
     );
@@ -954,7 +961,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         }
       }
     }
-  return $options;
+    return $options;
   }
 
 
