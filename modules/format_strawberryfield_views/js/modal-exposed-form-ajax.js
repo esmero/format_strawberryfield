@@ -190,7 +190,6 @@
           }
         });
         if (reloadfacets) {
-          console.log('reloading!');
           Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
         }
       }
@@ -215,8 +214,6 @@
     if (ajax_views_call && view_name && view_display_id) {
       var exposed_form_selector = '#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-');
       var $exposed_form = $(exposed_form_selector).length;
-      console.log($exposed_form);
-      console.log(exposed_form_selector);
       if ($exposed_form > 0) {
         $exposed_form = 1;
       }
@@ -258,10 +255,7 @@
   };
 
   Drupal.AjaxCommands.prototype.SbfSetBrowserUrl = function (ajax, response) {
-    console.log(response.url);
     window.history.replaceState(null, '', response.url);
   }
-
-
 })(jQuery, Drupal, once, drupalSettings);
 
