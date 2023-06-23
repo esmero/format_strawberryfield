@@ -133,7 +133,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         $exposed_input = $view->getExposedInput();
         $view->getRequest()->getRequestUri();
         $keys_to_filter = [];
-        $key_with_search_value = [] ;
+        $key_with_search_value = [];
         // Oh gosh, blocks...
         if (!$view->getDisplay()->isDefaultDisplay() && empty($view->getDisplay()->options['filters'] ?? [] )) {
           $filters = $view->getDisplay()->handlers['filter'];
@@ -147,9 +147,17 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             elseif ($filter->getPluginId() == 'sbf_advanced_search_api_fulltext'
               && $filter->isExposed()
             ) {
+              $current_count = 1;
+              if ($filter->options['expose']['identifier'] ?? NULL ) {
+                $field_count_field = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
+                $current_count = $exposed_input[$field_count_field] ?? ($filter->options['expose']['advanced_search_fields_count'] ?? 1);
+              }
               $extra_keys_to_filter = [];
-              $keys_to_filter[] =$filter->options['expose']['operator_id'] ?? NULL;
+              $keys_to_filter[] = $filter->options['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
+              if ($filter->options['expose']['identifier'] ?? NULL ) {
+                $keys_to_filter[] = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
+              }
               $key_with_search_value[] = $filter->options['expose']['identifier'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['searched_fields_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['advanced_search_operator_id']
@@ -160,17 +168,20 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
                   $i < $filter->options['expose']['advanced_search_fields_count'] ?? 1;
                   $i++
                 ) {
-
                   $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
                   if (in_array($key_to_filter, $key_with_search_value)){
-                    $key_with_search_value[] = $key_to_filter . '_' . $i;
+                    if ($i < $current_count) {
+                      $key_with_search_value[] = $key_to_filter . '_' . $i;
+                    }
                   }
                 }
               }
-              $keys_to_filter = array_filter($keys_to_filter);
+
               $keys_to_filter = array_merge(
                 $keys_to_filter, $extra_keys_to_filter
               );
+              $keys_to_filter = array_unique($keys_to_filter);
+              $keys_to_filter = array_filter($keys_to_filter);
             }
           }
         }
@@ -187,9 +198,20 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
               && $filter['exposed']
             ) {
+              $current_count = 1;
+              if ($filter['expose']['identifier'] ?? NULL ) {
+                $field_count_field = $filter['expose']['identifier'] . '_advanced_search_fields_count';
+                $current_count = $exposed_input[$field_count_field] ?? ($filter['expose']['advanced_search_fields_count'] ?? 1);
+              }
+
               $extra_keys_to_filter = [];
               $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
+              // fields count = $filter['expose']['identifier']
+              if ($filter['expose']['identifier'] ?? NULL ) {
+                $keys_to_filter[]
+                  = $filter['expose']['identifier'] . '_advanced_search_fields_count';
+              }
               $key_with_search_value[] = $filter['expose']['identifier'] ??
                 NULL;
               $keys_to_filter[] = $filter['expose']['searched_fields_id'] ??
@@ -203,17 +225,19 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
                   $i < $filter['expose']['advanced_search_fields_count'] ?? 1;
                   $i++
                 ) {
-
                   $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
                   if (in_array($key_to_filter, $key_with_search_value)) {
-                    $key_with_search_value[] = $key_to_filter . '_' . $i;
+                    if ($i < $current_count) {
+                      $key_with_search_value[] = $key_to_filter . '_' . $i;
+                    }
                   }
                 }
               }
-              $keys_to_filter = array_filter($keys_to_filter);
               $keys_to_filter = array_merge(
                 $keys_to_filter, $extra_keys_to_filter
               );
+              $keys_to_filter = array_unique($keys_to_filter);
+              $keys_to_filter = array_filter($keys_to_filter);
             }
           }
         }

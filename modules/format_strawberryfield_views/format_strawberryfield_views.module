@@ -141,8 +141,17 @@ function format_strawberryfield_views_block_view_views_exposed_filter_block_sbf_
  */
 function format_strawberryfield_views_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   if ($form_id == 'views_exposed_form') {
+    if (isset($form['actions']['submit'])) {
+      $form['actions']['#attached']['library'][] = 'format_strawberryfield_views/advanced-search-default-submit';
+      $form['actions']['submit']['#attributes']['autofocus'] = '';
+      $form['actions']['submit']['#attributes']['tabindex'] = 1;
+      $form['actions']['submit']['#attributes']['data-default-submit'] = '';
+      // Needed when multiple buttons are on the same form, by default the name is empty
+      // making \Drupal\Core\Form\FormBuilder::buttonWasClicked fail!
+      $form['actions']['submit']['#name'] = 'op';
+    }
     foreach ($form as $key => $value) {
-      if (is_array($value) && isset ($value['#group']) && isset($value['#type']) && $value['#group'] == 'actions' && $value['#type'] == 'submit') {
+      if (is_array($value) && isset ($value['#group']) && isset($value['#type']) && $value['#group'] == 'actions' && ($value['#type'] == 'submit' || $value['#type'] == 'button' || $value['#type'] == 'link')) {
         $form['actions'][$key] = $value;
         unset($form[$key]);
       }

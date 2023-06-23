@@ -388,7 +388,6 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
     array $form,
     FormStateInterface $form_state
   ) {
-    error_log('changeSceneCallBack called');
     $button = $form_state->getTriggeringElement();
     $element = NestedArray::getValue(
       $form,

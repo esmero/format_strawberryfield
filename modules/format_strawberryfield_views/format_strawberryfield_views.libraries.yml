@@ -42,3 +42,13 @@ view-ajax-interactions:
     - core/views
     - core/views.ajax
     - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+advanced-search-default-submit:
+  js:
+    js/sbf-advanced-search-default-submit.js: {minified: false}
+  css:
+    component:
+      css/advanced_search.css: { }
+  dependencies:
+    - core/drupal
+    - core/jquery
