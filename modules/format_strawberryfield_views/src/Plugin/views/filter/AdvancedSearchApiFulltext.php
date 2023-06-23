@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
+use Drupal\Core\Url;
 use Drupal\search_api\Entity\Index;
 use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\search_api_solr\Utility\Utility;
@@ -65,6 +66,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $options['expose']['contains']['advanced_search_operator_id'] = ['default' => ''];
     $options['expose']['contains']['advanced_search_fields_add_one_label'] = ['default' => 'add one'];
     $options['expose']['contains']['advanced_search_fields_remove_one_label'] = ['default' => 'remove one'];
+    $options['advanced_search_fields_add_one_label'] = ['default' => ['add one']];
+    $options['advanced_search_fields_remove_one_label'] = ['default' => ['remove one']];
     return $options;
   }
 
@@ -75,8 +78,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $this->options['expose']['advanced_search_fields_count'] = 2;
     $this->options['expose']['advanced_search_use_operator'] = FALSE;
     $this->options['expose']['advanced_search_operator_id'] = $this->options['id'] . '_group_operator';
-    $this->options['expose']['advanced_search_fields_add_one_label'] = 'add one';
-    $this->options['expose']['advanced_search_fields_remove_one_label'] = 'remove one';
+    $this->options['expose']['advanced_search_fields_add_one_label'] = $this->options['advanced_search_fields_add_one_label'];
+    $this->options['expose']['advanced_search_fields_remove_one_label'] = $this->options['advanced_search_fields_remove_one_label'];
   }
 
   /**
@@ -426,12 +429,13 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
       if ($j > 0) {
         if ($query_able_datum_internal['interfield_operator'] == 'and') {
-          $flat_key = ' && '.$flat_key;
+          $flat_key = ' && '. $flat_key;
         }
       }
       $flat_keys[] = $flat_key;
       $j++;
     }
+
     if (count($flat_keys)) {
       /** @var \Drupal\search_api\ParseMode\ParseModeInterface $parse_mode */
       $parse_mode_direct = $this->getParseModeManager()
@@ -545,22 +549,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   public function submitExposed(&$form, FormStateInterface $form_state) {
-
-    if (!$form_state->isValueEmpty('op') &&
-      ((($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_addone') ||
-      (($form_state->getTriggeringElement()['#op'] ?? NULL) == $this->options['id'] . '_delone'))
-    ){
-      $form_state->setRebuild(TRUE);
-    }
-    elseif (!$form_state->isValueEmpty('op') && !empty($this->options['exposed'])) {
-      if ($form_state->getTriggeringElement()['#parents'] ?? NULL &&
-        isset($form_state->getTriggeringElement()['#parents'][0]) == 'reset') {
-          error_log('reset pressed');
-      }
-    }
-
     // OR HOW THE RESET BUTTON DOES IT
     //if (!$form_state->isValueEmpty('op') && $form_state->getValue('op') == $this->options['reset_button_label'])
+    $form_state->setRebuild();
     parent::submitExposed(
       $form, $form_state
     );
@@ -594,27 +585,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Value in our case needs to be multiple values (bc of the multiple options)
     if ($return && $realcount = $input[$this->options['expose']['identifier'].'_advanced_search_fields_count']) {
       $this->value = [];
-      // On add one/delete one (means not submit.. check if this will affect other exposed input? )
-      if (isset($input['op']) &&
-        isset($input['submit']) &&
-        $input['op'] != $input['submit'] &&
-        \Drupal::request()->hasSession() &&
-        $this->getQuery() &&
-        !$this->getQuery()->shouldAbort()) {
-        $session = \Drupal::request()->getSession();
-        $display_id = ($this->view->display_handler->isDefaulted('filters'))
-          ? 'default' : $this->view->current_display;
-        $adv_search_session = $session->get('sbf_advanced_search_views', []);
-        if (isset($adv_search_session[$this->view->storage->id()][$display_id])) {
-          $input = $adv_search_session[$this->view->storage->id()][$display_id];
-          // $realcount needs to be the last one submitted/stored in the session.
-          $realcount = $input[$this->options['expose']['identifier']
-          . '_advanced_search_fields_count'];
-        }
-      }
-
       $this->value[$this->options['expose']['identifier']] = $input[$this->options['expose']['identifier']];
-      for($i=1;$i < $realcount && $realcount > 1; $i++) {
+      for($i=1; $i < $realcount && $realcount > 1; $i++) {
         if (!empty($this->options['expose']['use_operator']) && !empty($this->options['expose']['operator_id']) && isset($input[$this->options['expose']['operator_id'].'_'.$i])) {
           $this->operatorAdv[$this->options['expose']['identifier'] . '_' . $i] = $input[$this->options['expose']['operator_id'].'_'.$i];
         }
@@ -655,7 +627,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           = $this->options['expose']['searched_fields_id'];
       }
 
-
       // Remove the group operator if found
       unset($form[$searched_fields_identifier]);
       $multiple_exposed_fields = $this->options['expose']['multiple'] ?? FALSE ? min(count($fields), 5) : 1;
@@ -680,7 +651,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $advanced_search_operator_id = $this->options['id'] . '_group_operator';
     // And our own settings.
     if (!empty($this->options['expose']['advanced_search_use_operator']) && !empty($this->options['expose']['advanced_search_operator_id'])) {
-
       if (!empty($this->options['expose']['advanced_search_operator_id'])) {
         $advanced_search_operator_id = $this->options['expose']['advanced_search_operator_id'];
       }
@@ -705,44 +675,53 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Yes over complicated but so far the only way i found to keep the state
     // Of this value between calls/rebuilds and searches.
     // @TODO move this into Accept input. That is easier?
-    $nextcount = (int) ($form_state->getUserInput()['sbf_advanced_search_api_fulltext_advanced_search_fields_count'] ?? 1);
-    $prevcount = $this->view->exposed_raw_input[$this->options['id'].'_advanced_search_fields_count'] ?? NULL;
-    $form_state_count = $form_state->getValue('sbf_advanced_search_api_fulltext_advanced_search_fields_count', NULL);
+    $nextcount = (int) ($form_state->getUserInput()[$this->options['id'] . '_advanced_search_fields_count'] ?? 1);
+    //$prevcount = $this->view->exposed_raw_input[$this->options['id'].'_advanced_search_fields_count'] ?? NULL;
+    $form_state_count = $form_state->getValue($this->options['id'] . '_advanced_search_fields_count', NULL);
 
-    $realcount = $prevcount ?? ($form_state_count ?? $nextcount);
+    // $realcount = $prevcount ?? ($form_state_count ?? $nextcount);
+    $realcount = $form_state_count ?? $nextcount;
     // Cap it to the max limit
     $realcount = ($realcount <= $this->options['expose']['advanced_search_fields_count']) ? $realcount : $this->options['expose']['advanced_search_fields_count'];
     // Only enable if setup and the realcount is less than the max.
     $enable_more = $realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'];
     $enable_less = $realcount > 1;
-    // This fails on Preview (because of competing Ajax and replace calls)
-    // @TODO Re-test without the IF bc of Sunday refactor that should have fixed it?
 
     if (empty($this->view->live_preview)) {
       $form[$this->options['id'].'_addone'] = [
-        '#type' => 'button',
-        '#op' => $this->options['id'] . '_addone',
-        '#value' => $this->t('@label', [
-          '@label' => $this->options['exposed']['advanced_search_fields_add_one_label'] ?? 'add one'
-        ]),
-        '#name' => 'op',
+        '#type' => 'link',
+        '#title' => t($this->options['expose']['advanced_search_fields_add_one_label'] ?? 'add one'),
+        '#url' => Url::fromRoute('<current>'),
+        '#attributes' => [
+          'data-disable-refocus' => "true",
+          'data-advanced-search-addone' => "true",
+          'data-advanced-search-prefix' => $this->options['id'],
+          'tabindex' => 2,
+          'class' => [
+            'adv-search-addone',
+            'button',
+            'btn',
+          ],
+        ],
         '#access' => $enable_more,
-        '#attributes' => ['data-disable-refocus' => "true", 'tabindex' => 2],
-        '#executes_submit_callback' => TRUE,
         '#weight' => '-100',
         '#group' => 'actions',
       ];
-      /* Note: #group does not work for buttons but we use this to bring them into
-      'actions' key in a form alter */
       $form[$this->options['id'].'_delone'] = [
-        '#type' => 'button',
-        '#name' => 'op',
-        '#op' => $this->options['id'] . '_delone',
-        '#value' => $this->t('@label', [
-          '@label' => $this->options['exposed']['advanced_search_fields_remove_one_label'] ?? 'remove one'
-        ]),
-        '#executes_submit_callback' => TRUE,
-        '#attributes' => ['data-disable-refocus' => "true", 'tabindex' => 3],
+        '#type' => 'link',
+        '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
+        '#url' => Url::fromRoute('<current>'),
+        '#attributes' => [
+          'data-disable-refocus' => "true",
+          'data-advanced-search-delone' => "true",
+          'data-advanced-search-prefix' => $this->options['id'],
+          'tabindex' => 3,
+          'class' => [
+            'adv-search-delone',
+            'button',
+            'btn',
+          ],
+        ],
         '#access' => $enable_less,
         '#weight' => '-101',
         '#group' => 'actions',
@@ -810,36 +789,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $current_count = &$form_state->getValue(
       $this->options['id'] . '_advanced_search_fields_count', 1
     );
-    if ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
-          NULL) == $this->options['id'] . '_addone')
-      && (isset($form_state->getUserInput()['op']) && $form_state->getUserInput()['op'] == $form_state->getTriggeringElement()['#value'])
-      && $this->options['expose']['advanced_search_fields_multiple']
-    ) {
-      $this->searchedFieldsCount = $this->searchedFieldsCount
-      < ($this->options['expose']['advanced_search_fields_count'] ?? 1)
-        ? $this->searchedFieldsCount++
-        : ($this->options['expose']['advanced_search_fields_count'] ?? 1);
-      // Check if the state was set already
-      $current_count++;
-      if (!empty($this->options['expose']['required']) && $this->getQuery()) {
-
-      }
-    }
-    elseif ((($triggering_element = $form_state->getTriggeringElement()['#op'] ??
-          NULL) == $this->options['id'] . '_delone')
-      && (isset($form_state->getUserInput()['op']) && $form_state->getUserInput()['op'] == $form_state->getTriggeringElement()['#value'])
-      && $this->options['expose']['advanced_search_fields_multiple']
-    ) {
-      $this->searchedFieldsCount = $this->searchedFieldsCount
-      > ($this->options['expose']['advanced_search_fields_count'] ?? 1)
-        ? $this->searchedFieldsCount--
-        : ($this->options['expose']['advanced_search_fields_count'] ?? 1);
-      // Check if the state was set already
-      $current_count--;
-      if (!empty($this->options['expose']['required']) && $this->getQuery()) {
-
-      }
-    }
+    $this->searchedFieldsCount = $current_count;
 
     if ($this->options['expose']['advanced_search_fields_multiple']) {
       for ($i = 1; $i < $current_count; $i++) {
@@ -856,11 +806,31 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       }
     }
 
-    $identifiers[] = $this->options['expose']['identifier'];
-    for ($i = 1; $i < $current_count; $i++) {
-      $identifiers[] = $this->options['expose']['identifier'] . '_' . $i;
+    $identifiers[] = $identifiers_to_keep[] = $this->options['expose']['identifier'];
+
+    for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+      if ($i < $current_count) {
+        $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+          . $i;
+      }
+      $identifiers[] = $this->options['expose']['identifier'] . '_'
+        . $i;
     }
-    foreach ($identifiers as $identifier) {
+
+    foreach ($identifiers as $index => $identifier) {
+      if (!in_array($identifier, $identifiers_to_keep)) {
+        $form_state->unsetValue($identifier);
+        $form_state->unsetValue($index > 0 ? $searched_fields_identifier . '_' . $index : $searched_fields_identifier);
+        $form_state->unsetValue($index > 0 ? $advanced_search_operator_id . '_' . $index : $advanced_search_operator_id);
+        $userInput = $form_state->getUserInput();
+        unset($userInput[$identifier]);
+        unset($userInput[$index > 0 ? $searched_fields_identifier . '_' . $index : $searched_fields_identifier]);
+        unset($userInput[$index > 0 ? $advanced_search_operator_id . '_' . $index : $advanced_search_operator_id]);
+        $form_state->setUserInput($userInput);
+      }
+    }
+
+    foreach ($identifiers_to_keep as $index => $identifier) {
       $input = &$form_state->getValue($identifier, '');
       /// @TODO Add all inputs here...
       ///
@@ -869,7 +839,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       ) {
         $this->operator
           = $this->options['group_info']['group_items'][$input]['operator'];
-        $input = &$this->options['group_info']['group_items'][$input]['value'];
+        $input
+          = &$this->options['group_info']['group_items'][$input]['value'];
       }
 
       // Under some circumstances, input will be an array containing the string
@@ -881,7 +852,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         // No input was given by the user. If the filter was set to "required" and
         // there is a query (not the case when an exposed filter block is
         // displayed stand-alone), abort it.
-        if (!empty($this->options['expose']['required']) && $this->getQuery()) {
+        if (!empty($this->options['expose']['required'])
+          && $this->getQuery()
+        ) {
           $this->getQuery()->abort();
         }
         // If the input is empty, there is nothing to validate: return early.
@@ -920,33 +893,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     parent::prepareFilterSelectOptions(
       $options
     ); // TODO: Change the autogenerated stub
-  }
-
-  public function storeExposedInput($input, $status) {
-    $return = parent::storeExposedInput(
-      $input, $status
-    );
-    // In case of a proper submit (not addone/delone) we store all input in the session.
-    // This will be retrieved instead of the actual "form state/input submit on addone/delone
-    // So a previous search can be "replicated" and allowing added new fields to not be submited
-    // to the Views until the user decides so.
-    // @TODO make this an option, not the default (i like autosubmit).
-    if (!empty($this->options['exposed']) && isset($input['op']) && isset($input['submit']) && $input['op'] == $input['submit']) {
-      if (\Drupal::request()->hasSession() && $this->getQuery() && !$this->getQuery()->shouldAbort()) {
-        $session = \Drupal::request()->getSession();
-        $display_id = ($this->view->display_handler->isDefaulted('filters'))
-          ? 'default' : $this->view->current_display;
-        $adv_search_session = $session->get('sbf_advanced_search_views', []);
-        $exclude = ['submit', 'form_build_id', 'form_id', 'form_token', 'exposed_form_plugin', 'reset'];
-        foreach( $exclude as $key) {
-          unset($input[$key]);
-        }
-        $adv_search_session[$this->view->storage->id()][$display_id] = $input;
-        $session->set('sbf_advanced_search_views', $adv_search_session);
-      }
-    }
-
-    return $return;
   }
 
 
