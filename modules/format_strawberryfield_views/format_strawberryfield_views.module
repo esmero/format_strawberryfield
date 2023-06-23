@@ -151,7 +151,7 @@ function format_strawberryfield_views_form_alter(&$form, FormStateInterface $for
       $form['actions']['submit']['#name'] = 'op';
     }
     foreach ($form as $key => $value) {
-      if (is_array($value) && isset ($value['#group']) && isset($value['#type']) && $value['#group'] == 'actions' && ($value['#type'] == 'submit' || $value['#type'] == 'button')) {
+      if (is_array($value) && isset ($value['#group']) && isset($value['#type']) && $value['#group'] == 'actions' && ($value['#type'] == 'submit' || $value['#type'] == 'button' || $value['#type'] == 'link')) {
         $form['actions'][$key] = $value;
         unset($form[$key]);
       }
