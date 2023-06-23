@@ -745,6 +745,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
             'adv-search-addone',
             'button',
             'btn',
+            'btn-secondary'
           ],
         ],
         '#access' => $enable_more,
@@ -765,6 +766,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
             'adv-search-delone',
             'button',
             'btn',
+            'btn-secondary'
           ],
         ],
         '#access' => $enable_less,

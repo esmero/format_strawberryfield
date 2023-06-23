@@ -46,6 +46,9 @@ view-ajax-interactions:
 advanced-search-default-submit:
   js:
     js/sbf-advanced-search-default-submit.js: {minified: false}
+  css:
+    component:
+      css/advanced_search.css: { }
   dependencies:
     - core/drupal
     - core/jquery
