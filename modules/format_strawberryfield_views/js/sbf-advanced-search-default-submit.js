@@ -12,10 +12,15 @@
       var addMoreInterception = function(defaultSubmitInput, ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        const $form = defaultSubmitInput.closest('.views-exposed-form');
-        let $count =  $form.querySelector('input[name="sbf_advanced_search_api_fulltext_advanced_search_fields_count"]');
-        $count.value = Number($count.value) + 1;
-        defaultSubmitInput.click();
+        if (typeof ev.target.dataset.advancedSearchPrefix !== 'undefined') {
+          const $name = ev.target.dataset.advancedSearchPrefix + '_advanced_search_fields_count';
+          const $form = defaultSubmitInput.closest('.views-exposed-form');
+          let $count = $form.querySelector('input[name="'+$name+'"]');
+          if ($count) {
+            $count.value = Number($count.value) + 1;
+            defaultSubmitInput.click();
+          }
+        }
       };
 
       var delOneInterception = function(defaultSubmitInput, ev) {
@@ -32,9 +37,9 @@
             if ($tounset) {
               $tounset.value = '';
             }
+            defaultSubmitInput.click();
           }
         }
-        defaultSubmitInput.click();
       };
 
       for (const defaultSubmitInput of document.querySelectorAll('.views-exposed-form [data-default-submit]')) {
@@ -42,10 +47,22 @@
           formInput.addEventListener('keypress', formInterception.bind(null, defaultSubmitInput));
         }
         for (const addMore of document.querySelectorAll('.views-exposed-form [data-advanced-search-addone]')) {
-          addMore.addEventListener('click', addMoreInterception.bind(null, defaultSubmitInput));
+          let $parent_edit_actions = addMore.closest('[data-drupal-selector="edit-actions"]');
+          if ($parent_edit_actions) {
+            const $submitForAdv = $parent_edit_actions.querySelector('[data-default-submit]');
+            if ($submitForAdv) {
+              addMore.addEventListener('click', addMoreInterception.bind(null, $submitForAdv));
+            }
+          }
         }
         for (const delOne of document.querySelectorAll('.views-exposed-form [data-advanced-search-delone]')) {
-          delOne.addEventListener('click', delOneInterception.bind(null, defaultSubmitInput));
+          let $parent_edit_actions = delOne.closest('[data-drupal-selector="edit-actions"]');
+          if ($parent_edit_actions) {
+            const $submitForAdv = $parent_edit_actions.querySelector('[data-default-submit]');
+            if ($submitForAdv) {
+              delOne.addEventListener('click', delOneInterception.bind(null, $submitForAdv));
+            }
+          }
         }
       }
     }
