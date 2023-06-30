@@ -143,7 +143,6 @@ function format_strawberryfield_views_form_alter(&$form, FormStateInterface $for
   if ($form_id == 'views_exposed_form') {
     if (isset($form['actions']['submit'])) {
       $form['actions']['#attached']['library'][] = 'format_strawberryfield_views/advanced-search-default-submit';
-      $form['actions']['submit']['#attributes']['autofocus'] = '';
       $form['actions']['submit']['#attributes']['tabindex'] = 1;
       $form['actions']['submit']['#attributes']['data-default-submit'] = '';
       // Needed when multiple buttons are on the same form, by default the name is empty
