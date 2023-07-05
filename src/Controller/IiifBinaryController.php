@@ -240,6 +240,7 @@ class IiifBinaryController extends ControllerBase {
         }
 
         $response->setETag($etag, TRUE);
+        $response->headers->set("Content-Type", $mime);
         $response->prepare($request);
         $response->setContentDisposition(
           ResponseHeaderBag::DISPOSITION_INLINE,
