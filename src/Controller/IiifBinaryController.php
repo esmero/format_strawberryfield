@@ -137,7 +137,19 @@ class IiifBinaryController extends ControllerBase {
       $uri = $found->getFileUri(); // The source URL
       $filename = $found->getFilename(); // The filename...
 
-      $mime = $found->getMimeType(); // We may want the actual mime from metadata?
+      $mime = $found->getMimeType(); // We may want the actual mime from metadata? Not really.
+
+      // For weirdly migrated/pre 1.1.1 mimetypes we remap a few here
+      if ($mime == 'image/jpg') {
+        $mime = 'image/jpeg';
+      }
+      if ($mime == 'image/tif') {
+        $mime = 'image/tiff';
+      }
+      if ($mime == "audio/vnd.wave") {
+        $mime = "audio/x-wave";
+      }
+
       // Let's check!
       // Note: we are not touching the metadata here.
       $etag = md5($found->uuid());
