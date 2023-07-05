@@ -17,8 +17,8 @@ use Drupal\facets_summary\Processor\ProcessorPluginBase;
  *
  * @SummaryProcessor(
  *   id = "sbf_last_active_facets",
- *   label = @Translation("Adds Option to remove selected facets when there are no results at all"),
- *   description = @Translation("When checked and no resilts, this facet will add a summary of previously selected facets."),
+ *   label = @Translation("Adds Option to remove selected facets when there are no results at all."),
+ *   description = @Translation("When checked and no results, a summary of previously selected facets will be calculated from the request."),
  *   stages = {
  *     "build" = 60
  *   }
