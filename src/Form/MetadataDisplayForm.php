@@ -234,26 +234,24 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
-   * Takes an output array and an error message and returns
-   * the output with a status message container at the top.
+   * Takes an error message and returns
+   * the status message container.
    */
-  public static function buildAjaxPreviewError(array $output, string $message) {
-    if(!empty($message)) {
-      $output['preview_error'] = [
-        '#type' => 'container',
-        '#weight' => -1000,
-        '#theme' => 'status_messages',
-        '#message_list' => [
-          'error' => [
-            t($message),
-          ],
+  public static function buildAjaxPreviewError(string $message) {
+    $preview_error = [
+      '#type' => 'container',
+      '#weight' => -1000,
+      '#theme' => 'status_messages',
+      '#message_list' => [
+        'error' => [
+          t($message),
         ],
-        '#status_headings' => [
-          'error' => t('Error message'),
-        ],
-      ];
-    }
-    return $output;
+      ],
+      '#status_headings' => [
+        'error' => t('Error message'),
+      ],
+    ];
+    return $preview_error;
   }
 
   /**
@@ -417,7 +415,11 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-	$output = static::buildAjaxPreviewError($output, $message);
+        if(!empty($message)) {
+	  $preview_error = static::buildAjaxPreviewError($message);
+	  $output['preview_error'] = $preview_error;
+
+	}
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
@@ -426,7 +428,11 @@ class MetadataDisplayForm extends ContentEntityForm {
         else {
           $message = $exception->getMessage();
         }
-	$output = static::buildAjaxPreviewError($output, $message);
+        if(!empty($message)) {
+	  $preview_error = static::buildAjaxPreviewError($message);
+	  $output['preview_error'] = $preview_error;
+
+	}
       }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
