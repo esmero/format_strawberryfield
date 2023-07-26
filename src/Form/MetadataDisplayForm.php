@@ -234,6 +234,29 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
+   * Takes an output array and an error message and returns
+   * the output with a status message container at the top.
+   */
+  public static function buildAjaxPreviewError(array $output, string $message) {
+    if(!empty($message)) {
+      $output['preview_error'] = [
+        '#type' => 'container',
+        '#weight' => -1000,
+        '#theme' => 'status_messages',
+        '#message_list' => [
+          'error' => [
+            t($message),
+          ],
+        ],
+        '#status_headings' => [
+          'error' => t('Error message'),
+        ],
+      ];
+    }
+    return $output;
+  }
+
+  /**
    * AJAX callback.
    */
   public static function ajaxPreview($form, FormStateInterface $form_state) {
@@ -389,17 +412,12 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#type' => 'details',
             '#open' => TRUE,
             '#title' => 'HTML Output',
-            'messages' => [
-              '#markup' => $message,
-              '#attributes' => [
-                'class' => ['error'],
-              ],
-            ],
             'render' => [
                 '#markup' => $render,
             ],
           ];
         }
+	$output = static::buildAjaxPreviewError($output, $message);
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
@@ -408,15 +426,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         else {
           $message = $exception->getMessage();
         }
-
-        $output['preview'] = [
-          '#type' => 'details',
-          '#open' => TRUE,
-          '#title' => t('Syntax error'),
-          'error' => [
-            '#markup' => $message,
-          ]
-        ];
+	$output = static::buildAjaxPreviewError($output, $message);
       }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
