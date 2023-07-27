@@ -135,6 +135,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }, $args);
 
       $path = $request->request->get('view_path');
+      // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path);
       $dom_id = $request->request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
@@ -229,7 +230,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         if ($query != '') {
           $origin_destination .= '?' . $query;
           unset($used_query_parameters['op']);
-          $target_url->setOption('query', $used_query_parameters);
+          if ($target_url) {
+            $target_url->setOption('query', $used_query_parameters);
+          }
         }
         $this->redirectDestination->set($origin_destination);
 
@@ -254,7 +257,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
         //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
-        $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+        if ($target_url) {
+          $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+        }
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
         // Only <div> containing view is refreshed. ReplaceCommand is fixing
