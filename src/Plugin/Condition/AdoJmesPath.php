@@ -5,7 +5,6 @@ namespace Drupal\format_strawberryfield\Plugin\Condition;
 use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\Core\Url;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -13,20 +12,20 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Provides the 'ADO Type' condition.
  *
  * @Condition(
- *   id = "ado_type_condition",
- *   label = @Translation("ADO Type"),
+ *   id = "ado_jmespath_condition",
+ *   label = @Translation("ADO JMESPath"),
  *   context_definitions = {
  *     "node" = @ContextDefinition("entity:node", label = @Translation("node"))
  *   }
  * )
  */
-class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInterface {
-
+class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginInterface {
 
   /**
    * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
    */
   private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
+
   /**
    * Creates a new AdoType instance.
    *
@@ -59,20 +58,13 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    $form['ado_types'] = [
+    $form['ado_jmespaths'] = [
       '#title' => $this->pluginDefinition['label'],
       '#description' => t(
-        'Enter one or more ADO type names, <strong>one per line</strong>. A list of ADO types can be viewed on the <a href="@link">ADO Type to View Mode Mapping Form</a>.',
-        ['@link' => Url::fromRoute('format_strawberryfield.view_mode_mapping_settings_form')->toString()]
+        'Enter one or more ADO JMESPath expressions, <strong>one per line</strong>. Any non empty/not FALSE return (except an array with FALSE values) ,of the evaluated expresion(s), is considered a match',
       ),
       '#type' => 'textarea',
-      '#default_value' => implode(PHP_EOL, $this->configuration['ado_types']),
-    ];
-    $form['recurse_ado_types'] = [
-      '#title' => t("Recurse metadata"),
-      '#description' => t('Do you want this condition to look for type values everywhere in the ADO metadata, instead of just at the top level? For example, entering "Image" would cause this condition to match an ADO having an attached image file if this option is checked.'),
-      '#type' => 'checkbox',
-      '#default_value' => (bool) $this->configuration['recurse_ado_types'],
+      '#default_value' => implode(PHP_EOL, $this->configuration['ado_jmespaths']),
     ];
     return parent::buildConfigurationForm($form, $form_state);
   }
@@ -81,8 +73,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['ado_types'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_types'))));
-    $this->configuration['recurse_ado_types'] = (bool) $form_state->getValue('recurse_ado_types');
+    $this->configuration['ado_jmespaths'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_jmespaths'))));
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -91,28 +82,36 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    */
   public function evaluate() {
     // Returns true if no ado types are selected and negate option is disabled.
-    if (empty($this->configuration['ado_types']) && !$this->isNegated()) {
+    if (empty($this->configuration['ado_jmespaths']) && !$this->isNegated()) {
       return TRUE;
     }
     /** @var \Drupal\node\Entity\Node $node */
     $entity = $this->getContextValue('node');
 
-    $ado_types = [];
-    if ($sbf_fields = $this->strawberryfieldUtilityService->bearsStrawberryfield($entity)) {
+    $matches = FALSE;
+    if ($entity && $sbf_fields = $this->strawberryfieldUtilityService->bearsStrawberryfield($entity)) {
       foreach ($sbf_fields as $field_name) {
         /* @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $field */
         $field = $entity->get($field_name);
         if (!$field->isEmpty()) {
           foreach ($field->getIterator() as $delta => $itemfield) {
             /** @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $itemfield */
-            if($this->configuration['recurse_ado_types']) {
-              $values = (array) $itemfield->provideFlatten();
-            }
-            else {
-              $values = (array) $itemfield->provideDecoded();
-            }
-            if (isset($values['type'])) {
-              $ado_types = array_merge($ado_types, (array) $values['type']);
+            foreach ($this->configuration['ado_jmespaths'] as $jmespath) {
+              if (!$matches && !empty($jmespath)) {
+                try {
+                  $match_result = $itemfield->searchPath($jmespath);
+                  if (is_array($match_result)) {
+                    // Allows JMESPATHS that return [false] to be considered empty
+                    $match_result = array_filter($match_result);
+                  }
+                  $matches = !empty($match_result);
+                }
+                catch (\Exception $e) {
+                  $this->messenger()->addWarning('The JMESPath Block condition for Block @id is using an invalid JMESPath expression. Please correct the configuration.',[
+                    '@id' => $this->getPluginId()
+                  ]);
+                }
+              }
             }
           }
         }
@@ -125,51 +124,48 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
       unset($this->configuration['negate']);
       return TRUE;
     }
-    if(!empty($ado_types)) {
-      // Return true if any of the entity's types are in the condition's ado_types.
-      return (count(array_intersect($this->configuration['ado_types'], $ado_types)) > 0);
-    }
     // Default, return not matched.
-    return FALSE;
+    return $matches;
   }
+
 
   /**
    * {@inheritdoc}
    */
   // TODO: This seems to require javascript to display, though it seems pretty superfluous.
   public function summary() {
-    if (count($this->configuration['ado_types']) > 1) {
-      $ado_types = $this->configuration['ado_types'];
-      $last = array_pop($ado_types);
-      $ado_types = implode(', ', $ado_types);
+    if (count($this->configuration['ado_jmespaths']) > 1) {
+      $ado_jmespaths = $this->configuration['ado_jmespaths'];
+      $last = array_pop($ado_jmespaths);
+      $ado_jmespaths = implode(', ', $ado_jmespaths);
 
       if (empty($this->configuration['negate'])) {
-        return $this->t('@type is @ado_types or @last', [
-          '@type' => $this->pluginDefinition['label'],
-          '@ado_types' => $ado_types,
+        return $this->t('@jmespath is @ado_jmespaths or @last', [
+          '@jmespath' => $this->pluginDefinition['label'],
+          '@ado_jmespaths' => $ado_jmespaths,
           '@last' => $last,
         ]);
       }
       else {
-        return $this->t('@type is not @ado_types or @last', [
+        return $this->t('@jmespath is not @ado_jmespaths or @last', [
           '@type' => $this->pluginDefinition['label'],
-          '@ado_types' => $ado_types,
+          '@ado_jmespaths' => $ado_jmespaths,
           '@last' => $last,
         ]);
       }
     }
-    $ado_type = reset($this->configuration['ado_types']);
+    $ado_jmespath = reset($this->configuration['ado_jmespaths']);
 
     if (empty($this->configuration['negate'])) {
-      return $this->t('@type is @ado_type', [
-        '@type' => $this->pluginDefinition['label'],
-        '@ado_type' => $ado_type,
+      return $this->t('@jmespath is @ado_jmespath', [
+        '@jmespath' => $this->pluginDefinition['label'],
+        '@ado_jmespath' => $ado_jmespath,
       ]);
     }
     else {
-      return $this->t('@type is not @ado_type', [
-        '@type' => $this->pluginDefinition['label'],
-        '@ado_type' => $ado_type,
+      return $this->t('@jmespath is not @ado_jmespath', [
+        '@jmespath' => $this->pluginDefinition['label'],
+        '@ado_jmespath' => $ado_jmespath,
       ]);
     }
   }
@@ -179,8 +175,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    */
   public function defaultConfiguration() {
     return [
-        'ado_types' => [],
-        'recurse_ado_types' => FALSE,
+        'ado_jmespaths' => [],
       ] + parent::defaultConfiguration();
   }
 
