@@ -286,6 +286,10 @@ class MetadataDisplayForm extends ContentEntityForm {
       $mimetype = !empty($mimetype) ? $mimetype[0]['value'] : 'text/html';
       $show_render_native = $form_state->getValue('render_native');
 
+      if ($show_render_native) {
+        set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
+      }
+
       $sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($preview_node);
 
@@ -436,6 +440,10 @@ class MetadataDisplayForm extends ContentEntityForm {
 	  $output['preview_error'] = $preview_error;
 
 	}
+      }
+      if ($show_render_native) {
+        restore_error_handler();
+        restore_exception_handler();
       }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
