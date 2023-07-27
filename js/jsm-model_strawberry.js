@@ -11,12 +11,22 @@
                     // Check if we got some data passed via Drupal settings.
                     var canvas = value;
                     var canvasDom = $(value);
+                    var cameraUpVector = [0, 0, 1];
+                    if (typeof settings.format_strawberryfield.strawberry_3d_formatter[element_id]['camera-up-vector'] !== "undefined") {
+                      let cameraUp = settings.format_strawberryfield.strawberry_3d_formatter[element_id]['camera-up-vector'];
+                      if (Array.isArray(cameraUp)) {
+                        cameraUpVector = Array.from(cameraUp);
+                        cameraUpVector = cameraUpVector.filter(component => (Math.round((component * 10) / 10).toFixed(1) == 1.0) || (Math.round((component * 10) / 10).toFixed(1) == 0.0));
+                      }
+                    }
 
                     var viewerSettings = {
-                        cameraEyePosition: [-2.0, -1.5, 1.0],
+                        cameraEyePosition: [-2.0, 1.5, 1.0],
                         cameraCenterPosition: [0.0, 0.0, 0.0],
-                        cameraUpVector: [0, 0, 1],
-                        lightDiffuseColor : [0.9, 0.8, 0.8]
+                        cameraUpVector: cameraUpVector,
+                        lightDiffuseColor : [0.95, 0.85, 0.85],
+                        nearClippingPlane : 0.01
+                        //lightAmbientColor : [0.5, 0.45, 0.3]
                     };
                     var sourceurl = $(value).data('iiif-model');
                     var textureurl = $(value).data('iiif-texture');
@@ -28,8 +38,6 @@
                     // Ajusts width to what ever is smallest.
                     // If given width is less than window size, do nothing
                     // In any other case make it as width
-                    console.log(JSM);
-                    console.log(this);
                     function resizeCanvas () {
                         if (canvas.parentElement.clientWidth < canvasDom.data("iiif-image-width") || typeof canvasDom.data("iiif-image-width") == "undefined") {
                             canvasDom.width(canvasDom.first().parent().innerWidth());
@@ -107,6 +115,7 @@
 
                                 var currentMeshIndex = 0;
                                 var environment = {
+                                    boundingBox: {},
                                     onStart: function (/*taskCount, meshes*/) {
                                         viewer.EnableDraw(false);
                                         viewer.navigation.SetNearDistanceLimit (0.5);
@@ -120,14 +129,17 @@
                                     },
                                     onFinish: function (meshes) {
                                         if (meshes.length > 0) {
-                                            viewer.AdjustClippingPlanes(50.0);
-                                            while (currentMeshIndex < meshes.length) {
-                                                meshes[currentMeshIndex].geometry.computeBoundingBox();  // otherwise geometry.boundingBox will be undefined
-
-                                                var boundingBox = meshes[currentMeshIndex].geometry.boundingBox.clone();
-                                                alert('bounding box coordinates: ' +
+                                            //viewer.AdjustClippingPlanes(50.0);
+                                            let i = 0;
+                                            while (i < meshes.length) {
+                                                meshes[i].geometry.computeBoundingBox();  // otherwise geometry.boundingBox will be undefined
+                                                let boundingBox = meshes[i].geometry.boundingBox.clone();
+                                                /* alert('bounding box coordinates: ' +
                                                     '(' + boundingBox.min.x + ', ' + boundingBox.min.y + ', ' + boundingBox.min.z + '), ' +
-                                                    '(' + boundingBox.max.x + ', ' + boundingBox.max.y + ', ' + boundingBox.max.z + ')' );
+                                                    '(' + boundingBox.max.x + ', ' + boundingBox.max.y + ', ' + boundingBox.max.z + ')' ); */
+                                                this.boundingBox = new JSM.Coord(boundingBox.max.x, boundingBox.max.y, boundingBox.max.z);
+                                                console.log(this.boundingBox);
+                                              i++;
                                             }
                                         }
 
@@ -149,6 +161,14 @@
 
                                         viewer.EnableDraw(true);
                                         viewer.FitInWindow();
+                                        const direction = JSM.CoordSub (viewer.navigation.camera.center, viewer.navigation.camera.eye);
+                                        const dist = direction.Length ();
+                                        const direction_bounding_box = JSM.CoordSub (viewer.navigation.camera.center, this.boundingBox);
+                                        const dist_bx = direction_bounding_box.Length ();
+                                        console.log(dist);
+                                        console.log(dist_bx);
+                                        viewer.navigation.SetNearDistanceLimit (parseFloat(dist) - (parseFloat(dist_bx)));
+                                        viewer.navigation.SetFarDistanceLimit (parseFloat(dist) + (parseFloat(dist_bx)/2));
                                         viewer.Draw();
                                         downloadBase64File();
                                         $( window ).resize(function() {

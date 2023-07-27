@@ -176,6 +176,9 @@ field.formatter.settings.strawberry_3d_formatter:
     number_models:
       type: integer
       label: 'Number of 3D Models to load from JSON'
+    invert_up_axis:
+      type: boolean
+      label: 'Number of 3D Models to load from JSON'
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
