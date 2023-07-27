@@ -101,7 +101,11 @@ class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginI
                     $match_result = array_filter($match_result);
                   }
                   $matches = !empty($match_result);
-                } catch (\Exception $e) {
+                }
+                catch (\Exception $e) {
+                  $this->messenger()->addWarning('The JMESPath Block condition for Block @id is using an invalid JMESPath expression. Please correct the configuration.',[
+                    '@id' => $this->getPluginId()
+                  ]);
                 }
               }
             }
