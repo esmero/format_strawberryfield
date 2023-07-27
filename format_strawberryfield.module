@@ -389,6 +389,14 @@ function format_strawberryfield_cron() {
  * @see \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview()
  */
 function _format_strawberryfield_metadata_preview_error_handler($error_level, $message, $filename = NULL, $line = NULL, $context = NULL) {
-    _drupal_error_handler(E_WARNING, $message, $filename, $line, $context);
-    throw new ErrorException($message, $error_level, 0, $filename, $line);
+    switch($error_level)
+    {
+      case E_USER_WARNING:
+      case E_USER_ERROR:
+        _drupal_error_handler($error_level, $message, $filename, $line, $context);
+        throw new ErrorException($message, $error_level, 0, $filename, $line);
+      default:
+        _drupal_error_handler($error_level, $message, $filename, $line, $context);
+        break;
+    }
 }
