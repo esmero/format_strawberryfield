@@ -5,8 +5,7 @@ namespace Drupal\format_strawberryfield\Plugin\Condition;
 use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\Core\Url;
-use Drupal\strawberryfield\StrawberryfieldUtilityService;
+use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -23,6 +22,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginInterface {
 
   /**
+   * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
+   */
+  private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
+
+  /**
    * Creates a new AdoType instance.
    *
    * @param array $configuration
@@ -31,9 +35,9 @@ class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginI
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\strawberryfield\StrawberryfieldUtilityService $strawberryfieldUtilityService
+   * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityService $strawberryfieldUtilityService) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
