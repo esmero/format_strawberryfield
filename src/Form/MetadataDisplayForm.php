@@ -236,6 +236,9 @@ class MetadataDisplayForm extends ContentEntityForm {
   /**
    * Takes an error message and returns
    * the status message container.
+   *
+   * @param string $message
+   *   The error message to display to the user.
    */
   public static function buildAjaxPreviewError(string $message) {
     $preview_error = [
