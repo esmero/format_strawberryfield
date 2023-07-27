@@ -27,29 +27,33 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       $form['sbf_ajax_interactions'] = [
         '#title'         => $this->t('Strawberryfield ADO to ADO Interactions'),
         '#type'          => 'checkbox',
-        '#description'   => $this->t('Allow this View to get Exposed and Contextual filter values from other Strawberryfield formatters'),
+        '#description'   => $this->t('Allow this view to get Contextual filter values from other Strawberryfield formatters'),
         '#default_value' => isset($this->options['sbf_ajax_interactions'])
           ? $this->options['sbf_ajax_interactions'] : 0,
         '#states'        => [
-          'visible' => [
+          'enabled' => [
             ':input[name="use_ajax"]' => ['checked' => TRUE],
           ],
         ],
       ];
-      $arguments = $this->displayHandler->getOption('arguments');
-      $all_exposed_arguments = array_combine(array_keys($arguments),array_keys($arguments));
-      $form['sbf_ajax_interactions_arguments'] = [
-        '#type' => 'checkboxes',
-        '#title' => $this->t('Which exposed filters should allow input from other ADOs'),
-        '#options' => $all_exposed_arguments,
-        '#default_value' => $this->options['sbf_ajax_interactions_arguments'],
-        '#states'        => [
-          'visible' => [
-            ':input[name="sbf_ajax_interactions"]' => ['checked' => TRUE],
-            ':input[name="use_ajax"]' => ['checked' => TRUE],
+      $arguments = $this->displayHandler->getOption('arguments') ?? [];
+      $all_exposed_arguments = array_combine(array_keys($arguments), array_keys($arguments));
+      if (count($all_exposed_arguments)) {
+        $form['sbf_ajax_interactions_arguments'] = [
+          '#type'          => 'checkboxes',
+          '#title'         => $this->t(
+            'Which Contextual filters (if any) should allow input from other ADOs'
+          ),
+          '#options'       => $all_exposed_arguments,
+          '#default_value' => $this->options['sbf_ajax_interactions_arguments'],
+          '#states'        => [
+            'enabled' => [
+              ':input[name="sbf_ajax_interactions"]' => ['checked' => TRUE],
+              ':input[name="use_ajax"]'              => ['checked' => TRUE],
+            ],
           ],
-        ],
-      ];
+        ];
+      }
     }
   }
 
@@ -67,6 +71,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       }
       else {
         unset($this->options['sbf_ajax_interactions_arguments']);
+        unset($this->options['sbf_ajax_interactions']);
       }
     }
   }
@@ -93,6 +98,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
     if ($form_state->hasValue('use_ajax') && $form_state->getValue('use_ajax') != TRUE) {
       // Prevent use ajax history when ajax for view are disabled.
       $form_state->setValue('sbf_ajax_interactions', FALSE);
+      $form_state->setValue('sbf_ajax_interactions_arguments', NULL);
     }
   }
   /**
