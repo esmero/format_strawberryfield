@@ -367,9 +367,10 @@ function format_strawberryfield_cron() {
 /**
  * Provides custom PHP error handling when processing ajax previews.
  *
- * Converts trigger_error() to WARNING so that an exceptions can be thrown
- * and caught by
+ * Throws exceptions for E_USER_WARNING and E_USER_ERROR only
+ * to be caught by
  * \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview().
+ * All other errors are passed back to Drupal's error handler.
  *
  * @param int $error_level
  *   The level of the error raised.
@@ -384,7 +385,7 @@ function format_strawberryfield_cron() {
  *   error occurred.
  *
  * @throws \ErrorException
- *   Throw ErrorException for all errors passed from trigger_error().
+ *   Throw ErrorException for E_USER_WARNING and E_USER_ERROR only.
  *
  * @see \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview()
  */
