@@ -443,7 +443,6 @@ class MetadataDisplayForm extends ContentEntityForm {
       }
       if ($show_render_native) {
         restore_error_handler();
-        restore_exception_handler();
       }
       $response->addCommand(new OpenOffCanvasDialogCommand(t('Preview'), $output, ['width' => '50%']));
     }
