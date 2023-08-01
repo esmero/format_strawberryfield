@@ -78,7 +78,7 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
     }
     elseif ($route_match->getParameter('view_id') && is_numeric($node)) {
       /* Upcasting %node route argument to NodeInterface will not happen for
-      Rputed Views (Page/Rest), when under access control because of
+      Routed Views (Page/Rest), when under access control because of
       https://www.drupal.org/project/drupal/issues/2528166
       @TODO Revisit this work-around on Drupal 11.x
       */
