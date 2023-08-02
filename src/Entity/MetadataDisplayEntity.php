@@ -491,12 +491,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
       $parent_path = '';
-      if ($node instanceof NameExpression && !$nodes instanceof NotUnary) {
-        if (!$node->hasAttribute('name')) {
-          continue;
-        }
+      if ($node->hasAttribute('name')) {
         $variable_key = $node->getAttribute('name');
-        if ($variable_key == '_key') {
+        if ($node instanceof NameExpression && !$nodes instanceof NotUnary && $variable_key == '_key') {
           $seq = $nodes->getNode('seq');
           if ($seq->hasNode('node') && $seq->getNode('node')->hasAttribute('name')) {
             $seq_name = $seq->getNode('node')->getAttribute('name');
@@ -504,15 +501,13 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           elseif ($seq->hasAttribute('name')) {
             $seq_name = $seq->getAttribute('name');
           }
-          else {
-            continue;
+          if($seq->hasNode('attribute')) {
+            $seq_value = $seq->getNode('attribute')->getAttribute('value');
           }
-          $seq_value = $seq->hasNode('attribute') ? $seq->getNode('attribute')->getAttribute('value') : '';
           $value_target = $nodes->getNode('value_target');
-          if (!$value_target->hasAttribute('name')) {
-            continue;
+          if ($value_target->hasAttribute('name')) {
+            $variable_key = $value_target->getAttribute('name');
           }
-          $variable_key = $value_target->getAttribute('name');
           $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
           $set_var = $variable_key;
           $set_source = $parent_path;
