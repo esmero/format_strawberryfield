@@ -405,7 +405,14 @@ class MetadataDisplayForm extends ContentEntityForm {
           '#empty' => t('No content has been found.'),
         ];
 
-        if ($show_render_native) {
+        if($show_render_native && empty($render)) {
+          throw new \Exception(
+            'Twig Template is empty.',
+            0,
+            null
+          );
+        }
+        elseif ($show_render_native) {
           $message = '';
           switch ($mimetype) {
             case 'application/ld+json':
