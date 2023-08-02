@@ -347,6 +347,64 @@ class MetadataDisplayForm extends ContentEntityForm {
         $entity->set('twig', $input['twig'][0], FALSE);
         $render = $entity->renderNative($context);
 
+        $used_vars = $entity->getTwigVariablesUsed();
+        $data_json = MetadataDisplayForm::flattenKeys($jsondata);
+        ksort($data_json);
+        $used_keys = [];
+        foreach($used_vars as $used_var) {
+          $used_var_path = $used_var['path'];
+          $used_var_line = $used_var['line'];
+          $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
+          if (str_starts_with($used_var_path, 'data.')) {
+            $used_var_exploded = explode('.', $used_var_path);
+            array_push($used_keys, $used_var_path);
+            $wildcard_paths = static::addPropertyPath($used_var_path);
+            if (isset($data_json[$used_var_path])) {
+              $data_json[$used_var_path]['used'] = 'Used';
+              $data_json[$used_var_path]['line'] = $used_var_line;
+            }
+            foreach($wildcard_paths as $wildcard_path) {
+              if (isset($data_json[$wildcard_path])) {
+                $data_json[$wildcard_path]['used'] = 'Used';
+                $data_json[$wildcard_path]['line'] = $used_var_line;
+              }
+            }
+            if (count($used_var_exploded) > 2) {
+              $used_var_parts = array_slice($used_var_exploded,0, 2);
+              $used_var_part = implode('.', $used_var_parts);
+              if (isset($data_json[$used_var_part])) {
+                $data_json[$used_var_part]['used'] = 'Used';
+                $data_json[$used_var_part]['line'] = $used_var_line;
+              }
+            }
+          }
+          else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
+            $data_json[$used_var_parent_path]['used'] = 'Used';
+            $data_json[$used_var_parent_path]['line'] = $used_var_line;
+          }
+        }
+        $unused_vars = $data_json;
+
+        $unused_keys = array_keys($unused_vars);
+        $unused_rows = array_map(function($unused_key, $unused_value) {
+          return [
+            $unused_key,
+            $unused_value['type'],
+            $unused_value['used'],
+            isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+          ];
+        }, $unused_keys,$unused_vars);
+        $json_table = [
+          '#type' => 'table',
+          '#header' => [
+            t('JSON key'),
+            t('Type'), t('Used'),
+            t('Line No.')
+          ],
+          '#rows' => $unused_rows,
+          '#empty' => t('No content has been found.'),
+        ];
+
         if ($show_render_native) {
           $message = '';
           switch ($mimetype) {
@@ -427,6 +485,14 @@ class MetadataDisplayForm extends ContentEntityForm {
 	  $output['preview_error'] = $preview_error;
 
 	}
+        $output['json_unused'] = [
+          '#type' => 'details',
+          '#open' => FALSE,
+          '#title' => 'JSON keys',
+          'render' => [
+            'table' => $json_table
+          ],
+        ];
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
