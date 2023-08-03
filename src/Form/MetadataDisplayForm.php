@@ -10,6 +10,7 @@ use Drupal\Core\Language\Language;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Url;
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Twig\Error\Error as TwigError;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -178,10 +179,20 @@ class MetadataDisplayForm extends ContentEntityForm {
   /**
    * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
    * but adds some extra properties for reporting and returns an array of the properties.
+   *
    * @todo: add the extra property functionality as an option to the existing
    * function and import here.
+   *
+   * @param array $array
+   *     An associative array of an ADO's JSON.
+   * @param string $recursive_key
+   *     A string to track the JSON key across recursions.
+   * @param int $array_depth
+   *     An integer to track the depth of the array in order to limit the depth.
+   * @param array $excludepaths
+   *     An array of paths to exclude.
    */
-  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, $excludepaths = []) {
+  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, array $excludepaths = []) {
     $return = [];
     $array_depth_max = 10;
     ++$array_depth;
@@ -255,6 +266,76 @@ class MetadataDisplayForm extends ContentEntityForm {
       ],
     ];
     return $preview_error;
+  }
+
+  /**
+   * Takes ADO JSON keys and a given MetadataDisplay entity and generates
+   * a table to display in a MetadataDisplay Preview.
+   *
+   * @param array $jsondata
+   *     An associative array of an ADO's JSON.
+   * @param MetadataDisplayEntity $entity
+   *     A Metadata Display entity.
+   */
+  public static function buildUsedVariableTable(array $jsondata, MetadataDisplayEntity $entity) {
+    $used_vars = $entity->getTwigVariablesUsed();
+    $data_json = MetadataDisplayForm::flattenKeys($jsondata);
+    ksort($data_json);
+    $used_keys = [];
+    foreach($used_vars as $used_var) {
+      $used_var_path = $used_var['path'];
+      $used_var_line = $used_var['line'];
+      $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
+      if (str_starts_with($used_var_path, 'data.')) {
+        $used_var_exploded = explode('.', $used_var_path);
+        array_push($used_keys, $used_var_path);
+        $wildcard_paths = static::addPropertyPath($used_var_path);
+        if (isset($data_json[$used_var_path])) {
+          $data_json[$used_var_path]['used'] = 'Used';
+          $data_json[$used_var_path]['line'] = $used_var_line;
+        }
+        foreach($wildcard_paths as $wildcard_path) {
+          if (isset($data_json[$wildcard_path])) {
+            $data_json[$wildcard_path]['used'] = 'Used';
+            $data_json[$wildcard_path]['line'] = $used_var_line;
+          }
+        }
+        if (count($used_var_exploded) > 2) {
+          $used_var_parts = array_slice($used_var_exploded,0, 2);
+          $used_var_part = implode('.', $used_var_parts);
+          if (isset($data_json[$used_var_part])) {
+            $data_json[$used_var_part]['used'] = 'Used';
+            $data_json[$used_var_part]['line'] = $used_var_line;
+          }
+        }
+      }
+      else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
+        $data_json[$used_var_parent_path]['used'] = 'Used';
+        $data_json[$used_var_parent_path]['line'] = $used_var_line;
+      }
+    }
+    $unused_vars = $data_json;
+
+    $unused_keys = array_keys($unused_vars);
+    $unused_rows = array_map(function($unused_key, $unused_value) {
+      return [
+        $unused_key,
+        $unused_value['type'],
+        $unused_value['used'],
+        isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+      ];
+    }, $unused_keys,$unused_vars);
+    $json_table = [
+      '#type' => 'table',
+      '#header' => [
+        t('JSON key'),
+        t('Type'), t('Used'),
+        t('Line No.')
+      ],
+      '#rows' => $unused_rows,
+      '#empty' => t('No content has been found.'),
+    ];
+    return $json_table;
   }
 
   /**
@@ -347,63 +428,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         $entity->set('twig', $input['twig'][0], FALSE);
         $render = $entity->renderNative($context);
 
-        $used_vars = $entity->getTwigVariablesUsed();
-        $data_json = MetadataDisplayForm::flattenKeys($jsondata);
-        ksort($data_json);
-        $used_keys = [];
-        foreach($used_vars as $used_var) {
-          $used_var_path = $used_var['path'];
-          $used_var_line = $used_var['line'];
-          $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
-          if (str_starts_with($used_var_path, 'data.')) {
-            $used_var_exploded = explode('.', $used_var_path);
-            array_push($used_keys, $used_var_path);
-            $wildcard_paths = static::addPropertyPath($used_var_path);
-            if (isset($data_json[$used_var_path])) {
-              $data_json[$used_var_path]['used'] = 'Used';
-              $data_json[$used_var_path]['line'] = $used_var_line;
-            }
-            foreach($wildcard_paths as $wildcard_path) {
-              if (isset($data_json[$wildcard_path])) {
-                $data_json[$wildcard_path]['used'] = 'Used';
-                $data_json[$wildcard_path]['line'] = $used_var_line;
-              }
-            }
-            if (count($used_var_exploded) > 2) {
-              $used_var_parts = array_slice($used_var_exploded,0, 2);
-              $used_var_part = implode('.', $used_var_parts);
-              if (isset($data_json[$used_var_part])) {
-                $data_json[$used_var_part]['used'] = 'Used';
-                $data_json[$used_var_part]['line'] = $used_var_line;
-              }
-            }
-          }
-          else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
-            $data_json[$used_var_parent_path]['used'] = 'Used';
-            $data_json[$used_var_parent_path]['line'] = $used_var_line;
-          }
-        }
-        $unused_vars = $data_json;
-
-        $unused_keys = array_keys($unused_vars);
-        $unused_rows = array_map(function($unused_key, $unused_value) {
-          return [
-            $unused_key,
-            $unused_value['type'],
-            $unused_value['used'],
-            isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
-          ];
-        }, $unused_keys,$unused_vars);
-        $json_table = [
-          '#type' => 'table',
-          '#header' => [
-            t('JSON key'),
-            t('Type'), t('Used'),
-            t('Line No.')
-          ],
-          '#rows' => $unused_rows,
-          '#empty' => t('No content has been found.'),
-        ];
+        $json_table = static::buildUsedVariableTable($jsondata, $entity);
 
         if($show_render_native && empty($render)) {
           throw new \Exception(
@@ -488,10 +513,9 @@ class MetadataDisplayForm extends ContentEntityForm {
           ];
         }
         if(!empty($message)) {
-	  $preview_error = static::buildAjaxPreviewError($message);
-	  $output['preview_error'] = $preview_error;
-
-	}
+	        $preview_error = static::buildAjaxPreviewError($message);
+	        $output['preview_error'] = $preview_error;
+	      }
         $output['json_unused'] = [
           '#type' => 'details',
           '#open' => FALSE,
@@ -509,10 +533,9 @@ class MetadataDisplayForm extends ContentEntityForm {
           $message = $exception->getMessage();
         }
         if(!empty($message)) {
-	  $preview_error = static::buildAjaxPreviewError($message);
-	  $output['preview_error'] = $preview_error;
-
-	}
+	        $preview_error = static::buildAjaxPreviewError($message);
+	        $output['preview_error'] = $preview_error;
+	      }
       }
       if ($show_render_native) {
         restore_error_handler();
