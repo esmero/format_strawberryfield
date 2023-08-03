@@ -116,6 +116,14 @@ class MetadataDisplayForm extends ContentEntityForm {
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
     ];
+    $form['preview']['show_json_table'] = [
+      '#type' => 'checkbox',
+      '#defaut_value' => FALSE,
+      '#title' => 'Show Preview with JSON keys used in this template.',
+      '#states' => [
+        'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
+      ],
+    ];
 
     // Enable autosaving in code mirror.
     $form['#attached']['library'][] = 'format_strawberryfield/code_mirror_autosave';
@@ -428,7 +436,10 @@ class MetadataDisplayForm extends ContentEntityForm {
         $entity->set('twig', $input['twig'][0], FALSE);
         $render = $entity->renderNative($context);
 
-        $json_table = static::buildUsedVariableTable($jsondata, $entity);
+        $show_json_table = $form_state->getValue('show_json_table');
+        if($show_json_table) {
+          $json_table = static::buildUsedVariableTable($jsondata, $entity);
+        }
 
         if($show_render_native && empty($render)) {
           throw new \Exception(
@@ -516,14 +527,16 @@ class MetadataDisplayForm extends ContentEntityForm {
 	        $preview_error = static::buildAjaxPreviewError($message);
 	        $output['preview_error'] = $preview_error;
 	      }
-        $output['json_unused'] = [
-          '#type' => 'details',
-          '#open' => FALSE,
-          '#title' => 'JSON keys',
-          'render' => [
-            'table' => $json_table
-          ],
-        ];
+        if($show_json_table) {
+          $output['json_unused'] = [
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => 'JSON keys',
+            'render' => [
+              'table' => $json_table
+            ],
+          ];
+        }
       } catch (\Exception $exception) {
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
