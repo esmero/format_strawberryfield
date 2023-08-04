@@ -501,14 +501,16 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           elseif ($seq->hasAttribute('name')) {
             $seq_name = $seq->getAttribute('name');
           }
-          if($seq->hasNode('attribute')) {
+          if($seq->hasNode('attribute') && $seq->getNode('attribute')->hasAttribute('value')) {
             $seq_value = $seq->getNode('attribute')->getAttribute('value');
           }
           $value_target = $nodes->getNode('value_target');
           if ($value_target->hasAttribute('name')) {
             $variable_key = $value_target->getAttribute('name');
           }
-          $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
+          if(isset($seq_name)) {
+            $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
+          }
           $set_var = $variable_key;
           $set_source = $parent_path;
         }
