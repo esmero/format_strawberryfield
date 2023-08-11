@@ -506,15 +506,6 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param \Twig\Node\Node $nodes
    *   A Twig Module Nodes object.
    *
-   * @param array $all_variables
-   *   An array to track the variables during recursion to return the accumulated line numbers.
-   *
-   * @param array $set_var
-   *   A string to track variables that reference JSON keys.
-   *
-   * @param array $set_source
-   *   An string to track the referenced JSON key for the above.
-   *
    * @return array
    *   A list of used $variables by this template.
    */
