@@ -462,6 +462,38 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
   }
 
   /**
+   * Custom implementation of PHP's array_merge_recursive to process
+   * and deduplicate an array of line numbers.
+   *
+   * @param array $arrays
+   *   A spread of array arguments to merge.
+   *
+   * @return array
+   *   The merged array.
+   */
+  public static function arrayMergeRecursive(array ...$arrays): array {
+    $merged = [];
+    foreach ($arrays as $current) {
+      foreach ($current as $key => $value) {
+        if (is_string($key)) {
+          if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+            $merged[$key] = static::arrayMergeRecursive($merged[$key], $value);
+          }
+          else if(is_array($value) && $key == 'line') {
+            $merged[$key] = array_unique($value,SORT_NUMERIC);
+          } else {
+            $merged[$key] = $value;
+          }
+        } else {
+          $merged[] = $value;
+        }
+      }
+    }
+
+    return $merged;
+  }
+
+  /**
    * Fetches recursively Twig Template Variables.
    *
    * @param \Twig\Node\ModuleNode $nodes
@@ -485,81 +517,22 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $all_variables, string $set_var = '', string $set_source = ''): array {
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes): array {
     $variables = [];
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
-      $variable_key = '';
-      $parent_path = '';
-      if ($node->hasAttribute('name')) {
-        $variable_key = $node->getAttribute('name');
-        if ($node instanceof NameExpression && !$nodes instanceof NotUnary && $variable_key == '_key') {
-          $seq = $nodes->getNode('seq');
-          if ($seq->hasNode('node') && $seq->getNode('node')->hasAttribute('name')) {
-            $seq_name = $seq->getNode('node')->getAttribute('name');
-          }
-          elseif ($seq->hasAttribute('name')) {
-            $seq_name = $seq->getAttribute('name');
-          }
-          if($seq->hasNode('attribute') && $seq->getNode('attribute')->hasAttribute('value')) {
-            $seq_value = $seq->getNode('attribute')->getAttribute('value');
-          }
-          $value_target = $nodes->getNode('value_target');
-          if ($value_target->hasAttribute('name')) {
-            $variable_key = $value_target->getAttribute('name');
-          }
-          if(isset($seq_name)) {
-            $parent_path = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
-          }
-          $set_var = $variable_key;
-          $set_source = $parent_path;
-        }
-      }
-      elseif ($node instanceof ConstantExpression && $nodes instanceof GetAttrExpression) {
-        $variable_key = $node->getAttribute('value');
-      }
-      elseif ($node instanceof GetAttrExpression) {
-        // The array_unique/array_merge pattern below can't be used here because
-        // they don't work on multidimensional arrays. Instead the lines from
-        // $all_variables is passed to $variables below, and then the merged
-        // lines replace the old values and pass them thru the recursion.
-        // @todo: Look deeper into this and find a simpler, cleaner way if possible.
-        // At the very least some of this is overkill.
-        $variable_names = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
-        $variable_names_flat = [];
-        $prev_name = null;
-        foreach ($variable_names as $name) {
-          $name_check = $prev_name ? $prev_name['path'] . '.' . $name['path']:'';
-          if (($name['path'] == $set_var) && !($set_source == $name_check)) {
-            $variable_names_flat[] = $set_source;
-          }
-          else {
-            $variable_names_flat[] = $name['path'];
-          }
-          $prev_name = $name;
-        }
-        $variable_key = implode('.', $variable_names_flat);
-      }
-      elseif ($node instanceof Node) {
-        // See above comment about the recursion.
-        $add_variables = $this->getTwigVariableNames($node, array_replace_recursive($all_variables, $variables), $set_var, $set_source);
-        $variables = array_replace_recursive($variables, $add_variables);
-      }
-      if (!empty($variable_key)) {
+      $variable_key = $node->hasAttribute('name') ? $node->getAttribute('name'):'';
+      if($variable_key == 'data') {
+        $variable_key_suffix = $nodes->getNode('attribute')->getAttribute('value');
+        $variable_key = $variable_key . '.' . $variable_key_suffix;
         $variables[$variable_key]['path'] = $variable_key;
-        if(isset($all_variables[$variable_key]['line'])) {
-          // Since $variables is lost with each return and $all_variables accumulates
-          // line numbers across recursions we need to merge the current line
-          // number with those passed thru recursions, and since duplicate
-          // values can occur because it's an array, we need unique values.
-          $variables[$variable_key]['line']  = array_unique(array_merge($all_variables[$variable_key]['line'], $lineno));
+      }
+      if ($node instanceof Node) {
+        if (!empty($variable_key)) {
+          $variables[$variable_key]['line']  = isset($variables[$variable_key]['line']) ? array_merge($variables[$variable_key]['line'], $lineno) : $lineno;
         }
-        if(!isset($variables[$variable_key]['line'])) {
-          $variables[$variable_key]['line'] = $lineno;
-        }
-        if (!empty($parent_path)) {
-          $variables[$variable_key]['parent_path'] = $parent_path;
-        }
+        $add_variables = $this->getTwigVariableNamesDev($node);
+        $variables = static::arrayMergeRecursive($variables, $add_variables);
       }
     }
     return $variables;
