@@ -500,6 +500,19 @@ class MetadataDisplayForm extends ContentEntityForm {
               break;
           }
         }
+      } catch (\Exception $exception) {
+        // Make the Message easier to read for the end user
+        if ($exception instanceof TwigError) {
+          $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
+        }
+        else {
+          $message = $exception->getMessage();
+        }
+      } finally {
+        if(!empty($message)) {
+          $preview_error = static::buildAjaxPreviewError($message);
+          $output['preview_error'] = $preview_error;
+        }
         if (!$show_render_native || ($show_render_native && $mimetype != 'text/html')) {
           $output['preview'] = [
             '#type' => 'codemirror',
@@ -513,20 +526,16 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        else {
+        else if ($show_render_native && $render) {
           $output['preview'] = [
             '#type' => 'details',
             '#open' => TRUE,
             '#title' => 'HTML Output',
             'render' => [
-                '#markup' => $render,
+              '#markup' => $render,
             ],
           ];
         }
-        if(!empty($message)) {
-	        $preview_error = static::buildAjaxPreviewError($message);
-	        $output['preview_error'] = $preview_error;
-	      }
         if($show_json_table) {
           $output['json_unused'] = [
             '#type' => 'details',
@@ -537,18 +546,6 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-      } catch (\Exception $exception) {
-        // Make the Message easier to read for the end user
-        if ($exception instanceof TwigError) {
-          $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
-        }
-        else {
-          $message = $exception->getMessage();
-        }
-        if(!empty($message)) {
-	        $preview_error = static::buildAjaxPreviewError($message);
-	        $output['preview_error'] = $preview_error;
-	      }
       }
       if ($show_render_native) {
         restore_error_handler();
