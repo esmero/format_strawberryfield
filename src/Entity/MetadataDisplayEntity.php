@@ -463,7 +463,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
   /**
    * Custom implementation of PHP's array_merge_recursive to process
-   * and deduplicate an array of line numbers.
+   * and deduplicate an array of line numbers. Slightly modified version of
+   * https://gist.github.com/varrg/6e4d75d0bba3d839776249436ea73dec
    *
    * @param array $arrays
    *   A spread of array arguments to merge.
