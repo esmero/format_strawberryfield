@@ -531,7 +531,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         if (!empty($variable_key)) {
           $variables[$variable_key]['line']  = isset($variables[$variable_key]['line']) ? array_merge($variables[$variable_key]['line'], $lineno) : $lineno;
         }
-        $add_variables = $this->getTwigVariableNamesDev($node);
+        $add_variables = $this->getTwigVariableNames($node);
         $variables = static::arrayMergeRecursive($variables, $add_variables);
       }
     }
