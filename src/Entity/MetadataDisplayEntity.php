@@ -517,6 +517,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       if($variable_key == 'data') {
         $variable_key_suffix = $nodes->getNode('attribute')->getAttribute('value');
         $variable_key = $variable_key . '.' . $variable_key_suffix;
+      }
+      if(!empty($variable_key)) {
         $variables[$variable_key]['path'] = $variable_key;
       }
       if ($node instanceof Node) {
