@@ -454,7 +454,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $source = new Source($twigtemplate, $this->label() ?? '', '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
-      $used_vars = $this->getTwigVariableNames($nodes,[]);
+      $used_vars = $this->getTwigVariableNames($nodes);
       ksort($used_vars);
       $this->usedTwigVars = $used_vars;
     }
@@ -480,8 +480,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
           if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
             $merged[$key] = static::arrayMergeRecursive($merged[$key], $value);
           }
-          else if(is_array($value) && $key == 'line') {
-            $merged[$key] = array_unique($value,SORT_NUMERIC);
+          else if (isset($value['line']) && count($value['line']) > 1) {
+            $value['line'] = array_unique($value['line'], SORT_NUMERIC);
+            $merged[$key] = $value;
           } else {
             $merged[$key] = $value;
           }
@@ -513,20 +514,51 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $variables = [];
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
-      $variable_key = $node->hasAttribute('name') ? $node->getAttribute('name'):'';
-      if($variable_key == 'data') {
-        $variable_key_suffix = $nodes->getNode('attribute')->getAttribute('value');
-        $variable_key = $variable_key . '.' . $variable_key_suffix;
+      $variable_key = $node->hasAttribute('name')
+                      && $node->getAttribute('name') == 'data'
+        ? $node->getAttribute('name')
+        : '';
+      if ($node->hasAttribute('always_defined')) {
+        if ($node->getAttribute('always_defined')
+            && $nodes->hasNode('seq')) {
+          $seq = $nodes->getNode('seq');
+          if ($seq->hasNode('node')
+              && $seq->getNode('node')->hasAttribute('name')
+              && $seq->getNode('node')->getAttribute('name') == 'data'
+          ) {
+            $seq_name = $seq->getNode('node')->getAttribute('name');
+          }
+          elseif ($seq->hasAttribute('name')
+                  && $seq->getAttribute('name') == 'data') {
+            $seq_name = $seq->getAttribute('name');
+          }
+          if (!empty($seq_name)) {
+            $seq_value = $seq->hasNode('attribute')
+              ? $seq->getNode('attribute')->getAttribute('value')
+              : '';
+            $variable_key = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
+          }
+        }
       }
-      if(!empty($variable_key)) {
+      elseif ($node->hasAttribute('value')
+              && $nodes->hasNode('node')
+              && $nodes->getNode('node')->hasAttribute('name')
+              && $nodes->getNode('node')->getAttribute('name') == 'data'
+      ) {
+        $variable_key = $nodes->getNode('node')->getAttribute('name')
+                        . '.' . $node->getAttribute('value');
+      }
+      if (!empty($variable_key && str_starts_with($variable_key, 'data.'))) {
         $variables[$variable_key]['path'] = $variable_key;
+        $variables[$variable_key]['line'] = isset($variables[$variable_key]['line'])
+          ? array_merge($variables[$variable_key]['line'], $lineno)
+          : $lineno;
       }
       if ($node instanceof Node) {
-        if (!empty($variable_key)) {
-          $variables[$variable_key]['line']  = isset($variables[$variable_key]['line']) ? array_merge($variables[$variable_key]['line'], $lineno) : $lineno;
-        }
         $add_variables = $this->getTwigVariableNames($node);
-        $variables = static::arrayMergeRecursive($variables, $add_variables);
+        if (!empty($variables) || !empty($add_variables)) {
+          $variables = static::arrayMergeRecursive($variables, $add_variables);
+        }
       }
     }
     return $variables;
