@@ -290,23 +290,20 @@ class MetadataDisplayForm extends ContentEntityForm {
     $data_json = MetadataDisplayForm::flattenKeys($jsondata);
     ksort($data_json);
     $used_keys = [];
-    foreach($used_vars as $used_var) {
-      $used_var_path = $used_var['path'];
+    foreach($used_vars as $used_key => $used_var) {
+      $used_var_path = $used_key;
       $used_var_line = $used_var['line'];
-      $used_var_parent_path = isset($used_var['parent_path']) ? $used_var['parent_path'] : '';
-      if (str_starts_with($used_var_path, 'data.')) {
-        $used_var_exploded = explode('.', $used_var_path);
-        array_push($used_keys, $used_var_path);
-        $wildcard_paths = static::addPropertyPath($used_var_path);
-        if (isset($data_json[$used_var_path])) {
-          $data_json[$used_var_path]['used'] = 'Used';
-          $data_json[$used_var_path]['line'] = $used_var_line;
-        }
-        foreach($wildcard_paths as $wildcard_path) {
-          if (isset($data_json[$wildcard_path])) {
-            $data_json[$wildcard_path]['used'] = 'Used';
-            $data_json[$wildcard_path]['line'] = $used_var_line;
-          }
+      $used_var_exploded = explode('.', $used_var_path);
+      array_push($used_keys, $used_var_path);
+      $wildcard_paths = static::addPropertyPath($used_var_path);
+      if (isset($data_json[$used_var_path])) {
+        $data_json[$used_var_path]['used'] = 'Used';
+        $data_json[$used_var_path]['line'] = $used_var_line;
+      }
+      foreach($wildcard_paths as $wildcard_path) {
+        if (isset($data_json[$wildcard_path])) {
+          $data_json[$wildcard_path]['used'] = 'Used';
+          $data_json[$wildcard_path]['line'] = $used_var_line;
         }
         if (count($used_var_exploded) > 2) {
           $used_var_parts = array_slice($used_var_exploded,0, 2);
@@ -316,10 +313,6 @@ class MetadataDisplayForm extends ContentEntityForm {
             $data_json[$used_var_part]['line'] = $used_var_line;
           }
         }
-      }
-      else if (str_starts_with($used_var_parent_path, 'data.') && isset($data_json[$used_var_parent_path])) {
-        $data_json[$used_var_parent_path]['used'] = 'Used';
-        $data_json[$used_var_parent_path]['line'] = $used_var_line;
       }
     }
     $unused_vars = $data_json;
