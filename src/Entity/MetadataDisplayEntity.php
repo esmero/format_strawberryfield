@@ -454,45 +454,11 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $source = new Source($twigtemplate, $this->label() ?? '', '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
-      $used_vars = $this->getTwigVariableNames($nodes);
+      $used_vars = $this->getTwigVariableNames($nodes, []);
       ksort($used_vars);
       $this->usedTwigVars = $used_vars;
     }
     return $this->usedTwigVars;
-  }
-
-  /**
-   * Custom implementation of PHP's array_merge_recursive to process
-   * and deduplicate an array of line numbers. Slightly modified version of
-   * https://gist.github.com/varrg/6e4d75d0bba3d839776249436ea73dec
-   *
-   * @param array $arrays
-   *   A spread of array arguments to merge.
-   *
-   * @return array
-   *   The merged array.
-   */
-  public static function arrayMergeRecursive(array ...$arrays): array {
-    $merged = [];
-    foreach ($arrays as $current) {
-      foreach ($current as $key => $value) {
-        if (is_string($key)) {
-          if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
-            $merged[$key] = static::arrayMergeRecursive($merged[$key], $value);
-          }
-          else if (isset($value['line']) && count($value['line']) > 1) {
-            $value['line'] = array_unique($value['line'], SORT_NUMERIC);
-            $merged[$key] = $value;
-          } else {
-            $merged[$key] = $value;
-          }
-        } else {
-          $merged[] = $value;
-        }
-      }
-    }
-
-    return $merged;
   }
 
   /**
@@ -507,37 +473,29 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param \Twig\Node\Node $nodes
    *   A Twig Module Nodes object.
    *
+   * @param array $variables
+   *   The variables passed through recursions.
+   *
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes): array {
-    $variables = [];
+  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $variables = []): array {
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
-      $variable_key = $node->hasAttribute('name')
-                      && $node->getAttribute('name') == 'data'
-        ? $node->getAttribute('name')
-        : '';
-      if ($node->hasAttribute('always_defined')) {
-        if ($node->getAttribute('always_defined')
-            && $nodes->hasNode('seq')) {
-          $seq = $nodes->getNode('seq');
-          if ($seq->hasNode('node')
-              && $seq->getNode('node')->hasAttribute('name')
-              && $seq->getNode('node')->getAttribute('name') == 'data'
-          ) {
-            $seq_name = $seq->getNode('node')->getAttribute('name');
-          }
-          elseif ($seq->hasAttribute('name')
-                  && $seq->getAttribute('name') == 'data') {
-            $seq_name = $seq->getAttribute('name');
-          }
-          if (!empty($seq_name)) {
-            $seq_value = $seq->hasNode('attribute')
-              ? $seq->getNode('attribute')->getAttribute('value')
-              : '';
-            $variable_key = empty($seq_value) ? $seq_name : $seq_name . '.' . $seq_value;
-          }
+      $variable_key = '';
+      if ($node->hasAttribute('always_defined')
+          && $node->getAttribute('always_defined')
+          && $nodes->hasNode('seq')
+      ) {
+        $seq = $nodes->getNode('seq');
+        if ($seq->hasNode('node')
+            && $seq->getNode('node')->hasAttribute('name')
+            && $seq->getNode('node')->getAttribute('name') == 'data'
+            && $seq->hasNode('attribute')
+            && $seq->getNode('attribute')->hasAttribute('value')
+        ) {
+          $variable_key = 'data.'
+                          . $seq->getNode('attribute')->getAttribute('value');
         }
       }
       elseif ($node->hasAttribute('value')
@@ -545,20 +503,16 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
               && $nodes->getNode('node')->hasAttribute('name')
               && $nodes->getNode('node')->getAttribute('name') == 'data'
       ) {
-        $variable_key = $nodes->getNode('node')->getAttribute('name')
-                        . '.' . $node->getAttribute('value');
+        $variable_key = 'data.' . $node->getAttribute('value');
       }
-      if (!empty($variable_key && str_starts_with($variable_key, 'data.'))) {
+      if (!empty($variable_key)) {
         $variables[$variable_key]['path'] = $variable_key;
         $variables[$variable_key]['line'] = isset($variables[$variable_key]['line'])
-          ? array_merge($variables[$variable_key]['line'], $lineno)
+          ? array_unique(array_merge($variables[$variable_key]['line'], $lineno))
           : $lineno;
       }
       if ($node instanceof Node) {
-        $add_variables = $this->getTwigVariableNames($node);
-        if (!empty($variables) || !empty($add_variables)) {
-          $variables = static::arrayMergeRecursive($variables, $add_variables);
-        }
+        $variables = $this->getTwigVariableNames($node, $variables);
       }
     }
     return $variables;
