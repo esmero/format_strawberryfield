@@ -479,11 +479,15 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode|Node|BodyNode $nodes, array $variables = []): array {
+  private function getTwigVariableNames(
+    ModuleNode|Node|BodyNode $nodes,
+    array $variables = []
+  ): array {
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
-      // Parse seq to get the values for for/in loops, e.g. {% for data in data.documents %}
+      // Parse seq to get the values for for/in loops,
+      // e.g. {% for data in data.documents %}
       if ($node->hasAttribute('always_defined')
           && $node->getAttribute('always_defined')
           && $nodes->hasNode('seq')
