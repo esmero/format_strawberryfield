@@ -430,11 +430,11 @@ class MetadataDisplayForm extends ContentEntityForm {
         $render = $entity->renderNative($context);
 
         $show_json_table = $form_state->getValue('show_json_table');
-        if($show_json_table) {
+        if ($show_json_table) {
           $json_table = static::buildUsedVariableTable($jsondata, $entity);
         }
 
-        if($show_render_native && empty($render)) {
+        if ($show_render_native && empty($render)) {
           throw new \Exception(
             'Twig Template is empty.',
             0,
@@ -502,11 +502,11 @@ class MetadataDisplayForm extends ContentEntityForm {
           $message = $exception->getMessage();
         }
       } finally {
-        if(!empty($message)) {
+        if (!empty($message)) {
           $preview_error = static::buildAjaxPreviewError($message);
           $output['preview_error'] = $preview_error;
         }
-        if (!$show_render_native || ($show_render_native && $mimetype != 'text/html')) {
+        if ($render && (!$show_render_native || ($show_render_native && $mimetype != 'text/html'))) {
           $output['preview'] = [
             '#type' => 'codemirror',
             '#rows' => 60,
@@ -529,7 +529,7 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        if($show_json_table) {
+        if ($show_json_table) {
           $output['json_unused'] = [
             '#type' => 'details',
             '#open' => FALSE,
