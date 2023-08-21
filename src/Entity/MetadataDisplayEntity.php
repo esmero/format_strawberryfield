@@ -7,8 +7,6 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Logger\LoggerChannelTrait;
-use Twig\Node\ModuleNode;
-use Twig\Node\BodyNode;
 use Twig\Node\Node;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
@@ -19,10 +17,6 @@ use InvalidArgumentException;
 use Drupal\format_strawberryfield\MetadataDisplayInterface;
 use Drupal\user\UserInterface;
 use Twig\Source;
-use Twig\Node\Expression\NameExpression;
-use Twig\Node\Expression\Unary\NotUnary;
-use Twig\Node\Expression\ConstantExpression;
-use Twig\Node\Expression\GetAttrExpression;
 
 /**
  * Defines the Metadata Display Content entity.
@@ -479,10 +473,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(
-    ModuleNode|Node|BodyNode $nodes,
-    array $variables = []
-  ): array {
+  private function getTwigVariableNames(Node $nodes, array $variables = []): array {
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
