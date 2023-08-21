@@ -477,8 +477,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     foreach ($nodes as $node) {
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
-      // Parse seq to get the values for for/in loops,
-      // e.g. {% for data in data.documents %}
+      // Parse seq to check the name for "data" and if it passes, get the values
+      // for for/in loops, e.g. {% for creator in data.creator %}
       if ($node->hasAttribute('always_defined')
           && $node->getAttribute('always_defined')
           && $nodes->hasNode('seq')
