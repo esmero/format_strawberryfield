@@ -519,7 +519,7 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        else if ($show_render_native && isset($render)) {
+        elseif ($show_render_native && isset($render)) {
           $output['preview'] = [
             '#type' => 'details',
             '#open' => TRUE,
