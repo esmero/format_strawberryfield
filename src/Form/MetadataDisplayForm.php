@@ -292,7 +292,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     $used_keys = [];
     foreach($used_vars as $used_key => $used_var) {
       $used_var_path = $used_key;
-      $used_var_line = $used_var['line'];
+      $used_var_line = $used_var;
       $used_var_exploded = explode('.', $used_var_path);
       array_push($used_keys, $used_var_path);
       $wildcard_paths = static::addPropertyPath($used_var_path);

@@ -502,8 +502,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         $variable_key = 'data.' . $node->getAttribute('value');
       }
       if (!empty($variable_key)) {
-        $variables[$variable_key]['line'] = isset($variables[$variable_key]['line'])
-          ? array_unique(array_merge($variables[$variable_key]['line'], $lineno))
+        $variables[$variable_key] = isset($variables[$variable_key])
+          ? array_unique(array_merge($variables[$variable_key], $lineno))
           : $lineno;
       }
       if ($node instanceof Node) {
