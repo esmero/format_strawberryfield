@@ -220,7 +220,7 @@ class MetadataDisplayForm extends ContentEntityForm {
   public static function buildUsedVariableTable(array $jsondata, MetadataDisplayEntity $entity) {
     $used_vars = $entity->getTwigVariablesUsed();
     $data_json = [];
-    foreach($jsondata as $key=>$value) {
+    foreach($jsondata as $key => $value) {
       $key = 'data.' . $key;
       $used_lines = isset($used_vars[$key]) ? $used_vars[$key] : [];
       if (filter_var($value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
