@@ -185,74 +185,6 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
-   * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
-   * but adds some extra properties for reporting and returns an array of the properties.
-   *
-   * @todo: add the extra property functionality as an option to the existing
-   * function and import here.
-   *
-   * @param array $array
-   *     An associative array of an ADO's JSON.
-   * @param string $recursive_key
-   *     A string to track the JSON key across recursions.
-   * @param int $array_depth
-   *     An integer to track the depth of the array in order to limit the depth.
-   * @param array $excludepaths
-   *     An array of paths to exclude.
-   */
-  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, array $excludepaths = []) {
-    $return = [];
-    $array_depth_max = 10;
-    ++$array_depth;
-    if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
-      return $return;
-    }
-    foreach($array as $key=>$value) {
-      if(filter_var($key, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
-        $key = "*";
-      } elseif (is_integer($key)) {
-        $key = '[*]';
-      }
-      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
-      if ($key == '[*]' || $key == '*') {
-        $key = empty($recursive_key) ? $key : $recursive_key  . $key;
-      } else {
-        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
-      }
-      if (is_array($value)) {
-        $return['data.' . $key]['type'] = $value_type;
-        $return['data.' . $key]['used'] = '';
-        if ($array_depth <= $array_depth_max) {
-          $return = array_merge($return, static::flattenKeys($value, $key, $array_depth));
-        }
-      }
-      else {
-        $return['data.' . $key]['type'] = $value_type;
-        $return['data.' . $key]['used'] = '';
-      }
-    }
-    return $return;
-  }
-
-  /**
-   * Takes a provided property path and inserts one for URLs and arrays
-   * and returns an array of modified paths to check against.
-   */
-  public static function addPropertyPath(string $property_path) {
-    $last_dot_pos = strrpos($property_path,'.');
-    $url_property_path = substr_replace($property_path, '*.', $last_dot_pos, 1);
-    $url_property_path_end = $property_path . '*';
-    $array_property_path = substr_replace($property_path, '[*].', $last_dot_pos, 1);
-    $array_property_path_end = $property_path . '[*]';
-    return [
-      $url_property_path,
-      $url_property_path_end,
-      $array_property_path,
-      $array_property_path_end
-    ];
-  }
-
-  /**
    * Takes an error message and returns
    * the status message container.
    *
@@ -287,37 +219,24 @@ class MetadataDisplayForm extends ContentEntityForm {
    */
   public static function buildUsedVariableTable(array $jsondata, MetadataDisplayEntity $entity) {
     $used_vars = $entity->getTwigVariablesUsed();
-    $data_json = MetadataDisplayForm::flattenKeys($jsondata);
-    ksort($data_json);
-    $used_keys = [];
-    foreach($used_vars as $used_key => $used_var) {
-      $used_var_path = $used_key;
-      $used_var_line = $used_var;
-      $used_var_exploded = explode('.', $used_var_path);
-      array_push($used_keys, $used_var_path);
-      $wildcard_paths = static::addPropertyPath($used_var_path);
-      if (isset($data_json[$used_var_path])) {
-        $data_json[$used_var_path]['used'] = 'Used';
-        $data_json[$used_var_path]['line'] = $used_var_line;
+    $data_json = [];
+    foreach($jsondata as $key=>$value) {
+      $key = 'data.' . $key;
+      $used_lines = isset($used_vars[$key]) ? $used_vars[$key] : [];
+      if (filter_var($value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
+        $key = $key."*";
       }
-      foreach($wildcard_paths as $wildcard_path) {
-        if (isset($data_json[$wildcard_path])) {
-          $data_json[$wildcard_path]['used'] = 'Used';
-          $data_json[$wildcard_path]['line'] = $used_var_line;
-        }
-        if (count($used_var_exploded) > 2) {
-          $used_var_parts = array_slice($used_var_exploded,0, 2);
-          $used_var_part = implode('.', $used_var_parts);
-          if (isset($data_json[$used_var_part])) {
-            $data_json[$used_var_part]['used'] = 'Used';
-            $data_json[$used_var_part]['line'] = $used_var_line;
-          }
-        }
+      elseif (is_array($value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($value)) {
+        $key = $key.'[*]';
       }
+      $data_json[$key]['used'] = !empty($used_lines) ? 'Used' : '';
+      $data_json[$key]['line'] = $used_lines;
+      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
+      $data_json[$key]['type'] = $value_type;
     }
-    $unused_vars = $data_json;
+    ksort($data_json);
 
-    $unused_keys = array_keys($unused_vars);
+    $unused_keys = array_keys($data_json);
     $unused_rows = array_map(function($unused_key, $unused_value) {
       return [
         $unused_key,
@@ -325,7 +244,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         $unused_value['used'],
         isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
       ];
-    }, $unused_keys,$unused_vars);
+    }, $unused_keys,$data_json);
     $json_table = [
       '#type' => 'table',
       '#header' => [
