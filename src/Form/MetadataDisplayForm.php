@@ -403,9 +403,9 @@ class MetadataDisplayForm extends ContentEntityForm {
                 if ($error = libxml_get_last_error()) {
                   $message = $error->message;
                 }
-              } catch (\Exception $e) {
+              } catch (\Exception $exception) {
                 throw new \Exception(
-                  "Error parsing XML: {$e->getMessage()}",
+                  "Error parsing XML: {$exception->getMessage()}",
                   0,
                   null
                 );
@@ -414,6 +414,7 @@ class MetadataDisplayForm extends ContentEntityForm {
           }
         }
       } catch (\Exception $exception) {
+        $render = null;
         // Make the Message easier to read for the end user
         if ($exception instanceof TwigError) {
           $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
