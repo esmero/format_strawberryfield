@@ -454,10 +454,10 @@ class MetadataDisplayForm extends ContentEntityForm {
           ];
         }
         if ($show_json_table && isset($json_table)) {
-          $output['json_unused'] = [
+          $output['json_used'] = [
             '#type' => 'details',
             '#open' => FALSE,
-            '#title' => 'JSON keys',
+            '#title' => 'JSON Keys Used',
             'render' => [
               'table' => $json_table
             ],
