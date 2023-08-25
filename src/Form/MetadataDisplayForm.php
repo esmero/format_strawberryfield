@@ -236,15 +236,15 @@ class MetadataDisplayForm extends ContentEntityForm {
     }
     ksort($data_json);
 
-    $unused_keys = array_keys($data_json);
-    $unused_rows = array_map(function($unused_key, $unused_value) {
+    $json_table_keys = array_keys($data_json);
+    $json_table_rows = array_map(function($json_table_key, $json_table_value) {
       return [
-        $unused_key,
-        $unused_value['type'],
-        $unused_value['used'],
-        isset($unused_value['line']) ? implode(', ', $unused_value['line']) : ''
+        $json_table_key,
+        $json_table_value['type'],
+        $json_table_value['used'],
+        isset($json_table_value['line']) ? implode(', ', $json_table_value['line']) : ''
       ];
-    }, $unused_keys,$data_json);
+    }, $json_table_keys,$data_json);
     $json_table = [
       '#type' => 'table',
       '#header' => [
@@ -252,7 +252,7 @@ class MetadataDisplayForm extends ContentEntityForm {
         t('Type'), t('Used'),
         t('Line No.')
       ],
-      '#rows' => $unused_rows,
+      '#rows' => $json_table_rows,
       '#empty' => t('No content has been found.'),
     ];
     return $json_table;
