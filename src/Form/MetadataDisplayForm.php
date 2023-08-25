@@ -191,18 +191,18 @@ class MetadataDisplayForm extends ContentEntityForm {
    * @param string $message
    *   The error message to display to the user.
    */
-  public static function buildAjaxPreviewError(string $message) {
+  public static function buildAjaxPreviewError(string $message, bool $is_error) {
     $preview_error = [
       '#type' => 'container',
       '#weight' => -1000,
       '#theme' => 'status_messages',
       '#message_list' => [
-        'error' => [
+        $is_error ? 'error' : 'warning' => [
           t($message),
         ],
       ],
       '#status_headings' => [
-        'error' => t('Error message'),
+        'error' => t($is_error ? 'Error' : 'Warning' . ' message'),
       ],
     ];
     return $preview_error;
@@ -424,8 +424,11 @@ class MetadataDisplayForm extends ContentEntityForm {
         }
       } finally {
         if (!empty($message)) {
-          $preview_error = static::buildAjaxPreviewError($message);
-          $output['preview_error'] = $preview_error;
+          // If there's no render output, generate an error message. Otherwise,
+          // generate a warning.
+          $preview_error = !isset($render);
+          $preview_error_output = static::buildAjaxPreviewError($message, $preview_error);
+          $output['preview_error'] = $preview_error_output;
         }
         if (isset($render) && (!$show_render_native || ($show_render_native && $mimetype != 'text/html'))) {
           $output['preview'] = [
