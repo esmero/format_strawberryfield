@@ -100,9 +100,6 @@ field.formatter.settings.strawberry_image_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
-    viewer_overrides:
-      type: string
-      label: 'OSD JSON based Viewer Overrides'
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
@@ -155,6 +152,9 @@ field.formatter.settings.strawberry_media_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    viewer_overrides:
+      type: string
+      label: 'OSD JSON based Viewer Overrides'
     hide_on_embargo:
       type: boolean
       label: 'Hide Viewer if embargo is resolved as embargoed.'
