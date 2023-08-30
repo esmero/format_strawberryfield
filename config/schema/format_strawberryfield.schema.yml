@@ -132,6 +132,9 @@ field.formatter.settings.strawberry_media_formatter:
     webannotations_betterpolygon:
       type: boolean
       label: 'If Better Polygon plugin is enabled. Only if tool is polygon or both'
+    webannotations_georeferencewidget:
+      type: boolean
+      label: 'If Georeference Annotation Plugin is enabled.'
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
@@ -152,11 +155,27 @@ field.formatter.settings.strawberry_media_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    mediasource:
+      type: mapping
+      label: 'Sources for IIIF URL'
+      mapping:
+        manifestnodelist:
+          type: string
+          label: 'If manifestnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        manifesturl:
+          type: string
+          label: 'If manifesturl is being used'
+    main_mediasource:
+      type: string
+      label: 'Primary IIIF URL Source used'
     viewer_overrides:
       type: string
       label: 'OSD JSON based Viewer Overrides'
     hide_on_embargo:
-      type: boolean
+      type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 field.formatter.settings.strawberry_3d_formatter:
@@ -222,6 +241,15 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: string
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -261,7 +289,7 @@ field.formatter.settings.strawberry_paged_formatter:
       type: string
       label: 'When embargoed, comma separated list of Image upload JSON keys to filter against.'
     hide_on_embargo:
-      type: boolean
+      type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 field.formatter.settings.strawberry_pannellum_formatter:
@@ -392,7 +420,7 @@ field.formatter.settings.strawberry_pdf_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
-field.formatter.strawberry_uv_formatter:
+field.formatter.settings.strawberry_uv_formatter:
   type: mapping
   label: 'Specific Config for strawberry_uv_formatter'
   mapping:
@@ -414,8 +442,14 @@ field.formatter.strawberry_uv_formatter:
       type: string
       label: 'Whether to use global IIIF settings or not.'
     hide_on_embargo:
-      type: boolean
+      type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_mirador_formatter'
@@ -462,8 +496,14 @@ field.formatter.settings.strawberry_mirador_formatter:
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
     hide_on_embargo:
-      type: boolean
+      type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_warc_formatter:
   type: mapping
@@ -595,6 +635,12 @@ field.formatter.settings.strawberry_map_formatter:
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
 # Given any DS field plugin formatter key a type
 ds.field_plugin.*:
   type: mapping
@@ -666,4 +712,12 @@ condition.plugin.ado_type_condition:
     recurse_ado_types:
       type: boolean
       label: 'Recurse metadata'
-
+condition.plugin.ado_jmespath_condition:
+  type: condition.plugin
+  label: 'ADO JMESPATH Condition'
+  mapping:
+    ado_jmespaths:
+      type: sequence
+      label: 'ADO JMESPATHS'
+      sequence:
+        type: string
