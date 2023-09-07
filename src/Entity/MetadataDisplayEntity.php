@@ -490,8 +490,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
             && $seq->hasNode('attribute')
             && $seq->getNode('attribute')->hasAttribute('value')
         ) {
-          $variable_key = 'data.'
-                          . $seq->getNode('attribute')->getAttribute('value');
+          $variable_key = $seq->getNode('attribute')->getAttribute('value');
         }
       }
       elseif ($node->hasAttribute('value')
@@ -499,7 +498,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
               && $nodes->getNode('node')->hasAttribute('name')
               && $nodes->getNode('node')->getAttribute('name') == 'data'
       ) {
-        $variable_key = 'data.' . $node->getAttribute('value');
+        $variable_key = $node->getAttribute('value');
       }
       if (!empty($variable_key)) {
         $variables[$variable_key] = isset($variables[$variable_key])
