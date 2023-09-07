@@ -218,41 +218,60 @@ class MetadataDisplayForm extends ContentEntityForm {
    *     A Metadata Display entity.
    */
   public static function buildUsedVariableTable(array $jsondata, MetadataDisplayEntity $entity) {
-    $used_vars = $entity->getTwigVariablesUsed();
-    $data_json = [];
-    foreach($jsondata as $key => $value) {
-      $key = 'data.' . $key;
-      $used_lines = isset($used_vars[$key]) ? $used_vars[$key] : [];
-      if (filter_var($value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
-        $key = $key."*";
-      }
-      elseif (is_array($value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($value)) {
-        $key = $key.'[*]';
-      }
-      $data_json[$key]['used'] = !empty($used_lines) ? 'Used' : '';
-      $data_json[$key]['line'] = $used_lines;
-      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
-      $data_json[$key]['type'] = $value_type;
-    }
-    ksort($data_json);
+    $json_table_rows_used = [];
+    $json_table_rows_unused = [];
 
-    $json_table_keys = array_keys($data_json);
-    $json_table_rows = array_map(function($json_table_key, $json_table_value) {
-      return [
-        $json_table_key,
-        $json_table_value['type'],
-        $json_table_value['used'],
-        isset($json_table_value['line']) ? implode(', ', $json_table_value['line']) : ''
-      ];
-    }, $json_table_keys,$data_json);
-    $json_table = [
+    $used_vars = $entity->getTwigVariablesUsed();
+
+    // Sort the Twig variables by the first instance line number and the JSON keys alphabetically.
+    uasort($used_vars, function($a, $b){
+      return $a[0] < $b[0] ? -1 : 1;
+    });
+    ksort($jsondata);
+
+    // Generate the first table by using data from both arrays.
+    foreach ($used_vars as $used_var => $used_lines) {
+      $used_value = isset($jsondata[$used_var]) ? $jsondata[$used_var] : null;
+      $used_value_type = empty($used_value) && !is_null($used_value) ? 'empty ' . gettype($used_value) : gettype($used_value);
+      $json_table_key = $used_var;
+      if (filter_var($used_value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($used_var)) {
+        $json_table_key = $used_var."*";
+      }
+      elseif (is_array($used_value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($used_value)) {
+        $json_table_key = $used_var.'[*]';
+      }
+      $json_table_key = 'data.' . $json_table_key;
+      $json_table_rows_used[] = [$json_table_key, $used_value_type, implode(', ', $used_lines)];
+      unset($jsondata[$used_var]);
+    }
+    foreach ($jsondata as $jsondata_key => $jsondata_value) {
+      $jsondata_key = 'data.' . $jsondata_key;
+      if (filter_var($jsondata_value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($jsondata_key)) {
+        $jsondata_key = $jsondata_key."*";
+      }
+      elseif (is_array($jsondata_value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($jsondata_value)) {
+        $jsondata_key = $jsondata_key.'[*]';
+      }
+      $jsondata_value_type = empty($jsondata_value) && !is_null($jsondata_value) ? 'empty ' . gettype($jsondata_value) : gettype($jsondata_value);
+      $json_table_rows_unused[] = [$jsondata_key, $jsondata_value_type];
+    }
+    $json_table['json_table_used'] = [
       '#type' => 'table',
       '#header' => [
         t('JSON key'),
-        t('Type'), t('Used'),
+        t('Type'),
         t('Line No.')
       ],
-      '#rows' => $json_table_rows,
+      '#rows' => $json_table_rows_used,
+      '#empty' => t('No content has been found.'),
+    ];
+    $json_table['json_table_unused'] = [
+      '#type' => 'table',
+      '#header' => [
+        t('JSON key'),
+        t('Type')
+      ],
+      '#rows' => $json_table_rows_unused,
       '#empty' => t('No content has been found.'),
     ];
     return $json_table;
@@ -459,7 +478,15 @@ class MetadataDisplayForm extends ContentEntityForm {
             '#open' => FALSE,
             '#title' => 'JSON Keys Used',
             'render' => [
-              'table' => $json_table
+              'table' => $json_table['json_table_used']
+            ],
+          ];
+          $output['json_unused'] = [
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => 'JSON Keys Unused',
+            'render' => [
+              'table' => $json_table['json_table_unused']
             ],
           ];
         }
