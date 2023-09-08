@@ -119,7 +119,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     $form['preview']['show_json_table'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
-      '#title' => 'Show Preview with JSON keys used in this template.',
+      '#title' => 'Show Preview with JSON keys used in this template',
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
