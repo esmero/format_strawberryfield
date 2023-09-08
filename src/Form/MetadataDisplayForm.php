@@ -110,7 +110,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     $form['preview']['render_native'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
-      '#title' => 'Show Preview using native Output Format (e.g HTML)',
+      '#title' => 'Show Preview using native Output Format (e.g. HTML)',
       '#description' => 'If errors are found Preview will fail.',
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
