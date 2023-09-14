@@ -162,7 +162,7 @@ class FormatStrawberryfieldRestOaiPmhSettingsForm extends ConfigFormBase {
       '#empty_value' => '',
       '#title' => 'DC wrapper elements',
       '#description' => 'Provide attributes and values in json format',
-      '#default_value' =>  json_encode($config->get('mods-wrapper-elements') ?? MetadatadisplayTemplateMapDc::defaultMetadataWrapperElements(), JSON_PRETTY_PRINT),
+      '#default_value' =>  json_encode($config->get('dc-wrapper-elements') ?? MetadatadisplayTemplateMapDc::defaultMetadataWrapperElements(), JSON_PRETTY_PRINT),
       '#required' => TRUE,
       '#rows' => 8,
     ];
