@@ -10,6 +10,7 @@ use Drupal\Core\Language\Language;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Url;
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Twig\Error\Error as TwigError;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -109,8 +110,16 @@ class MetadataDisplayForm extends ContentEntityForm {
     $form['preview']['render_native'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
-      '#title' => 'Show Preview using native Output Format (e.g HTML)',
+      '#title' => 'Show Preview using native Output Format (e.g. HTML)',
       '#description' => 'If errors are found Preview will fail.',
+      '#states' => [
+        'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
+      ],
+    ];
+    $form['preview']['show_json_table'] = [
+      '#type' => 'checkbox',
+      '#defaut_value' => FALSE,
+      '#title' => 'Show Preview with JSON keys used in this template',
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
@@ -176,85 +185,96 @@ class MetadataDisplayForm extends ContentEntityForm {
   }
 
   /**
-   * Provides similar functionality to StrawberryfieldJsonHelper::arrayToFlatJsonPropertypaths,
-   * but adds some extra properties for reporting and returns an array of the properties.
-   * @todo: add the extra property functionality as an option to the existing
-   * function and import here.
-   */
-  public static function flattenKeys(array $array, string $recursive_key = '', int $array_depth = 0, $excludepaths = []) {
-    $return = [];
-    $array_depth_max = 10;
-    ++$array_depth;
-    if (!empty($excludepaths) && in_array(rtrim($recursive_key,'.'), $excludepaths)) {
-      return $return;
-    }
-    foreach($array as $key=>$value) {
-      if(filter_var($key, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($key)) {
-        $key = "*";
-      } elseif (is_integer($key)) {
-        $key = '[*]';
-      }
-      $value_type = empty($value) && !is_null($value) ? 'empty ' . gettype($value) : gettype($value);
-      if ($key == '[*]' || $key == '*') {
-        $key = empty($recursive_key) ? $key : $recursive_key  . $key;
-      } else {
-        $key = empty($recursive_key) ? $key : $recursive_key . '.' . $key;
-      }
-      if (is_array($value)) {
-        $return['data.' . $key]['type'] = $value_type;
-        $return['data.' . $key]['used'] = '';
-        if ($array_depth <= $array_depth_max) {
-          $return = array_merge($return, static::flattenKeys($value, $key, $array_depth));
-        }
-      }
-      else {
-        $return['data.' . $key]['type'] = $value_type;
-        $return['data.' . $key]['used'] = '';
-      }
-    }
-    return $return;
-  }
-
-  /**
-   * Takes a provided property path and inserts one for URLs and arrays
-   * and returns an array of modified paths to check against.
-   */
-  public static function addPropertyPath(string $property_path) {
-    $last_dot_pos = strrpos($property_path,'.');
-    $url_property_path = substr_replace($property_path, '*.', $last_dot_pos, 1);
-    $url_property_path_end = $property_path . '*';
-    $array_property_path = substr_replace($property_path, '[*].', $last_dot_pos, 1);
-    $array_property_path_end = $property_path . '[*]';
-    return [
-      $url_property_path,
-      $url_property_path_end,
-      $array_property_path,
-      $array_property_path_end
-    ];
-  }
-
-  /**
    * Takes an error message and returns
    * the status message container.
    *
    * @param string $message
    *   The error message to display to the user.
    */
-  public static function buildAjaxPreviewError(string $message) {
+  public static function buildAjaxPreviewError(string $message, bool $is_error) {
     $preview_error = [
       '#type' => 'container',
       '#weight' => -1000,
       '#theme' => 'status_messages',
       '#message_list' => [
-        'error' => [
+        $is_error ? 'error' : 'warning' => [
           t($message),
         ],
       ],
       '#status_headings' => [
-        'error' => t('Error message'),
+        'error' => t($is_error ? 'Error' : 'Warning' . ' message'),
       ],
     ];
     return $preview_error;
+  }
+
+  /**
+   * Takes ADO JSON keys and a given MetadataDisplay entity and generates
+   * a table to display in a MetadataDisplay Preview.
+   *
+   * @param array $jsondata
+   *     An associative array of an ADO's JSON.
+   * @param MetadataDisplayEntity $entity
+   *     A Metadata Display entity.
+   */
+  public static function buildUsedVariableTable(array $jsondata, MetadataDisplayEntity $entity) {
+    $json_table_rows_used = [];
+    $json_table_rows_unused = [];
+
+    $used_vars = $entity->getTwigVariablesUsed();
+
+    // Sort the Twig variables by the first instance line number and the JSON keys alphabetically.
+    uasort($used_vars, function($a, $b){
+      return $a[0] < $b[0] ? -1 : 1;
+    });
+    ksort($jsondata);
+
+    // Generate the first table by using data from both arrays.
+    foreach ($used_vars as $used_var => $used_lines) {
+      $used_value = isset($jsondata[$used_var]) ? $jsondata[$used_var] : null;
+      $used_value_type = empty($used_value) && !is_null($used_value) ? 'empty ' . gettype($used_value) : gettype($used_value);
+      $json_table_key = $used_var;
+      if (filter_var($used_value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($used_var)) {
+        $json_table_key = $used_var."*";
+      }
+      elseif (is_array($used_value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($used_value)) {
+        $json_table_key = $used_var.'[*]';
+      }
+      $json_table_key = 'data.' . $json_table_key;
+      $json_table_rows_used[] = [$json_table_key, $used_value_type, implode(', ', $used_lines)];
+      unset($jsondata[$used_var]);
+    }
+    foreach ($jsondata as $jsondata_key => $jsondata_value) {
+      $jsondata_key = 'data.' . $jsondata_key;
+      if (filter_var($jsondata_value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($jsondata_key)) {
+        $jsondata_key = $jsondata_key."*";
+      }
+      elseif (is_array($jsondata_value) && !StrawberryfieldJsonHelper::arrayIsMultiSimple($jsondata_value)) {
+        $jsondata_key = $jsondata_key.'[*]';
+      }
+      $jsondata_value_type = empty($jsondata_value) && !is_null($jsondata_value) ? 'empty ' . gettype($jsondata_value) : gettype($jsondata_value);
+      $json_table_rows_unused[] = [$jsondata_key, $jsondata_value_type];
+    }
+    $json_table['json_table_used'] = [
+      '#type' => 'table',
+      '#header' => [
+        t('JSON key'),
+        t('Type'),
+        t('Line No.')
+      ],
+      '#rows' => $json_table_rows_used,
+      '#empty' => t('No content has been found.'),
+    ];
+    $json_table['json_table_unused'] = [
+      '#type' => 'table',
+      '#header' => [
+        t('JSON key'),
+        t('Type')
+      ],
+      '#rows' => $json_table_rows_unused,
+      '#empty' => t('No content has been found.'),
+    ];
+    return $json_table;
   }
 
   /**
@@ -345,15 +365,28 @@ class MetadataDisplayForm extends ContentEntityForm {
         // default.
         $input = $form_state->getUserInput();
         $entity->set('twig', $input['twig'][0], FALSE);
+        $show_json_table = $form_state->getValue('show_json_table');
+        if ($show_json_table) {
+          $json_table = static::buildUsedVariableTable($jsondata, $entity);
+        }
         $render = $entity->renderNative($context);
 
-        if ($show_render_native) {
+
+        if ($show_render_native && empty($render)) {
+          throw new \Exception(
+            'Twig Template is empty.',
+            0,
+            null
+          );
+        }
+        elseif ($show_render_native) {
           $message = '';
           switch ($mimetype) {
             case 'application/ld+json':
             case 'application/json':
               $render_encoded = json_decode((string) $render);
               if (JSON_ERROR_NONE !== json_last_error()) {
+                $render = null;
                 throw new \Exception(
                   'Error parsing JSON: ' . json_last_error_msg(),
                   0,
@@ -389,9 +422,9 @@ class MetadataDisplayForm extends ContentEntityForm {
                 if ($error = libxml_get_last_error()) {
                   $message = $error->message;
                 }
-              } catch (\Exception $e) {
+              } catch (\Exception $exception) {
                 throw new \Exception(
-                  "Error parsing XML: {$e->getMessage()}",
+                  "Error parsing XML: {$exception->getMessage()}",
                   0,
                   null
                 );
@@ -399,7 +432,24 @@ class MetadataDisplayForm extends ContentEntityForm {
               break;
           }
         }
-        if (!$show_render_native || ($show_render_native && $mimetype != 'text/html')) {
+      } catch (\Exception $exception) {
+        $render = null;
+        // Make the Message easier to read for the end user
+        if ($exception instanceof TwigError) {
+          $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
+        }
+        else {
+          $message = $exception->getMessage();
+        }
+      } finally {
+        if (!empty($message)) {
+          // If there's no render output, generate an error message. Otherwise,
+          // generate a warning.
+          $preview_error = !isset($render);
+          $preview_error_output = static::buildAjaxPreviewError($message, $preview_error);
+          $output['preview_error'] = $preview_error_output;
+        }
+        if (isset($render) && (!$show_render_native || ($show_render_native && $mimetype != 'text/html'))) {
           $output['preview'] = [
             '#type' => 'codemirror',
             '#rows' => 60,
@@ -412,34 +462,34 @@ class MetadataDisplayForm extends ContentEntityForm {
             ],
           ];
         }
-        else {
+        elseif ($show_render_native && isset($render)) {
           $output['preview'] = [
             '#type' => 'details',
             '#open' => TRUE,
             '#title' => 'HTML Output',
             'render' => [
-                '#markup' => $render,
+              '#markup' => $render,
             ],
           ];
         }
-        if(!empty($message)) {
-	  $preview_error = static::buildAjaxPreviewError($message);
-	  $output['preview_error'] = $preview_error;
-
-	}
-      } catch (\Exception $exception) {
-        // Make the Message easier to read for the end user
-        if ($exception instanceof TwigError) {
-          $message = $exception->getRawMessage() . ' at line ' . $exception->getTemplateLine();
+        if ($show_json_table && isset($json_table)) {
+          $output['json_used'] = [
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => 'JSON Keys Used',
+            'render' => [
+              'table' => $json_table['json_table_used']
+            ],
+          ];
+          $output['json_unused'] = [
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => 'JSON Keys Unused',
+            'render' => [
+              'table' => $json_table['json_table_unused']
+            ],
+          ];
         }
-        else {
-          $message = $exception->getMessage();
-        }
-        if(!empty($message)) {
-	  $preview_error = static::buildAjaxPreviewError($message);
-	  $output['preview_error'] = $preview_error;
-
-	}
       }
       if ($show_render_native) {
         restore_error_handler();
