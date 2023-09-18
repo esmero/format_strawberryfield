@@ -89,14 +89,21 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#title' => $this->t('Which Content types will this metadata be allowed to be exposed?'),
         '#required'=> TRUE,
         '#default_value' => (!$metadataconfig->isNew()) ? $metadataconfig->getTargetEntityTypes(): [],
-        ],
+      ],
       'active' => [
         '#type' => 'checkbox',
         '#title' => $this->t('Is this exposed Metadata Endpoint active?'),
         '#return_value' => TRUE,
         '#default_value' => ($metadataconfig->isNew()) ? TRUE : $metadataconfig->isActive()
+      ],
+      'hide_on_embargo' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Return a 401 (Not authorized) in case of an embargo.'),
+        '#Description' => $this->t('If checked and in the presence of an Embargo, this endpoint will return a 401 instead of delegating the embargo processing to the metadata display entity'),
+        '#return_value' => TRUE,
+        '#default_value' => ($metadataconfig->isNew()) ? FALSE : $metadataconfig->getHideOnEmbargo()
       ]
-     ];
+    ];
 
     return $form;
   }

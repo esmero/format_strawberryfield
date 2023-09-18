@@ -58,6 +58,7 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
         'viewer_overrides' => '',
         'mediasource' => NULL,
         'main_mediasource' => NULL,
+        'hide_on_embargo' => FALSE,
       ] + parent::defaultSettings();
   }
 
@@ -145,7 +146,7 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
           '#title' => $this->t('Advanced: a JSON with Open Seadragon Viewer Library config overrides.'),
           '#description' => $this->t('See <a href="https://openseadragon.github.io/docs/OpenSeadragon.html#.Options">https://openseadragon.github.io/docs/OpenSeadragon.html#.Options</a>. Leave Empty to use defaults.
 Not all options can be overriden. `id`,`tileSources`, `element` and other might have unexpected consequences. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
-  '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_media_formatter"=> ["options" => ["showRotationControl" => TRUE]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+            '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_media_formatter"=> ["options" => ["showRotationControl" => TRUE]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
           ]),
           '#default_value' => $this->getSetting('viewer_overrides'),
           '#element_validate' => [[$this, 'validateJSON']],
@@ -185,6 +186,16 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
           '#required' => TRUE,
+        ],
+        'hide_on_embargo' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
+          '#description' => t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer or to the allowed upload keys if using directly images.'),
+          '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'hide_on_embargo',
+          ],
         ],
       ] + parent::settingsForm($form, $form_state);
 
@@ -226,6 +237,11 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
+      [
+        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
+      ]
+    );
 
     return $summary;
   }
@@ -241,6 +257,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     $upload_keys = array_map('trim', $upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
 
     $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
@@ -273,6 +290,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
+      $embargoed = FALSE;
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
         ->uuid(), $jsondata);
       // Check embargo
@@ -293,32 +311,41 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
         $upload_keys = $embargo_upload_keys_string;
       }
 
-      if (!$embargoed || !empty($embargo_upload_keys_string)) {
-
-        // We need to load main Library on each page for views to see it.
-        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
-
-
-        $mediasource = is_array($this->getSetting('mediasource'))
-          ? $this->getSetting('mediasource') : [];
-        $main_mediasource = $this->getSetting('main_mediasource');
-        if (!empty($mediasource) && ($main_mediasource)) {
-          $this->generateElementForIIIFManifests($delta,$items,$elements, $jsondata);
+      $mediasource = is_array($this->getSetting('mediasource'))
+        ? $this->getSetting('mediasource') : [];
+      $main_mediasource = $this->getSetting('main_mediasource');
+      if (!empty($mediasource) && ($main_mediasource)) {
+        if (!$embargoed || ($embargoed && !$hide_on_embargo)
+        ) {
+          $this->generateElementForIIIFManifests(
+            $delta, $items, $elements, $jsondata
+          );
         }
-        else {
+      }
+      else {
+        if (!$embargoed || (!empty($embargo_upload_keys_string) && !$hide_on_embargo)) {
           $ordersubkey = 'sequence';
           $media = $this->fetchMediaFromJsonWithFilter(
             $delta, $items, $elements,
             TRUE, $jsondata, 'Image', $key, $ordersubkey, 0, $upload_keys
           );
         }
-        if (empty($elements[$delta])) {
-          $elements[$delta] = ['#markup' => $this->t('This Object has no Media')];
-        }
-        // Get rid of empty #attributes key to avoid render error.
-        if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
-          unset($elements[$delta]["#attributes"]);
-        }
+      }
+      if (empty($elements[$delta])) {
+        $elements[$delta] = [
+          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#prefix' => '<span>',
+          '#suffix' => '</span>',
+        ];
+      }
+      else {
+        // Only attach the JS if there is something inside $elements[$delta]
+        // We need to load main Library on each page for views to see it.
+        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/iiif_openseadragon_strawberry';
+      }
+      // Get rid of empty #attributes key to avoid render error.
+      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
+        unset($elements[$delta]["#attributes"]);
       }
     }
     $elements['#cache'] = [
@@ -352,8 +379,6 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     else {
       $viewer_overrides = NULL;
     }
-
-
 
 
     $icons_prefixurl = trim($this->getSetting('icons_prefixurl')) ?? "";

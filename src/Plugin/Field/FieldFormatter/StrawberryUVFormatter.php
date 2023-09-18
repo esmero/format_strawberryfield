@@ -8,6 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
@@ -124,6 +125,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         'metadataexposeentity_source' => NULL,
         'max_width' => 720,
         'max_height' => 480,
+        'hide_on_embargo' => FALSE,
       ];
   }
 
@@ -176,6 +178,16 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
           '#min' => 0,
           '#required' => TRUE
         ],
+        'hide_on_embargo' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
+          '#description' => t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
+          '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'hide_on_embargo',
+          ],
+        ],
       ] + parent::settingsForm($form, $form_state);
     return $settings_form;
   }
@@ -224,6 +236,11 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
+      [
+        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
+      ]
+    );
     return array_merge($summary, parent::settingsSummary());
   }
 
@@ -236,20 +253,15 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
-    /* @var \Drupal\file\FileInterface[] $files */
-    // Fixing the key to extract while coding to 'Media'
 
-    // This little one is a bit different to the Open Seadragon viewer.
-    // Needs to deal with as type:Image and as type Document
-    // Since people can setup this to a key we will handle both.
-    // Main difference is how we generate the IIIF image sequence.
-    // So we have at least 4 ways.
-    // For type:Image its pretty much the same as Media Formatter
-    // For type:Document we will use number of pages as default
-    // But also allow a Table of Content if such structure exists.
-    // We also allow a Twig template / Media Display to be used
-    // To generate an on the Fly Manifest. We coded our JS to read from manifests
-    // Finally we allow also an Manifest URL to be passed.
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    // This won't be evaluated and will stay false even if embargoed
+    // if hide_on_embargo is not enabled
+    // bc all embargo decision will anyways be delegated to the
+    // Exposed Metadata endpoints.
+    $embargo_context = [];
+    $embargo_tags = [];
+    $embargoed = FALSE;
 
     $nodeuuid = $items->getEntity()->uuid();
     /* @var FieldItemInterface $item */
@@ -261,6 +273,8 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
       if (empty($value)) {
         continue;
       }
+
+
       /* @var array $jsondata */
       $jsondata = json_decode($item->value, TRUE);
       // @TODO use future flatversion precomputed at field level as a property
@@ -269,66 +283,106 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       // A rendered Manifest
-
-      $manifests['metadataexposeentity'] = $this->processManifestforMetadataExposeEntity(
-        $jsondata,
-        $item
-      );
-      $main_manifesturl = NULL;
-      // Check which one is our main source and if it really exists
-      if (isset($manifests['metadataexposeentity']) && !empty($manifests['metadataexposeentity'])) {
-        // Take only the first since we could have more
-        $main_manifesturl = array_shift($manifests['metadataexposeentity']);
-      }
-
-      // Only process is we got at least one manifest
-      if (!empty($main_manifesturl)) {
-
-        $groupid = 'iiif-' . $item->getName(
-          ) . '-' . $nodeuuid . '-' . $delta . '-mirador';
-        $htmlid = $groupid;
-        // The uv css class is needed for the CDN CSS to kick in
-        // Undocumented of course like a lot in UV
-        $elements[$delta]['media'] = [
-          '#type' => 'container',
-          '#default_value' => $htmlid,
-          '#attributes' => [
-            'id' => $htmlid,
-            'class' => [
-              'strawberry-uv-item',
-              'UvViewer',
-              'uv',
-              'field-iiif',
-            ],
-            'style' => "width:{$max_width_css}; height:{$max_height}px",
-            'height' => $max_height,
-          ],
-        ];
-
-        // get the URL to our Metadata Expose Endpoint, we will get a string here.
-
-        $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['nodeuuid'] = $nodeuuid;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['manifesturl'] = $main_manifesturl;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['width'] = $max_width_css;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['height'] = max(
-          $max_height,
-          480
+      if ($hide_on_embargo) {
+        $embargo_info = $this->embargoResolver->embargoInfo(
+          $item->getEntity()->uuid(), $jsondata
         );
-
-        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/uv_strawberry';
-
-
-
-        if (isset($item->_attributes)) {
-          $elements[$delta] += ['#attributes' => []];
-          $elements[$delta]['#attributes'] += $item->_attributes;
-          // Unset field item attributes since they have been included in the
-          // formatter output and should not be rendered in the field template.
+        if (is_array($embargo_info)) {
+          $embargoed = $embargo_info[0];
+          $embargo_tags[] = 'format_strawberryfield:all_embargo';
+          if ($embargo_info[1]) {
+            $embargo_tags[] = 'format_strawberryfield:embargo:'
+              . $embargo_info[1];
+          }
+          if ($embargo_info[2]) {
+            $embargo_context[] = 'ip';
+          }
         }
       }
+
+      // Only process render elements if hide on embargo is TRUE
+      if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+        // A rendered Manifest
+
+        $manifests['metadataexposeentity'] = $this->processManifestforMetadataExposeEntity(
+          $jsondata,
+          $item
+        );
+        $main_manifesturl = NULL;
+        // Check which one is our main source and if it really exists
+        if (isset($manifests['metadataexposeentity']) && !empty($manifests['metadataexposeentity'])) {
+          // Take only the first since we could have more
+          $main_manifesturl = array_shift($manifests['metadataexposeentity']);
+        }
+
+        // Only process is we got at least one manifest
+        if (!empty($main_manifesturl)) {
+
+          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta
+            . '-mirador';
+          $htmlid = $groupid;
+          // The uv css class is needed for the CDN CSS to kick in
+          // Undocumented of course like a lot in UV
+          $elements[$delta]['media'] = [
+            '#type'          => 'container',
+            '#default_value' => $htmlid,
+            '#attributes'    => [
+              'id'     => $htmlid,
+              'class'  => [
+                'strawberry-uv-item',
+                'UvViewer',
+                'uv',
+                'field-iiif',
+              ],
+              'style'  => "width:{$max_width_css}; height:{$max_height}px",
+              'height' => $max_height,
+            ],
+          ];
+
+          // get the URL to our Metadata Expose Endpoint, we will get a string here.
+
+          $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['nodeuuid']
+            = $nodeuuid;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['manifesturl']
+            = $main_manifesturl;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['width']
+            = $max_width_css;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['uv'][$htmlid]['height']
+            = max(
+            $max_height,
+            480
+          );
+
+          $elements[$delta]['#attached']['library'][]
+            = 'format_strawberryfield/uv_strawberry';
+        }
+      }
+      if (empty($elements[$delta])) {
+        $elements[$delta] = [
+          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#prefix' => '<span>',
+          '#suffix' => '</span>',
+        ];
+      }
+
+      if (isset($item->_attributes)) {
+        $elements[$delta] += ['#attributes' => []];
+        $elements[$delta]['#attributes'] += $item->_attributes;
+        // Unset field item attributes since they have been included in the
+        // formatter output and should not be rendered in the field template.
+        unset($item->_attributes);
+      }
+
+      // Get rid of empty #attributes key to avoid render error
+      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
+        unset($elements[$delta]["#attributes"]);
+      }
     }
-    unset($item->_attributes);
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
     return $elements;
   }
 

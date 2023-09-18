@@ -214,3 +214,21 @@ function format_strawberryfield_update_8702() {
   $message = "All Metadata Display Entities in Configurations updated to use UUIDs";
   return $message;
 }
+/**
+ * Implements hook_update_N().
+ *
+ * Updates metadataexpose_entity config adding hide_on_embargo config option.
+ *
+ */
+function format_strawberryfield_update_8703() {
+  $message = "Nothing to update. metadataexpose_entity entity is not installed.";
+  $entity_type = \Drupal::entityDefinitionUpdateManager()->getEntityType('metadataexpose_entity');
+  if ($entity_type) {
+      $entity_config_export = $entity_type->get('config_export');
+      $entity_config_export[] = 'hide_on_embargo';
+      $entity_type->set('config_export', $entity_config_export);
+      \Drupal::entityDefinitionUpdateManager()->updateEntityType($entity_type);
+      $message = "Metadata Exposed Display Entity's (metadataexpose_entity) Schema updated with hide_on_embargo setting";
+  }
+  return $message;
+}

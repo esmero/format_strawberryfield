@@ -8,6 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
@@ -131,6 +132,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'custom_js' => FALSE,
         'max_width' => 720,
         'max_height' => 480,
+        'hide_on_embargo' => FALSE,
       ];
   }
 
@@ -297,6 +299,16 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#min' => 0,
           '#required' => TRUE
         ],
+        'hide_on_embargo' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
+          '#description' => t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
+          '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'hide_on_embargo',
+          ],
+        ],
       ] + parent::settingsForm($form, $form_state);
     if (empty($options_for_mainsource)) {
       // let's give people a hint of what they are doing wrong
@@ -420,9 +432,14 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
-   if ($this->getSetting('custom_js')) {
-     $summary[] = $this->t('Using Custom Mirador with Plugins');
-   }
+    if ($this->getSetting('custom_js')) {
+      $summary[] = $this->t('Using Custom Mirador with Plugins');
+    }
+    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
+      [
+        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
+      ]
+    );
 
     return array_merge($summary, parent::settingsSummary());
   }
@@ -438,6 +455,14 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     $max_height = $this->getSetting('max_height');
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    // This won't be evaluated and will stay false even if embargoed
+    // if hide_on_embargo is not enabled
+    // bc all embargo decision will anyways be delegated to the
+    // Exposed Metadata endpoints.
+    $embargo_context = [];
+    $embargo_tags = [];
+    $embargoed = FALSE;
 
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
@@ -472,95 +497,138 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
       // A rendered Manifest
-
-      foreach ($mediasource as $iiifsource) {
-        $pagestrategy = (string)$iiifsource;
-        switch ($pagestrategy) {
-          case 'metadataexposeentity':
-            $manifests['metadataexposeentity'] = $this->processManifestforMetadataExposeEntity(
-              $jsondata,
-              $item
-            );
-            continue 2;
-          case 'manifesturl':
-            $manifests['manifesturl'] = $this->processManifestforURL(
-              $jsondata,
-              $item
-            );
-            continue 2;
-          case 'manifestnodelist':
-            $manifests['manifestnodelist'] = $this->processManifestforNodeList(
-              $jsondata,
-              $item
-            );
-            continue 2;
-        }
-      }
-
-      // Check which one is our main source and if it really exists
-      if (isset($manifests[$main_mediasource]) && !empty($manifests[$main_mediasource])) {
-        // Take only the first since we could have more
-        $main_manifesturl = array_shift($manifests[$main_mediasource]);
-        $all_manifesturl =  array_reduce($manifests,'array_merge',[]);
-      } else {
-        // reduce flattens and applies a merge. Basically we get a simple list.
-        $all_manifesturl = array_reduce($manifests,'array_merge',[]);
-        $main_manifesturl = array_shift($all_manifesturl);
-      }
-
-      // Only process is we got at least one manifest
-      if (!empty($main_manifesturl)) {
-
-        $groupid = 'iiif-' . $item->getName(
-          ) . '-' . $nodeuuid . '-' . $delta . '-mirador';
-        $htmlid = $groupid;
-
-        $elements[$delta]['media'] = [
-          '#type' => 'container',
-          '#default_value' => $htmlid,
-          '#attributes' => [
-            'id' => $htmlid,
-            'class' => [
-              'strawberry-mirador-item',
-              'MiradorViewer',
-              'field-iiif',
-            ],
-            'style' => "width:{$max_width_css}; height:{$max_height}px",
-            'height' => $max_height,
-          ],
-        ];
-
-        // get the URL to our Metadata Expose Endpoint, we will get a string here.
-
-        $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid'] = $nodeuuid;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl'] = $main_manifesturl;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestother'] = is_array($all_manifesturl) ? $all_manifesturl : [];
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width'] = $max_width_css;
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height'] = max(
-          $max_height,
-          480
+      if ($hide_on_embargo) {
+        $embargo_info = $this->embargoResolver->embargoInfo(
+          $item->getEntity()->uuid(), $jsondata
         );
-        $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['custom_js'] = $this->getSetting('custom_js') ?? FALSE;
-        if ($this->getSetting('custom_js')) {
-          $elements[$delta]['#attached']['library'][]
-            = 'format_strawberryfield/mirador_custom_strawberry';
-        }
-        else {
-          $elements[$delta]['#attached']['library'][]
-            = 'format_strawberryfield/mirador_strawberry';
-        }
 
 
-        if (isset($item->_attributes)) {
-          $elements[$delta] += ['#attributes' => []];
-          $elements[$delta]['#attributes'] += $item->_attributes;
-          // Unset field item attributes since they have been included in the
-          // formatter output and should not be rendered in the field template.
+        if (is_array($embargo_info)) {
+          $embargoed = $embargo_info[0];
+          $embargo_tags[] = 'format_strawberryfield:all_embargo';
+          if ($embargo_info[1]) {
+            $embargo_tags[] = 'format_strawberryfield:embargo:'
+              . $embargo_info[1];
+          }
+          if ($embargo_info[2]) {
+            $embargo_context[] = 'ip';
+          }
         }
+      }
+
+      // Only process render elements if hide on embargo is TRUE
+      if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+        foreach ($mediasource as $iiifsource) {
+          $pagestrategy = (string)$iiifsource;
+          switch ($pagestrategy) {
+            case 'metadataexposeentity':
+              $manifests['metadataexposeentity'] = $this->processManifestforMetadataExposeEntity(
+                $jsondata,
+                $item
+              );
+              continue 2;
+            case 'manifesturl':
+              $manifests['manifesturl'] = $this->processManifestforURL(
+                $jsondata,
+                $item
+              );
+              continue 2;
+            case 'manifestnodelist':
+              $manifests['manifestnodelist'] = $this->processManifestforNodeList(
+                $jsondata,
+                $item
+              );
+              continue 2;
+          }
+        }
+        // Check which one is our main source and if it really exists
+        if (isset($manifests[$main_mediasource]) && !empty($manifests[$main_mediasource])) {
+          // Take only the first since we could have more
+          $main_manifesturl = array_shift($manifests[$main_mediasource]);
+          $all_manifesturl =  array_reduce($manifests,'array_merge',[]);
+        } else {
+          // reduce flattens and applies a merge. Basically we get a simple list.
+          $all_manifesturl = array_reduce($manifests,'array_merge',[]);
+          $main_manifesturl = array_shift($all_manifesturl);
+        }
+
+        // Only process is we got at least one manifest
+        if (!empty($main_manifesturl)) {
+
+          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta
+            . '-mirador';
+          $htmlid = $groupid;
+
+          $elements[$delta]['media'] = [
+            '#type'          => 'container',
+            '#default_value' => $htmlid,
+            '#attributes'    => [
+              'id'     => $htmlid,
+              'class'  => [
+                'strawberry-mirador-item',
+                'MiradorViewer',
+                'field-iiif',
+              ],
+              'style'  => "width:{$max_width_css}; height:{$max_height}px",
+              'height' => $max_height,
+            ],
+          ];
+
+          // get the URL to our Metadata Expose Endpoint, we will get a string here.
+
+          $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['nodeuuid']
+            = $nodeuuid;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifesturl']
+            = $main_manifesturl;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['manifestother']
+            = is_array($all_manifesturl) ? $all_manifesturl : [];
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['width']
+            = $max_width_css;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['height']
+            = max(
+            $max_height,
+            480
+          );
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['custom_js']
+            = $this->getSetting('custom_js') ?? FALSE;
+          if ($this->getSetting('custom_js')) {
+            $elements[$delta]['#attached']['library'][]
+              = 'format_strawberryfield/mirador_custom_strawberry';
+          }
+          else {
+            $elements[$delta]['#attached']['library'][]
+              = 'format_strawberryfield/mirador_strawberry';
+          }
+        }
+      }
+      if (empty($elements[$delta])) {
+        $elements[$delta] = [
+          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#prefix' => '<span>',
+          '#suffix' => '</span>',
+        ];
+      }
+
+      if (isset($item->_attributes)) {
+        $elements[$delta] += ['#attributes' => []];
+        $elements[$delta]['#attributes'] += $item->_attributes;
+        // Unset field item attributes since they have been included in the
+        // formatter output and should not be rendered in the field template.
+        unset($item->_attributes);
+      }
+
+      // Get rid of empty #attributes key to avoid render error
+      if (isset($elements[$delta]["#attributes"]) && empty($elements[$delta]["#attributes"])) {
+        unset($elements[$delta]["#attributes"]);
       }
     }
-    unset($item->_attributes);
+
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+
     return $elements;
   }
 
