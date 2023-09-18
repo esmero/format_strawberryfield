@@ -451,14 +451,19 @@ class MetadataDisplayForm extends ContentEntityForm {
         }
         if (isset($render) && (!$show_render_native || ($show_render_native && $mimetype != 'text/html'))) {
           $output['preview'] = [
-            '#type' => 'codemirror',
-            '#rows' => 60,
-            '#value' => $render,
-            '#codemirror' => [
-              'lineNumbers' => FALSE,
-              'toolbar' => FALSE,
-              'readOnly' => TRUE,
-              'mode' => $mimetype,
+            '#type' => 'details',
+            '#open' => TRUE,
+            '#title' => 'Processed Output',
+            'render' => [
+              '#type' => 'codemirror',
+              '#rows' => 60,
+              '#value' => $render,
+              '#codemirror' => [
+                'lineNumbers' => FALSE,
+                'toolbar' => FALSE,
+                'readOnly' => TRUE,
+                'mode' => $mimetype,
+              ]
             ],
           ];
         }
