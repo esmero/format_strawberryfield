@@ -129,7 +129,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     ];
     $form['sbf_type'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Comma separeted list of processor ids to join.'),
+      '#title' => $this->t('Comma separated list of processor ids to join.'),
       '#description' => $this->t('If empty all Strawberry Flavor types will be searched. You can limit that by e.g adding here <em>ocr,text</em> to limit it to those two Strawberry Runner processors'),
       '#default_value' => $this->options['sbf_type'],
       '#required' => FALSE,

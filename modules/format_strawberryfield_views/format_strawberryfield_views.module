@@ -197,6 +197,25 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
       // @TODO add also an argument ID if relationships are enabled to
       // $table[$advanced_fulltext_field]['argument']['id'] = 'sbf_advanced_search_api_fulltext';
       // Requires a special Argument Plugin. Not needed right now.
+
+      $ado_filter = _search_api_views_find_field_alias('sbf_ado_filter', $table);
+      $table[$ado_filter] = [
+        'title'  => t('Related ADO Filter'),
+        'group' => t('Search'),
+        'help' => t('Filters against several or all fields, that contain an ADO entity reference in their property paths, against other ADOs via UUIDs'),
+        'filter' => [
+          'title' => t('Related ADO Filter'),
+          'field' => 'id',
+          'id'    => 'sbf_ado_filter',
+        ],
+      ];
+      if ($ado_filter != 'sbf_ado_filter') {
+        $table[$ado_filter]['real field'] = 'sbf_ado_filter';
+      }
+
+
+
+
     }
     catch (\Exception $e) {
       $args = [
