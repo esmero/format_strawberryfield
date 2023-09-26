@@ -250,18 +250,18 @@ uv_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 leaflet_markercluster:
-  version: 1.4.1
+  version: 1.5.3
   remote: https://github.com/Leaflet/Leaflet.markercluster
   license:
     name: MIT
     url: https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENCE.txt
     gpl-compatible: true
   js:
-    https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
+    https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
-      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css: { external: true}
 
 leaflet_subgroup:
   version: 1.0.2
@@ -275,16 +275,16 @@ leaflet_subgroup:
 
 
 leaflet_core:
-  version: 1.6.0
+  version: 1.9.4
   license:
     name: BSD-2-Clause
-    url: https://cdn.jsdelivr.net/npm/leaflet@1.6.0/LICENSE
+    url: https://cdn.jsdelivr.net/npm/leaflet@1.9.4/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet-src.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css: { external: true}
+      https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css: { external: true}
 
 
 leaftleft_iiif_bound:

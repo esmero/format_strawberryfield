@@ -191,7 +191,7 @@
             //@TODO add an extra geojsons key with every other one so people can select the others.
             // load a tile layer
             geojsonLayer.addTo(map);
-            console.log('initializing leaflet 1.6.0')
+            console.log('initializing leaflet 1.9.4')
             console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
             document.addEventListener('sbf:ado:change', (e) => {
               // Don't react to its own events.
