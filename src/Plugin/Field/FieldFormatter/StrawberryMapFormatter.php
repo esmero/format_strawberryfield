@@ -229,13 +229,13 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     ];
 
 
-    $options_for_mainsource = array_filter($options_for_mainsource);
+    $options_for_mainsource = array_filter($options_for_mainsource ?? []);
     $options_for_mainsource = array_intersect_key(
       $options_for_mainsource,
       $all_options_form_source
     );
 
-    $options_for_mainoverlaysource = array_filter($options_for_mainoverlaysource);
+    $options_for_mainoverlaysource = array_filter($options_for_mainoverlaysource ?? []);
     $options_for_mainoverlaysource = array_intersect_key(
       $options_for_mainoverlaysource,
       $all_options_form_overlaysource
