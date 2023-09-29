@@ -96,6 +96,8 @@ class TwigExtension extends AbstractExtension {
       new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
       new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
         ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_iso_date', [$this, 'edtfToIsoDate'],
+        ['is_safe' => ['all']]),
     ];
   }
 
@@ -118,7 +120,7 @@ class TwigExtension extends AbstractExtension {
   public function entityIdsByLabel(
     string $label,
     string $entity_type,
-    string $bundle_identifier = '',
+    string $bundle_identifier = NULL,
     $limit = 1
   ): ?array {
     $fields = [
@@ -129,7 +131,7 @@ class TwigExtension extends AbstractExtension {
     ];
     $limit = (int) $limit;
     $entity_type = trim($entity_type);
-    $bundle_identifier = trim($bundle_identifier);
+    $bundle_identifier = !empty($bundle_identifier) ? trim($bundle_identifier) : NULL;
     $label_field = $fields[$entity_type][0] ?? NULL;
     if ($label_field) {
       $bundle_field = $fields[$entity_type][1] ?? NULL;
@@ -311,7 +313,7 @@ class TwigExtension extends AbstractExtension {
       $bibliography = $render->bibliography($locale, $styles, $json_data);
     }
     else {
-      $bibliography = $render->bibliography(null, $styles, $json_data);
+      $bibliography = $render->bibliography(NULL, $styles, $json_data);
     }
     $uniqueid = Html::getUniqueId('bibliography');
     $render_bibliography = [
@@ -339,7 +341,7 @@ class TwigExtension extends AbstractExtension {
    *
    * @return mixed
    */
-  public function clipboardCopy(string $copyContentCssClass = '', string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
+  public function clipboardCopy(string $copyContentCssClass = NULL, string $copyButtonCssClass = NULL, string $copyButtonText = NULL) {
 
     if (is_null($copyContentCssClass)) {
       return '';
@@ -353,6 +355,11 @@ class TwigExtension extends AbstractExtension {
     if (is_null($copyButtonCssClass) || empty($copyButtonCssClass)) {
       $copyButtonCssClass = 'clipboard-copy-button';
     }
+
+    if (is_null($copyButtonText) || empty($copyButtonText)) {
+      $copyButtonText = t("Copy to clipboard");
+    }
+
     $uniqueid = Html::getUniqueId('clipboard-copy-data');
     $button_html = [
       '#type' => 'container',
@@ -383,14 +390,16 @@ class TwigExtension extends AbstractExtension {
    *
    * @return string
    */
-  public function edtfToHumanDate($edtfString, string $lang = 'en'): string {
+  public function edtfToHumanDate($edtfString, string $lang = NULL): string {
     if (empty($edtfString)) {
       return '';
     }
     if (!is_string($edtfString)) {
+    if (!is_string($edtfString)) {
       return '';
     }
 
+    $lang = $lang ?? 'en';
     $parser = EdtfFactory::newParser();
     $parsed = $parser->parse($edtfString);
     if ($parsed->isValid()) {
@@ -398,12 +407,62 @@ class TwigExtension extends AbstractExtension {
       try {
         $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
         return $humanizer->humanize($edtfValue);
-      } catch (\Exception $exception) {
+      }
+      catch (\Exception $exception) {
         return '';
       }
     }
     return '';
   }
+
+  /**
+   * Converts EDTF to ISO date(s).
+   *
+   * @param mixed $edtfString
+   *
+   * @return array
+   *   Will be empty if EDTF is not valid or passed arguments are invalid
+   */
+  public function edtfToIsoDate($edtfString): array {
+    if (empty($edtfString)) {
+      return [];
+    }
+    if (!is_string($edtfString)) {
+      return [];
+    }
+    $values_parsed = [];
+    $parser = EdtfFactory::newParser();
+    try {
+      $parsed = $parser->parse($edtfString);
+      if ($parsed->isValid()) {
+        $edtfValue = $parsed->getEdtfValue();
+        // @todo remove once EDTF fixes their invalid Constructor for EDTF\Model\Interval that should per interface never allow NULL for start nor end date
+        switch (get_class($edtfValue)) {
+          case "EDTF\Model\Interval":
+            if ($edtfValue->hasStartDate()) {
+              $values_parsed[] = date('Y-m-d', $edtfValue->getMin());
+            }
+            if ($edtfValue->hasEndDate()) {
+              $values_parsed[] = date('Y-m-d', $edtfValue->getMax());
+            }
+            break;
+          default:
+
+            $values_parsed[] = date('Y-m-d', $edtfValue->getMin());
+            $values_parsed[] = date('Y-m-d', $edtfValue->getMax());
+            break;
+        }
+        return array_unique($values_parsed);
+      }
+    }
+    catch (\Exception $exception) {
+      return [];
+    }
+
+    return [];
+  }
+
+
 
   /**
    * Executes and Search API query programatically
@@ -432,7 +491,10 @@ class TwigExtension extends AbstractExtension {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\search_api\SearchApiException
    */
-  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], int $limit = 1, int $offset = 0): array {
+  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], int $limit = NULL, int $offset = NULL): array {
+
+    $limit = $limit ?? 1;
+    $offset = $offset ?? 0;
 
     /** @var \Drupal\search_api\IndexInterface[] $indexes */
     $indexes = \Drupal::entityTypeManager()
