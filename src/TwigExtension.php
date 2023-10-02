@@ -395,7 +395,6 @@ class TwigExtension extends AbstractExtension {
       return '';
     }
     if (!is_string($edtfString)) {
-    if (!is_string($edtfString)) {
       return '';
     }
 
