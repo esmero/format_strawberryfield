@@ -345,7 +345,8 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
       ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
     $nodeuuid = $items->getEntity()->uuid();
-
+    // If legacy/migration/missing config this will be empty?
+    $manifests = [];
       foreach ($mediasource as $iiifsource) {
         $pagestrategy = (string) $iiifsource;
         switch ($pagestrategy) {
