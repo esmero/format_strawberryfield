@@ -34,18 +34,13 @@ use Drupal\Core\Entity\Element\EntityAutocomplete;
  *
  * @ViewsFilter("sbf_ado_filter")
  */
-class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
+class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
 
   use SearchApiFilterTrait;
 
   protected $valueFormType = 'select';
+  protected $alwaysMultiple = TRUE;
 
-
-  /**
-   * @var array
-   * Stores all operations which are available on the form.
-   */
-  protected $valueOptions = [];
 
   /**
    * The parse mode manager.
@@ -90,7 +85,6 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
   protected $fieldsHelper;
 
 
-
   /**
    * {@inheritdoc}
    */
@@ -101,57 +95,9 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
     $plugin->setNodeStorage($container->get('entity_type.manager')->getStorage('node'));
     $plugin->setFieldsHelper($container->get('search_api.fields_helper'));
     $plugin->setViewStorage($container->get('entity_type.manager')->getStorage('view'));
-
     $plugin->currentUser = $container->get('current_user');
     return $plugin;
   }
-
-
-
-  /**
-   * {@inheritdoc}
-   */
-  public function operators() {
-    return [
-      'or' => [
-        'title' => $this->t('Is one of'),
-        'short' => $this->t('or'),
-        'short_single' => $this->t('='),
-        'method' => 'opHelper',
-        'values' => 1,
-        'ensure_my_table' => 'helper',
-      ],
-      'and' => [
-        'title' => $this->t('Is all of'),
-        'short' => $this->t('and'),
-        'short_single' => $this->t('='),
-        'method' => 'opHelper',
-        'values' => 1,
-        'ensure_my_table' => 'helper',
-      ],
-      'not' => [
-        'title' => $this->t('Is none of'),
-        'short' => $this->t('not'),
-        'short_single' => $this->t('<>'),
-        'method' => 'opHelper',
-        'values' => 1,
-        'ensure_my_table' => 'helper',
-      ],
-      'empty' => [
-        'title' => $this->t('Is empty (NULL)'),
-        'method' => 'opEmpty',
-        'short' => $this->t('empty'),
-        'values' => 0,
-      ],
-      'not empty' => [
-        'title' => $this->t('Is not empty (NOT NULL)'),
-        'method' => 'opEmpty',
-        'short' => $this->t('not empty'),
-        'values' => 0,
-      ],
-    ];
-  }
-
 
   /**
    * {@inheritdoc}
@@ -171,6 +117,11 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
   public function defaultExposeOptions() {
     parent::defaultExposeOptions();
     //$this->options['expose']['sbf_type'] = ['default' => []];
+  }
+
+  protected function valueSubmit($form, FormStateInterface $form_state) {
+    $form_state = $form_state;
+
   }
 
   /**
@@ -286,131 +237,40 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
   }
 
   protected function valueForm(&$form, FormStateInterface $form_state) {
-    $form['value'] = [];
-    $options = [];
+    $nodes = $this->value ? $this->nodeStorage->loadByProperties(['uuid' => $this->value]) : [];
+    $form['value'] = [
+      '#type' => 'sbf_entity_autocomplete_uuid',
+      '#title' => $this->t('ADOs'),
+      '#description' => $this->t('Enter a comma separated list of Archipelago Digital Objects.'),
+      '#target_type' => 'node',
+      '#tags' => TRUE,
+      '#default_value' => $nodes,
+      '#selection_handler' => 'default:nodewithstrawberry',
+      '#validate_reference' => TRUE,
+    ];
 
-    $exposed = $form_state->get('exposed');
-    if (!$exposed) {
-      // Add a select all option to the value form.
-      $options = ['all' => $this->t('Select all')];
-    }
-
-    $this->getValueOptions();
-    $options += $this->valueOptions;
-    $default_value = (array) $this->value;
-
-    $which = 'all';
-    if (!empty($form['operator'])) {
-      $source = ':input[name="options[operator]"]';
-    }
-    if ($exposed) {
-      $identifier = $this->options['expose']['identifier'];
-
-      if (empty($this->options['expose']['use_operator']) || empty($this->options['expose']['operator_id'])) {
-        // exposed and locked.
-        $which = in_array($this->operator, $this->operatorValues(1)) ? 'value' : 'none';
-      }
-      else {
-        $source = ':input[name="' . $this->options['expose']['operator_id'] . '"]';
-      }
-
-      if (!empty($this->options['expose']['reduce'])) {
-        $options = $this->reduceValueOptions();
-
-        if (!empty($this->options['expose']['multiple']) && empty($this->options['expose']['required'])) {
-          $default_value = [];
-        }
-      }
-
-      if (empty($this->options['expose']['multiple'])) {
-        if (empty($this->options['expose']['required']) && (empty($default_value) || !empty($this->options['expose']['reduce'])) || isset($this->options['value']['all'])) {
-          $default_value = 'All';
-        }
-        elseif (empty($default_value)) {
-          $keys = array_keys($options);
-          $default_value = array_shift($keys);
-        }
-        else {
-          $copy = $default_value;
-          $default_value = array_shift($copy);
-        }
-      }
-    }
-
-    if ($which == 'all' || $which == 'value') {
-      $nodes = $this->value ?  $this->nodeStorage->loadByProperties(['id' => $this->value]) : [];
-      $default_value = EntityAutocomplete::getEntityLabels($nodes);
-      $form['value'] = [
-        '#type' => 'entity_autocomplete',
-        '#title' => $this->t('Nodes'),
-        '#description' => $this->t('Enter a comma separated list of Nodes.'),
-        '#target_type' => 'node',
-        '#tags' => TRUE,
-        '#default_value' => $default_value,
-        '#process_default_value' => $this->isExposed(),
-      ];
-
-      $user_input = $form_state->getUserInput();
-      if ($form_state->get('exposed') && !isset($user_input[$this->options['expose']['identifier']])) {
-        $user_input[$this->options['expose']['identifier']] = $default_value;
-        $form_state->setUserInput($user_input);
-      }
-      $user_input = $form_state->getUserInput();
-      if ($exposed && !isset($user_input[$identifier])) {
-        $user_input[$identifier] = $default_value;
-        $form_state->setUserInput($user_input);
-      }
-
-      if ($which == 'all') {
-        if (!$exposed && (in_array($this->valueFormType, ['checkbox', 'checkboxes', 'radios', 'select']))) {
-          $form['value']['#prefix'] = '<div id="edit-options-value-wrapper">';
-          $form['value']['#suffix'] = '</div>';
-        }
-        // Setup #states for all operators with one value.
-        foreach ($this->operatorValues(1) as $operator) {
-          $form['value']['#states']['visible'][] = [
-            $source => ['value' => $operator],
-          ];
-        }
-      }
+    $user_input = $form_state->getUserInput();
+    if ($form_state->get('exposed') && !isset($user_input[$this->options['expose']['identifier']])) {
+      $user_input[$this->options['expose']['identifier']] = $default_value;
+      $form_state->setUserInput($user_input);
     }
   }
 
-  /**
-   * Build strings from the operators() for 'select' options.
-   */
-  public function operatorOptions($which = 'title') {
-    $options = [];
-    foreach ($this->operators() as $id => $info) {
-      $options[$id] = $info[$which];
-    }
-
-    return $options;
-  }
-
-  protected function operatorValues($values = 1) {
-    $options = [];
-    foreach ($this->operators() as $id => $info) {
-      if (isset($info['values']) && $info['values'] == $values) {
-        $options[] = $id;
+  protected function valueValidate($form, FormStateInterface $form_state) {
+    $node_uuids = [];
+    if ($values = $form_state->getValue(['options', 'value'])) {
+      foreach ($values as $value) {
+        $node_uuids[] = $value;
       }
+      sort($node_uuids);
     }
-
-    return $options;
+    $form_state->setValue(['options', 'value'], $node_uuids);
   }
+
 
 
   public function hasExtraOptions() {
     return TRUE;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getValueOptions() {
-    // This should return the list of values based on the
-    //$this->options['views_source_ids'];
-    return $this->valueOptions;
   }
 
   public function buildExtraOptionsForm(&$form, FormStateInterface $form_state) {
@@ -450,173 +310,6 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
     $backend = $query->getIndex()->getServerInstance()->getBackend();
     $full_text = NULL;
     $type = NULL;
-    // We only know how to join on Solr. All rest is bad poetry
-    if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
-      $index_fields = $query->getIndex()->getFields(TRUE);
-      /* @var \Drupal\views\Plugin\views\display\DisplayPluginBase[] $filters */
-      $filters = $this->view->getHandlers('filter', NULL);
-      $value = "";
-      foreach ($filters as $filter_name => $filter) {
-        if ($filter['plugin_id'] == 'search_api_fulltext') {
-          // Reuse the Full Text Field's parse mode
-          $parsemode = $filter['parse_mode'] ?? 'terms' ;
-          /** @var \Drupal\search_api\ParseMode\ParseModeInterface $parse_mode */
-          $parse_mode = $this->getParseModeManager()
-            ->createInstance($parsemode);
-
-          if (!$filter['exposed']) {
-            $op = $filter['operator'];
-          }
-          $full_text = $query->getKeys();
-          $type = 'fulltext';
-        }
-        elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext') {
-          $full_text = $query->getKeys();
-          $type = 'advanced_fulltext';
-        }
-        if ($this->options['id'] == $filter_name) {
-          // This is myself, break out.
-          break;
-        }
-      }
-      // If value == "" do nothing, no need to JOIN SBF for that.
-      if ($type == 'fulltext' && $full_text && ((is_scalar($full_text) && strlen($full_text) > 0) || (is_array($full_text) && count($full_text) > 0 ))) {
-
-        // Never ever make it easy Solr!
-        // This is the Join Subquery, sadly not useful "directly" for Flavor Highlights IF the conjunction is AND
-        // Because the AND implies matches across the union/intersection of main query and the Join
-        // but OCR might only contain a few of these. the Idea is that the combination of all keys + searched against fields match
-        // at the end the total.
-        $subquery = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
-        // check the conjunctions, remove the #negations, change the ANDs to ORs.
-        // processor_id
-        $negation = FALSE;
-        if (strlen($subquery) > 0 ) {
-          // only if we have a subquery
-          foreach ($full_text as $key => &$entry) {
-            if (is_array($entry)) {
-              if ($entry['#negation'] ?? FALSE) {
-                unset($full_text[$key]);
-                $negation = TRUE;
-              }
-              elseif (($entry['#conjunction'] ?? FALSE) == 'AND') {
-                // Make it OR. could move the search term up but that would add
-                // an extra foreach loop. I'm cheap.
-                $entry['#conjunction'] = 'OR';
-              }
-            }
-            elseif ($key == "#conjunction" && $entry == 'AND') {
-              $entry = 'OR';
-            }
-          }
-          if ($this->options['negation_default'] == 'omit' && $negation) {
-            // In case of negation AND decision to return on negation return;
-            return;
-          }
-          $subquery_hl = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
-
-          $join_structure = [
-            'from' => 'its_parent_id',
-            'to'   => 'its_nid',
-            'v'    => $subquery,
-            'hl'   => $subquery_hl,
-          ];
-          // 'hl' will be used by
-          // \Drupal\strawberryfield\Plugin\search_api\processor\StrawberryFieldHighlight::highlightFlavorsFromIndex
-          $this->getQuery()->setOption('sbf_join_flavor', $join_structure);
-        }
-      }
-      elseif ($type == 'advanced_fulltext') {
-        if ($subtitutions = $this->getQuery()->getOption('sbf_advanced_search_filter_join', NULL)) {
-          foreach ($subtitutions as $placeholder => $subquery) {
-            $join_structure[$placeholder] = [
-              'from' => 'its_parent_id',
-              'to'   => 'its_nid',
-              'v'    => $subquery
-            ];
-          }
-          $this->getQuery()->setOption('sbf_join_flavor_advanced', $join_structure);
-        }
-      }
-    }
-  }
-
-  /**
-   * @param \Drupal\search_api\Plugin\views\query\SearchApiQuery $query
-   *
-   * @throws \Drupal\search_api\SearchApiException
-   */
-  protected function buildFlavorSubQuery(SearchApiQuery $query, $parse_mode, array $queryable_fields, array|string $keys) {
-    $solr_field_names = $query->getIndex()
-      ->getServerInstance()
-      ->getBackend()
-      ->getSolrFieldNames($query->getIndex());
-    // Damn Solr Search API...
-
-    $index_fields = $query->getIndex()->getFields(TRUE);
-
-    $settings = Utility::getIndexSolrSettings($query->getIndex());
-    $language_ids = $query->getLanguages();
-    $flat_keys = [];
-    // If there are no languages set, we need to set them. As an example, a
-    // language might be set by a filter in a search view.
-    if (empty($language_ids)) {
-      if (!$query->getSearchApiQuery()->hasTag('views') && $settings['multilingual']['limit_to_content_language']) {
-        // Limit the language to the current language being used.
-        $language_ids[] = \Drupal::languageManager()
-          ->getCurrentLanguage(LanguageInterface::TYPE_CONTENT)
-          ->getId();
-      }
-      else {
-        // If the query is generated by views and/or the query isn't limited
-        // by any languages we have to search for all languages using their
-        // specific fields.
-        $language_ids = array_keys(\Drupal::languageManager()->getLanguages());
-      }
-    }
-
-    if ($settings['multilingual']['include_language_independent']) {
-      $language_ids[] = LanguageInterface::LANGCODE_NOT_SPECIFIED;
-    }
-
-    $field_names = $query->getIndex()
-      ->getServerInstance()
-      ->getBackend()->getSolrFieldNamesKeyedByLanguage($language_ids, $query->getIndex());
-
-    foreach (($queryable_fields ?? []) as $field) {
-      if (isset($solr_field_names[$field])
-        && 'twm_suggest' !== $solr_field_names[$field] & strpos(
-          $solr_field_names[$field], 'spellcheck'
-        ) !== 0
-      ) {
-        $index_field = $index_fields[$field];
-        $boost = $index_field->getBoost() ? '^' . $index_field->getBoost()
-          : '';
-        $names = [];
-        $first_name = reset($field_names[$field]);
-        if (strpos($first_name, 't') === 0) {
-          // Add all language-specific field names. This should work for
-          // non Drupal Solr Documents as well which contain only a single
-          // name.
-          $names = array_values($field_names[$field]);
-        }
-        else {
-          $names[] = $first_name;
-        }
-        $names = array_unique($names);
-        foreach ($names as &$name) {
-          $name = $name . $boost;
-        }
-      }
-    }
-
-    if (count($names)) {
-      $flat_keys[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
-        $keys, $names,
-        $parse_mode->getPluginId()
-      );
-    }
-    return implode(" ", $flat_keys);
   }
 
 
@@ -799,8 +492,6 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
       field_name = "title"
      */
 
-
-
     return $data;
   }
 
@@ -838,22 +529,7 @@ class StrawberryADOfilter  extends InOperator /* FilterPluginBase */ {
       $return['entity_type'] = $property_definition->getEntityTypeId();
       $return['bundles'] = $property_definition->getBundles() ?: [];
     }
-
     return $return;
   }
-
-  public function adminSummary() {
-    $this->valueOptions = [];
-    if ($this->value) {
-      $result = $this->nodeStorage->loadByProperties(['id' => $this->value]);
-      foreach ($result as $node) {
-        if ($node->id()) {
-          $this->valueOptions[$node->id()] = $node->label();
-        }
-      }
-    }
-    return parent::adminSummary();
-  }
-
 
 }
