@@ -47,13 +47,13 @@ use Ramsey\Uuid\Uuid;
  * Usage example:
  * @code
  * $form['my_element'] = [
- *  '#type' => 'entity_autocomplete',
+ *  '#type' => 'sbf_entity_autocomplete_uuid',
  *  '#target_type' => 'node',
  *  '#tags' => TRUE,
  *  '#default_value' => $node,
- *  '#selection_handler' => 'default',
+ *  '#selection_handler' => 'default:nodewithstrawberry',
  *  '#selection_settings' => [
- *    'target_bundles' => ['article', 'page'],
+ *    'target_bundles' => ['digital_object', 'digital_object_collection'],
  *   ],
  *  '#autocreate' => [
  *    'bundle' => 'article',
@@ -331,6 +331,8 @@ class EntityAutocompleteUUID extends Textfield {
         }
       }
       $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($value);
+      // We have to reset again or we will end with both the UUID and the ID stored at the same time.
+      $value = [];
       if ($entities) {
         foreach($entities as $entity) {
           $value[] = $entity->uuid();
