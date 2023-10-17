@@ -104,7 +104,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    */
   public function defineOptions() {
     $options = parent::defineOptions();
-
+    $options['value']['default'] = [];
     $options['operator']['default'] = 'or';
     $options['views_source_ids'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
