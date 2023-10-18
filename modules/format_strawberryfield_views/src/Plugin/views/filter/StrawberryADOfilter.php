@@ -207,6 +207,12 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     - For testing, start first with a fixed UUID (or ID, we should allow both) and then go from there.
     */
 
+    /* Oct 18th. Note to myself. The Views user to fill up the exposed Options need to allow/checkbox
+    to pass any relationships/contextual values passed to this views. Why?
+    e.g i want to only show collections that are part of the View currently being showed.
+    If i don't allow this, every option will have to be static which basically defeats the purpose of having a view
+    driving the exposed options. I can do this using the same/siliar logic of the Open Pull towards OpenAPI integration */
+
     $fields = $this->getSbfNodeFields() ?? [];
     // Note we can not use a manyToOne class as base
     // because _search_api_views_handler_mapping() does not evaluate a fields full property path
@@ -275,6 +281,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   public function buildExtraOptionsForm(&$form, FormStateInterface $form_state) {
     $options = $this->getApplicationViewsAsOptions() ?? [];
       // We only do this when the form is displayed.
+      $options['null'] = '- Do not use a Views -';
       if (empty($this->definition['views'])) {
         $form['views_source_ids'] = [
           '#type' => 'radios',
@@ -283,6 +290,12 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
           '#description' => $this->t('Select which View to use to show/generate ADOs list in the regular options .'),
           '#default_value' => $this->options['views_source_ids'],
         ];
+        $form['views_source_inherit_relationship'] = [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Inherit this Views\' Relationships or Context'),
+          '#description' => $this->t('This allows the main View to pass its Contextual Values to the Views that generates the Exposed Options.'),
+          '#default_value' => $this->options['views_source_inherit_relationship'],
+        ];
       }
   }
 
@@ -290,7 +303,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     $displays_entity_reference = Views::getApplicableViews('entity_reference_display');
     // Only key that allows to me get REST and FEEDS
     $displays_rest = Views::getApplicableViews('returns_response');
-    $options = [];
     $displays = $displays_entity_reference + $displays_rest;
     foreach ($displays as $data) {
       [$view_id, $display_id] = $data;
@@ -460,6 +472,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     /* We need to cache this folks. Too much energy to extract each
     time we need to query  */
     $cacheability = new CacheableMetadata();
+    // here we can use $cache = $this->display_handler->getPlugin('cache'); ?
     $cacheability->addCacheableDependency($index);
     /** @var \Drupal\search_api\IndexInterface $index */
     $index = Index::load(substr($this->table, 17));
