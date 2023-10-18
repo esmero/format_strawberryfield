@@ -340,18 +340,37 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     if (is_array($this->options['sbf_fields']) && !empty($this->options['sbf_fields'])) {
       $field_id = reset($this->options['sbf_fields']);
     }
+    $resolved_values = [];
     foreach ($nodes as $node) {
       if ($field_id) {
+        $field = $query->getIndex()->getField($field_id);
+
+
         $object = $node->getTypedData();
         $data = $this->calculateEntityRelationsForField($field_id);
-        $fields = [
-          $data[0]['property_path_to_foreign_entity']
-          => $this->fieldsHelper->createField(
-            $query->getIndex(), $node->uuid() . '-0'
-          )
-        ];
-        $fields_values = $this->fieldsHelper->extractFields($object, $fields);
-        $fields_values = $fields_values;
+        if (isset($data['path_to_resolve'])) {
+          $info = [
+            'label' => 'nan',
+            'type' => $field->getType(),
+            'datasource_id' => $field->getDatasourceId(),
+            'property_path' => $data['path_to_resolve'],
+          ];
+          $fields = [
+            $data['path_to_resolve']
+            => [$this->fieldsHelper->createField(
+              $query->getIndex(), 'fake_id', $info)]
+          ];
+          $this->fieldsHelper->extractFields($object, $fields);
+          foreach ($fields as $property_path => $property_fields) {
+            foreach ($property_fields as $field) {
+              $field_values = $field->getValues();
+              sort($field_values);
+              if (!isset($values[$property_path])) {
+                $resolved_values[$property_path] = $field_values;
+              }
+            }
+          }
+        }
       }
     }
 
@@ -459,6 +478,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     $relation_info = [
       'datasource' => $datasource->getPluginId(),
       'entity_type' => NULL,
+      'type' => $field->getType(),
       'bundles' => NULL,
       'path_to_resolve' => NULL,
     ];
