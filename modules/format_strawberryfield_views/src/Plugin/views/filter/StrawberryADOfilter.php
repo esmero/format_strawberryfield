@@ -460,9 +460,10 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       'datasource' => $datasource->getPluginId(),
       'entity_type' => NULL,
       'bundles' => NULL,
-      'property_path_to_foreign_entity' => NULL,
+      'path_to_resolve' => NULL,
     ];
     $seen_path_chunks = [];
+    $usable_path_chunks = [];
     $property_definitions = $datasource->getPropertyDefinitions();
     $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath($field->getPropertyPath(), FALSE);
     for (; $field_property[0]; $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath($field_property[1] ?? '', FALSE)) {
@@ -474,7 +475,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
         break;
       }
 
-      $seen_path_chunks[] = $field_property[0];
+      $seen_path_chunks[] = $usable_path_chunks[] = $field_property[0];
 
       if ($property_definition instanceof FieldItemDataDefinitionInterface
         && $property_definition->getFieldDefinition()->isComputed()) {
@@ -487,13 +488,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       if ($relation_info['entity_type'] && $property_definition instanceof FieldItemDataDefinitionInterface) {
         // Parent is an entity. Hence this level is fields of the entity.
         $cacheability->addCacheableDependency($property_definition->getFieldDefinition());
-
-        $data[] = $relation_info + [
-            'path_to_field' => $property_definition->getFieldDefinition()
-              ->getName(),
-          ];
         // We want only the last piece of the chunks?
-        $seen_path_chunks = [];
+        $usable_path_chunks = [];
+        $usable_path_chunks[] = $field_property[0];
       }
 
       $entity_reference = $this->isEntityReferenceDataDefinition($property_definition, $cacheability);
@@ -513,6 +510,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
           $entity_reference['bundles'] = $relation_info['bundles'];
         }
         $relation_info = $entity_reference;
+        // Not used but good for debugging
         $relation_info['property_path_to_foreign_entity'] = implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks);
         $relation_info['datasource'] = $datasource->getPluginId();
       }
@@ -528,11 +526,8 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
           // Means we reached the root of the properties and there were no Entities/references inbetween
           // But means also the property path is already connected at the base (so invisible to this) to an entity
           // So we can use it directly
-          $relation_info['property_path_to_foreign_entity'] = implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks);
+          $relation_info['full_property_path'] = implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks);
           $relation_info['datasource'] = $datasource->getPluginId();
-          $data[] = $relation_info + [
-              'path_to_field' => $seen_path_chunks[0]
-            ];
         }
         // This item no longer has "nested" properties in its Typed Data
         // definition. Thus we cannot examine it any further than the current
@@ -540,25 +535,18 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
         break;
       }
     }
-    /* Data will contain something like this in case of two properties.
-    Ordered by occurrence which is great bc we want the last one only.
-    Note. We can also here check if there is a bundle. Given that if there is NOT bundle
-    any queried node will serve as input, but if there is one, we need to limit or
-    even discard.
-     * result =
-    0 = {array} [5]
-       entity_type = "node"
-       bundles = {array} [0]
-       property_path_to_foreign_entity = "field_descriptive_metadata:sbf_entity_reference_ispartof"
-       datasource = "entity:node"
-       path_to_field = "field_descriptive_metadata"
-   1 = {array} [5]
-      entity_type = "node"
-      bundles = {array} [0]
-      property_path_to_foreign_entity = "field_descriptive_metadata:sbf_entity_reference_ispartof:field_descriptive_metadata:sbf_entity_reference_ismemberof"
-      datasource = "entity:node"
-      path_to_field = "title"
-     */
+    $data = $relation_info + [
+        'path_to_resolve' =>  implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $usable_path_chunks)
+      ];
+    /* data looks like and we really only need `path_to_resolve`
+    result = {array} [6]
+ entity_type = "node"
+ bundles = {array} [0]
+ property_path_to_foreign_entity = "field_descriptive_metadata:sbf_entity_reference_ismemberof"
+ datasource = "entity:node"
+ full_property_path = "field_descriptive_metadata:sbf_entity_reference_ismemberof:field_descriptive_metadata:digital_object_type"
+ path_to_resolve = "field_descriptive_metadata:digital_object_type"
+    */
 
     return $data;
   }
