@@ -26,6 +26,7 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\search_api\Utility\FieldsHelperInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\Element\EntityAutocomplete;
+use Drupal\Core\Cache\CacheBackendInterface;
 
 /**
  * Defines a filter that handles ADO/ADO UUIDs against any indexed subproperty.
@@ -84,6 +85,13 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    */
   protected $fieldsHelper;
 
+  /**
+   * The cache backend.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  protected $cache;
+
 
   /**
    * {@inheritdoc}
@@ -95,6 +103,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     $plugin->setNodeStorage($container->get('entity_type.manager')->getStorage('node'));
     $plugin->setFieldsHelper($container->get('search_api.fields_helper'));
     $plugin->setViewStorage($container->get('entity_type.manager')->getStorage('view'));
+    $plugin->setCache($container->get('cache.default'));
     $plugin->currentUser = $container->get('current_user');
     return $plugin;
   }
@@ -176,6 +185,20 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    */
   public function setViewStorage(EntityStorageInterface $viewstorage) {
     $this->viewStorage = $viewstorage;
+    return $this;
+  }
+
+
+  /**
+   * Sets the Cache Backed.
+   *
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache
+   *   The cache backend. Use to store complex calculations of property paths.
+   *
+   * @return $this
+   */
+  public function setCache(CacheBackendInterface $cache) {
+    $this->cache = $cache;
     return $this;
   }
 
@@ -352,6 +375,10 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     if (is_array($this->options['sbf_fields']) && !empty($this->options['sbf_fields'])) {
       $field_id = reset($this->options['sbf_fields']);
     }
+
+    $this->getEntityRelationsForFields($this->options['sbf_fields']);
+
+
     $resolved_values = [];
     foreach ($nodes as $node) {
       if ($field_id) {
@@ -467,15 +494,38 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     return $fields;
   }
 
+  protected function getEntityRelationsForFields($fields, $cached = TRUE) {
+    $index = Index::load(substr($this->table, 17));
+    $this->getIndex();
+    $this->field;
+    $this->view->id();
+    $this->view->current_display;
+    $cid = "format_strawberryfield_views:{$index->id()}:property_fields";
+    $cache = $this->cache->get($cid);
+    if ($cache) {
+      return $cache->data;
+    }
+    $cacheability = new CacheableMetadata();
+    $cacheability->addCacheableDependency($index);
+    $field_data = [];
+    foreach ($fields as $field_id) {
+      $field_data[$field_id] = $this->calculateEntityRelationsForField($field_id);
+    }
+    $this->cache->set($cid, $data, $cacheability->getCacheMaxAge(), $cacheability->getCacheTags());
+    return $field_data;
+  }
+
+
 
   protected function calculateEntityRelationsForField($field_id) {
     /* We need to cache this folks. Too much energy to extract each
     time we need to query  */
+    $index = Index::load(substr($this->table, 17));
     $cacheability = new CacheableMetadata();
     // here we can use $cache = $this->display_handler->getPlugin('cache'); ?
     $cacheability->addCacheableDependency($index);
     /** @var \Drupal\search_api\IndexInterface $index */
-    $index = Index::load(substr($this->table, 17));
+
     $field = $index->getField($field_id);
     $data = [];
     try {
