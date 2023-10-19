@@ -7,6 +7,7 @@ use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Entity\TypedData\EntityDataDefinitionInterface;
 use Drupal\Core\Field\TypedData\FieldItemDataDefinitionInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -27,6 +28,7 @@ use Drupal\search_api\Utility\FieldsHelperInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\Element\EntityAutocomplete;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Render\RenderContext;
 
 /**
  * Defines a filter that handles ADO/ADO UUIDs against any indexed subproperty.
@@ -35,11 +37,13 @@ use Drupal\Core\Cache\CacheBackendInterface;
  *
  * @ViewsFilter("sbf_ado_filter")
  */
-class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
+class StrawberryADOfilter extends InOperator /* FilterPluginBase */
+{
 
   use SearchApiFilterTrait;
 
   protected $valueFormType = 'select';
+
   protected $alwaysMultiple = TRUE;
 
 
@@ -96,17 +100,59 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+  public static function create(ContainerInterface $container,
+    array $configuration, $plugin_id, $plugin_definition
+  ) {
     /** @var static $plugin */
-    $plugin = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    $plugin->setParseModeManager($container->get('plugin.manager.search_api.parse_mode'));
-    $plugin->setNodeStorage($container->get('entity_type.manager')->getStorage('node'));
+    $plugin = parent::create(
+      $container, $configuration, $plugin_id, $plugin_definition
+    );
+    $plugin->setParseModeManager(
+      $container->get('plugin.manager.search_api.parse_mode')
+    );
+    $plugin->setNodeStorage(
+      $container->get('entity_type.manager')->getStorage('node')
+    );
     $plugin->setFieldsHelper($container->get('search_api.fields_helper'));
-    $plugin->setViewStorage($container->get('entity_type.manager')->getStorage('view'));
+    $plugin->setViewStorage(
+      $container->get('entity_type.manager')->getStorage('view')
+    );
     $plugin->setCache($container->get('cache.default'));
     $plugin->currentUser = $container->get('current_user');
     return $plugin;
   }
+
+  /**
+   * Returns information about the available operators for this filter.
+   *
+   * @return array[]
+   *   An associative array mapping operator identifiers to their information.
+   *   The operator information itself is an associative array with the
+   *   following keys:
+   *   - title: The translated title for the operator.
+   *   - short: The translated short title for the operator.
+   *   - values: The number of values the operator requires as input.
+   */
+  public function operators() {
+    return [
+      'and' => [
+        'title'  => $this->t('Contains all of the resolved values'),
+        'short'  => $this->t('and'),
+        'values' => 1,
+      ],
+      'or'  => [
+        'title'  => $this->t('Contains any of the resolved values'),
+        'short'  => $this->t('or'),
+        'values' => 1,
+      ],
+      'not' => [
+        'title'  => $this->t('Contains none of the resolved values'),
+        'short'  => $this->t('not'),
+        'values' => 1,
+      ],
+    ];
+  }
+
 
   /**
    * {@inheritdoc}
@@ -138,7 +184,10 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    *   The parse mode manager.
    */
   public function getParseModeManager() {
-    return $this->parseModeManager ?: \Drupal::service('plugin.manager.search_api.parse_mode');
+    return $this->parseModeManager
+      ?: \Drupal::service(
+        'plugin.manager.search_api.parse_mode'
+      );
   }
 
   /**
@@ -149,7 +198,8 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    *
    * @return $this
    */
-  public function setParseModeManager(ParseModePluginManager $parse_mode_manager) {
+  public function setParseModeManager(ParseModePluginManager $parse_mode_manager
+  ) {
     $this->parseModeManager = $parse_mode_manager;
     return $this;
   }
@@ -244,14 +294,18 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     // instead of what we will do there which is a Node resolved against a property path (a field) against a value
 
     $form['sbf_fields'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Node based Entity Reference (or in its property path) Fields that need to match.'),
-      '#description' => $this->t('Select the fields that will be filtered against a Node or Node list.'),
-      '#options' => $fields,
-      '#size' => min(4, count($fields)),
-      '#multiple' => TRUE,
+      '#type'          => 'select',
+      '#title'         => $this->t(
+        'Node based Entity Reference (or in its property path) Fields that need to match.'
+      ),
+      '#description'   => $this->t(
+        'Select the fields that will be filtered against the corresponding values resolved from the Node used as query input.'
+      ),
+      '#options'       => $fields,
+      '#size'          => min(4, count($fields)),
+      '#multiple'      => TRUE,
       '#default_value' => $this->options['sbf_fields'],
-      '#required' => TRUE,
+      '#required'      => TRUE,
     ];
   }
 
@@ -260,24 +314,83 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       $form, $form_state
     );
     // Just a quick way of regenerating the caches, just in case.
-    $this->getEntityRelationsForFields($form_state->getValue(['options','sbf_fields']), FALSE);
+    $this->getEntityRelationsForFields(
+      $form_state->getValue(['options', 'sbf_fields']), FALSE
+    );
   }
 
   protected function valueForm(&$form, FormStateInterface $form_state) {
-    $nodes = $this->value ? $this->nodeStorage->loadByProperties(['uuid' => $this->value]) : [];
-    $form['value'] = [
-      '#type' => 'sbf_entity_autocomplete_uuid',
-      '#title' => $this->t('ADOs'),
-      '#description' => $this->t('Enter a comma separated list of Archipelago Digital Objects.'),
-      '#target_type' => 'node',
-      '#tags' => TRUE,
-      '#default_value' => $nodes,
-      '#selection_handler' => 'default:nodewithstrawberry',
-      '#validate_reference' => TRUE,
-    ];
+    // Always remember diego. If this is exposed then the same Form shown during
+    // Config will be shown for the end user
+    // Not what we want!
+    // problem here. Views will return an ID, we want UUIDs ...
+    function is_numeric($var) {
+      return is_numeric($var);
+    }
+
+    if (array_filter($this->value, 'is_numeric') === $this->value) {
+      $nodes = $this->value ? $this->nodeStorage->loadByProperties(
+        ['id' => $this->value]
+      ) : [];
+    }
+    else {
+      $nodes = $this->value ? $this->nodeStorage->loadByProperties(
+        ['uuid' => $this->value]
+      ) : [];
+    }
+    if (!$form_state->get('exposed')) {
+      $form['value'] = [
+        '#type'               => 'sbf_entity_autocomplete_uuid',
+        '#title'              => $this->t('ADOs'),
+        '#description'        => $this->t(
+          'Enter a comma separated list of Archipelago Digital Objects.'
+        ),
+        '#target_type'        => 'node',
+        '#tags'               => TRUE,
+        '#default_value'      => $nodes,
+        '#selection_handler'  => 'default:nodewithstrawberry',
+        '#validate_reference' => TRUE,
+      ];
+    }
+    else {
+      if ($this->options['views_source_ids']) {
+        $options = $this->readExposedOptionsForSelectFromView();
+        $view_parts = explode(':', $this->options['views_source_ids']);
+        if (count($view_parts) == 2) {
+          $form_value_selection = [
+            '#selection_handler'  => 'solr_views',
+            '#validate_reference' => TRUE,
+            '#selection_settings' => [
+              'view' => [
+                'view_name'    => $view_parts[0],
+                'display_name' => $view_parts[1],
+                'arguments'    => [],
+              ],
+            ],
+          ];
+        }
+        else {
+          $form_value_selection = [
+            '#target_type'        => 'node',
+            '#tags'               => TRUE,
+            '#selection_handler'  => 'default:nodewithstrawberry',
+            '#default_value'      => $nodes,
+            '#validate_reference' => TRUE,
+          ];
+        }
+      }
+      $form['value'] = [
+          '#type'        => 'entity_autocomplete',
+          '#title'       => t('Select an ADO'),
+          '#target_type' => 'node',
+        ] + $form_value_selection;
+    }
+
 
     $user_input = $form_state->getUserInput();
-    if ($form_state->get('exposed') && !isset($user_input[$this->options['expose']['identifier']])) {
+    if ($form_state->get('exposed')
+      && !isset($user_input[$this->options['expose']['identifier']])
+    ) {
       $user_input[$this->options['expose']['identifier']] = $default_value;
       $form_state->setUserInput($user_input);
     }
@@ -295,34 +408,75 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   }
 
 
-
   public function hasExtraOptions() {
     return TRUE;
   }
 
-  public function buildExtraOptionsForm(&$form, FormStateInterface $form_state) {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildExposeForm(&$form, FormStateInterface $form_state) {
+    parent::buildExposeForm($form, $form_state);
+
+    $form['expose']['placeholder'] = [
+      '#type'          => 'textfield',
+      '#default_value' => $this->options['expose']['placeholder'],
+      '#title'         => $this->t('Placeholder'),
+      '#size'          => 40,
+      '#description'   => $this->t(
+        'Hint text that appears inside the field when empty or as "empty option" when using select widget'
+      ),
+    ];
+
+    $form['expose']['value_form_type'] = [
+      '#type'          => 'radios',
+      '#default_value' => $this->options['expose']['value_form_type'],
+      '#options'       => [
+        'autocomplete' => 'autocomplete',
+        'select'       => 'select',
+        'checkboxes'   => 'checkboxes',
+      ],
+      '#title'         => $this->t('Type of exposed Widget'),
+      '#description'   => $this->t(
+        'Either a text autocomplete field, a select or checkboxes'
+      ),
+    ];
+  }
+
+
+  public function buildExtraOptionsForm(&$form, FormStateInterface $form_state
+  ) {
     $options = $this->getApplicationViewsAsOptions() ?? [];
-      // We only do this when the form is displayed.
-      $options['null'] = '- Do not use a Views -';
-      if (empty($this->definition['views'])) {
-        $form['views_source_ids'] = [
-          '#type' => 'radios',
-          '#title' => $this->t('View'),
-          '#options' => $options,
-          '#description' => $this->t('Select which View to use to show/generate ADOs list in the regular options .'),
-          '#default_value' => $this->options['views_source_ids'],
-        ];
-        $form['views_source_inherit_relationship'] = [
-          '#type' => 'checkbox',
-          '#title' => $this->t('Inherit this Views\' Relationships or Context'),
-          '#description' => $this->t('This allows the main View to pass its Contextual Values to the Views that generates the Exposed Options.'),
-          '#default_value' => $this->options['views_source_inherit_relationship'],
-        ];
-      }
+    // We only do this when the form is displayed.
+    $options['null'] = '- Do not use a Views -';
+    if (empty($this->definition['views'])) {
+      $form['views_source_ids'] = [
+        '#type'          => 'radios',
+        '#title'         => $this->t('View'),
+        '#options'       => $options,
+        '#description'   => $this->t(
+          'Select which View to use to show/generate ADOs list in the regular options .'
+        ),
+        '#default_value' => $this->options['views_source_ids'],
+      ];
+      $form['views_source_inherit_relationship'] = [
+        '#type'          => 'checkbox',
+        '#title'         => $this->t(
+          'Inherit this Views\' Relationships or Context'
+        ),
+        '#description'   => $this->t(
+          'This allows the main View to pass its Contextual Values to the Views that generates the Exposed Options.'
+        ),
+        '#default_value' => $this->options['views_source_inherit_relationship'],
+      ];
+    }
   }
 
   private function getApplicationViewsAsOptions() {
-    $displays_entity_reference = Views::getApplicableViews('entity_reference_display');
+    $displays_entity_reference = Views::getApplicableViews(
+      'entity_reference_display'
+    );
     // Only key that allows to me get REST and FEEDS
     $displays_rest = Views::getApplicableViews('returns_response');
     $displays = $displays_entity_reference + $displays_rest;
@@ -330,12 +484,12 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       [$view_id, $display_id] = $data;
       $view = $this->viewStorage->load($view_id);
       $display = $view->get('display');
-      $options[$view_id . ':' . $display_id] = $view_id . ' - ' . $display[$display_id]['display_title'];
+      $options[$view_id . ':' . $display_id] = $view_id . ' - '
+        . $display[$display_id]['display_title'];
     }
     ksort($options);
     return $options;
   }
-
 
 
   public function query() {
@@ -369,7 +523,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
 
     */
     $query = $this->getQuery();
-    $nodes = $this->value ? $this->nodeStorage->loadByProperties(['uuid' => $this->value]) : [];
+    $nodes = $this->value ? $this->nodeStorage->loadByProperties(
+      ['uuid' => $this->value]
+    ) : [];
     $data = $this->getEntityRelationsForFields($this->options['sbf_fields']);
 
     $resolved_values = [];
@@ -379,15 +535,18 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
         $object = $node->getTypedData();
         if (isset($field_data['path_to_resolve'])) {
           $info = [
-            'label' => 'nan',
-            'type' => $field->getType(),
+            'label'         => 'nan',
+            'type'          => $field->getType(),
             'datasource_id' => $field->getDatasourceId(),
             'property_path' => $field_data['path_to_resolve'],
           ];
           $fields = [
             $field_data['path_to_resolve']
-            => [$this->fieldsHelper->createField(
-              $query->getIndex(), 'fake_id', $info)]
+            => [
+              $this->fieldsHelper->createField(
+                $query->getIndex(), 'fake_id', $info
+              ),
+            ],
           ];
           $this->fieldsHelper->extractFields($object, $fields);
           foreach ($fields as $property_path => $property_fields) {
@@ -410,6 +569,58 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   }
 
 
+  public function validate() {
+    $this->getValueOptions();
+    $errors = parent::validate();
+
+    if (!in_array($this->operator, $this->operatorValues(1))) {
+      $errors[] = $this->t(
+        'The operator is invalid on filter: @filter.',
+        ['@filter' => $this->adminLabel(TRUE)]
+      );
+    }
+    if (is_array($this->value)) {
+      if (!isset($this->valueOptions)) {
+        // Don't validate if there are none value options provided, for example for special handlers.
+        return $errors;
+      }
+      if ($this->options['exposed'] && !$this->options['expose']['required']
+        && empty($this->value)
+      ) {
+        // Don't validate if the field is exposed and no default value is provided.
+        return $errors;
+      }
+
+      // Some filter_in_operator usage uses optgroups forms, so flatten it.
+      $flat_options = OptGroup::flattenOptions($this->valueOptions);
+
+      // Remove every element which is not known.
+      foreach ($this->value as $value) {
+        if (!isset($flat_options[$value])) {
+          unset($this->value[$value]);
+        }
+      }
+      // Choose different kind of output for 0, a single and multiple values.
+      if (count($this->value) == 0) {
+        $errors[] = $this->t(
+          'No valid values found on filter: @filter.',
+          ['@filter' => $this->adminLabel(TRUE)]
+        );
+      }
+    }
+    elseif (!empty($this->value)) {
+      $errors[] = $this->t(
+        'The value @value is not an array for @operator on filter: @filter', [
+          '@value'    => var_export($this->value, TRUE),
+          '@operator' => $this->operator,
+          '@filter'   => $this->adminLabel(TRUE),
+        ]
+      );
+    }
+    return $errors;
+  }
+
+
   /**
    * Retrieves a list of all fields that contain in its path a Node Entity.
    *
@@ -429,7 +640,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       // basically return the same ADO as input filtered, given that those are unique.
       $property_path = $field->getPropertyPath();
       $datasource_id = $field->getDatasourceId();
-      if(strpos($field->getType(), 'text') === false && ($property_path !== "nid" || $property_path !== "uuid")) {
+      if (strpos($field->getType(), 'text') === FALSE
+        && ($property_path !== "nid" || $property_path !== "uuid")
+      ) {
         $field->getDataDefinition();
         // Now the hard part.
         // We need to know if the $field->getDatasourceId() == 'entity:node' and/or
@@ -485,7 +698,10 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   }
 
   protected function getEntityRelationsForFields($fields, $cached = TRUE) {
-    $cacheid = md5($this->getIndex()->id().$this->field.$this->view->id().$this->view->current_display);
+    $cacheid = md5(
+      $this->getIndex()->id() . $this->field . $this->view->id()
+      . $this->view->current_display
+    );
     $cid = "format_strawberryfield_views:{$cacheid}:property_fields";
     if ($cached) {
       $cache = $this->cache->get($cid);
@@ -497,15 +713,20 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     $cacheability->addCacheableDependency($index);
     $field_data = [];
     foreach ($fields as $field_id) {
-      $field_data[$field_id] = $this->calculateEntityRelationsForField($field_id, $cacheability);
+      $field_data[$field_id] = $this->calculateEntityRelationsForField(
+        $field_id, $cacheability
+      );
     }
-    $this->cache->set($cid, $field_data, $cacheability->getCacheMaxAge(), $cacheability->getCacheTags());
+    $this->cache->set(
+      $cid, $field_data, $cacheability->getCacheMaxAge(),
+      $cacheability->getCacheTags()
+    );
     return $field_data;
   }
 
 
-
-  protected function calculateEntityRelationsForField($field_id, $cacheability) {
+  protected function calculateEntityRelationsForField($field_id, $cacheability
+  ) {
     /* We need to cache this folks. Too much energy to extract each
     time we need to query  */
     // $cacheability is passed by reference bc object and stuff.
@@ -517,8 +738,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     $data = [];
     try {
       $datasource = $field->getDatasource();
-    }
-    catch (SearchApiException $e) {
+    } catch (SearchApiException $e) {
       return [];
     }
     if (!$datasource) {
@@ -526,18 +746,27 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
     }
 
     $relation_info = [
-      'datasource' => $datasource->getPluginId(),
-      'entity_type' => NULL,
-      'type' => $field->getType(),
-      'bundles' => NULL,
+      'datasource'      => $datasource->getPluginId(),
+      'entity_type'     => NULL,
+      'type'            => $field->getType(),
+      'bundles'         => NULL,
       'path_to_resolve' => NULL,
     ];
     $seen_path_chunks = [];
     $usable_path_chunks = [];
     $property_definitions = $datasource->getPropertyDefinitions();
-    $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath($field->getPropertyPath(), FALSE);
-    for (; $field_property[0]; $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath($field_property[1] ?? '', FALSE)) {
-      $property_definition = $this->fieldsHelper->retrieveNestedProperty($property_definitions, $field_property[0]);
+    $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath(
+      $field->getPropertyPath(), FALSE
+    );
+    for (
+    ; $field_property[0];
+      $field_property = \Drupal\search_api\Utility\Utility::splitPropertyPath(
+        $field_property[1] ?? '', FALSE
+      )
+    ) {
+      $property_definition = $this->fieldsHelper->retrieveNestedProperty(
+        $property_definitions, $field_property[0]
+      );
       if (!$property_definition) {
         // Seems like we could not map it from the property path to some Typed
         // Data definition. In the absence of a better alternative, let's
@@ -548,22 +777,29 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       $seen_path_chunks[] = $usable_path_chunks[] = $field_property[0];
 
       if ($property_definition instanceof FieldItemDataDefinitionInterface
-        && $property_definition->getFieldDefinition()->isComputed()) {
+        && $property_definition->getFieldDefinition()->isComputed()
+      ) {
         // We cannot really deal with computed fields since we have no
         // knowledge about their internal logic. Thus we cannot process
         // this field any further.
         break;
       }
 
-      if ($relation_info['entity_type'] && $property_definition instanceof FieldItemDataDefinitionInterface) {
+      if ($relation_info['entity_type']
+        && $property_definition instanceof FieldItemDataDefinitionInterface
+      ) {
         // Parent is an entity. Hence this level is fields of the entity.
-        $cacheability->addCacheableDependency($property_definition->getFieldDefinition());
+        $cacheability->addCacheableDependency(
+          $property_definition->getFieldDefinition()
+        );
         // We want only the last piece of the chunks?
         $usable_path_chunks = [];
         $usable_path_chunks[] = $field_property[0];
       }
 
-      $entity_reference = $this->isEntityReferenceDataDefinition($property_definition, $cacheability);
+      $entity_reference = $this->isEntityReferenceDataDefinition(
+        $property_definition, $cacheability
+      );
       if ($entity_reference) {
         // Rethinking this:
         // Once we touch an $entity_reference, only then i need to start tracking $seen_path_chunks
@@ -576,19 +812,24 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
         if ($relation_info['entity_type'] === $entity_reference['entity_type']
           && empty($entity_reference['bundles'])
           && !empty($relation_info['bundles'])
-          && $field_property[0] === 'entity') {
+          && $field_property[0] === 'entity'
+        ) {
           $entity_reference['bundles'] = $relation_info['bundles'];
         }
         $relation_info = $entity_reference;
         // Not used but good for debugging
-        $relation_info['property_path_to_foreign_entity'] = implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks);
+        $relation_info['property_path_to_foreign_entity'] = implode(
+          IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks
+        );
         $relation_info['datasource'] = $datasource->getPluginId();
       }
 
 
       if ($property_definition instanceof ComplexDataDefinitionInterface) {
         /// Not even sure i need this?
-        $property_definitions = $this->fieldsHelper->getNestedProperties($property_definition);
+        $property_definitions = $this->fieldsHelper->getNestedProperties(
+          $property_definition
+        );
       }
       else {
 
@@ -596,7 +837,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
           // Means we reached the root of the properties and there were no Entities/references inbetween
           // But means also the property path is already connected at the base (so invisible to this) to an entity
           // So we can use it directly
-          $relation_info['full_property_path'] = implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks);
+          $relation_info['full_property_path'] = implode(
+            IndexInterface::PROPERTY_PATH_SEPARATOR, $seen_path_chunks
+          );
           $relation_info['datasource'] = $datasource->getPluginId();
         }
         // This item no longer has "nested" properties in its Typed Data
@@ -606,7 +849,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       }
     }
     $data = $relation_info + [
-        'path_to_resolve' =>  implode(IndexInterface::PROPERTY_PATH_SEPARATOR, $usable_path_chunks)
+        'path_to_resolve' => implode(
+          IndexInterface::PROPERTY_PATH_SEPARATOR, $usable_path_chunks
+        ),
       ];
     /* data looks like and we really only need `path_to_resolve`
     result = {array} [6]
@@ -624,7 +869,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
   /**
    * Determines whether the given property is a reference to an entity.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $property_definition
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface           $property_definition
    *   The property to test.
    * @param \Drupal\Core\Cache\RefinableCacheableDependencyInterface $cacheability
    *   A cache metadata object to track any caching information necessary in
@@ -639,11 +884,15 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
    *     specific bundles cannot be determined or the $property points to all
    *     the bundles, this key will contain an empty array.
    */
-  protected function isEntityReferenceDataDefinition(DataDefinitionInterface $property_definition, RefinableCacheableDependencyInterface $cacheability): array {
+  protected function isEntityReferenceDataDefinition(DataDefinitionInterface $property_definition,
+    RefinableCacheableDependencyInterface $cacheability
+  ): array {
     $return = [];
 
     if ($property_definition instanceof FieldItemDataDefinitionInterface
-      && $property_definition->getFieldDefinition()->getType() === 'entity_reference') {
+      && $property_definition->getFieldDefinition()->getType()
+      === 'entity_reference'
+    ) {
       $field = $property_definition->getFieldDefinition();
       $cacheability->addCacheableDependency($field);
 
@@ -656,6 +905,66 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */ {
       $return['bundles'] = $property_definition->getBundles() ?: [];
     }
     return $return;
+  }
+
+  protected function readExposedOptionsForSelectFromView(): array {
+    $view_parts = [];
+    $options = [];
+    if ($this->options['views_source_ids']) {
+      $view_parts = explode(':', $this->options['views_source_ids']);
+    }
+    if (count($view_parts) == 2) {
+      $view = $this->viewStorage->load($view_parts[0]);
+      if ($view) {
+        $display = $view ? $view->getDisplay($view_parts[1]) : NULL;
+        $executable = $view->getExecutable();
+        /** @var \Drupal\views\ViewExecutable $executable */
+        if ($display) {
+          $executable->setDisplay($view_parts[1]);
+          //$executable->setArguments(array_values($arguments));
+          $views_validation = $executable->validate();
+          if (empty($views_validation)) {
+            try {
+              $this->getRenderer()->executeInRenderContext(
+                new RenderContext(),
+                function () use ($executable) {
+                  // Damn view renders forms and stuff. GOSH!
+                  $executable->execute();
+                }
+              );
+            } catch (\InvalidArgumentException $exception) {
+              error_log('Views failed to render' . $exception->getMessage());
+              $exception->getMessage();
+            }
+
+            $total = $executable->pager->getTotalItems() != 0
+              ? $executable->pager->getTotalItems()
+              : count(
+                $executable->result
+              );
+            $current_page = $executable->pager->getCurrentPage();
+            $num_per_page = $executable->pager->getItemsPerPage();
+            $offset = $executable->pager->getOffset();
+
+            foreach ($executable->result as $resultRow) {
+              if ($resultRow instanceof
+                \Drupal\search_api\Plugin\views\ResultRow
+              ) {
+                //@TODO move to its own method\
+                if ($resultRow->_item) {
+                  $node = $resultRow->_item->getOriginalObject()->getValue() ??
+                    NULL;
+                  if ($node) {
+                    $options[$node->uuid()] = $node->label();
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return $options;
   }
 
 }
