@@ -163,6 +163,8 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $options['operator']['default'] = 'or';
     $options['views_source_ids'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
+    $options['expose']['contains']['value_form_type'] = ['default' => 'autocomplete'];
+    $options['expose']['contains']['placeholder'] = ['default' => ''];
     return $options;
   }
 
@@ -171,6 +173,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
    */
   public function defaultExposeOptions() {
     parent::defaultExposeOptions();
+    $this->options['expose']['reduce'] = FALSE;
+    $this->options['expose']['value_form_type'] = 'select';
+    $this->options['expose']['placeholder'] = '- Select a Digital Object -';
   }
 
   protected function valueSubmit($form, FormStateInterface $form_state) {
@@ -302,7 +307,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         'Select the fields that will be filtered against the corresponding values resolved from the Node used as query input.'
       ),
       '#options'       => $fields,
-      '#size'          => min(4, count($fields)),
+      '#size'          => min(6, count($fields)),
       '#multiple'      => TRUE,
       '#default_value' => $this->options['sbf_fields'],
       '#required'      => TRUE,
@@ -327,7 +332,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     function is_numeric($var) {
       return is_numeric($var);
     }
-
+    /* This does not allow mixed Ids and UUIDs.. i guess that is OK */
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
         ['id' => $this->value]
@@ -340,34 +345,47 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     }
     if (!$form_state->get('exposed')) {
       $form['value'] = [
-        '#type'               => 'sbf_entity_autocomplete_uuid',
-        '#title'              => $this->t('ADOs'),
-        '#description'        => $this->t(
+        '#type' => 'sbf_entity_autocomplete_uuid',
+        '#title' => $this->t('ADOs'),
+        '#description' => $this->t(
           'Enter a comma separated list of Archipelago Digital Objects.'
         ),
-        '#target_type'        => 'node',
-        '#tags'               => TRUE,
-        '#default_value'      => $nodes,
-        '#selection_handler'  => 'default:nodewithstrawberry',
-        '#validate_reference' => TRUE,
+        '#target_type' => 'node',
+        '#tags' => TRUE,
+        '#default_value' => $nodes,
+        '#selection_handler' => 'default:nodewithstrawberry',
+        '#validate_reference'=> TRUE,
       ];
     }
-    else {
+    elseif ($this->isExposed()) {
       if ($this->options['views_source_ids']) {
         $options = $this->readExposedOptionsForSelectFromView();
         $view_parts = explode(':', $this->options['views_source_ids']);
+        $form['value'] = [];
         if (count($view_parts) == 2) {
-          $form_value_selection = [
-            '#selection_handler'  => 'solr_views',
-            '#validate_reference' => TRUE,
-            '#selection_settings' => [
-              'view' => [
-                'view_name'    => $view_parts[0],
-                'display_name' => $view_parts[1],
-                'arguments'    => [],
+          if ($this->options['expose']['value_form_type'] == 'select') {
+            $form['value'] = [
+              '#type'          => 'select',
+              '#title'         => t('Select an ADO'),
+              '#options'       => $options,
+              '#empty_option'  => $this->options['expose']['placeholder'],
+              '#default_value' => $nodes ? $this->value : [],
+            ];
+            $form_value_selection = [];
+          }
+          else {
+            $form_value_selection = [
+              '#selection_handler'  => 'solr_views',
+              '#validate_reference' => TRUE,
+              '#selection_settings' => [
+                'view' => [
+                  'view_name'    => $view_parts[0],
+                  'display_name' => $view_parts[1],
+                  'arguments'    => [],
+                ],
               ],
-            ],
-          ];
+            ];
+          }
         }
         else {
           $form_value_selection = [
@@ -379,7 +397,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
           ];
         }
       }
-      $form['value'] = [
+      $form['value'] = $form['value'] + [
           '#type'        => 'entity_autocomplete',
           '#title'       => t('Select an ADO'),
           '#target_type' => 'node',
@@ -400,13 +418,12 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $node_uuids = [];
     if ($values = $form_state->getValue(['options', 'value'])) {
       foreach ($values as $value) {
-        $node_uuids[] = $value;
+        $node_uuids_or_ids[] = $value;
       }
-      sort($node_uuids);
+      sort($node_uuids_or_ids);
     }
-    $form_state->setValue(['options', 'value'], $node_uuids);
+    $form_state->setValue(['options', 'value'], $node_uuids_or_ids);
   }
-
 
   public function hasExtraOptions() {
     return TRUE;
