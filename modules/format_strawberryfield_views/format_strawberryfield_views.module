@@ -200,9 +200,9 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
 
       $ado_filter = _search_api_views_find_field_alias('sbf_ado_filter', $table);
       $table[$ado_filter] = [
-        'title'  => t('Similar ADO Filter'),
+        'title'  => t('Similar ADO Filter (Experimental)'),
         'group' => t('Search'),
-        'help' => t('Filters one or more Node Entity against Search API fields, resolving dynamically values for the input Node(s) using the destination Field property paths'),
+        'help' => t('Filters one or more Node Entity against Search API fields, resolving dynamically values for the input Node(s) using the destination Field property paths.'),
         'filter' => [
           'title' => t('Similar ADO Filter'),
           'field' => 'id',
