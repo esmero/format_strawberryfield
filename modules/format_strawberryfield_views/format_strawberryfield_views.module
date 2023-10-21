@@ -185,7 +185,7 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
 
       $sbf_join_field = _search_api_views_find_field_alias('sbf_flavors_join', $table);
       $table[$sbf_join_field] = [
-        'title'  => t('Strawberry Flavor to Node Join.'),
+        'title'  => t('Strawberry Flavor to Node Join'),
         'group' => t('Search'),
         'help' => t('Joins Strawberry Flavor Search API datasources (e.g OCR) to Nodes (ADO) when doing a Full Text Search.'),
         'filter' => [
@@ -200,11 +200,11 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
 
       $ado_filter = _search_api_views_find_field_alias('sbf_ado_filter', $table);
       $table[$ado_filter] = [
-        'title'  => t('Related ADO Filter'),
+        'title'  => t('Similar ADO Filter'),
         'group' => t('Search'),
-        'help' => t('Filters against several or all fields, that contain an ADO entity reference in their property paths, against other ADOs via UUIDs'),
+        'help' => t('Filters one or more Node Entity against Search API fields, resolving dynamically values for the input Node(s) using the destination Field property paths'),
         'filter' => [
-          'title' => t('Related ADO Filter'),
+          'title' => t('Similar ADO Filter'),
           'field' => 'id',
           'id'    => 'sbf_ado_filter',
         ],

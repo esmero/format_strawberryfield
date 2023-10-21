@@ -46,14 +46,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
 
   protected $alwaysMultiple = TRUE;
 
-
-  /**
-   * The parse mode manager.
-   *
-   * @var \Drupal\search_api\ParseMode\ParseModePluginManager|null
-   */
-  protected $parseModeManager;
-
   /**
    * Stores the exposed input for this filter.
    *
@@ -107,9 +99,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $plugin = parent::create(
       $container, $configuration, $plugin_id, $plugin_definition
     );
-    $plugin->setParseModeManager(
-      $container->get('plugin.manager.search_api.parse_mode')
-    );
+
     $plugin->setNodeStorage(
       $container->get('entity_type.manager')->getStorage('node')
     );
@@ -161,6 +151,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $options = parent::defineOptions();
     $options['value']['default'] = [];
     $options['operator']['default'] = 'or';
+    $options['internal_operator']['default'] = 'and';
     $options['views_source_ids'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
     $options['expose']['contains']['value_form_type'] = ['default' => 'autocomplete'];
@@ -183,58 +174,29 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
   }
 
   /**
-   * Retrieves the parse mode manager.
-   *
-   * @return \Drupal\search_api\ParseMode\ParseModePluginManager
-   *   The parse mode manager.
-   */
-  public function getParseModeManager() {
-    return $this->parseModeManager
-      ?: \Drupal::service(
-        'plugin.manager.search_api.parse_mode'
-      );
-  }
-
-  /**
-   * Sets the parse mode manager.
-   *
-   * @param \Drupal\search_api\ParseMode\ParseModePluginManager $parse_mode_manager
-   *   The new parse mode manager.
-   *
-   * @return $this
-   */
-  public function setParseModeManager(ParseModePluginManager $parse_mode_manager
-  ) {
-    $this->parseModeManager = $parse_mode_manager;
-    return $this;
-  }
-
-
-  /**
    * Sets the Node Storage.
    *
    * @param \Drupal\node\NodeStorageInterface $nodestorage
-   *   The new parse mode manager.
+   *   The node storage.
    *
    * @return $this
    */
+
   public function setNodeStorage(NodeStorageInterface $nodestorage) {
     $this->nodeStorage = $nodestorage;
     return $this;
   }
-
 
   public function setFieldsHelper(FieldsHelperInterface $fieldsHelper) {
     $this->fieldsHelper = $fieldsHelper;
     return $this;
   }
 
-
   /**
    * Sets the View Storage.
    *
    * @param \Drupal\Core\Entity\EntityStorageInterface $viewstorage
-   *   The new parse mode manager.
+   *   The view Storage.
    *
    * @return $this
    */
@@ -242,7 +204,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $this->viewStorage = $viewstorage;
     return $this;
   }
-
 
   /**
    * Sets the Cache Backed.
@@ -263,34 +224,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
     parent::buildOptionsForm($form, $form_state);
 
-    /* The plan:
-    - Only allow fields that have somewhere in their property path a entity reference or are
-    directly tied to a NODE entity except the nid, uuid. For flavors or any other data sources, including
-    datasource id  == null (processor fields/aggregated fields) we need to traverse before even allowing the field
-    to be configured. Also we need to re-check the field on queries in case the field definition changed?
-    We can see/test \Drupal\search_api\Utility\TrackingHelper::getForeignEntityRelationsMap since that basically does something
-    similar, even if protected... mimic the basics there
-    - On Field selection/saving of settings also save the property path UNTIL a entity is hit, that way
-    - we can save some time on the query? This has issues in case the field changes afterwards
-    but that is true for even the full text search so maybe not needed
-    - On query either reprocess the property paths again, or use the already processed subpaths we want.
-    - Create a field on the fly with these cut/down properties (if cut down, if not we can reuse the existing fields!)
-    maybe this \Drupal\search_api\Utility\FieldsHelperInterface::createFieldFromProperty ?
-    - Evaluate the fields using the loaded item (the query ADO) and get the values for each. These are already mapped
-    to each target field.
-    - Generate a query using AND or OR (depending on the internal settings, so we need to expose that too?)
-    querying against the real indexed field with the resolved from the query ADO values against these partial paths
-    - For the exposed form, allow a select box or autocomplete be generated from a View using the extra form
-    we have (which i can bring into the exposed one instead (better).
-    - For testing, start first with a fixed UUID (or ID, we should allow both) and then go from there.
-    */
-
-    /* Oct 18th. Note to myself. The Views user to fill up the exposed Options need to allow/checkbox
-    to pass any relationships/contextual values passed to this views. Why?
-    e.g i want to only show collections that are part of the View currently being showed.
-    If i don't allow this, every option will have to be static which basically defeats the purpose of having a view
-    driving the exposed options. I can do this using the same/siliar logic of the Open Pull towards OpenAPI integration */
-
     $fields = $this->getSbfNodeFields() ?? [];
     // Note we can not use a manyToOne class as base
     // because _search_api_views_handler_mapping() does not evaluate a fields full property path
@@ -299,20 +232,42 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     // instead of what we will do there which is a Node resolved against a property path (a field) against a value
 
     $form['sbf_fields'] = [
-      '#type'          => 'select',
-      '#title'         => $this->t(
+      '#type' => 'select',
+      '#title' => $this->t(
         'Node based Entity Reference (or in its property path) Fields that need to match.'
       ),
-      '#description'   => $this->t(
+      '#description' => $this->t(
         'Select the fields that will be filtered against the corresponding values resolved from the Node used as query input.'
       ),
-      '#options'       => $fields,
-      '#size'          => min(6, count($fields)),
-      '#multiple'      => TRUE,
+      '#options' => $fields,
+      '#size' => min(6, count($fields)),
+      '#multiple' => TRUE,
       '#default_value' => $this->options['sbf_fields'],
-      '#required'      => TRUE,
+      '#required' => TRUE,
     ];
   }
+
+  /**
+   * Shortcut to display the operator form.
+   */
+  public function showOperatorForm(&$form, FormStateInterface $form_state) {
+    $this->operatorForm($form, $form_state);
+    $form['operator']['#prefix'] = '<div class="views-group-box views-left-30">';
+    $form['operator']['#suffix'] = '</div>';
+    $form['operator']['#title'] = $this->t('Resolved Values Operator');
+    $form['internal_operator'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('Interfield Operator'),
+      '#default_value' => $this->options['internal_operator'] ?? 'or',
+      '#options' => [
+        'and'=>'AND',
+        'or'=>'OR',
+      ]
+    ];
+    $form['internal_operator']['#prefix'] = '<div class="views-group-box views-left-30">';
+    $form['internal_operator']['#suffix'] = '</div>';
+  }
+
 
   public function submitOptionsForm(&$form, FormStateInterface $form_state) {
     parent::submitOptionsForm(
@@ -363,10 +318,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         if (count($view_parts) == 2) {
           if ($this->options['expose']['value_form_type'] == 'select') {
             $form['value'] = [
-              '#type'          => 'select',
-              '#title'         => t('Select an ADO'),
-              '#options'       => $options,
-              //'#default_value' => $this->value,
+              '#type' => 'select',
+              '#title' => t('Select an ADO'),
+              '#options' => $options,
             ];
             $form_value_selection = [];
           }
@@ -376,9 +330,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
               '#validate_reference' => TRUE,
               '#selection_settings' => [
                 'view' => [
-                  'view_name'    => $view_parts[0],
+                  'view_name' => $view_parts[0],
                   'display_name' => $view_parts[1],
-                  'arguments'    => [],
+                  'arguments' => [],
                 ],
               ],
             ];
@@ -386,10 +340,9 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         }
         else {
           $form_value_selection = [
-            '#target_type'        => 'node',
-            '#tags'               => TRUE,
-            '#selection_handler'  => 'default:nodewithstrawberry',
-            //'#default_value'      => $nodes,
+            '#target_type' => 'node',
+            '#tags' => TRUE,
+            '#selection_handler' => 'default:nodewithstrawberry',
             '#validate_reference' => TRUE,
           ];
         }
@@ -443,28 +396,31 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     parent::buildExposeForm($form, $form_state);
 
     $form['expose']['placeholder'] = [
-      '#type'          => 'textfield',
+      '#type' => 'textfield',
       '#default_value' => $this->options['expose']['placeholder'],
-      '#title'         => $this->t('Placeholder'),
-      '#size'          => 40,
-      '#description'   => $this->t(
+      '#title' => $this->t('Placeholder'),
+      '#size' => 40,
+      '#description' => $this->t(
         'Hint text that appears inside the field when empty when using the autocomplete widget'
       ),
     ];
 
     $form['expose']['value_form_type'] = [
-      '#type'          => 'radios',
+      '#type' => 'radios',
       '#default_value' => $this->options['expose']['value_form_type'],
-      '#options'       => [
+      '#options'  => [
         'autocomplete' => 'autocomplete',
-        'select'       => 'select',
-        'checkboxes'   => 'checkboxes',
+        'select' => 'select',
+        'checkboxes' => 'checkboxes',
       ],
-      '#title'         => $this->t('Type of exposed Widget'),
-      '#description'   => $this->t(
+      '#title' => $this->t('Type of exposed Widget'),
+      '#description'=> $this->t(
         'Either a text autocomplete field, a select or checkboxes'
       ),
     ];
+    // No need to reduce here bc the options are driven by a View. The admin
+    // is responsible for reducing what is available.
+    unset($form['expose']['reduce']);
   }
 
 
@@ -475,20 +431,20 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $options['null'] = '- Do not use a Views -';
     if (empty($this->definition['views'])) {
       $form['views_source_ids'] = [
-        '#type'          => 'radios',
-        '#title'         => $this->t('View'),
-        '#options'       => $options,
-        '#description'   => $this->t(
+        '#type' => 'radios',
+        '#title' => $this->t('View'),
+        '#options' => $options,
+        '#description' => $this->t(
           'Select which View to use to show/generate ADOs list in the regular options .'
         ),
         '#default_value' => $this->options['views_source_ids'],
       ];
       $form['views_source_inherit_relationship'] = [
-        '#type'          => 'checkbox',
-        '#title'         => $this->t(
+        '#type' => 'checkbox',
+        '#title' => $this->t(
           'Inherit this Views\' Relationships or Context'
         ),
-        '#description'   => $this->t(
+        '#description' => $this->t(
           'This allows the main View to pass its Contextual Values to the Views that generates the Exposed Options.'
         ),
         '#default_value' => $this->options['views_source_inherit_relationship'],
@@ -604,19 +560,20 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     if (empty($resolved_values)) {
       return;
     }
-    if ($this->operator == 'and') {
-      $condition_group = $this->getQuery()->createConditionGroup();
-      $this->getQuery()->addConditionGroup(
+    $internal_operator = $this->options['internal_operator'] ?? 'OR';
+    $internal_operator = strtoupper($internal_operator);
+    $condition_group = $this->getQuery()->createConditionGroup($internal_operator);
+    $this->getQuery()->addConditionGroup(
         $condition_group, $this->options['group']
-      );
-    }
+    );
+
 
     foreach($resolved_values as $field_id => $field_values) {
       if ($this->operator !== 'and') {
         $operator = $this->operator === 'not' ? 'NOT IN' : 'IN';
-        $this->getQuery()->addCondition($field_id, $field_values, $operator, $this->options['group']);
+        $condition_group->addCondition($field_id, $field_values, $operator, $this->options['group']);
       }
-      elseif ($condition_group) {
+      else {
         foreach ((array) $field_values as $value) {
           $condition_group->addCondition($field_id, $value, '=');
         }
