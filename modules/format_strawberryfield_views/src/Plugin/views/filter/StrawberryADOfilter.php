@@ -329,9 +329,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     // Config will be shown for the end user
     // Not what we want!
     // problem here. Views will return an ID, we want UUIDs ...
-    function is_numeric($var) {
-      return is_numeric($var);
-    }
+
     /* This does not allow mixed Ids and UUIDs.. i guess that is OK */
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
@@ -368,8 +366,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
               '#type'          => 'select',
               '#title'         => t('Select an ADO'),
               '#options'       => $options,
-              '#empty_option'  => $this->options['expose']['placeholder'],
-              '#default_value' => $nodes ? $this->value : [],
+              //'#default_value' => $this->value,
             ];
             $form_value_selection = [];
           }
@@ -392,11 +389,15 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
             '#target_type'        => 'node',
             '#tags'               => TRUE,
             '#selection_handler'  => 'default:nodewithstrawberry',
-            '#default_value'      => $nodes,
+            //'#default_value'      => $nodes,
             '#validate_reference' => TRUE,
           ];
         }
       }
+      if (!empty($this->options['expose']['placeholder']) && !in_array($this->options['expose']['value_form_type'],['select','checkboxes'])) {
+        $form['value']['#attributes']['placeholder'] = $this->options['expose']['placeholder'];
+      }
+
       $form['value'] = $form['value'] + [
           '#type'        => 'entity_autocomplete',
           '#title'       => t('Select an ADO'),
@@ -409,14 +410,19 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     if ($form_state->get('exposed')
       && !isset($user_input[$this->options['expose']['identifier']])
     ) {
-      $user_input[$this->options['expose']['identifier']] = $default_value;
-      $form_state->setUserInput($user_input);
+      // Don't do this for select boxes. Why? the default value setup might not
+      // be present in a View generating the options and thus an error will pop up
+      if (!in_array($this->options['expose']['value_form_type'],['select','checkboxes'])) {
+        $user_input[$this->options['expose']['identifier']] = $this->value;
+        $form_state->setUserInput($user_input);
+      }
     }
   }
 
   protected function valueValidate($form, FormStateInterface $form_state) {
     $node_uuids = [];
     if ($values = $form_state->getValue(['options', 'value'])) {
+      if (!is_array($values)) { (array) $values;}
       foreach ($values as $value) {
         $node_uuids_or_ids[] = $value;
       }
@@ -442,7 +448,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
       '#title'         => $this->t('Placeholder'),
       '#size'          => 40,
       '#description'   => $this->t(
-        'Hint text that appears inside the field when empty or as "empty option" when using select widget'
+        'Hint text that appears inside the field when empty when using the autocomplete widget'
       ),
     ];
 
@@ -540,11 +546,18 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
 
     */
     $query = $this->getQuery();
-    $nodes = $this->value ? $this->nodeStorage->loadByProperties(
-      ['uuid' => $this->value]
-    ) : [];
-    $data = $this->getEntityRelationsForFields($this->options['sbf_fields']);
+    if (array_filter($this->value, 'is_numeric') === $this->value) {
+      $nodes = $this->value ? $this->nodeStorage->loadByProperties(
+        ['id' => $this->value]
+      ) : [];
+    }
+    else {
+      $nodes = $this->value ? $this->nodeStorage->loadByProperties(
+        ['uuid' => $this->value]
+      ) : [];
+    }
 
+    $data = $this->getEntityRelationsForFields($this->options['sbf_fields']);
     $resolved_values = [];
     foreach ($nodes as $node) {
       foreach ($data as $field_id => $field_data) {
@@ -625,18 +638,67 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         );
       }
     }
-    elseif (!empty($this->value)) {
-      $errors[] = $this->t(
-        'The value @value is not an array for @operator on filter: @filter', [
-          '@value'    => var_export($this->value, TRUE),
-          '@operator' => $this->operator,
-          '@filter'   => $this->adminLabel(TRUE),
-        ]
-      );
+    elseif (!empty($this->value) && !is_scalar($this->value)) {
+      // We allow a single scalar value to pass trough. We will cast back into array
+      // when/if needed. This is because we allow a select box to be used too.
+        $errors[] = $this->t(
+          'The value @value is not an array for @operator on filter: @filter', [
+            '@value'    => var_export($this->value, TRUE),
+            '@operator' => $this->operator,
+            '@filter'   => $this->adminLabel(TRUE),
+          ]
+        );
     }
     return $errors;
   }
 
+  public function validateExposed(&$form, FormStateInterface $form_state) {
+    // Only validate exposed input.
+    if (empty($this->options['exposed'])
+      || empty($this->options['expose']['identifier'])
+    ) {
+      return;
+    }
+
+    $identifier = $this->options['expose']['identifier'];
+    $input = $form_state->getValue($identifier);
+
+    if ($this->options['is_grouped'] && isset($this->options['group_info']['group_items'][$input])) {
+      $this->operator = $this->options['group_info']['group_items'][$input]['operator'];
+      $input = $this->options['group_info']['group_items'][$input]['value'];
+    }
+
+    $node_uuids_or_ids = [];
+    $values = (array) $form_state->getValue($identifier);
+
+
+    if ($values &&
+      (!$this->options['is_grouped'] && ($this->options['expose']['value_form_type'] != 'select' && $input != 'All')) ||
+        ($this->options['is_grouped'] && ($input != 'All'))
+      ) {
+      foreach ($values as $value) {
+        $node_uuids_or_ids[] = is_scalar($value) ? $value : NULL;
+      }
+    }
+    $node_uuids_or_ids = array_filter($node_uuids_or_ids);
+    if ($node_uuids_or_ids) {
+      $this->validated_exposed_input = $uids;
+    }
+  }
+
+
+  public function acceptExposedInput($input) {
+    $rc = parent::acceptExposedInput($input);
+
+    if ($rc) {
+      // If we have previously validated input, override.
+      if (isset($this->validated_exposed_input)) {
+        $this->value = $this->validated_exposed_input;
+      }
+    }
+
+    return $rc;
+  }
 
   /**
    * Retrieves a list of all fields that contain in its path a Node Entity.
@@ -940,13 +1002,21 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
           $executable->setDisplay($view_parts[1]);
           //$executable->setArguments(array_values($arguments));
           $views_validation = $executable->validate();
+
+          // Check if we need to inherit this views arguments and pass them to
+          // the exposed options generating one.
+          $args = $this->options['views_source_inherit_relationship'] ? $this->view->args : [];
+          if (!empty($args)) {
+            $executable->setArguments($args);
+          }
+
           if (empty($views_validation)) {
             try {
               $this->getRenderer()->executeInRenderContext(
                 new RenderContext(),
                 function () use ($executable) {
                   // Damn view renders forms and stuff. GOSH!
-                  $executable->execute();
+                  $executable->execute($view_parts[1]);
                 }
               );
             } catch (\InvalidArgumentException $exception) {
