@@ -154,7 +154,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $options['internal_operator']['default'] = 'and';
     $options['views_source_ids'] = ['default' => []];
     $options['sbf_fields'] = ['default' => []];
-    $options['expose']['contains']['value_form_type'] = ['default' => 'autocomplete'];
+    $options['expose']['contains']['value_form_type'] = ['default' => 'select'];
     $options['expose']['contains']['placeholder'] = ['default' => ''];
     return $options;
   }
@@ -286,10 +286,11 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     // problem here. Views will return an ID, we want UUIDs ...
 
     /* This does not allow mixed Ids and UUIDs.. i guess that is OK */
+    $nodes = [];
     $this->value = is_array($this->value) ? $this->value : (array) $this->value;
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
-        ['id' => $this->value]
+        ['nid' => $this->value]
       ) : [];
     }
     else {
@@ -313,14 +314,15 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     }
     elseif ($this->isExposed()) {
       if ($this->options['views_source_ids']) {
-        $options = $this->readExposedOptionsForSelectFromView();
         $view_parts = explode(':', $this->options['views_source_ids']);
         $form['value'] = [];
         if (count($view_parts) == 2) {
           if ($this->options['expose']['value_form_type'] == 'select') {
+            // only call the options if we are going to show all of them
+            $options = $this->readExposedOptionsForSelectFromView();
             $form['value'] = [
-              '#type' => 'select',
-              '#title' => t('Select an ADO'),
+              '#type' => $this->options['expose']['value_form_type'],
+              '#title' => $this->options['expose']['placeholder'],
               '#options' => $options,
             ];
             $form_value_selection = [];
@@ -348,7 +350,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
           ];
         }
       }
-      if (!empty($this->options['expose']['placeholder']) && !in_array($this->options['expose']['value_form_type'],['select','checkboxes'])) {
+      if (!empty($this->options['expose']['placeholder']) && $this->options['expose']['value_form_type'] !== 'select') {
         $form['value']['#attributes']['placeholder'] = $this->options['expose']['placeholder'];
       }
 
@@ -357,19 +359,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
           '#title'       => t('Select an ADO'),
           '#target_type' => 'node',
         ] + $form_value_selection;
-    }
-
-
-    $user_input = $form_state->getUserInput();
-    if ($form_state->get('exposed')
-      && !isset($user_input[$this->options['expose']['identifier']])
-    ) {
-      // Don't do this for select boxes. Why? the default value setup might not
-      // be present in a View generating the options and thus an error will pop up
-      if (!in_array($this->options['expose']['value_form_type'],['select','checkboxes'])) {
-        $user_input[$this->options['expose']['identifier']] = $this->value;
-        $form_state->setUserInput($user_input);
-      }
     }
   }
 
@@ -411,12 +400,11 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
       '#default_value' => $this->options['expose']['value_form_type'],
       '#options'  => [
         'autocomplete' => 'autocomplete',
-        'select' => 'select',
-        'checkboxes' => 'checkboxes',
+        'select' => 'select'
       ],
       '#title' => $this->t('Type of exposed Widget'),
       '#description'=> $this->t(
-        'Either a text autocomplete field, a select or checkboxes'
+        'Either a text autocomplete field or a Select. Select requires a View driving the list. See extra settings for this field.'
       ),
     ];
     // No need to reduce here bc the options are driven by a View. The admin
@@ -514,7 +502,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $query = $this->getQuery();
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
-        ['id' => $this->value]
+        ['nid' => $this->value]
       ) : [];
     }
     else {
