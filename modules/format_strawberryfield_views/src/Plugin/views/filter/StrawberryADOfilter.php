@@ -545,6 +545,16 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     - DOne.
 
     */
+    if (empty($this->value)) {
+      return;
+    }
+    // Select boxes will always generate a single value.
+    // I could check here or cast sooner on validation?
+    if (!is_array($this->value)) {
+      $this->value = (array) $this->value;
+    }
+
+
     $query = $this->getQuery();
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
@@ -591,11 +601,28 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         }
       }
     }
+    if (empty($resolved_values)) {
+      return;
+    }
+    if ($this->operator == 'and') {
+      $condition_group = $this->getQuery()->createConditionGroup();
+      $this->getQuery()->addConditionGroup(
+        $condition_group, $this->options['group']
+      );
+    }
 
-
-    $backend = $query->getIndex()->getServerInstance()->getBackend();
-    $full_text = NULL;
-    $type = NULL;
+    foreach($resolved_values as $field_id => $field_values) {
+      if ($this->operator !== 'and') {
+        $operator = $this->operator === 'not' ? 'NOT IN' : 'IN';
+        $this->getQuery()->addCondition($field_id, $field_values, $operator, $this->options['group']);
+      }
+      elseif ($condition_group) {
+        foreach ((array) $field_values as $value) {
+          $condition_group->addCondition($field_id, $value, '=');
+        }
+      }
+    }
+    return;
   }
 
 
@@ -641,13 +668,13 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     elseif (!empty($this->value) && !is_scalar($this->value)) {
       // We allow a single scalar value to pass trough. We will cast back into array
       // when/if needed. This is because we allow a select box to be used too.
-        $errors[] = $this->t(
-          'The value @value is not an array for @operator on filter: @filter', [
-            '@value'    => var_export($this->value, TRUE),
-            '@operator' => $this->operator,
-            '@filter'   => $this->adminLabel(TRUE),
-          ]
-        );
+      $errors[] = $this->t(
+        'The value @value is not an array for @operator on filter: @filter', [
+          '@value'    => var_export($this->value, TRUE),
+          '@operator' => $this->operator,
+          '@filter'   => $this->adminLabel(TRUE),
+        ]
+      );
     }
     return $errors;
   }
@@ -674,8 +701,8 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
 
     if ($values &&
       (!$this->options['is_grouped'] && ($this->options['expose']['value_form_type'] != 'select' && $input != 'All')) ||
-        ($this->options['is_grouped'] && ($input != 'All'))
-      ) {
+      ($this->options['is_grouped'] && ($input != 'All'))
+    ) {
       foreach ($values as $value) {
         $node_uuids_or_ids[] = is_scalar($value) ? $value : NULL;
       }
@@ -823,13 +850,12 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     if (!$datasource) {
       return [];
     }
-
+    // path_to_resolve is not added here so we can actually + the arrays.
     $relation_info = [
       'datasource'      => $datasource->getPluginId(),
       'entity_type'     => NULL,
       'type'            => $field->getType(),
       'bundles'         => NULL,
-      'path_to_resolve' => NULL,
     ];
     $seen_path_chunks = [];
     $usable_path_chunks = [];
@@ -1014,7 +1040,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
             try {
               $this->getRenderer()->executeInRenderContext(
                 new RenderContext(),
-                function () use ($executable) {
+                function () use ($executable, $view_parts) {
                   // Damn view renders forms and stuff. GOSH!
                   $executable->execute($view_parts[1]);
                 }
