@@ -286,6 +286,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     // problem here. Views will return an ID, we want UUIDs ...
 
     /* This does not allow mixed Ids and UUIDs.. i guess that is OK */
+    $this->value = is_array($this->value) ? $this->value : (array) $this->value;
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
         ['id' => $this->value]
@@ -510,7 +511,6 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
       $this->value = (array) $this->value;
     }
 
-
     $query = $this->getQuery();
     if (array_filter($this->value, 'is_numeric') === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
@@ -549,8 +549,8 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
             foreach ($property_fields as $field) {
               $field_values = $field->getValues();
               sort($field_values);
-              if (!isset($values[$property_path])) {
-                $resolved_values[$field_id] = $field_values;
+              if (!isset($field_values[$property_path])) {
+                $resolved_values[$field_id] = array_unique($field_values);
               }
             }
           }
@@ -571,7 +571,11 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     foreach($resolved_values as $field_id => $field_values) {
       if ($this->operator !== 'and') {
         $operator = $this->operator === 'not' ? 'NOT IN' : 'IN';
-        $condition_group->addCondition($field_id, $field_values, $operator, $this->options['group']);
+        if (!empty($field_values)) {
+          $condition_group->addCondition(
+            $field_id, $field_values, $operator, $this->options['group']
+          );
+        }
       }
       else {
         foreach ((array) $field_values as $value) {
