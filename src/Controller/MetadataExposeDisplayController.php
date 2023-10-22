@@ -17,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
-use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
+use Symfony\Component\Mime\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
@@ -52,7 +52,7 @@ class MetadataExposeDisplayController extends ControllerBase {
   /**
    * The MIME type guesser.
    *
-   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   * @var \Symfony\Component\Mime\MimeTypeGuesserInterface
    */
   protected $mimeTypeGuesser;
 
@@ -72,7 +72,7 @@ class MetadataExposeDisplayController extends ControllerBase {
    *   The Entity Type Manager.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The Drupal Renderer Service.
-   * @param \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface $mime_type_guesser
+   * @param \Symfony\Component\Mime\MimeTypeGuesserInterface $mime_type_guesser
    *   The Drupal Mime type guesser Service.
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
@@ -172,7 +172,7 @@ class MetadataExposeDisplayController extends ControllerBase {
         $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
         // Gues mimetype using $format.
-        $mimetype = $this->mimeTypeGuesser->guess($format);
+        $mimetype = $this->mimeTypeGuesser->guessMimeType($format);
         if ($mimetype != $responsetype) {
           $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], 415);
           return $badresponse;

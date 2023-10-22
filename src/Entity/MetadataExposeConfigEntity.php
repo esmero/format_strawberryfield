@@ -412,7 +412,7 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
     }
     else {
       $guesser = ExtensionGuesser::getInstance();
-      $extension = $guesser->guess($responsetype);
+      $extension = $guesser->guessMimeType($responsetype);
     }
 
     $filename = !empty($extension) ? 'default.' . $extension : 'default.html';
