@@ -950,7 +950,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   private function rewriteFieldLabels($options) {
-    $lines = explode("\n", trim($this->options['fields_label_replace']));
+    $lines = explode("\n", trim($this->options['fields_label_replace'] ?? ''));
     foreach ($lines as $line) {
       if (strpos($line, '|') !== FALSE) {
         [$search, $replace] = array_map('trim', explode('|', $line));

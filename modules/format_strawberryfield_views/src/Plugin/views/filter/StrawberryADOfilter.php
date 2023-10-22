@@ -314,7 +314,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     }
     elseif ($this->isExposed()) {
       if ($this->options['views_source_ids']) {
-        $view_parts = explode(':', $this->options['views_source_ids']);
+        $view_parts = explode(':', $this->options['views_source_ids'] ?? '');
         $form['value'] = [];
         if (count($view_parts) == 2) {
           if ($this->options['expose']['value_form_type'] == 'select') {
@@ -740,7 +740,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
           $fields[$field_id] = $field->getPrefixedLabel() . '('
             . $field->getFieldIdentifier() . ' ' . $property_path . ')';
         }
-        $property_path_parts = explode(":", $property_path);
+        $property_path_parts = explode(":", $property_path ?? '');
         if (end($property_path_parts) == "nid"
           || $property_path == 'parent_id'
         ) {
@@ -965,7 +965,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $view_parts = [];
     $options = [];
     if ($this->options['views_source_ids']) {
-      $view_parts = explode(':', $this->options['views_source_ids']);
+      $view_parts = explode(':', $this->options['views_source_ids'] ?? '');
     }
     if (count($view_parts) == 2) {
       $view = $this->viewStorage->load($view_parts[0]);

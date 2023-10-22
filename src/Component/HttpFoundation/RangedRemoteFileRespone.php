@@ -60,11 +60,11 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
         // Do X-Accel-Mapping substitutions.
         // @link https://www.nginx.com/resources/wiki/start/topics/examples/x-accel/#x-accel-redirect
         foreach (explode(',', $request->headers->get('X-Accel-Mapping', '')) as $mapping) {
-          $mapping = explode('=', $mapping, 2);
+          $mapping = explode('=', $mapping ?? '', 2);
 
           if (2 === \count($mapping)) {
-            $pathPrefix = trim($mapping[0]);
-            $location = trim($mapping[1]);
+            $pathPrefix = trim($mapping[0] ?? '');
+            $location = trim($mapping[1] ?? '');
 
             if (substr($path, 0, \strlen($pathPrefix)) === $pathPrefix) {
               $path = $location.substr($path, \strlen($pathPrefix));
@@ -83,7 +83,7 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
     } elseif ($request->headers->has('Range')) {
       // Process the range headers.
       if (!$request->headers->has('If-Range') || $this->hasValidIfRangeHeader($request->headers->get('If-Range'))) {
-        $range = $request->headers->get('Range');
+        $range = $request->headers->get('Range') ?? '';
 
         [$start, $end] = explode('-', substr($range, 6), 2) + [0];
 
