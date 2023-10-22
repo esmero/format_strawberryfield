@@ -151,8 +151,7 @@ jsm_model_strawberry:
     js/jsm-model_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/iiif_formatstrawberryfield_utils
