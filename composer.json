@@ -1,6 +1,6 @@
 {
     "name": "strawberryfield/format_strawberryfield",
-    "description": "Strawberryfield Mash/Smash/extractor/formatters for Drupal 9",
+    "description": "Strawberryfield Mash/Smash/extractor/formatters for Drupal 9/10",
     "license": "GPL-2.0+",
     "type": "drupal-module",
     "homepage": "https://github.com/esmero/format_strawberryfield",
@@ -13,7 +13,7 @@
         }
     ],
     "require": {
-        "strawberryfield/strawberryfield":"1.1.0.x-dev",
+        "strawberryfield/strawberryfield":"1.2.0.x-dev",
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^6.1.4",
