@@ -235,7 +235,7 @@ mirador_custom_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 uv_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/uv_strawberry.js: {minified: false}
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
@@ -271,7 +271,6 @@ leaflet_subgroup:
   js:
     https://cdn.jsdelivr.net/npm/leaflet.featuregroup.subgroup@1.0.2/dist/leaflet.featuregroup.subgroup.js : { external: true, minified: true, preprocess: false}
 
-
 leaflet_core:
   version: 1.9.4
   license:
@@ -305,12 +304,12 @@ leaflet_ajax:
     - format_strawberryfield/leaftleft_iiif_bound
 
 leaflet_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/leaflet_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
@@ -375,13 +374,12 @@ opencv:
     https://docs.opencv.org/4.5.0/opencv.js: { external: true, minified: true, preprocess: false}
 
 w3cWebAnnotations_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/w3cWebAnnon_strawberry.js: { minified: false }
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupalSettings
 

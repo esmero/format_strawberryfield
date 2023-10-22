@@ -1,12 +1,11 @@
-(function ($, Drupal, drupalSettings, L) {
+(function ($, Drupal, once, drupalSettings, L) {
 
   'use strict';
 
   Drupal.behaviors.format_strawberryfield_leaflet_initiate = {
     attach: function(context, settings) {
-      $('.strawberry-leaflet-item[data-iiif-infojson]').once('attache_leaflet')
-        .each(function (index, value) {
-
+      const elementsToAttach = once('attache_leaflet', '.strawberry-leaflet-item[data-iiif-infojson]', context);
+      $(elementsToAttach).each(function (index, value) {
           var $featurecount = 0;
           function popUpFeature(feature, layer){
             var popupText = feature.properties.name +"<br>";
@@ -222,4 +221,4 @@
             });
           }
         })}}
-})(jQuery, Drupal, drupalSettings, window.L);
+})(jQuery, Drupal, once, drupalSettings, window.L);
