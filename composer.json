@@ -17,6 +17,8 @@
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^6.1.4",
+        "drupal/jquery_ui_slider":"^2",
+        "drupal/jquery_ui_effects":"^2",
         "ext-json": "*",
 	"seboettg/citeproc-php": "dev-master"
     }
