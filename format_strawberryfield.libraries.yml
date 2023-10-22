@@ -219,7 +219,7 @@ mirador_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_custom_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/mirador_strawberry.js: {minified: false}
   css:
@@ -228,7 +228,7 @@ mirador_custom_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/mirador_archipelago_custom
     - format_strawberryfield/mirador_font
@@ -242,7 +242,7 @@ uv_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/universalviewer
     - format_strawberryfield/iiif_formatstrawberryfield_utils
