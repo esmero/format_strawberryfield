@@ -77,11 +77,11 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
     - core/jquery
-    - core/jquery.ui
-    - core/jquery.ui.slider
-    - core/jquery.ui.effects.core
+    - jquery_ui_slider/slider
+    - jquery_ui_effects/core
     - core/drupal
     - core/drupalSettings
 
@@ -93,8 +93,7 @@ iiif_iabookreader_strawberry:
     js/iiif-iabookreader_collapse.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupal.form
     - core/drupalSettings

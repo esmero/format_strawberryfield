@@ -291,6 +291,9 @@ field.formatter.settings.strawberry_paged_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    textselection:
+      type: boolean
+      label: 'If textselection from DjaVUXML should be enabled or not'
 
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping

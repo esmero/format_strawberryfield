@@ -128,6 +128,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       'max_width' => 720,
       'max_height' => 480,
       'hide_on_embargo' => FALSE,
+      'textselection' => FALSE,
     ];
   }
 
@@ -210,13 +211,23 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'hide_on_embargo' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
-          '#description' => t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
+          '#description' => $this->t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
           '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
           '#required' => FALSE,
           '#attributes' => [
             'data-formatter-selector' => 'hide_on_embargo',
           ],
         ],
+        'textselection' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Enable the Textselection plugin via the internal DjvuXml Endpoint.'),
+          '#description' => $this->t('If enabled, direct selection on OCRed pages will be possible. Do not enable if the manifest combines more than a single OCRed resource (multiple PDFs etc)'),
+          '#default_value' => $this->getSetting('textselection') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'textselection',
+          ],
+        ]
       ] + parent::settingsForm($form, $form_state);
   }
 
@@ -396,6 +407,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
     $embargoed = FALSE;
@@ -495,6 +507,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifest' => json_decode($manifest),
             'width'    => $max_width_css,
             'height'   => max($max_height, 520),
+            'textselection' => $textselection,
             // While Bookreader has a way to enable/disable search via the "enableSearch"
             // parameter, it doesn't work properly at the moment and we have opened an
             // issue to fix it, meanwhile it's hidden via jQuery.
@@ -553,6 +566,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargoed = FALSE;
 
     if ($this->getSetting('manifesturl_source')) {
@@ -590,6 +604,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifesturl' => $manifest_url,
             'width' => $max_width_css,
             'height' => max($max_height, 520),
+            'textselection' => $textselection,
             // @see self::processElementforMetadatadisplays()
           ];
         }
