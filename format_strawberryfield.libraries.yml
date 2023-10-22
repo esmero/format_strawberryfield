@@ -33,13 +33,13 @@ iiif_openseadragon:
     https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
 
 iiif_openseadragon_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/iiif-openseadragon_strawberry.js: {minified: false}
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/iiif_openseadragon

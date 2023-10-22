@@ -1,4 +1,4 @@
-(function ($, Drupal,  OpenSeadragonAnnotorious, drupalSettings, Leaflet) {
+(function ($, Drupal,  once, OpenSeadragonAnnotorious, drupalSettings, Leaflet) {
 
   'use strict';
 
@@ -523,8 +523,8 @@
       worker = new Worker(workerUrl);
       worker.onmessage = onWorkerMessage;
 
-      $('.strawberry-media-item[data-iiif-infojson]').once('attache_osd')
-        .each(function (index, value) {
+      const elementsToAttach = once('attache_osd', '.strawberry-media-item[data-iiif-infojson]', context);
+      $(elementsToAttach).each(function (index, value) {
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
           var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
@@ -980,4 +980,4 @@
       });
     }
   };
-})(jQuery, Drupal, window.OpenSeadragon.Annotorious, drupalSettings, window.L);
+})(jQuery, Drupal, once, window.OpenSeadragon.Annotorious, drupalSettings, window.L);
