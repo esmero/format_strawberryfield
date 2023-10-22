@@ -1,4 +1,4 @@
-(function ($, Drupal, drupalSettings, Mirador) {
+(function ($, Drupal, once, drupalSettings, Mirador) {
 
   'use strict';
   const ActionTypes = {
@@ -250,8 +250,8 @@
         saga: rootSaga,
       };
 
-      $('.strawberry-mirador-item[data-iiif-infojson]').once('attache_mirador')
-        .each(function (index, value) {
+      const elementsToAttach = once('attache_mirador', '.strawberry-mirador-item[data-iiif-infojson]', context);
+      $(elementsToAttach).each(function (index, value) {
           // Get the node uuid for this element
           var element_id = $(this).attr("id");
           // Check if we got some data passed via Drupal settings.
@@ -293,6 +293,7 @@
               };
             }
 
+
             var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
             var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
             var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
@@ -311,6 +312,26 @@
               })
               $options.manifests = $manifests;
             }
+
+            // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
+            // Allow a last minute override, exclude main element manifest
+            if (typeof drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] == 'object' &&
+              !Array.isArray(drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides']) &&
+              drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] !== null) {
+              let viewer_override = drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'];
+              if (typeof viewer_override?.windows !== 'undefined') {
+                if (Array.isArray(viewer_override.windows) && viewer_override.windows.length > 0) {
+                  if (viewer_override.windows[0].manifestId !== 'undefined') {
+                    delete viewer_override.windows[0].manifestId;
+                  }
+                }
+              }
+              $options = {
+                ...$options,
+                ...viewer_override,
+              };
+            }
+
             //@TODO add an extra Manifests key with every other one so people can select the others.
             if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
               const miradorInstance = renderMirador($options);
@@ -354,4 +375,4 @@
             });
           }
         })}}
-})(jQuery, Drupal, drupalSettings, window.Mirador, ReduxSaga);
+})(jQuery, Drupal, once, drupalSettings, window.Mirador, ReduxSaga);

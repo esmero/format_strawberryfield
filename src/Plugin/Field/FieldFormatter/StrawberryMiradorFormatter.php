@@ -130,6 +130,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'manifestnodelist_json_key_source' => 'isrelatedto',
         'manifesturl_json_key_source' => 'iiifmanifest',
         'custom_js' => FALSE,
+        'viewer_overrides' => '',
         'max_width' => 720,
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
@@ -214,6 +215,17 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#type' => 'checkbox',
           '#title' => t('Use Custom Archipelago Mirador with Plugins'),
           '#default_value' => $this->getSetting('custom_js') ?? FALSE,
+        ],
+        'viewer_overrides' => [
+          '#type' => 'textarea',
+          '#title' => $this->t('Advanced: a JSON with Mirador Viewer configuration overrides.'),
+          '#description' => $this->t('See <a href="https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js"https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js</a>. Leave Empty to use defaults.
+   <em>`windows[0].manifestId</em> can not be overriden. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+            '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_mirador_formatter"=> ["window" => ["workspaceControlPanel" => ["enabled" => FALSE]]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+          ]),
+          '#default_value' => $this->getSetting('viewer_overrides'),
+          '#element_validate' => [[$this, 'validateJSON']],
+          '#required' => FALSE,
         ],
         'main_mediasource' => [
           '#type' => 'select',
@@ -456,6 +468,17 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
     $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
+
     // This won't be evaluated and will stay false even if embargoed
     // if hide_on_embargo is not enabled
     // bc all embargo decision will anyways be delegated to the
@@ -496,7 +519,14 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       if ($json_error != JSON_ERROR_NONE) {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
-      // A rendered Manifest
+
+      if (isset($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+        is_array($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+        !empty($jsondata["ap:viewerhints"][$this->getPluginId()])) {
+        // if we could decode it, it is already JSON..
+        $viewer_overrides = $jsondata["ap:viewerhints"][$this->getPluginId()];
+      }
+        // A rendered Manifest
       if ($hide_on_embargo) {
         $embargo_info = $this->embargoResolver->embargoInfo(
           $item->getEntity()->uuid(), $jsondata
@@ -590,6 +620,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             $max_height,
             480
           );
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['viewer_overrides'] = $viewer_overrides;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['mirador'][$htmlid]['custom_js']
             = $this->getSetting('custom_js') ?? FALSE;
           if ($this->getSetting('custom_js')) {

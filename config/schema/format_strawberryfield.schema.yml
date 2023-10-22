@@ -508,6 +508,10 @@ field.formatter.settings.strawberry_mirador_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    viewer_overrides:
+      type: string
+      label: 'Mirador settings via JSON Overrides'
+
 field.formatter.settings.strawberry_warc_formatter:
   type: mapping
   label: 'Specific Config for strawberry_warc_formatter'
