@@ -417,13 +417,13 @@ lazyload_strawberry:
     - core/drupal
 
 citations_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/citations_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
 
 clipboard_copy:
@@ -436,11 +436,11 @@ clipboard_copy:
     https://unpkg.com/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
 
 clipboard_copy_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/clipboard_copy_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
