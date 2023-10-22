@@ -165,7 +165,7 @@ class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
       $query->condition('status', 1);
       $query->condition('type', $bundle);
       $query->range(0, 1);
-      $node_ids = $query->execute();
+      $node_ids = $query->accessCheck()->execute();
     }
     foreach (\Drupal::entityTypeManager()->getStorage('node')->loadMultiple(
       $node_ids
