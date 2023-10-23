@@ -219,8 +219,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'viewer_overrides' => [
           '#type' => 'textarea',
           '#title' => $this->t('Advanced: a JSON with Mirador Viewer configuration overrides.'),
-          '#description' => $this->t('See <a href="https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js"https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js</a>. Leave Empty to use defaults.
-   <em>`windows[0].manifestId</em> can not be overriden. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+          '#description' => $this->t('See <a href="https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js">https://github.com/ProjectMirador/mirador/blob/master/src/config/settings.js</a>. Leave Empty to use defaults.
+   <em>windows[0].manifestId</em> can not be overriden. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
             '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_mirador_formatter"=> ["window" => ["workspaceControlPanel" => ["enabled" => FALSE]]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
           ]),
           '#default_value' => $this->getSetting('viewer_overrides'),
