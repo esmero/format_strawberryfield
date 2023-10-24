@@ -164,6 +164,7 @@ class MetadataExposeConfigEntityForm extends EntityForm {
     $entity = $this->entityTypeManager->getStorage('metadataexpose_entity')
       ->getQuery()
       ->condition('id', $id)
+      ->accessCheck(FALSE)
       ->execute();
     return (bool) $entity;
   }
