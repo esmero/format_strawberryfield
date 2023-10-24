@@ -23,7 +23,7 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
   /**
    * {@inheritdoc}
    */
-  public function prepare(Request $request)
+  public function prepare(Request $request): static
   {
     if (!$this->headers->has('Content-Type')) {
       $this->headers->set('Content-Type', $this->file->getMimeType() ?: 'application/octet-stream');
