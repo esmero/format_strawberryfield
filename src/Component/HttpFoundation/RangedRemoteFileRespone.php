@@ -133,7 +133,7 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
    *
    * {@inheritdoc}
    */
-  public function sendContent()
+  public function sendContent(): static
   {
     if (!$this->isSuccessful()) {
       return parent::sendContent();
