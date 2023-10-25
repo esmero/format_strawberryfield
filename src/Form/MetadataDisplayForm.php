@@ -95,6 +95,7 @@ class MetadataDisplayForm extends ContentEntityForm {
       '#target_type' => 'node',
       '#maxlength' => 1024,
       '#selection_handler' => 'default:nodewithstrawberry',
+      '#weight' => -8,
     ];
     $form['preview']['button_preview'] = [
       '#type' => 'button',
@@ -106,10 +107,12 @@ class MetadataDisplayForm extends ContentEntityForm {
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
       ],
+      '#weight' => -7,
     ];
     $form['preview']['render_native'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
+      '#weight' => -6,
       '#title' => 'Show Preview using native Output Format (e.g. HTML)',
       '#description' => 'If errors are found Preview will fail.',
       '#states' => [
@@ -119,6 +122,7 @@ class MetadataDisplayForm extends ContentEntityForm {
     $form['preview']['show_json_table'] = [
       '#type' => 'checkbox',
       '#defaut_value' => FALSE,
+      '#weight' => -5,
       '#title' => 'Show Preview with JSON keys used in this template',
       '#states' => [
         'visible' => [':input[name="ado_context_preview"]' => ['filled' => true]],
