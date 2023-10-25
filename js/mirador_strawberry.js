@@ -214,7 +214,7 @@
         }
         else if (action.type === ActionTypes.RECEIVE_SEARCH) {
           const { windowId, companionWindowId } = action
-          const query = yield effects.select(getSearchQuery, { companionWindowId, windowId })
+          const query = yield effects.select(Mirador.selectors.getSearchQuery, { companionWindowId, windowId })
           newParams.search = query
         }
         else if (action.type === ActionTypes.REMOVE_SEARCH) {
