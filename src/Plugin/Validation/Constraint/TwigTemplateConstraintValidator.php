@@ -14,7 +14,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
 use Twig\Source;
-use Twig_Error_Syntax;
+use Twig\Error\Error as TwigError;
 
 
 
@@ -47,11 +47,10 @@ class TwigTemplateConstraintValidator extends ConstraintValidator implements Con
     try {
       $source = new Source($value->value, $constraint->TwigTemplateLogicalName);
       $twig->parse($twig->tokenize($source));
-    } catch (Twig_Error_Syntax $e) {
+    } catch (TwigError $e) {
       if ($constraint->useTwigMessage) {
         $message = $e->getMessage();
       }
-
       $this->context->addViolation($message);
     }
   }

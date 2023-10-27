@@ -140,7 +140,7 @@ class MetadataDisplayForm extends ContentEntityForm {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     try {
-      if (isset($form_state->getTriggeringElement()['#op']) && $form_state->getTriggeringElement()['#op']!='preview') {
+      if (($form_state->getTriggeringElement()['#name'] == 'op' && !isset($form_state->getTriggeringElement()['#op'])) || ( isset($form_state->getTriggeringElement()['#op']) && $form_state->getTriggeringElement()['#op']!='preview')) {
         $build = [
           '#type'     => 'inline_template',
           '#template' => $form_state->getValue('twig')[0]['value'],
@@ -512,7 +512,6 @@ class MetadataDisplayForm extends ContentEntityForm {
     if ($form_state->getErrors()) {
       // Clear errors so the user does not get confused when reloading.
       \Drupal::messenger()->deleteByType(MessengerInterface::TYPE_ERROR);
-
       $form_state->clearErrors();
     }
     return $response;
