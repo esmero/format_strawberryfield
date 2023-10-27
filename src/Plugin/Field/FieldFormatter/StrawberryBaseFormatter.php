@@ -142,11 +142,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     // @TODO maybe we want the opposite? like add the slash always?
     // Also why are we not removing on save but on fetch?
     $urls = [
-      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url'), "/"),
-      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url_internal'), "/"),
+      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url') ?? '', "/"),
+      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url_internal') ?? '', "/"),
     ];
     return $urls;
-
   }
 
   /**
