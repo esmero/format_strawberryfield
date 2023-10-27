@@ -241,14 +241,13 @@ function format_strawberryfield_update_8703() {
  *
  */
 function format_strawberryfield_update_8704() {
-  $message = '';
   $separator = "\r\n";
-
   $ifinsidefor_regex = '/{%([\s|\-|~]*for.+?(?=\s{1}if))(.*?)%}/m';
-  $not_ifinsidefor_regex = '/^(?!.*if).*{%[\s|~|\-]*for.*/m';
+  $any_for_regex = '/{%([\s|\-|~]*for.+)%}/m';
+  // Not used but will keep here bc so hard to buil!
+  // $not_ifinsidefor_regex = '/^(?!.*if).*{%[\s|~|\-]*for.*/m';
   $endfor_regex = '/({%[\s|\-|~]*(endfor)[\s|\-|~]*?%}){1}/m';
   $spaceless_regex = '/({%[\s|\-|~]*(spaceless|endspaceless)[\s|\-|~]*%})/m';
-
   $metadatadisplay_entity_storage = \Drupal::entityTypeManager()->getStorage('metadatadisplay_entity');
   $entity_query = \Drupal::entityQuery('metadatadisplay_entity');
   $entity_query->sort('id', 'DESC');
@@ -261,56 +260,54 @@ function format_strawberryfield_update_8704() {
     /* @var $metadatadisplay_entity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity|null */
     $metadatadisplay_entity = $metadatadisplay_entity_storage->load($id);
     if (!empty($metadatadisplay_entity)) {
-      $ifinsideforfound = 0;
-      $delay_closing = 0;
-      $newtemplate = '';
+      // Count for nested fors
+      $for_level = 0;
+      $ifinsideforfound_level = [];
       $twigtemplate = $metadatadisplay_entity->get('twig')->getValue();
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
       strtok('', '');
       $fixed = FALSE;
       $line = strtok($twigtemplate, $separator);
+      // after finding a for if, keep counting other fors .. because we could end closing the new if at the first encounter of an for which is wrong
+      $newtemplate = '';
       while ($line !== false) {
-        # do something with $line
-        if ($ifinsideforfound) {
-          $matches4 = [];
-          // Check now for any other FORs that might define that a later endfor is the one to patch
-          preg_match_all($not_ifinsidefor_regex, $line, $matches4, PREG_SET_ORDER, 0);
-          if (!empty($matches4)) {
-            $delay_closing++;
-          }
-          for($i=0; $i < $ifinsideforfound; $i++) {
-            $matches2 = [];
-            preg_match_all($endfor_regex, $line, $matches2, PREG_SET_ORDER, 0);
-            if (!empty($matches2)) {
-              if ($delay_closing == 0) {
-                $line = preg_replace($endfor_regex, '{#- WIZARDLY UPDATED BY ARCHIPELAGO -#}'.$separator.'{% endif %}'.$separator.'${1}', $line);
-                $fixed = TRUE;
-                $ifinsideforfound--;
-              }
-              else {
-                $delay_closing--;
-              }
-            }
-          }
+        // Check for any for so we can keep track of the for deepness. More reliable.
+        $matches_any_for = [];
+        preg_match_all($any_for_regex, $line, $matches_any_for, PREG_SET_ORDER, 0);
+        if (!empty($matches_any_for)) {
+          $for_level++;
         }
+        $matches_any_endfor = [];
+        preg_match_all($endfor_regex, $line, $matches_any_endfor, PREG_SET_ORDER, 0);
+        if (!empty($matches_any_endfor)) {
+          if (isset($ifinsideforfound_level[$for_level])) {
+            $line = preg_replace($endfor_regex, '{#- WIZARDLY UPDATED BY ARCHIPELAGO -#}'.$separator.'{% endif %}'.$separator.'${1}', $line);
+            unset($ifinsideforfound_level[$for_level]);
+            $fixed = TRUE;
+          }
+          $for_level--;
+        }
+
+        // Checks an FOR with an IF
         $matches = [];
         preg_match_all($ifinsidefor_regex, $line, $matches, PREG_SET_ORDER, 0);
         if (!empty($matches)) {
           $line = preg_replace($ifinsidefor_regex, '{%${1}%}'.$separator.'{#- WIZARDLY UPDATED BY ARCHIPELAGO -#}'.$separator.'{% ${2}%}', $line);
-          $fixed = TRUE;
-          $ifinsideforfound++;
+          $ifinsideforfound_level[$for_level] = TRUE;
         }
+
+        // Checks Spacesless/Endspaceless
         $matches3 = [];
         preg_match_all($spaceless_regex, $line, $matches3, PREG_SET_ORDER, 0);
         if (!empty($matches3)) {
-          $fixed = TRUE;
           $line = preg_replace($spaceless_regex,'', $line);
+          $fixed = TRUE;
         }
-
+        // Appends line
         if (!empty($line)) {
-          $newtemplate = $newtemplate . $line .$separator;
+          $newtemplate = $newtemplate . rtrim($line) .$separator;
         }
-
+        // Tokenize a new line
         $line = strtok( $separator );
       }
       if ($fixed) {
