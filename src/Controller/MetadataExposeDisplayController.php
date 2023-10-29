@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
@@ -111,11 +112,12 @@ class MetadataExposeDisplayController extends ControllerBase {
   /**
    * Main Controller Method. Casts JSON via Twig.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   * @param \Symfony\Component\HttpFoundation\Request                        $request
+   * @param \Drupal\Core\Entity\ContentEntityInterface                       $node
    *   A Node as argument.
    * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
    *   The Metadata Exposed Config Entity that carries the settings.
-   * @param string $format
+   * @param string                                                           $format
    *   A possible Filename used in the last part of the Route.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
@@ -126,7 +128,7 @@ class MetadataExposeDisplayController extends ControllerBase {
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
     $format = 'default.json'
   ) {
-    // Check if Config entity is actually enablewd.
+    // Check if Config entity is actually enabled.
     if (!$metadataexposeconfig_entity->isActive()) {
       throw new AccessDeniedHttpException(
         "Sorry, this metadata service is currently disabled."

@@ -324,3 +324,52 @@ format_strawberryfield.flavor_datasource_search_template:
       page: 'all'
   requirements:
     _entity_access: 'node.view'
+
+# IIIF Search Content API Endpoint for a given Node file uuid and processor.
+# https://dcmny.org/iiifcontentsearch/do/{uuid}/metadatadisplay/{1}/page/{10}/?q=allison
+
+format_strawberryfield.iiif_content_search:
+  path: '/iiifcontentsearch/{mode}/do/{node}/metadatadisplay/{metadatadisplay_entity}/page/{page}'
+  methods: [GET, POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::search'
+    page: 0
+  options:
+    no_cache: TRUE
+    parameters:
+      mode:
+        - simple
+        - advanced
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadatadisplay_entity:
+        type: 'entity:metadatadisplay_entity'
+      page: 0
+  requirements:
+    page: \d+
+    _entity_access: 'node.view'
+
+format_strawberryfield.iiif_content_search_exposed:
+  path: '/iiifcontentsearch/do/{node}/metadatadisplayexposed/{metadataexposeconfig_entity}/mode/{mode}/page/{page}'
+  methods: [GET, POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::searchWithExposedMetadataDisplay'
+    page: 0
+  options:
+    no_cache: TRUE
+    parameters:
+      mode:
+        - simple
+        - advanced
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfig_entity:
+        type: 'entity:metadataexpose_entity'
+      page: 0
+  requirements:
+    page: \d+
+    _entity_access: 'node.view'
