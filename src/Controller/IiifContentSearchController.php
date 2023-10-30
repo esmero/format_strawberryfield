@@ -145,6 +145,7 @@ class IiifContentSearchController extends ControllerBase {
 
     if ($entity) {
       $current_url = $request->getRequestUri();
+      $current_url_clean = strtok($current_url, '?');
       $the_query_string = $request->get('q','');
       $the_api = $request->get('api',1);
       /// I have to modify the request URL so the Template does not render
@@ -230,7 +231,71 @@ class IiifContentSearchController extends ControllerBase {
                     0 = "http://localhost:8183/iiif/2/bf0%2Fapplication-87758-0ad78298-d921-4f87-b0d8-104c1caf6cb1.pdf;1/full/full/0/default.jpg"
                     1 = "http://localhost:8001/do/975c85ef-4eb2-4e37-a044-078207a8e0dd/iiif/0ad78298-d921-4f87-b0d8-104c1caf6cb1/canvas/p1"
             */
-            $cacheabledata = json_encode($results, JSON_PRETTY_PRINT);
+            $entries = [];
+            if (count($results)) {
+              $i = 0;
+              foreach ($results as $hit => $hits_per_file_and_sequence) {
+                foreach (
+                ($hits_per_file_and_sequence['boxes'] ?? []) as $annotation
+                ) {
+                  $i++;
+                  // Calculate Canvas and its offset
+                  $canvas
+                    = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']]
+                    ?? [];
+                  foreach ($canvas as $canvas_id => $canvas_data) {
+                    if ($canvas_id) {
+                      // @TODO I need to also take the actual target offset in account if present
+                      $canvas_position = [
+                        $annotation['l'] * $canvas_data[0],
+                        $annotation['t'] * $canvas_data[1],
+                        $annotation['r'] * $canvas_data[0],
+                        $annotation['b'] * $canvas_data[1],
+                      ];
+                      $canvas_position = "#xywh" . implode(
+                          ",", $canvas_position
+                        );
+                      // Generate the entry
+
+                      $entries[] = [
+                        "@id"        => $current_url_clean
+                          . "/annotation/anno-result/$i",
+                        "@type"      => "oa:Annotation",
+                        "motivation" => "painting",
+                        "resource"   => [
+                          "@type" => "cnt:ContentAsText",
+                          "chars" => $annotation['snippet'],
+                        ],
+                        "on"         => $canvas_id . $canvas_position
+                        #xywh=100,100,350,40",
+                      ];
+                    }
+                  }
+                }
+              }
+
+              /*
+              $cacheabledata = [
+        "@context" => "http://iiif.io/api/presentation/2/context.json",
+        "@id" => $current_url,
+        "@type" => "sc:AnnotationList",
+        "resources" => [
+          "@id" => "https://example.org/identifier/annotation/anno-line",
+          "@type" => "oa:Annotation",
+          "motivation" => "painting",
+          "resource" => [
+            "@type" => "cnt:ContentAsText",
+            "chars" => "you searched for {$the_query_string}, well done",
+          ],
+          "on" => "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/canvas/p1#xywh=100,100,350,40",
+        ],
+      ];*/
+
+            }
+
+
+
+            $cacheabledata = json_encode($entries, JSON_PRETTY_PRINT);
             $responsetype = 'application/json';
             $status = 200;
 
@@ -384,43 +449,6 @@ v2
       TRUE
     );
     return $response;
-
-  }
-
-  public function parseManifest(string $json_string) {
-    $jsonArray = json_decode($json_string, TRUE);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-      return [];
-    }
-
-    $searchresult = StrawberryfieldJsonHelper::searchJson(
-      static::IIIF_V3_JMESPATH, $jsonArray
-    );
-    // Canvas will come in order or appearance
-    foreach ($searchresult as $canvas_order => $canvas) {
-      foreach ($canvas['items'] as $item) {
-        $images = $item['service_ids'] ?? ($item['image_ids'] ?? []);
-        /*
-         Needs to match for now either an argument at the end of in the ID.
-        $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf/full/max/0/default.jpg?page=1";
-        $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf;1/full/max/0/default.jpg";
-        */
-        foreach ($images as $image_url) {
-          $image_id = IiifHelper::extract_iiif_id($image_url);
-          $hash_images[$image_id] = array_merge($hash_images[$image_id] ?? [], [$canvas['canvas_id']]);
-        }
-        if (count($images)) {
-          $hash[$canvas['canvas_id']] = array_merge($hash[$canvas['canvas_id']] ?? [], $images);
-        }
-        // We count even if there are no images because the order is what we want here
-        $canvas_natural_order[$canvas['canvas_id']] = $canvas_order;
-      }
-    }
-    if (empty($order)) {
-      $order = $canvas_natural_order;
-    }
-
-
   }
 
   protected function cleanJmesPathResult(array $jmespath_searchresult) {
@@ -431,7 +459,7 @@ v2
         $image_id = $this->destinationScheme."://".IiifHelper::extract_iiif_id($image_canvas_pair[0]);
         // The $image_canvas_pair[1] is the Canvas targeted by the Image.
         $image_parts = explode(";",$image_id);
-        $sequence = count($image_parts) > 1 ? end($image_parts) : 0 ;
+        $sequence = count($image_parts) > 1 ? end($image_parts) : 1 ;
         $image_hash[$image_parts[0]][$sequence][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
       }
     }
@@ -640,7 +668,6 @@ v2
                       'hit' => $hit,
                     ];
                   }
-
                 }
               }
 
