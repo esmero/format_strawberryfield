@@ -2,13 +2,13 @@
 * @preserve
 **/
 
-(function ($) {
+(function ($, once) {
   Drupal.facets = Drupal.facets || {};
 
   Drupal.behaviors.sbfFacetsDateRange = {
     attach: function attach(context, settings) {
-      var $dateRangeFacets = $('.js-facets-sbf-daterange', context)
-        .once('js-facets-sbf-daterange-on-click');
+      const elementsToAttach = once('js-facets-sbf-daterange-on-click', 'js-facets-sbf-daterange', context);
+      $dateRangeFacets = $(elementsToAttach);
 
 
       function toTimestamp(strDate) {
@@ -54,4 +54,4 @@
       }
     }
   };
-})(jQuery);
+})(jQuery, once);
