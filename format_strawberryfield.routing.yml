@@ -352,7 +352,7 @@ format_strawberryfield.iiif_content_search:
     _entity_access: 'node.view'
 
 format_strawberryfield.iiif_content_search_exposed:
-  path: '/iiifcontentsearch/do/{node}/metadatadisplayexposed/{metadataexposeconfig_entity}/mode/{mode}/page/{page}'
+  path: '/iiifcontentsearch/{version}/do/{node}/metadatadisplayexposed/{metadataexposeconfig_entity}/mode/{mode}/page/{page}'
   methods: [GET, POST]
   defaults:
     _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::searchWithExposedMetadataDisplay'
@@ -363,6 +363,9 @@ format_strawberryfield.iiif_content_search_exposed:
       mode:
         - simple
         - advanced
+      version:
+        - v1
+        - v2
       node:
         type: 'entity:node'
       resource_type:

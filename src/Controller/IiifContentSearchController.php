@@ -92,6 +92,13 @@ class IiifContentSearchController extends ControllerBase {
   protected $parseModeManager;
 
   /**
+   * The Global IIIF Settings.
+   *
+   * @var \Drupal\Core\Config\Config|\Drupal\Core\Config\ImmutableConfig $iiifConfig
+   */
+  private $iiifConfig;
+
+  /**
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    *
    * @return \Drupal\format_strawberryfield\Controller\IiifContentSearchController
@@ -109,31 +116,35 @@ class IiifContentSearchController extends ControllerBase {
     $instance->destinationScheme = $container->get('config.factory')->get(
       'strawberryfield.storage_settings'
     )->get('file_scheme');
+    $instance->iiifConfig = $container->get('config.factory')->get('format_strawberryfield.iiif_settings');
     return $instance;
   }
 
   /**
    * Wrapper Controller Method. Returns a IIIF Content Search response.
    *
-   * @param \Symfony\Component\HttpFoundation\Request                   $request
-   * @param \Drupal\Core\Entity\ContentEntityInterface                  $node
+   * @param \Symfony\Component\HttpFoundation\Request                        $request
+   * @param string                                                           $mode
+   * @param \Drupal\Core\Entity\ContentEntityInterface                       $node
    *   A Node as argument.
-   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfigentity
-   *   The Metadata Config Entity that rendered the calling IIIF Manifest.
-   * @param string                                                      $page
+   * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
+   * @param string                                                           $version
+   * @param string                                                           $page
    *   The page according to the IIIF Content Search API 1.0/2.0 Specs.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
    *   A cacheable response.
    *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   * @throws \Drupal\search_api\SearchApiException
    * @throw \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
-   *
    */
   public function searchWithExposedMetadataDisplay(
     Request $request,
     string $mode,
     ContentEntityInterface $node,
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
+    string $version,
     $page = '0'
   ) {
 
@@ -208,6 +219,8 @@ class IiifContentSearchController extends ControllerBase {
 
         if ($response->isSuccessful()) {
           $json_string = $response->getContent() ?? '{}';
+
+
           $jsonArray = json_decode($json_string, TRUE);
           if (json_last_error() == JSON_ERROR_NONE) {
             $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
@@ -248,10 +261,13 @@ class IiifContentSearchController extends ControllerBase {
                         $annotation['r'] * $canvas_data[0],
                         $annotation['b'] * $canvas_data[1],
                       ];
-                      $canvas_position = "#xywh" . implode(
+                      $canvas_position = "#xywh=" . implode(
                           ",", $canvas_position
                         );
+
+                      // V1
                       // Generate the entry
+                      if ($version == "v1") {
                       $entries[] = [
                         "@id"        => $current_url_clean
                           . "/annotation/anno-result/$i",
@@ -263,6 +279,21 @@ class IiifContentSearchController extends ControllerBase {
                         ],
                         "on"         => $canvas_id . $canvas_position
                       ];
+                      }
+                      elseif ($version == "v2") {
+                        $entries[] = [
+                          "id"        => $current_url_clean
+                            . "/annotation/anno-result/$i",
+                          "type"      => "Annotation",
+                          "motivation" => "painting",
+                          "body"   => [
+                            "type" => "TextualBody",
+                            "value" => $annotation['snippet'],
+                            "format" => "text/plain",
+                          ],
+                          "target"         => $canvas_id . $canvas_position
+                        ];
+                      }
                     }
                   }
                 }
@@ -286,7 +317,7 @@ class IiifContentSearchController extends ControllerBase {
       ];*/
             }
 
-            $response->setContent(json_encode($entries));
+            $response->setContent(json_encode($entries, JSON_PRETTY_PRINT));
             return $response;
           }
         }
