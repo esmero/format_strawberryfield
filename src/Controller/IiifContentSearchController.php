@@ -5,22 +5,19 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Render\RenderContext;
-use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\Core\Cache\CacheableJsonResponse;
-use Drupal\Core\Cache\CacheableResponse;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
-use Ramsey\Uuid\Uuid;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\Routing\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
+
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -148,6 +145,21 @@ class IiifContentSearchController extends ControllerBase {
     $page = '0'
   ) {
 
+    if (!$this->iiifConfig->get('iiif_content_search_api_active')) {
+      $data = [
+        'error' => [
+          'errors' => [
+            'message' => 'IIIF Content Search API V1 and V2 are disabled on this Server'
+          ]
+        ],
+        'code' => 503,
+      ];
+      return new JsonResponse($data, 503);
+    }
+
+
+
+
     $entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
 
     if ($entity) {
@@ -220,9 +232,37 @@ class IiifContentSearchController extends ControllerBase {
         if ($response->isSuccessful()) {
           $json_string = $response->getContent() ?? '{}';
 
-
           $jsonArray = json_decode($json_string, TRUE);
+
           if (json_last_error() == JSON_ERROR_NONE) {
+            if ($this->iiifConfig->get('iiif_content_search_validate_exposed')) {
+              $valid = FALSE;
+              foreach($jsonArray['service'] ?? [] as $service) {
+                if (isset($service['type']) && in_array($service['type'], ["SearchService2", "SearchService1"])) {
+                  if (strtok($service['id'] ?? '', '?') == $current_url_clean) {
+                    $valid = TRUE;
+                  }
+                }
+                if (isset($service['profile']) && in_array($service['profile'], ["http://iiif.io/api/search/1/search", "https://iiif.io/api/search/1/search"])) {
+                  if (strtok($service['@id'] ?? '', '?') == $current_url_clean) {
+                    $valid = TRUE;
+                  }
+                }
+              }
+              if (!$valid) {
+                $data = [
+                  'error' => [
+                    'errors' => [
+                      'message' => 'IIIF Content Search API V1 and V2 are disabled on this particular Manifest/Digital Object'
+                    ]
+                  ],
+                  'code' => 503,
+                ];
+                return new JsonResponse($data, 503);
+              }
+            }
+
+
             $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
               static::IIIF_V3_JMESPATH, $jsonArray
             );
@@ -703,11 +743,5 @@ v2
       }
     }
     return $result_snippets;
-
-
   }
-
-
-
-
 }
