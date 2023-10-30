@@ -211,7 +211,7 @@ class IiifContentSearchController extends ControllerBase {
         $this->requestStack->push($original_request);
 
         if ($response->isSuccessful()) {
-          $json_string = $response->getContent();
+          $json_string = $response->getContent() ?? '{}';
           $jsonArray = json_decode($json_string, TRUE);
           if (json_last_error() == JSON_ERROR_NONE) {
             $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
@@ -293,21 +293,13 @@ class IiifContentSearchController extends ControllerBase {
 
             }
 
-
-
-            $cacheabledata = json_encode($entries, JSON_PRETTY_PRINT);
-            $responsetype = 'application/json';
-            $status = 200;
-
-            $response = new CacheableJsonResponse(
-              $cacheabledata,
-              $status,
-              ['content-type' => $responsetype],
-              TRUE
-            );
+            $response->setContent(json_encode($entries));
             return $response;
           }
-          //return $this->search($subrequest, $node, $entity, $page);
+        }
+        else {
+          // Pass the issue back?
+          return $response;
         }
       }
     }
