@@ -500,15 +500,6 @@ v2
 
       $query->addCondition('search_api_datasource', 'strawberryfield_flavor_datasource')
         ->addCondition('processor_id', $processors, 'IN');
-      // IN the case of multiple files being used in the same IIIF manifest we do not limit
-      // Which file we are loading.
-      // @IDEA. Since the Rendered Twig templates (metadata display) that generate a IIIF manifest are cached
-      // We could also pass arguments that would allow us to fetch that rendered JSON
-      // And preprocess everything here.
-      // Its like having the same Twig template on front and back?
-      // @giancarlobi. Maybe an idea for the future once this "works".
-      // $solarium_query->createFilterQuery('language_filter')->setQuery(
-      // $this->createFilterQuery($unspecific_field_names['search_api_language'], $language_ids, 'IN', new Field($index, 'search_api_language'), $options)
 
       if (isset($allfields_translated_to_solr['ocr_text'])) {
         // Will be used by \strawberryfield_search_api_solr_query_alter
@@ -519,6 +510,9 @@ v2
       $fields_to_retrieve['id'] = 'id';
       if (isset($allfields_translated_to_solr['parent_sequence_id'])) {
         $fields_to_retrieve['parent_sequence_id'] = $allfields_translated_to_solr['parent_sequence_id'];
+      }
+      if (isset($allfields_translated_to_solr['uuid'])) {
+        $fields_to_retrieve['uuid'] = $allfields_translated_to_solr['uuid'];
       }
       if (isset($allfields_translated_to_solr['sequence_id'])) {
         $fields_to_retrieve['sequence_id'] = $allfields_translated_to_solr['sequence_id'];
@@ -585,89 +579,71 @@ v2
             }
             // If we use getField we can access the RAW/original source without touching Solr
             // Not right now needed but will keep this around.
-            //e.g $sequence_id = $result->getField('sequence_id')->getValues();
+            // e.g. $sequence_id = $result->getField('sequence_id')->getValues();
           }
 
           foreach ($extradata['search_api_solr_response']['ocrHighlighting'] as $sol_doc_id => $field) {
             $result_snippets_base = [];
-            $previous_text = '';
-            $accumulated_text = [];
             if (isset($field[$allfields_translated_to_solr['ocr_text']]['snippets']) &&
               is_array($field[$allfields_translated_to_solr['ocr_text']]['snippets'])) {
               foreach ($field[$allfields_translated_to_solr['ocr_text']]['snippets'] as $snippet) {
-                // IABR uses 0 to N-1. We may want to reprocess this for other endpoints.
-                //$page_number = strpos($snippet['pages'][0]['id'], $page_prefix) === 0 ? (int) substr(
-                //  $snippet['pages'][0]['id'],
-                //  $page_prefix_len
-                //) : (int) $snippet['pages'][0]['id'];
-                if (isset($page_number_by_id[$sol_doc_id])) {
-                  // If we have a Solr doc (means children) and their own page number use them here.
-                  $page_number = $page_number_by_id[$sol_doc_id];
-                }
-                else {
-                  // If not the case (e.g a PDF) go for it.
-                  $page_number = preg_replace('/\D/', '', $snippet['pages'][0]['id']);
-                }
-                // Just some check in case something goes wrong and page number is 0 or negative?
-                // and rebase page number starting with 0
-                $page_number = ($page_number > 0) ? (int) ($page_number - 1) : 0;
-
-                // We assume that if coords <1 (i.e. .123) => MINIOCR else ALTO
-                // As ALTO are absolute to be compatible with current logic we have to transform to relative
-                // To convert we need page width/height
                 $page_width = (float) $snippet['pages'][0]['width'];
                 $page_height = (float) $snippet['pages'][0]['height'];
 
                 $result_snippets_base = [
-                  'par' => [
-                    [
-                      'page' => $page_number,
-                      'boxes' => $result_snippets_base['par'][0]['boxes'] ?? [],
-                    ],
-                  ],
+                  'boxes' => $result_snippets_base['boxes'] ?? [],
                 ];
+                $shared_parent_region = array_fill_keys(array_keys($snippet['regions']), 0);
 
-                foreach ($snippet['highlights'] as $highlight) {
+                foreach ($snippet['highlights'] as $key => $highlight) {
+                  $parent_region = $highlight[0]['parentRegionIdx'];
+                  $shared_parent_region[$parent_region]++;
+                  // This allows us to offset the before and after when we are re-using a snippet for multiple hits
+                  $region_text = $snippet['regions'][$parent_region]['text'] ?? $term;
+                  $hit = $highlight[0]['text'] ?? $term;
 
-                  $region_text = str_replace(
-                    ['<em>', '</em>'],
-                    ['{{{', '}}}'],
-                    $snippet['regions'][$highlight[0]['parentRegionIdx']]['text']
-                  );
+                  $before_and_after =  explode("<em>{$hit}</em>", $region_text ?? $term);
+                  // Check if (int) coordinates >=1 (ALTO)
+                  // else between 0 and < 1 (MINIOCR)
+                  $before_index = $shared_parent_region[$parent_region] -1;
+                  $before_index = $before_index > 0 ? $before_index : 0;
+                  $after_index = $shared_parent_region[$parent_region];
+                  $after_index = ($after_index < count($before_and_after)) ? $after_index : 1;
 
-                  // check if coord >=1 (ALTO)
-                  // else between 0 and <1 (MINIOCR)
                   if ( ((int) $highlight[0]['lrx']) > 0  ){
                     //ALTO so coords need to be relative
                     $left = sprintf('%.3f',((float) $highlight[0]['ulx'] / $page_width));
                     $top = sprintf('%.3f',((float) $highlight[0]['uly'] / $page_height));
                     $right = sprintf('%.3f',((float) $highlight[0]['lrx'] / $page_width));
                     $bottom = sprintf('%.3f',((float) $highlight[0]['lry'] / $page_height));
-                    $result_snippets_base['par'][0]['boxes'][] = [
+                    $result_snippets_base['boxes'][] = [
                       'l' => $left,
                       't' => $top,
                       'r' => $right,
                       'b' => $bottom,
-                      'page' => $page_number,
+                      'snippet' => $region_text,
+                      'before' =>  $before_and_after[$before_index],
+                      'after' =>  $before_and_after[$after_index],
+                      'hit' => $hit,
                     ];
                   }
                   else {
                     //MINIOCR coords already relative
-                    $result_snippets_base['par'][0]['boxes'][] = [
+                    $result_snippets_base['boxes'][] = [
                       'l' => $highlight[0]['ulx'],
                       't' => $highlight[0]['uly'],
                       'r' => $highlight[0]['lrx'],
                       'b' => $highlight[0]['lry'],
-                      'page' => $page_number,
+                      'snippet' => $region_text,
+                      'before' =>  $before_and_after[$before_index],
+                      'after' =>  $before_and_after[$after_index],
+                      'hit' => $hit,
                     ];
                   }
-                  $accumulated_text[] = $region_text;
+
                 }
               }
-              $result_snippets_base['text'] = !empty($accumulated_text) ? implode(" ... ", array_unique($accumulated_text)) : $term;
-              // Add extra data that IAB does not need/nor understand but we do need
-              // To match Image IDs against sequences/canvases on an arbitrary
-              // IIIF manifest driven by a twig template.
+
               foreach($fields_to_retrieve as $machine_name => $field) {
                 $result_snippets_base['sbf_metadata'][$machine_name] = $filedata_by_id[$sol_doc_id][$machine_name];
               }
@@ -677,7 +653,7 @@ v2
         }
       }
     }
-    return ['matches' => $result_snippets];
+    return $result_snippets;
 
 
   }
