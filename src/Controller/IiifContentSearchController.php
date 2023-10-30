@@ -27,7 +27,6 @@ use Symfony\Component\Routing\Route;
  */
 class IiifContentSearchController extends ControllerBase {
 
-
   /**
    * A JMESPATH to fetch Canvas Size, Images and their targets IIIF Presentation 2.x
    */
@@ -79,6 +78,10 @@ class IiifContentSearchController extends ControllerBase {
    */
   protected $routeProvider;
 
+
+  /** The Configured Permanent Storage for Files in Archipelago
+   * @var string $destinationScheme
+   */
   private $destinationScheme;
 
   /**
@@ -135,13 +138,6 @@ class IiifContentSearchController extends ControllerBase {
   ) {
 
     $entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
-
-    // IDEA. What if i make a query first using all different Image Ids found. NO Q
-    // I pass also as facet? the Node uuid. Maybe i can then save the facet so consequent Queryies can be done
-    // USING the facet as query filter?
-    // Also idea. 3 modes. Simple. Get all related ADOs. Complex process all Image IDs from the manifest.
-    // Why? Bc that gives the user writing the Manifest the chance to help us, making the query faster
-    // 2 Modes as Path arguments? Good idea.
 
     if ($entity) {
       $current_url = $request->getRequestUri();
@@ -256,7 +252,6 @@ class IiifContentSearchController extends ControllerBase {
                           ",", $canvas_position
                         );
                       // Generate the entry
-
                       $entries[] = [
                         "@id"        => $current_url_clean
                           . "/annotation/anno-result/$i",
@@ -267,7 +262,6 @@ class IiifContentSearchController extends ControllerBase {
                           "chars" => $annotation['snippet'],
                         ],
                         "on"         => $canvas_id . $canvas_position
-                        #xywh=100,100,350,40",
                       ];
                     }
                   }
@@ -290,7 +284,6 @@ class IiifContentSearchController extends ControllerBase {
           "on" => "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/canvas/p1#xywh=100,100,350,40",
         ],
       ];*/
-
             }
 
             $response->setContent(json_encode($entries));
@@ -298,7 +291,7 @@ class IiifContentSearchController extends ControllerBase {
           }
         }
         else {
-          // Pass the issue back?
+          // Pass the Template rendering Controller plain back?
           return $response;
         }
       }
@@ -443,7 +436,14 @@ v2
     return $response;
   }
 
-  protected function cleanJmesPathResult(array $jmespath_searchresult) {
+  /**
+   * Cleans the over complex original JMESPATH result to a reversed array.
+   *
+   * @param array $jmespath_searchresult
+   *
+   * @return array
+   */
+  protected function cleanJmesPathResult(array $jmespath_searchresult): array {
     $image_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
       $entries_percanvas = $entries_percanvas;
@@ -461,21 +461,20 @@ v2
 
 
   /**
-   * OCR Search Controller. Can deal with multiple formats/requests types
+   * OCR Search Controller specific to IIIF Content Seaach Needs
    *
-   * @param \Symfony\Component\HttpFoundation\Request $request
+   * @param \Symfony\Component\HttpFoundation\Request  $request
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    * @param string $fileuuid
    * @param string $processor
    * @param string $format
-   * @param string $page
+   * @param int|string $page
    *
    * @return \Symfony\Component\HttpFoundation\Response
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\search_api\SearchApiException
    */
-  protected function flavorfromSolrIndex(string $term, array $processors, array $image_uris, array $node_ids = [], $limit = 100) {
-
+  protected function flavorfromSolrIndex(string $term, array $processors, array $image_uris, array $node_ids = [], $limit = 100, int|string $page = 0) {
 
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
