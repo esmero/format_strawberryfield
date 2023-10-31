@@ -1,11 +1,11 @@
-(function ($, Drupal, drupalSettings, UV) {
+(function ($, Drupal, once, drupalSettings, UV) {
 
     'use strict';
 
     Drupal.behaviors.format_strawberryfield_uv_initiate = {
         attach: function(context, settings) {
-            $('.strawberry-uv-item[data-iiif-infojson]').once('attache_uv')
-                .each(function (index, value) {
+          const elementsToAttach = once('attache_uv', '.strawberry-uv-item[data-iiif-infojson]', context);
+          $(elementsToAttach).each(function (index, value) {
                     // Get the node uuid for this element
                     var element_id = $(this).attr("id");
                     // Check if we got some data passed via Drupal settings.
@@ -48,4 +48,4 @@
                         console.log('initializing Universal Viewer 4')
                     }
                 })}}
-})(jQuery, Drupal, drupalSettings, UV);
+})(jQuery, Drupal, once, drupalSettings, UV);

@@ -251,7 +251,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
@@ -259,7 +259,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     $embargo_tags = [];
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
     $key = $this->getSetting('json_key_source');
@@ -372,12 +372,20 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     $webannotations_georeferencewidget = $this->getSetting('webannotations_georeferencewidget');
     $viewer_overrides = $this->getSetting('viewer_overrides');
     $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+
     $json_error = json_last_error();
     if ($json_error == JSON_ERROR_NONE) {
       $viewer_overrides = $viewer_overrides_json;
     }
     else {
       $viewer_overrides = NULL;
+    }
+
+    if (isset($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+      is_array($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+      !empty($jsondata["ap:viewerhints"][$this->getPluginId()])) {
+      // if we could decode it, it is already JSON..
+      $viewer_overrides = $jsondata["ap:viewerhints"][$this->getPluginId()];
     }
 
 
@@ -505,6 +513,12 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     }
     else {
       $viewer_overrides = NULL;
+    }
+    if (isset($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+      is_array($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+      !empty($jsondata["ap:viewerhints"][$this->getPluginId()])) {
+      // if we could decode it, it is already JSON..
+      $viewer_overrides = $jsondata["ap:viewerhints"][$this->getPluginId()];
     }
 
 

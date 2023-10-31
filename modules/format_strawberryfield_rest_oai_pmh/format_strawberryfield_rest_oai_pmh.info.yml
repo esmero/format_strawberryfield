@@ -1,7 +1,7 @@
 name: 'Format Strawberryfield Rest OAI-PMH'
 type: module
 description: 'Extends Rest OAI-PMH to support mapping via metadatadisplay templates'
-core_version_requirement: ^9
+core_version_requirement: ^9.5 || ^10
 package: 'Web services'
 dependencies:
   - drupal:views

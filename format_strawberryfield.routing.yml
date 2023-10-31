@@ -276,3 +276,103 @@ format_strawberryfield.display_settings:
     parameters:
       node:
         type: 'entity:node'
+
+# Search Highlight Endpoint for a given Node file uuid and processor using an Exposed Metadata Display Entity.
+format_strawberryfield.flavor_datasource_search:
+  path: '/do/{node}/metadata/search_endpoint/{metadataexposeconfigentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfigentity:
+        type: 'entity:metadataexpose_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
+
+# Search Highlight Endpoint for a given Node file uuid and processor using Metadata Display Entity.
+format_strawberryfield.flavor_datasource_search_template:
+  path: '/do/{node}/metadata/search/{metadatadisplayentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadatadisplayentity:
+        type: 'entity:metadatadisplay_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
+
+# IIIF Search Content API Endpoint for a given Node file uuid and processor.
+# https://dcmny.org/iiifcontentsearch/do/{uuid}/metadatadisplay/{1}/page/{10}/?q=allison
+
+format_strawberryfield.iiif_content_search:
+  path: '/iiifcontentsearch/{mode}/do/{node}/metadatadisplay/{metadatadisplay_entity}/page/{page}'
+  methods: [GET, POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::search'
+    page: 0
+  options:
+    no_cache: TRUE
+    parameters:
+      mode:
+        - simple
+        - advanced
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadatadisplay_entity:
+        type: 'entity:metadatadisplay_entity'
+      page: 0
+  requirements:
+    page: \d+
+    _entity_access: 'node.view'
+
+format_strawberryfield.iiif_content_search_exposed:
+  path: '/iiifcontentsearch/{version}/do/{node}/metadatadisplayexposed/{metadataexposeconfig_entity}/mode/{mode}/page/{page}'
+  methods: [GET, POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::searchWithExposedMetadataDisplay'
+    page: 0
+  options:
+    no_cache: TRUE
+    parameters:
+      mode:
+        - simple
+        - advanced
+      version:
+        - v1
+        - v2
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfig_entity:
+        type: 'entity:metadataexpose_entity'
+      page: 0
+  requirements:
+    page: \d+
+    _entity_access: 'node.view'

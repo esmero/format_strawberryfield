@@ -8,6 +8,35 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
+    iiif_content_search_api_page_count:
+      type: int
+      label: 'The max results to show per page on a iiif_content_search_api_page_count'
+    iiif_content_search_api_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors that can be fetched by the Content Search API on query.'
+    iiif_content_search_api_active:
+      type: bool
+      label: 'If IIIF Content Search API V1 and V2 are enabled.'
+    iiif_content_search_validate_exposed:
+      type: bool
+      label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
+    iiif_content_search_api_parent_node_fields:
+      type: sequence
+      label: 'Strawberry Flavor Data Source Search API Fields that can be used to connect a Strawberry Flavor to a Parent ADO.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiif_content_search_api_file_uri_fields:
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiif_content_search_api_results_per_page:
+      type: int
+      label: 'Number of results per page'
+    iiif_content_search_api_query_length:
+      type: int
+      label: 'max size of the allowed term passed (?q)'
+
 
 format_strawberryfield.embargo_settings:
   type: config_object
@@ -291,6 +320,9 @@ field.formatter.settings.strawberry_paged_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    textselection:
+      type: boolean
+      label: 'If textselection from DjaVUXML should be enabled or not'
 
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
@@ -505,6 +537,10 @@ field.formatter.settings.strawberry_mirador_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    viewer_overrides:
+      type: string
+      label: 'Mirador settings via JSON Overrides'
+
 field.formatter.settings.strawberry_warc_formatter:
   type: mapping
   label: 'Specific Config for strawberry_warc_formatter'

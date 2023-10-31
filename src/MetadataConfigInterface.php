@@ -11,4 +11,13 @@ use Drupal\Core\Entity\EntityChangedInterface;
    */
 interface MetadataConfigInterface extends ConfigEntityInterface  {
 
+  /* Generates a valid Example URL given a Node UUID.
+   *
+   * @param string $uuid
+   * An UUID of a node configured for this Exposed endpoint.
+   * @return \Drupal\Core\GeneratedUrl|null|string
+   * A Drupal URL if we have enough arguments or NULL if not.
+  */
+  public function getUrlForItemFromNodeUUID(string $uuid, $absolute = FALSE);
+
 }

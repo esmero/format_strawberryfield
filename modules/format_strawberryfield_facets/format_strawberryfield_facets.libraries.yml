@@ -26,6 +26,7 @@ slider:
     - core/jquery.once
     - format_strawberryfield_facets/jquery.ui.slider.pips
     - jquery_ui_touch_punch/touch-punch
+    - core/once
 
 date-range:
   version: VERSION
@@ -35,3 +36,4 @@ date-range:
     - core/jquery
     - core/drupal
     - core/drupalSettings
+    - core/once

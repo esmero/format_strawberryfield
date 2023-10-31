@@ -7,7 +7,6 @@ use Drupal\format_strawberryfield\MetadataConfigInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
-use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
  * Defines the MetadataExposeConfigEntity entity.*.
@@ -411,8 +410,9 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
       $extension = 'jsonld';
     }
     else {
-      $guesser = ExtensionGuesser::getInstance();
-      $extension = $guesser->guess($responsetype);
+      $extension = \Drupal::service(
+        'strawberryfield.mime_type.guesser.mime'
+      )->inverseguess($responsetype);
     }
 
     $filename = !empty($extension) ? 'default.' . $extension : 'default.html';

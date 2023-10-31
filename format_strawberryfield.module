@@ -268,7 +268,7 @@ function format_strawberryfield_contextual_links_alter(array &$links, $group, ar
  * Implements hook_ENTITY_TYPE_view_alter().
  */
 function format_strawberryfield_node_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
-  // Empty. Issue is if this hook does not exist, the broader one fail;
+  // Empty. Issue is if this hook does not exist, the broader one will fail.
 }
 
 /**

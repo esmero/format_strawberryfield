@@ -239,7 +239,7 @@ class EntityAutocompleteUUID extends Textfield {
         $value = $element['#value'];
       }
       else {
-        $input_values = $element['#tags'] ? Tags::explode($element['#value']) : [$element['#value']];
+        $input_values = $element['#tags'] ? Tags::explode($element['#value'] ?? '') : [$element['#value']];
 
         foreach ($input_values as $input) {
           $match = static::extractEntityIdFromAutocompleteInput($input);

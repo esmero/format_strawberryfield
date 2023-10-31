@@ -127,7 +127,7 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     $modalviews_blocks = array_unique($modalviews_blocks);
 
     $new_request = Request::create($path);
-    $request_stack = new DrupalRequestStack();
+    $request_stack = new \Symfony\Component\HttpFoundation\RequestStack;
 
     $processed = $this->pathProcessor->processInbound($path, $new_request);
     $processed_request = Request::create($processed);

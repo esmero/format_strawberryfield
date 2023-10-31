@@ -1,9 +1,9 @@
-(function ($, Drupal, drupalSettings) {
+(function ($, Drupal, once, drupalSettings) {
   'use strict';
   Drupal.behaviors.format_strawberryfield_clipboard_copy = {
     attach: function (context, settings) {
-      $('.clipboard-copy-data').once('attach_clipboard')
-        .each(function (index, value) {
+      const elementsToAttach = once('attache_clipboard', '.clipboard-copy-data', context);
+      $(elementsToAttach).each(function (index, value) {
           const theid = '#' + this.id;
           const copyContainer = document.querySelector(theid);
           const copyButtonClassData = copyContainer.dataset.clipboardCopyButton;
@@ -52,4 +52,4 @@
         });
     }
   };
-})(jQuery, Drupal, drupalSettings);
+})(jQuery, Drupal, once, drupalSettings);

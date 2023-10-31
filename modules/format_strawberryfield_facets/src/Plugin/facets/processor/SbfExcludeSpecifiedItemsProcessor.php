@@ -31,7 +31,7 @@ class SbfExcludeSpecifiedItemsProcessor extends ProcessorPluginBase implements B
     $config = $this->getConfiguration();
 
     /** @var \Drupal\facets\Result\ResultInterface $result */
-    $exclude_item = $config['exclude'];
+    $exclude_item = $config['exclude'] ?? '';
     foreach ($results as $id => $result) {
       $is_excluded = FALSE;
       if ($config['regex']) {

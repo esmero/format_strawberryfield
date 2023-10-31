@@ -4,7 +4,7 @@ leaflet_strawberry_views:
     js/leaflet_strawberry_views.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - core/views
@@ -17,7 +17,7 @@ modal-exposed-form-views-ajax:
   dependencies:
     - core/drupal
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/once
     - core/drupalSettings
     - core/views
@@ -30,6 +30,7 @@ modal-exposed-form-facet-views-ajax:
     - core/drupalSettings
     - core/drupal.ajax
     - core/views.ajax
+    - core/once
 
 view-ajax-interactions:
   js:

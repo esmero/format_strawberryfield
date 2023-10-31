@@ -350,7 +350,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     foreach ($fields_info as $field_id => $field) {
       if (($field->getDatasourceId() == 'strawberryfield_flavor_datasource') && ($field->getType() == "integer")) {
         $property_path = $field->getPropertyPath();
-        $property_path_parts = explode(":", $property_path);
+        $property_path_parts = explode(":", $property_path ?? '');
         if (end($property_path_parts) == "nid" || $property_path == 'parent_id') {
           $fields[$field_id] = $field->getPrefixedLabel() . '('
             . $field->getFieldIdentifier() . ')';

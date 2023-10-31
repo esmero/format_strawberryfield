@@ -11,10 +11,6 @@ use Drupal\views\ViewExecutable;
 use Drupal\views\Plugin\views\query\QueryPluginBase;
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\search_api\Entity\Index;
-use Drupal\search_api\Query\QueryInterface;
-use Solarium\Component\ComponentAwareQueryInterface;
-use Solarium\Core\Query\QueryInterface as SolariumQueryInterface;
-
 /**
  * Implements hook_theme().
  */
@@ -135,7 +131,6 @@ function format_strawberryfield_views_block_view_views_exposed_filter_block_sbf_
   }
 }
 
-
 /**
  * Implements hook_block_view_BASE_BLOCK_ID_alter() for 'views_exposed_filter_block_sbf'.
  */
@@ -212,10 +207,6 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
       if ($ado_filter != 'sbf_ado_filter') {
         $table[$ado_filter]['real field'] = 'sbf_ado_filter';
       }
-
-
-
-
     }
     catch (\Exception $e) {
       $args = [
@@ -225,84 +216,6 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
     }
   }
   return $data;
-}
-
-/**
- * Implements hook_search_api_solr_query_alter().
- *
- * Let modules alter the Solarium select query before executing it.
- *
- * After this hook, the select query will be finally converted into an
- * expression that will be processed by the lucene query parser. Therefore you
- * can't modify the 'q' parameter here, because it gets overwritten by that
- * conversion. If you need to modify the 'q' parameter you should implement an
- * event listener instead of this hook that handles the solarium events (our
- * connector injects the drupal event handler into solarium) or implement
- * hook_search_api_solr_converted_query() instead. If you want to force a
- * different parser like edismax you must set the 'defType' parameter
- * accordingly.
- */
-function format_strawberryfield_views_search_api_solr_converted_query_alter(SolariumQueryInterface $solarium_query, QueryInterface $query) {
-  // To get a list of solarium events:
-  // @see http://solarium.readthedocs.io/en/stable/customizing-solarium/#plugin-system
-  if ($query->getOption('sbf_advanced_search_filter')) {
-    $components = $solarium_query->getComponents();
-    if (isset($components['edismax'])) {
-      $solarium_query->removeComponent(ComponentAwareQueryInterface::COMPONENT_EDISMAX);
-      $solarium_query->addParam('defType','lucene');
-    }
-  }
-  if ($query->getOption('sbf_join_flavor')) {
-    $options = $query->getOption('sbf_join_flavor');
-    if (is_array($options) &&
-      !empty($options['from']) &&
-      !empty($options['to']) &&
-      !empty($options['v'])) {
-      // Options might contain more data used for HL/Advanced search etc.
-      // see \Drupal\format_strawberryfield_views\Plugin\views\filter\StrawberryFlavorsJoin::query
-      $conjunction = $options['#conjunction'] ?? 'OR'; // Used to connect the join with the main one
-      $join_term['from'] = $options['from'];
-      $join_term['to'] = $options['to'];
-      $subquery = $options['v'];
-      $join_term['v'] = '$subquery';
-      // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
-      // This is desired because it will be faster
-      // Also adding $options['score'] = 'none' even faster.
-      // @TODO enable extra UUID type Solr field to be used as joined ones
-      $join = $solarium_query->getHelper()->qparser(
-        'join',
-        $join_term
-      );
-      $new_query_string = $solarium_query->getQuery() . " {$conjunction} " . $join;
-      $solarium_query->setQuery($new_query_string);
-      $solarium_query->addParam(
-        'subquery', $subquery
-      );
-    }
-  }
-  elseif ($query->getOption('sbf_join_flavor_advanced')) {
-    $substitutions = $query->getOption('sbf_join_flavor_advanced');
-    if (is_array($substitutions) &&
-      !empty($options['from']) &&
-      !empty($options['to']) &&
-      !empty($options['v'])) {
-      $subquery = $options['v'];
-      $options['v'] = '$subquery';
-      // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
-      // This is desired because it will be faster
-      // Also adding $options['score'] = 'none' even faster.
-      // @TODO enable extra UUID type Solr field to be used as joined ones
-      $join = $solarium_query->getHelper()->qparser(
-        'join',
-        $options
-      );
-      $new_query_string = $solarium_query->getQuery() . ' OR ' . $join;
-      $solarium_query->setQuery($new_query_string);
-      $solarium_query->addParam(
-        'subquery', $subquery
-      );
-    }
-  }
 }
 
 /**
@@ -337,7 +250,6 @@ function format_strawberryfield_views_library_info_alter(&$libraries, $extension
     array_unshift($libraries['drupal.facets.views-ajax']['dependencies'], 'core/views.ajax');
   }
 }
-
 
 /**
  * Implements hook_views_pre_render().
