@@ -32,10 +32,11 @@ class IiifContentSearchController extends ControllerBase {
    * A JMESPATH to fetch Canvas Size, Images and their targets IIIF Presentation 3.x
    */
   CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
+
   /**
    * Mime type guesser service.
    *
-   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   * @var \Symfony\Component\Mime\MimeTypeGuesserInterface
    */
   protected $mimeTypeGuesser;
 
@@ -129,12 +130,11 @@ class IiifContentSearchController extends ControllerBase {
    * @param string                                                           $page
    *   The page according to the IIIF Content Search API 1.0/2.0 Specs.
    *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A cacheable response.
+   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse|JsonResponse
+   *   A response. Cacheable when needed.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\search_api\SearchApiException
-   * @throw \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
    */
   public function searchWithExposedMetadataDisplay(
     Request $request,
@@ -157,16 +157,17 @@ class IiifContentSearchController extends ControllerBase {
       return new JsonResponse($data, 503);
     }
 
-
-
-
     $entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
-
+    $iiif_response = [];
     if ($entity) {
+      $per_page = $this->iiifConfig->get('iiif_content_search_api_results_per_page');
+
       $current_url = $request->getRequestUri();
       $current_url_clean = strtok($current_url, '?');
+      $current_url_clean = $request->getSchemeAndHttpHost() . $current_url_clean;
+      $current_url_clean_no_page = strtok($current_url_clean,'/');
+
       $the_query_string = $request->get('q','');
-      $the_api = $request->get('api',1);
       /// I have to modify the request URL so the Template does not render
       /// with the Search API as <current> or worst, skips caches.
       $cacheabledata = $this->renderer->executeInRenderContext(
@@ -262,14 +263,13 @@ class IiifContentSearchController extends ControllerBase {
               }
             }
 
-
             $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
               static::IIIF_V3_JMESPATH, $jsonArray
             );
 
             $image_hash = $this->cleanJmesPathResult($jmespath_searchresult);
             unset($jmespath_searchresult);
-            $results = $this->flavorfromSolrIndex($the_query_string, ['ocr'], array_keys($image_hash));
+            $results = $this->flavorfromSolrIndex($the_query_string, ['ocr'], array_keys($image_hash), [], ($page * $per_page), $per_page);
             /* Expected structure independent if V2 or V3.
             result = {array[345]}
               0 = {array[3]}
@@ -281,16 +281,15 @@ class IiifContentSearchController extends ControllerBase {
                     1 = "http://localhost:8001/do/975c85ef-4eb2-4e37-a044-078207a8e0dd/iiif/0ad78298-d921-4f87-b0d8-104c1caf6cb1/canvas/p1"
             */
             $entries = [];
-            if (count($results)) {
+            if (count($results['annotations'])) {
               $i = 0;
-              foreach ($results as $hit => $hits_per_file_and_sequence) {
+              foreach ($results['annotations'] as $hit => $hits_per_file_and_sequence) {
                 foreach (
                 ($hits_per_file_and_sequence['boxes'] ?? []) as $annotation
                 ) {
                   $i++;
                   // Calculate Canvas and its offset
-                  $canvas
-                    = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']]
+                  $canvas = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']]
                     ?? [];
                   foreach ($canvas as $canvas_id => $canvas_data) {
                     if ($canvas_id) {
@@ -308,17 +307,17 @@ class IiifContentSearchController extends ControllerBase {
                       // V1
                       // Generate the entry
                       if ($version == "v1") {
-                      $entries[] = [
-                        "@id"        => $current_url_clean
-                          . "/annotation/anno-result/$i",
-                        "@type"      => "oa:Annotation",
-                        "motivation" => "painting",
-                        "resource"   => [
-                          "@type" => "cnt:ContentAsText",
-                          "chars" => $annotation['snippet'],
-                        ],
-                        "on"         => $canvas_id . $canvas_position
-                      ];
+                        $entries[] = [
+                          "@id"        => $current_url_clean
+                            . "/annotation/anno-result/$i",
+                          "@type"      => "oa:Annotation",
+                          "motivation" => "painting",
+                          "resource"   => [
+                            "@type" => "cnt:ContentAsText",
+                            "chars" => $annotation['snippet'],
+                          ],
+                          "on"         => $canvas_id . $canvas_position
+                        ];
                       }
                       elseif ($version == "v2") {
                         $entries[] = [
@@ -338,26 +337,74 @@ class IiifContentSearchController extends ControllerBase {
                   }
                 }
               }
-
-              /*
-              $cacheabledata = [
-        "@context" => "http://iiif.io/api/presentation/2/context.json",
-        "@id" => $current_url,
-        "@type" => "sc:AnnotationList",
-        "resources" => [
-          "@id" => "https://example.org/identifier/annotation/anno-line",
-          "@type" => "oa:Annotation",
-          "motivation" => "painting",
-          "resource" => [
-            "@type" => "cnt:ContentAsText",
-            "chars" => "you searched for {$the_query_string}, well done",
-          ],
-          "on" => "http://localhost:8001/do/22cea396-b4ec-11eb-8b96-9fa490fdda0b/iiif/canvas/p1#xywh=100,100,350,40",
-        ],
-      ];*/
             }
 
-            $response->setContent(json_encode($entries, JSON_PRETTY_PRINT));
+            $paging_structure = [];
+            if ($results['total'] > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
+              $max_page = floor($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
+              if ($version == "v1") {
+                $paging_structure = [
+                  "within" => [
+                    "@type" => "sc:Layer",
+                    "total" => $results['total'],
+                    "first" => $current_url_clean_no_page.'/0?='.urlencode($the_query_string),
+                    "last" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
+                  ]
+                ];
+                if ($results['total'] > ($page * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                  $paging_structure["next"] = $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string);
+                  $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
+                }
+              }
+              elseif ($version == "v2") {
+                $paging_structure = [
+                  "partOf" => [
+                    "id" => $current_url_clean,
+                    "type" => "AnnotationCollection",
+                    "total" => $results['total'],
+                    "first" =>
+                      [
+                        "id" => $current_url_clean_no_page.'/0?='.urlencode($the_query_string),
+                        "type" => "AnnotationPage",
+                      ],
+
+                    "last" =>
+                      [
+                        "id" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
+                        "type" => "AnnotationPage",
+                      ]
+                  ]
+                ];
+                if ($results['total'] > ($page * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                  $paging_structure["next"] = [
+                    "id" => $current_url_clean.'/'.($page + 1).'?='.urlencode($the_query_string),
+                    "type" => "AnnotationPage",
+                  ];
+                  $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
+                }
+              }
+            }
+            // Let's wrapp up
+            if ($version == 2) {
+              $iiif_response = [
+                "@context" => "http://iiif.io/api/search/2/context.json",
+                "id" => $current_url_clean,
+                "type" => "AnnotationPage",
+              ];
+              $iiif_response = $iiif_response + $paging_structure;
+              $iiif_response['items'] = $entries;
+            }
+            elseif ($version == 1) {
+              $iiif_response = [
+                "@context" => "http://iiif.io/api/presentation/2/context.json",
+                 "@id" => $current_url_clean,
+                 "@type" => "sc:AnnotationList",
+              ];
+              $iiif_response = $iiif_response + $paging_structure;
+              $iiif_response['resources'] = $entries;
+            }
+
+            $response->setContent(json_encode($iiif_response, JSON_PRETTY_PRINT));
             return $response;
           }
         }
@@ -517,7 +564,6 @@ v2
   protected function cleanJmesPathResult(array $jmespath_searchresult): array {
     $image_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
-      $entries_percanvas = $entries_percanvas;
       foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
         $image_id = $this->destinationScheme."://".IiifHelper::extract_iiif_id($image_canvas_pair[0]);
         // The $image_canvas_pair[1] is the Canvas targeted by the Image.
@@ -534,29 +580,32 @@ v2
   /**
    * OCR Search Controller specific to IIIF Content Seaach Needs
    *
-   * @param \Symfony\Component\HttpFoundation\Request  $request
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
-   * @param string $fileuuid
-   * @param string $processor
-   * @param string $format
-   * @param int|string $page
+   * @param string $term
+   * @param array  $processors
+   * @param array  $image_uris
+   * @param array  $node_ids
+   * @param int    $offset
+   * @param int    $limit
    *
-   * @return \Symfony\Component\HttpFoundation\Response
+   * @return array
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\search_api\SearchApiException
    */
-  protected function flavorfromSolrIndex(string $term, array $processors, array $image_uris, array $node_ids = [], $limit = 100, int|string $page = 0) {
+  protected function flavorfromSolrIndex(string $term, array $processors, array $image_uris, array $node_ids = [], $offset = 0, $limit = 100) {
 
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
     /* @var \Drupal\search_api\IndexInterface[] $indexes */
+
     $result_snippets = [];
+    $search_result = [];
+
     foreach ($indexes as $search_api_index) {
 
       // Create the query.
       $query = $search_api_index->query([
         'limit' => $limit,
-        'offset' => 0,
+        'offset' => $offset,
       ]);
 
       $parse_mode = $this->parseModeManager->createInstance('terms');
@@ -568,25 +617,23 @@ v2
       $allfields_translated_to_solr = $search_api_index->getServerInstance()
         ->getBackend()
         ->getSolrFieldNames($query->getIndex());
-      /* Forcing here two fixed options */
-      $parent_conditions = $query->createConditionGroup('OR');
 
+      $parent_conditions = $query->createConditionGroup('OR');
+      $uri_conditions = $query->createConditionGroup('OR');
 
       // If Nodes are passed use them as conditionals
-     if (count($node_ids)) {
-        if (isset($allfields_translated_to_solr['parent_id'])) {
-          $parent_conditions->addCondition('parent_id', $node_ids, 'IN');
-        }
-        // The property path for this is: target_id:field_descriptive_metadata:sbf_entity_reference_ispartof:nid
-        // TODO: This needs a config form. For now let's document. Even if not present
-        // It will not fail.
-        if (isset($allfields_translated_to_solr['top_parent_id'])) {
-          $parent_conditions->addCondition('top_parent_id',  $node_ids, 'IN');
+      if (count($node_ids)) {
+        foreach ($this->iiifConfig->get('iiif_content_search_api_parent_node_fields') ?? [] as $node_field) {
+          if (isset($allfields_translated_to_solr[$node_field])) {
+            $parent_conditions->addCondition($node_field, $node_ids, 'IN');
+          }
+          $fields_to_retrieve[$node_field] = $allfields_translated_to_solr[$node_field];
         }
         if (count($parent_conditions->getConditions())) {
           $query->addConditionGroup($parent_conditions);
         }
       }
+
 
       $query->addCondition('search_api_datasource', 'strawberryfield_flavor_datasource')
         ->addCondition('processor_id', $processors, 'IN');
@@ -612,17 +659,17 @@ v2
         $fields_to_retrieve['file_uuid'] = $allfields_translated_to_solr['file_uuid'];
       }
 
-      /* @TODO make this a config, used to be 'sbf_file_uri'*/
-      $possible_file_uri_field = 'uri';
-
-      if (isset($allfields_translated_to_solr[$possible_file_uri_field])) {
-        if (count($image_uris)) {
-          $query->addCondition(
-            'search_api_datasource', 'strawberryfield_flavor_datasource'
-          )
-            ->addCondition($possible_file_uri_field, $image_uris, 'IN');
+      if (count($image_uris)) {
+        foreach ($this->iiifConfig->get('iiif_content_search_api_file_uri_fields') ?? [] as $uri_field) {
+          if (isset($allfields_translated_to_solr[$uri_field])) {
+            $uri_conditions->addCondition($uri_field, $image_uris, 'IN');
+            $fields_to_retrieve[$uri_field]
+              = $allfields_translated_to_solr[$uri_field];
+          }
+          if (count($uri_conditions->getConditions())) {
+            $query->addConditionGroup($uri_conditions);
+          }
         }
-        $fields_to_retrieve[$possible_file_uri_field] = $allfields_translated_to_solr[$possible_file_uri_field];
       }
       // This is documented at the API level but maybe our processing level
       // Does not trigger it?
@@ -733,7 +780,7 @@ v2
                 }
               }
 
-              foreach($fields_to_retrieve as $machine_name => $field) {
+              foreach($fields_to_retrieve as $machine_name => $machine_name_field) {
                 $result_snippets_base['sbf_metadata'][$machine_name] = $filedata_by_id[$sol_doc_id][$machine_name];
               }
             }
@@ -742,6 +789,8 @@ v2
         }
       }
     }
-    return $result_snippets;
+    $search_result['annotations'] = $result_snippets;
+    $search_result['total'] = $results->getResultCount();
+    return $search_result;
   }
 }

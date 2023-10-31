@@ -222,6 +222,8 @@ class IiifSettingsForm extends ConfigFormBase {
       )
       ->set('iiif_content_search_api_parent_node_fields',
         $form_state->getValue('iiif_content_search_api_parent_node_fields') ?? [])
+      ->set('iiif_content_search_api_file_uri_fields',
+        $form_state->getValue('iiif_content_search_api_file_uri_fields') ?? [])
       ->set('iiif_content_search_api_results_per_page',
         $form_state->getValue('iiif_content_search_api_results_per_page') ?? 25)
       ->set('iiif_content_search_api_query_length',
