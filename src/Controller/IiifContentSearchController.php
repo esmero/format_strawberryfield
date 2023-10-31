@@ -165,7 +165,10 @@ class IiifContentSearchController extends ControllerBase {
       $current_url = $request->getRequestUri();
       $current_url_clean = strtok($current_url, '?');
       $current_url_clean = $request->getSchemeAndHttpHost() . $current_url_clean;
-      $current_url_clean_no_page = strtok($current_url_clean,'/');
+      $current_url_clean_no_page = $request->getSchemeAndHttpHost() . $request->getPathInfo();
+      $current_url_clean_no_page = explode("/", $current_url_clean_no_page);
+      array_pop($current_url_clean_no_page);
+      $current_url_clean_no_page = implode("/", $current_url_clean_no_page);
 
       $the_query_string = $request->get('q','');
       /// I have to modify the request URL so the Template does not render
@@ -240,12 +243,12 @@ class IiifContentSearchController extends ControllerBase {
               $valid = FALSE;
               foreach($jsonArray['service'] ?? [] as $service) {
                 if (isset($service['type']) && in_array($service['type'], ["SearchService2", "SearchService1"])) {
-                  if (strtok($service['id'] ?? '', '?') == $current_url_clean) {
+                  if (strtok($service['id'] ?? '', '?') == $current_url_clean_no_page.'/0') {
                     $valid = TRUE;
                   }
                 }
                 if (isset($service['profile']) && in_array($service['profile'], ["http://iiif.io/api/search/1/search", "https://iiif.io/api/search/1/search"])) {
-                  if (strtok($service['@id'] ?? '', '?') == $current_url_clean) {
+                  if (strtok($service['@id'] ?? '', '?') == $current_url_clean_no_page.'/0') {
                     $valid = TRUE;
                   }
                 }
@@ -281,6 +284,7 @@ class IiifContentSearchController extends ControllerBase {
                     1 = "http://localhost:8001/do/975c85ef-4eb2-4e37-a044-078207a8e0dd/iiif/0ad78298-d921-4f87-b0d8-104c1caf6cb1/canvas/p1"
             */
             $entries = [];
+            $paging_structure = [];
             if (count($results['annotations'])) {
               $i = 0;
               foreach ($results['annotations'] as $hit => $hits_per_file_and_sequence) {
@@ -293,13 +297,21 @@ class IiifContentSearchController extends ControllerBase {
                     ?? [];
                   foreach ($canvas as $canvas_id => $canvas_data) {
                     if ($canvas_id) {
-                      // @TODO I need to also take the actual target offset in account if present
+                      // @TODO I need to also take the actual target offset in account if present*
                       $canvas_position = [
                         $annotation['l'] * $canvas_data[0],
                         $annotation['t'] * $canvas_data[1],
-                        $annotation['r'] * $canvas_data[0],
-                        $annotation['b'] * $canvas_data[1],
+                        ($annotation['r']-$annotation['l']) * $canvas_data[0],
+                        ($annotation['b']- $annotation['t']) * $canvas_data[1],
                       ];
+
+                      /*$canvas_position = [
+                        $annotation['l'] * 100,
+                        $annotation['t'] * 100,
+                        $annotation['r'] * 100,
+                        $annotation['b'] * 100,
+                      ];*/
+
                       $canvas_position = "#xywh=" . implode(
                           ",", $canvas_position
                         );
@@ -339,9 +351,8 @@ class IiifContentSearchController extends ControllerBase {
               }
             }
 
-            $paging_structure = [];
             if ($results['total'] > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
-              $max_page = floor($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
+              $max_page = ceil($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
               if ($version == "v1") {
                 $paging_structure = [
                   "within" => [
@@ -351,7 +362,7 @@ class IiifContentSearchController extends ControllerBase {
                     "last" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
                   ]
                 ];
-                if ($results['total'] > ($page * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                if ($results['total'] > (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
                   $paging_structure["next"] = $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string);
                   $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
                 }
@@ -375,9 +386,9 @@ class IiifContentSearchController extends ControllerBase {
                       ]
                   ]
                 ];
-                if ($results['total'] > ($page * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                if ($results['total'] >  (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
                   $paging_structure["next"] = [
-                    "id" => $current_url_clean.'/'.($page + 1).'?='.urlencode($the_query_string),
+                    "id" => $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string),
                     "type" => "AnnotationPage",
                   ];
                   $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
@@ -385,7 +396,7 @@ class IiifContentSearchController extends ControllerBase {
               }
             }
             // Let's wrapp up
-            if ($version == 2) {
+            if ($version == "v2") {
               $iiif_response = [
                 "@context" => "http://iiif.io/api/search/2/context.json",
                 "id" => $current_url_clean,
@@ -394,12 +405,12 @@ class IiifContentSearchController extends ControllerBase {
               $iiif_response = $iiif_response + $paging_structure;
               $iiif_response['items'] = $entries;
             }
-            elseif ($version == 1) {
+            elseif ($version == "v1") {
               $iiif_response = [
                 "@context" => "http://iiif.io/api/presentation/2/context.json",
-                 "@id" => $current_url_clean,
-                 "@type" => "sc:AnnotationList",
-              ];
+                "@id" => $current_url_clean,
+                "@type" => "sc:AnnotationList",
+              ] + $paging_structure;
               $iiif_response = $iiif_response + $paging_structure;
               $iiif_response['resources'] = $entries;
             }
