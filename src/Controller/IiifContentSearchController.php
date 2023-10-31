@@ -299,10 +299,10 @@ class IiifContentSearchController extends ControllerBase {
                     if ($canvas_id) {
                       // @TODO I need to also take the actual target offset in account if present*
                       $canvas_position = [
-                        $annotation['l'] * $canvas_data[0],
-                        $annotation['t'] * $canvas_data[1],
-                        ($annotation['r']-$annotation['l']) * $canvas_data[0],
-                        ($annotation['b']- $annotation['t']) * $canvas_data[1],
+                        round($annotation['l'] * $canvas_data[0]),
+                        round($annotation['t'] * $canvas_data[1]),
+                        round(($annotation['r']-$annotation['l']) * $canvas_data[0]),
+                        round(($annotation['b']- $annotation['t']) * $canvas_data[1]),
                       ];
 
                       /*$canvas_position = [
