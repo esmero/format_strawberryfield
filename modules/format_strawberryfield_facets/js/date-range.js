@@ -7,7 +7,7 @@
 
   Drupal.behaviors.sbfFacetsDateRange = {
     attach: function attach(context, settings) {
-      const elementsToAttach = once('js-facets-sbf-daterange-on-click', 'js-facets-sbf-daterange', context);
+      const elementsToAttach = once('js-facets-sbf-daterange-on-click', '.js-facets-sbf-daterange', context);
       $dateRangeFacets = $(elementsToAttach);
 
 
