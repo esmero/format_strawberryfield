@@ -116,8 +116,8 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     $response = new AjaxResponse();
 
     // Rebuild the request and the current path, needed for facets.
-    $path = $request->request->get('exposedform_link');
-    $modalviews_blocks = $request->request->get('modalviews_blocks');
+    $path = $request->request->get('exposedform_link') ?? NULL;
+    $modalviews_blocks = $request->request->all('modalviews_blocks') ?? [];
 
     if (empty($path) || empty($modalviews_blocks)) {
       throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
