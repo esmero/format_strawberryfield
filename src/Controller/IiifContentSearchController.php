@@ -638,8 +638,8 @@ class IiifContentSearchController extends ControllerBase {
                       'r' => $right,
                       'b' => $bottom,
                       'snippet' => $region_text,
-                      'before' =>  $before_and_after[$before_index],
-                      'after' =>  $before_and_after[$after_index],
+                      'before' =>  $before_and_after[$before_index] ?? '',
+                      'after' =>  $before_and_after[$after_index] ?? '',
                       'hit' => $hit,
                     ];
                   }
@@ -651,8 +651,8 @@ class IiifContentSearchController extends ControllerBase {
                       'r' => $highlight[0]['lrx'],
                       'b' => $highlight[0]['lry'],
                       'snippet' => $region_text,
-                      'before' =>  $before_and_after[$before_index],
-                      'after' =>  $before_and_after[$after_index],
+                      'before' =>  $before_and_after[$before_index] ?? '',
+                      'after' =>  $before_and_after[$after_index] ?? '',
                       'hit' => $hit,
                     ];
                   }
