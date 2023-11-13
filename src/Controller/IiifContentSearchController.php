@@ -216,8 +216,6 @@ class IiifContentSearchController extends ControllerBase {
         $raw_inputbag->add(['format' => $format]);
         $subrequest->attributes->set('_raw_variables', $raw_inputbag);
         $this->requestStack->push($subrequest);
-        // TESTING
-        //error_log($this->requestStack->getCurrentRequest()->getPathInfo());
 
 
         /* This call is right but will never ever be cached. But i can cache at least the result of the processing */
@@ -272,7 +270,9 @@ class IiifContentSearchController extends ControllerBase {
 
             $image_hash = $this->cleanJmesPathResult($jmespath_searchresult);
             unset($jmespath_searchresult);
+
             $results = $this->flavorfromSolrIndex($the_query_string, ['ocr'], array_keys($image_hash), [], ($page * $per_page), $per_page);
+
             /* Expected structure independent if V2 or V3.
             result = {array[345]}
               0 = {array[3]}
@@ -293,6 +293,10 @@ class IiifContentSearchController extends ControllerBase {
                 ) {
                   $i++;
                   // Calculate Canvas and its offset
+                  // PDFs Sequence is correctly detected, but on images it should always be "1"
+                  // For that we will change the response from the main Solr search using our expected ID (splitting)
+
+
                   $canvas = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']]
                     ?? [];
                   foreach ($canvas as $canvas_id => $canvas_data) {
@@ -578,21 +582,20 @@ class IiifContentSearchController extends ControllerBase {
             $extradata['search_api_solr_response']['ocrHighlighting']
           ) > 0) {
           foreach ($results as $result) {
-            $extradata_from_item = $result->getAllExtraData() ?? [];
-            if (isset($allfields_translated_to_solr['parent_sequence_id']) &&
-              isset($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['parent_sequence_id']])) {
-              $sequence_number = (array) $extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['parent_sequence_id']];
-              if (isset($sequence_number[0]) && !empty($sequence_number[0]) && ($sequence_number[0] != 0)) {
-                // We do all this checks to avoid adding a strange offset e.g a collection instead of a CWS
-                $page_number_by_id[$extradata_from_item['search_api_solr_document']['id']] = $sequence_number[0];
-              }
+            $real_id = $result->getId();
+            $real_sequence = NULL;
+            $real_id_part = explode(":", $real_id);
+            if (isset($real_id_part[1]) && is_scalar($real_id_part[1])) {
+              $real_sequence = $real_id_part[1];
             }
+            $extradata_from_item = $result->getAllExtraData() ?? [];
+
             foreach($fields_to_retrieve as $machine_name => $field) {
               $filedata_by_id[$extradata_from_item['search_api_solr_document']['id']][$machine_name] = $extradata_from_item['search_api_solr_document'][$field] ?? NULL;
             }
-            // If we use getField we can access the RAW/original source without touching Solr
-            // Not right now needed but will keep this around.
-            // e.g. $sequence_id = $result->getField('sequence_id')->getValues();
+            if ($real_sequence) {
+              $filedata_by_id[$extradata_from_item['search_api_solr_document']['id']]['sequence_id'] = $real_sequence;
+            }
           }
 
           foreach ($extradata['search_api_solr_response']['ocrHighlighting'] as $sol_doc_id => $field) {

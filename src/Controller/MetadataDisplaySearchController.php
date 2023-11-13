@@ -141,8 +141,6 @@ class MetadataDisplaySearchController extends
                 foreach ($searchresult as $canvas_order => $canvas) {
                   foreach ($canvas['items'] as $item) {
                     $images = $item['service_ids'] ?? ($item['image_ids'] ?? []);
-                    $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf/full/max/0/default.jpg?page=1";
-                    $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf;1/full/max/0/default.jpg";
                     foreach ($images as $image_url) {
                       $image_id = IiifHelper::extract_iiif_id($image_url);
                       $hash_images[$image_id] = array_merge($hash_images[$image_id] ?? [], [$canvas['canvas_id']]);
@@ -347,8 +345,6 @@ class MetadataDisplaySearchController extends
               foreach ($searchresult as $canvas_order => $canvas) {
                 foreach ($canvas['items'] as $item) {
                   $images = $item['service_ids'] ?? ($item['image_ids'] ?? []);
-                  $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf/full/max/0/default.jpg?page=1";
-                  $images[] = "http://localhost:8183/iiif/2/a5e%2FPERRITO.pdf;1/full/max/0/default.jpg";
                   foreach ($images as $image_url) {
                     $image_id = IiifHelper::extract_iiif_id($image_url);
                     $hash_images[$image_id] = array_merge($hash_images[$image_id] ?? [], [$canvas['canvas_id']]);
