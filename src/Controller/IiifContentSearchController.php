@@ -301,13 +301,24 @@ class IiifContentSearchController extends ControllerBase {
                     ?? [];
                   foreach ($canvas as $canvas_id => $canvas_data) {
                     if ($canvas_id) {
-                      // @TODO I need to also take the actual target offset in account if present*
-                      $canvas_position = [
-                        round($annotation['l'] * $canvas_data[0]),
-                        round($annotation['t'] * $canvas_data[1]),
-                        round(($annotation['r']-$annotation['l']) * $canvas_data[0]),
-                        round(($annotation['b']- $annotation['t']) * $canvas_data[1]),
-                      ];
+                      $canvas_parts = explode("#xywh=", $canvas_id);
+                      if (count($canvas_parts) == 2) {
+                        $canvas_offset = explode(',' , $canvas_parts[1]);
+                        $canvas_position = [
+                          round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
+                          round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
+                          round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
+                          round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
+                        ];
+                      }
+                      else {
+                        $canvas_position = [
+                          round($annotation['l'] * $canvas_data[0]),
+                          round($annotation['t'] * $canvas_data[1]),
+                          round(($annotation['r'] - $annotation['l']) * $canvas_data[0]),
+                          round(($annotation['b'] - $annotation['t']) * $canvas_data[1]),
+                        ];
+                      }
 
                       /*$canvas_position = [
                         $annotation['l'] * 100,
@@ -332,7 +343,7 @@ class IiifContentSearchController extends ControllerBase {
                             "@type" => "cnt:ContentAsText",
                             "chars" => $annotation['snippet'],
                           ],
-                          "on"         => $canvas_id . $canvas_position
+                          "on"         => ($canvas_parts[0] ?? $canvas_id) . $canvas_position
                         ];
                       }
                       elseif ($version == "v2") {
@@ -399,7 +410,7 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
             }
-            // Let's wrapp up
+            // Let's wrap up
             if ($version == "v2") {
               $iiif_response = [
                 "@context" => "http://iiif.io/api/search/2/context.json",
