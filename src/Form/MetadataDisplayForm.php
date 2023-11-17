@@ -1,4 +1,5 @@
 <?php
+declare(strict_types = 1);
 
 namespace Drupal\format_strawberryfield\Form;
 
@@ -445,7 +446,17 @@ class MetadataDisplayForm extends ContentEntityForm {
         else {
           $message = $exception->getMessage();
         }
-      } finally {
+      } catch (\Error $error) {
+        $render = null;
+        // Make the Message easier to read for the end user
+        if ($error instanceof TwigError) {
+          $message = $error->getRawMessage() . ' at line ' . $error->getTemplateLine();
+        }
+        else {
+          $message = $error->getMessage();
+        }
+      }
+      finally {
         if (!empty($message)) {
           // If there's no render output, generate an error message. Otherwise,
           // generate a warning.
