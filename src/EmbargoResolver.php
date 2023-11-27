@@ -123,11 +123,23 @@ class EmbargoResolver implements EmbargoResolverInterface {
         }
       }
       $ip_embargo_key = $this->embargoConfig->get('ip_json_key');
-      if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key]) && is_string($jsondata[$ip_embargo_key])) {
+      if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
         $current_ip =  $this->requestStack->getCurrentRequest()->getClientIp();
         if ($current_ip) {
-          $ip_embargo = IpUtils::checkIp4($current_ip, trim($jsondata[$ip_embargo_key]));
-          $noembargo = $noembargo && $ip_embargo;
+          if (is_array($jsondata[$ip_embargo_key])) {
+            foreach($jsondata[$ip_embargo_key] as $ip_embargo_value) {
+              if (is_string($ip_embargo_value)) {
+                $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
+                // Here we need to do it differently. We will || all the $ip_embargo
+                // and then check the $noembargo variable outside of this loop
+              }
+            }
+            $noembargo = $noembargo && $ip_embargo;
+          }
+          elseif (is_string($jsondata[$ip_embargo_key])) {
+            $ip_embargo = IpUtils::checkIp4($current_ip, trim($jsondata[$ip_embargo_key]));
+            $noembargo = $noembargo && $ip_embargo;
+          }
         }
       }
       $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo];
