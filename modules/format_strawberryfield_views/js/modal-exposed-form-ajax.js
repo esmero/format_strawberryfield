@@ -230,6 +230,9 @@
        options.data = $.param(params);
      }
      else {
+       if  ((options.data == null) || (typeof(options.data) == 'undefined')) {
+         options.data = {};
+       }
        options.data['exposed_form_display'] = $exposed_form;
      }
     }
