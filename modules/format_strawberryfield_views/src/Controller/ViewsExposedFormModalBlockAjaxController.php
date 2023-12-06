@@ -18,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\RouterInterface;
 
 /**
- * Defines a controller to load an Modal Exposed Views Form Block via AJAX.
+ * Defines a controller to load a Modal Exposed Views Form Block via AJAX.
  */
 class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
 
