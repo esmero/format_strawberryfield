@@ -134,7 +134,7 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
     // Because main media source needs to update its choices based on
     // Media Source checked options, we need to recalculate its default
     // Value also.
-    $default_value_main_mediasoruce = ($this->getSetting(
+    $default_value_main_mediasource = ($this->getSetting(
         'main_mediasource'
       ) && array_key_exists(
         $this->getSetting('main_mediasource'),
@@ -164,7 +164,7 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
             'Select which Source will be handled as the primary one.'
           ),
           '#options' => $options_for_mainsource,
-          '#default_value' => $default_value_main_mediasoruce,
+          '#default_value' => $default_value_main_mediasource,
           '#required' => FALSE,
           '#prefix' => '<div id="main-mediasource-ajax-container">',
           '#suffix' => '</div>',

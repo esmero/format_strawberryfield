@@ -18,7 +18,6 @@ modal-exposed-form-views-ajax:
     - core/drupal
     - core/jquery
     - core/once
-    - core/once
     - core/drupalSettings
     - core/views
     - core/views.ajax
