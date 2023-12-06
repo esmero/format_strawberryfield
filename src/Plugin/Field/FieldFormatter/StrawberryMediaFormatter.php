@@ -313,6 +313,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
 
       $mediasource = is_array($this->getSetting('mediasource'))
         ? $this->getSetting('mediasource') : [];
+      $mediasource = array_filter($mediasource);
       $main_mediasource = $this->getSetting('main_mediasource');
       if (!empty($mediasource) && ($main_mediasource)) {
         if (!$embargoed || ($embargoed && !$hide_on_embargo)
