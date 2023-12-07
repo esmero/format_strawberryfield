@@ -103,6 +103,7 @@ use Twig\Source;
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
  *     "edit-form" = "/metadatadisplay/{metadatadisplay_entity}/edit",
  *     "delete-form" = "/metadatadisplay/{metadatadisplay_entity}/delete",
+ *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
  *     "collection" = "/metadatadisplay/list"
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
@@ -509,7 +510,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
       // Parse seq to check the name for "data" and if it passes, get the values
-      // for for/in loops, e.g. {% for creator in data.creator %}
+      // for/in loops, e.g. {% for creator in data.creator %}
       if ($node->hasAttribute('always_defined')
           && $node->getAttribute('always_defined')
           && $nodes->hasNode('seq')
