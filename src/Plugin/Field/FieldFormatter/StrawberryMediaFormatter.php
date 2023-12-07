@@ -135,9 +135,8 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
           '#default_value' => $this->getSetting('webannotations_betterpolygon'),
           '#states' => [
             'visible' => [
-              [':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE]],
-              'and',
-              [':input[data-formatter-selector="webannotations-tool"]' =>  ['!value' => "rect"]],
+              ':input[data-formatter-selector="webannotations"]' => ['checked' => TRUE],
+              ':input[data-formatter-selector="webannotations-tool"]' =>  ['!value' => "rect"],
             ],
           ],
         ],
@@ -463,6 +462,8 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['width'] = $max_width_css;
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['dr:uuid'] = $file->uuid();
     $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['icons_prefixurl'] = $icons_prefixurl;
+    $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
+
     // Used to keep annotations around during edit.
     // Note: Since View modes are cached, if no change to the NODE
     // this will be served from a cache! mmm.
@@ -473,7 +474,6 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
-      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['viewer_overrides'] = $viewer_overrides;
       // This also never runs if cached. So after deletion we better
       // call the controller!
       if (!empty($jsondata['ap:annotationCollection']) && is_array($jsondata['ap:annotationCollection'])) {
