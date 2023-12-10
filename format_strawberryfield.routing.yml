@@ -124,7 +124,6 @@ format_strawberryfield.metadatadisplay_caster:
   requirements:
     format: .+
     _entity_access: 'node.view'
-#    _entity_access: 'metadataexpose_entity.view'
 
 format_strawberryfield.iiif_admin_settings_form:
   path: '/admin/config/archipelago/iiif'
@@ -363,3 +362,17 @@ format_strawberryfield.iiif_content_search_exposed:
   requirements:
     page: \d+
     _entity_access: 'node.view'
+
+# Direct access to Metadata display / Views processed API using Metadata API Config Entity.
+format_strawberryfield.metadataapi_caster_base:
+  path: '/ap/api/{metadataapiconfig_entity}/{patharg}'
+  methods: [GET, POST, HEAD]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataAPIController::castViaView'
+    patharg: 'v1'
+  options:
+    parameters:
+      metadataapiconfig_entity:
+        type: 'entity:metadataapi_entity'
+  requirements:
+    _permission: 'view strawberryfield api'

@@ -188,7 +188,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       '#type' => 'textfield',
       '#title' => t('When embargo is used or applied, alternate JSON Key(s) where the files to be used by this formatter where uploaded/store in your JSON.'),
       '#description' => t('Be careful about providing same keys used for user that can by pass an embargo. You can add multiple ones separated by comma. Some viewers use multiple file types, e.g audios and Subtitles, in that case please add all of them. In case of multiple Keys for the same type e.g "audios1", "audios2", the key names will be also used for grouping. Leave empty to not provide any alternate embargo option at all.'),
-      '#default_value' => $this->getSetting('upload_json_key_source'),
+      '#default_value' => $this->getSetting('embargo_json_key_source'),
       '#required' => FALSE,
       '#maxlength' => 255,
       '#size' => 64,
