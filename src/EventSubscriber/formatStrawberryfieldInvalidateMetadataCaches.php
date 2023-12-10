@@ -2,6 +2,8 @@
 
 namespace Drupal\format_strawberryfield\EventSubscriber;
 
+use Drupal\search_api\Event\ItemsIndexedEvent;
+use Drupal\search_api\Event\SearchApiEvents;
 use Drupal\strawberryfield\Event\StrawberryfieldCrudEvent;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -71,6 +73,7 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
     $events[StrawberryfieldEventType::SAVE][] = ['onEntityOp', static::$priority];
     $events[StrawberryfieldEventType::DELETE][] = ['onEntityOp', static::$priority];
     $events[StrawberryfieldEventType::INSERT][] = ['onEntityOp', static::$priority];
+    $events[SearchApiEvents::ITEMS_INDEXED][] = ['itemsIndexed', static::$priority];
     return $events;
   }
 
@@ -81,11 +84,51 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
    * @param \Drupal\strawberryfield\Event\StrawberryfieldCrudEvent $event
    */
   public function onEntityOp(StrawberryfieldCrudEvent $event) {
-     /* @var $entity \Drupal\Core\Entity\ContentEntityInterface */
+    /* @var $entity \Drupal\Core\Entity\ContentEntityInterface */
     $entity = $event->getEntity();
     $this->invalidate_cache($entity);
     $current_class = get_called_class();
     $event->setProcessedBy($current_class, true);
+  }
+
+  /**
+   * Reacts to the items indexed event and invalidates parent tags.
+   *
+   * @param \Drupal\search_api\Event\ItemsIndexedEvent $event
+   *   The items indexed event.
+   */
+  public function itemsIndexed(ItemsIndexedEvent $event) {
+    $tags = [];
+    try {
+      $processed_entities = $event->getProcessedIds();
+      $items = $event->getIndex()->loadItemsMultiple($processed_entities);
+      foreach ($items as $item) {
+        // Content DataSources will return pluginID == NULL BC the entity
+        // replaces the actual item, but SBF will still be of type datasource
+        // We won't use Flavors here to update the parent ADO cache.
+        // @TODO ask team. Should an OCR index invalidate the caches of a parent?
+        if ($item->getPluginId() != "strawberryfield_flavor_data") {
+          if ($item->getEntity()->hasField('field_sbf_nodetonode')) {
+            $field = $item->getEntity()->get('field_sbf_nodetonode');
+            foreach ($field->getIterator() as $delta => $itemfield) {
+              $tags[] = 'node_metadatadisplay:' . $itemfield->target_id;
+            }
+          }
+        }
+      }
+      $tags = array_unique($tags);
+      if (!empty($tags)) {
+        Cache::invalidateTags($tags);
+      }
+    }
+    catch (\Exception $exception) {
+      $this->loggerFactory->get('format_strawberryfield')->error(
+        $this->t(
+          'Error invalidating Caches for parent Nodes of newly Indexed Documents @e',
+          ['@e' => $exception->getMessage()]
+        )
+      );
+    }
   }
 
   protected function invalidate_cache(ContentEntityInterface $entity) {
@@ -99,7 +142,7 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
       }
     }
     catch (\Exception $exception) {
-      $this->loggerFactory->get('strawberryfield')->error($this->t('Error invalidating Caches for parent Nodes for Node ID @node', ['@node' => $entity->id()]));
+      $this->loggerFactory->get('format_strawberryfield')->error($this->t('Error invalidating Caches for parent Nodes for Node ID @node', ['@node' => $entity->id()]));
     }
   }
 }

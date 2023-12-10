@@ -254,19 +254,19 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
     $hotspots = $this->getSetting('json_key_hotspots');
-    $multiscene = trim($this->getSetting('json_key_multiscene'));
+    $multiscene = trim($this->getSetting('json_key_multiscene') ?? '');
     $settings_hotspotdebug = $this->getSetting('hotSpotDebug');
     $settings_autoload = $this->getSetting('autoLoad');
     $settings_key = $this->getSetting('json_key_settings');
 
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
     $publicimageurl = NULL;

@@ -62,16 +62,42 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
   public function settingsForm(array $form, FormStateInterface $form_state) {
 
     $form = parent::settingsForm($form, $form_state);
-    $current_field = array_keys($form_state->getValue('fields'));
-    $field_name = reset($current_field);
-    $realparents = [
-      'fields',
-      $field_name,
-      'settings_edit_form',
-      'settings',
-      'formatter',
-      'jmespath',
-    ];
+    $provider_settings = $form_state->getValue('settings', []);
+    // Deal with Layout Builder's structure/config form render array parents
+    if (isset($provider_settings['provider']) && $provider_settings['provider'] == 'layout_builder') {
+      $realparents = [
+        'settings',
+        'formatter',
+        'settings',
+        'jmespath',
+      ];
+    }
+    else {
+      // Deal with DS/Normal Display Mode Structure
+      $current_field = array_keys($form_state->getValue('fields', []));
+      $field_name = reset($current_field);
+      if ($field_name) {
+        $realparents = [
+          'fields',
+          $field_name,
+          'settings_edit_form',
+          'settings',
+          'formatter',
+          'jmespath',
+        ];
+      }
+      else {
+        // If for some never seen before reason we have no fields in form state
+        // default to same layour builder option just so we don't fail badly
+        // But ajax might not work. Also, this should never happen.
+        $realparents = [
+          'settings',
+          'formatter',
+          'settings',
+          'jmespath',
+        ];
+      }
+    }
     $jmespath_settings = $this->getSetting('jmespath');
     $form['jmespath']['use_jmespath'] = [
       '#type' => 'checkbox',

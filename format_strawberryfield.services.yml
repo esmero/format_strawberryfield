@@ -20,3 +20,8 @@ services:
   format_strawberryfield.embargo_resolver:
     class: Drupal\format_strawberryfield\EmbargoResolver
     arguments: ['@config.factory', '@current_user', '@request_stack']
+  format_strawberryfield.routes:
+    class: Drupal\format_strawberryfield\Routing\FormatStrawberryfieldLayoutBuilderRoutes
+    tags:
+      - { name: event_subscriber }
+    arguments: ['@entity_type.manager']

@@ -52,41 +52,41 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     return [
-      'json_key_source' => [
-        '#type' => 'textfield',
-        '#title' => t('JSON Key from where to fetch Media URLs'),
-        '#default_value' => $this->getSetting('json_key_source'),
-        '#required' => TRUE
-      ],
-      'number_media' => [
-        '#type' => 'number',
-        '#title' => $this->t('Number of Audio files'),
-        '#default_value' => $this->getSetting('number_media'),
-        '#size' => 2,
-        '#maxlength' => 2,
-        '#min' => 0,
-      ],
-      'max_width' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum width'),
-        '#default_value' => $this->getSetting('max_width'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-      'max_height' => [
-        '#type' => 'number',
-        '#title' => $this->t('Maximum height'),
-        '#default_value' => $this->getSetting('max_height'),
-        '#size' => 5,
-        '#maxlength' => 5,
-        '#field_suffix' => $this->t('pixels'),
-        '#min' => 0,
-        '#required' => TRUE
-      ],
-    ] + parent::settingsForm($form, $form_state);
+        'json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key from where to fetch Media URLs'),
+          '#default_value' => $this->getSetting('json_key_source'),
+          '#required' => TRUE
+        ],
+        'number_media' => [
+          '#type' => 'number',
+          '#title' => $this->t('Number of Audio files'),
+          '#default_value' => $this->getSetting('number_media'),
+          '#size' => 2,
+          '#maxlength' => 2,
+          '#min' => 0,
+        ],
+        'max_width' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum width'),
+          '#default_value' => $this->getSetting('max_width'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+        'max_height' => [
+          '#type' => 'number',
+          '#title' => $this->t('Maximum height'),
+          '#default_value' => $this->getSetting('max_height'),
+          '#size' => 5,
+          '#maxlength' => 5,
+          '#field_suffix' => $this->t('pixels'),
+          '#min' => 0,
+          '#required' => TRUE
+        ],
+      ] + parent::settingsForm($form, $form_state);
   }
 
   /**
@@ -124,13 +124,13 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
 
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
 
@@ -138,6 +138,9 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
+    // Basically min 90px height if using VTT
+    $max_height_vtt_css = empty($max_height) || $max_height == 0 ? 'auto' : ($max_height <= 90 ? 90 : $max_height) .'px';
+
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
@@ -213,57 +216,66 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           $upload_keys, []);
         if (count($media)) {
           $conditions[] = [
-            'source' => ['dr:mimetype'],
+            'source'    => ['dr:mimetype'],
             'condition' => 'text/vtt',
           ];
-          $vtt = $this->fetchMediaFromJsonWithFilter($delta, $items,
+          $vtt = $this->fetchMediaFromJsonWithFilter(
+            $delta, $items,
             $elements,
             FALSE, $jsondata, 'Text', 'as:text', $ordersubkey, $number_media,
-            $upload_keys, $conditions);
-          /* This may be a bit more complex, possible situations
+            $upload_keys, $conditions
+          );
+          /* This may be a bit more complex, possible situations we cover
             1.- NO vtt, all good
             2.- One Media, multiple vtt, all good
-            3.- Multiple media, single vtt (all good?)
-            4.- Multiple media, multiple vtt. But there is a single media per upload_key and vtt share the upload key
-            5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
+            3.- Multiple media, multiple vtt. need to grouped by sourcekey
             */
           if (count($vtt)) {
             // Yep, redundant but we have no longer these settings here
-            // and i need to add 30px (uff) to the top.
-
-            if  ($max_height = $this->getSetting('max_height') <= 90) {
-              $max_width = $this->getSetting('max_width');
-              $max_height = 90;
-              $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-            }
+            // If $media is a single one, we will assume all VTTS belong to it, bypassing the dr:for grouping
 
             foreach ($media as $drforkey => $media_item) {
-              if (isset($vtt[$drforkey])) {
+              if (isset($vtt[$drforkey]) || count($media) == 1) {
                 foreach ($media_item as $key => $media_entry) {
-                  $elements[$delta]['audio_hmtl5_' . $key]['audio']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height}px";
-                  foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
-                    $route_parameters = [
-                      'node' => $nodeid,
-                      'uuid' => $vtt_item['file']->uuid(),
-                      'format' => 'default.' . pathinfo($vtt_item['file']->getFilename(),
-                          PATHINFO_EXTENSION)
-                    ];
-                    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
-                      $route_parameters);
-                    //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
-                    // tracks need at least 30px more up. Wonder if we should add those here
-                    // Or document it as min: 90px height?
-                    $elements[$delta]['audio_hmtl5_' . $key]['audio']['track' . $vtt_key] = [
-                      '#type' => 'html_tag',
-                      '#tag' => 'track',
-                      '#attributes' => [
-                        'label' => $this->t('Transcript ' . $current_language),
-                        'kind' => 'subtitles',
-                        'srclang' => $current_language,
-                        'src' => $publicurl->toString(),
-                        'default' => TRUE
-                      ]
-                    ];
+                  $elements[$delta]['audio_hmtl5_'
+                  . $key]['audio']['#attributes']['style']
+                    = "width:{$max_width_css}; height:{$max_height_vtt_css}";
+                  foreach ($vtt as $vtt_drforkey => $vtt_entries) {
+                    if (count($media) == 1 || $drforkey == $vtt_drforkey) {
+                      foreach ($vtt_entries as $vtt_key => &$vtt_item) {
+                        $route_parameters = [
+                          'node'   => $nodeid,
+                          'uuid'   => $vtt_item['file']->uuid(),
+                          'format' => 'default.' . pathinfo(
+                              $vtt_item['file']->getFilename(),
+                              PATHINFO_EXTENSION
+                            )
+                        ];
+                        $publicurl = Url::fromRoute(
+                          'format_strawberryfield.iiifbinary',
+                          $route_parameters
+                        );
+                        //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
+                        // tracks need at least 30px more up. Wonder if we should add those here
+                        // Or document it as min: 90px height?
+                        $elements[$delta]['audio_hmtl5_'
+                        . $key]['audio']['track'
+                        . $vtt_key]
+                          = [
+                          '#type'       => 'html_tag',
+                          '#tag'        => 'track',
+                          '#attributes' => [
+                            'label'   => $this->t(
+                              'Transcript ' . $current_language ." ({$vtt_item['file_name']})"
+                            ),
+                            'kind'    => 'subtitles',
+                            'srclang' => $current_language,
+                            'src'     => $publicurl->toString(),
+                            'default' => TRUE
+                          ]
+                        ];
+                      }
+                    }
                   }
                 }
               }

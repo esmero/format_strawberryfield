@@ -1,0 +1,96 @@
+facet.widget.config.sbf_date_range:
+  type: facet.widget.default_config
+  label: 'List of range widget configuration'
+  mapping:
+    set_defaults_from_results:
+      type: integer
+      label: 'Use default max/min from reslts'
+    show_reset_link:
+      type: integer
+      label: 'Show Reset Link'
+    reset_text:
+      type: string
+      label: 'Text to be used in the reset button'
+    hide_reset_when_no_selection:
+      type: integer
+      label: 'Hide Reset when no selection'
+
+plugin.plugin_configuration.facets_processor.sbf_date_range:
+  type: mapping
+  label: 'Format Strawberryfield Date Range Picker'
+  mapping:
+    enabled:
+      type: integer
+      label: 'If enabled'
+    variable_granularity:
+      type: integer
+      label: 'If Variable granularity is going to be used'
+
+facet.widget.config.sbf_range_date_slider:
+  type: facet.widget.default_config
+  label: 'List of range widget configuration'
+  mapping:
+    prefix:
+      type: label
+      label: 'Prefix'
+    suffix:
+      type: label
+      label: 'Suffix'
+    min_type:
+      type: string
+      label: 'Minimum type'
+    min_value:
+      type: float
+      label: 'Minimum value'
+    max_type:
+      type: string
+      label: 'Maximum type'
+    max_value:
+      type: float
+      label: 'Maximum value'
+    step:
+      type: float
+      label: 'Step'
+
+plugin.plugin_configuration.facets_processor.sbf_exclude_specified_items:
+  type: mapping
+  label: 'Format Strawberryfield Exclude specified items'
+  mapping:
+    exclude:
+      type: string
+      label: Exclude
+    regex:
+      type: boolean
+      label: Regex
+    invert:
+      type: boolean
+      label: Invert
+    exclude_case_insensitive:
+      type: boolean
+      label: Use Case insensitive comparison
+# inherited from the facet_summary module
+plugin.plugin_configuration.facets_summary_processor.sbf_last_active_facets:
+  type: mapping
+  label: 'Last Active Processor Facet Summary'
+  mapping:
+    enable:
+      type: integer
+      label: 'Enabled'
+    enable_empty_message:
+      type: integer
+      label: 'Enable Empty Message'
+    enable_query:
+      type: integer
+      label: 'Enable Full text search terms as Facet Summary Entry'
+    quote_query:
+      type: boolean
+      label: 'If Full Text search terms will be surrounded by Double Quotes or not'
+    text:
+      type: mapping
+      mapping:
+        format:
+          type: string
+          label: Text format
+        value:
+          type: string
+          label: The Text used for Empty

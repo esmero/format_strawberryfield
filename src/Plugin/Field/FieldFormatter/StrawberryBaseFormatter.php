@@ -17,6 +17,7 @@ use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use mysql_xdevapi\Exception;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -141,11 +142,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     // @TODO maybe we want the opposite? like add the slash always?
     // Also why are we not removing on save but on fetch?
     $urls = [
-      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url'),"/") : rtrim($this->getSetting('iiif_base_url'), "/"),
-      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url'),"/") : rtrim($this->getSetting('iiif_base_url_internal'), "/"),
+      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url') ?? '', "/"),
+      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url_internal') ?? '', "/"),
     ];
     return $urls;
-
   }
 
   /**
@@ -163,10 +163,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       '%url' => $this->getIiifUrls()['internal'],
     ]);
     $summary[] = $this->t('Limited to the following file upload JSON Keys: %value', [
-      '%value' => strlen(trim($this->getSetting('upload_json_key_source' ))) == 0 ? 'Fetch from any available' : $this->getSetting('upload_json_key_source')
+      '%value' => strlen(trim($this->getSetting('upload_json_key_source' ) ?? '')) == 0 ? 'Fetch from any available' : $this->getSetting('upload_json_key_source')
     ]);
     $summary[] = $this->t('Embargo Alternate upload JSON Keys: %value', [
-      '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ))) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
+      '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ) ?? '')) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
     ]);
     return $summary;
   }
@@ -272,6 +272,32 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         $form_state->setErrorByName(implode('][', $parents), t("We could not contact your @urltype IIIF server", [
           '@urltype' => $url_type,
         ]));
+      }
+    }
+  }
+
+  /**
+   * Validates a JSON.
+   *
+   * @param array $element
+   *   The Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The Form State Object.
+   * @param array $complete_form
+   *   The complete form structure.
+   */
+  public function validateJSON(array &$element, FormStateInterface $form_state, array &$complete_form) {
+    $parents = $element['#parents'];
+    if (strlen(trim($element['#value']) ?? '') > 0) {
+      try {
+        $json = json_decode($element['#value'], TRUE);
+        $json_error = json_last_error();
+        if ($json_error != JSON_ERROR_NONE) {
+          $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
+        }
+      }
+      catch (Exception $e) {
+        $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
       }
     }
   }

@@ -8,6 +8,35 @@ format_strawberryfield.iiif_settings:
     int_server_url:
       type: string
       label: 'Internal IIIF server URL'
+    iiif_content_search_api_page_count:
+      type: int
+      label: 'The max results to show per page on a iiif_content_search_api_page_count'
+    iiif_content_search_api_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors that can be fetched by the Content Search API on query.'
+    iiif_content_search_api_active:
+      type: bool
+      label: 'If IIIF Content Search API V1 and V2 are enabled.'
+    iiif_content_search_validate_exposed:
+      type: bool
+      label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
+    iiif_content_search_api_parent_node_fields:
+      type: sequence
+      label: 'Strawberry Flavor Data Source Search API Fields that can be used to connect a Strawberry Flavor to a Parent ADO.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiif_content_search_api_file_uri_fields:
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiif_content_search_api_results_per_page:
+      type: int
+      label: 'Number of results per page'
+    iiif_content_search_api_query_length:
+      type: int
+      label: 'max size of the allowed term passed (?q)'
+
 
 format_strawberryfield.embargo_settings:
   type: config_object
@@ -132,6 +161,9 @@ field.formatter.settings.strawberry_media_formatter:
     webannotations_betterpolygon:
       type: boolean
       label: 'If Better Polygon plugin is enabled. Only if tool is polygon or both'
+    webannotations_georeferencewidget:
+      type: boolean
+      label: 'If Georeference Annotation Plugin is enabled.'
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
@@ -152,6 +184,28 @@ field.formatter.settings.strawberry_media_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    mediasource:
+      type: mapping
+      label: 'Sources for IIIF URL'
+      mapping:
+        manifestnodelist:
+          type: string
+          label: 'If manifestnodelist is being used'
+        metadataexposeentity:
+          type: string
+          label: 'If metadataexposeentity is being used'
+        manifesturl:
+          type: string
+          label: 'If manifesturl is being used'
+    main_mediasource:
+      type: string
+      label: 'Primary IIIF URL Source used'
+    viewer_overrides:
+      type: string
+      label: 'OSD JSON based Viewer Overrides'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
@@ -175,6 +229,9 @@ field.formatter.settings.strawberry_3d_formatter:
       label: 'Whether to use global IIIF settings or not.'
     number_models:
       type: integer
+      label: 'Number of 3D Models to load from JSON'
+    invert_up_axis:
+      type: boolean
       label: 'Number of 3D Models to load from JSON'
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
@@ -213,6 +270,15 @@ field.formatter.settings.strawberry_metadata_formatter:
       type: string
     metadatadisplayentity_uselabel:
       type: string
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_paged_formatter:
   type: mapping
   label: 'Specific Config for strawberry_paged_formatter'
@@ -250,7 +316,13 @@ field.formatter.settings.strawberry_paged_formatter:
       label: 'Comma separated list of Image upload JSON keys to filter against'
     embargo_json_key_source:
       type: string
-      label: 'When embargoed, comma separated list of Image upload JSON keys to filter against'
+      label: 'When embargoed, comma separated list of Image upload JSON keys to filter against.'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+    textselection:
+      type: boolean
+      label: 'If textselection from DjaVUXML should be enabled or not'
 
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
@@ -380,7 +452,36 @@ field.formatter.settings.strawberry_pdf_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
-
+field.formatter.settings.strawberry_uv_formatter:
+  type: mapping
+  label: 'Specific Config for strawberry_uv_formatter'
+  mapping:
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
+    metadataexposeentity_source:
+      type: string
+      label: 'metadataexpose_entity machine name'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: string
+    use_iiif_globals:
+      type: string
+      label: 'Whether to use global IIIF settings or not.'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
 field.formatter.settings.strawberry_mirador_formatter:
   type: mapping
   label: 'Specific Config for strawberry_mirador_formatter'
@@ -391,6 +492,9 @@ field.formatter.settings.strawberry_mirador_formatter:
     iiif_base_url_internal:
       type: string
       label: 'Custom internal IIIF Server URL'
+    custom_js:
+      type: boolean
+      label: 'If custom Mirador with plugin is going to be used instead of Vanilla CDN'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'
@@ -424,6 +528,18 @@ field.formatter.settings.strawberry_mirador_formatter:
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+    viewer_overrides:
+      type: string
+      label: 'Mirador settings via JSON Overrides'
 
 field.formatter.settings.strawberry_warc_formatter:
   type: mapping
@@ -555,6 +671,12 @@ field.formatter.settings.strawberry_map_formatter:
     use_iiif_globals:
       type: string
       label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Comma separated list of Image upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
 # Given any DS field plugin formatter key a type
 ds.field_plugin.*:
   type: mapping
@@ -614,3 +736,24 @@ field.formatter.settings.strawberry_citation_formatter:
         label: 'style'
     localekey:
       type: string
+condition.plugin.ado_type_condition:
+  type: condition.plugin
+  label: 'ADO Type Condition'
+  mapping:
+    ado_types:
+      type: sequence
+      label: 'ADO Type'
+      sequence:
+        type: string
+    recurse_ado_types:
+      type: boolean
+      label: 'Recurse metadata'
+condition.plugin.ado_jmespath_condition:
+  type: condition.plugin
+  label: 'ADO JMESPATH Condition'
+  mapping:
+    ado_jmespaths:
+      type: sequence
+      label: 'ADO JMESPATHS'
+      sequence:
+        type: string

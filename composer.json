@@ -1,6 +1,6 @@
 {
     "name": "strawberryfield/format_strawberryfield",
-    "description": "Strawberryfield Mash/Smash/extractor/formatters for Drupal 8/9",
+    "description": "Strawberryfield Mash/Smash/extractor/formatters for Drupal 9/10",
     "license": "GPL-2.0+",
     "type": "drupal-module",
     "homepage": "https://github.com/esmero/format_strawberryfield",
@@ -13,12 +13,13 @@
         }
     ],
     "require": {
-        "ml/json-ld": "^1.2",
-        "mtdowling/jmespath.php":"^2.5",
-        "strawberryfield/strawberryfield":"1.0.0.x-dev",
+        "strawberryfield/strawberryfield":"1.3.0.x-dev",
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",
-        "drupal/webform": "^5.23 || ^6.0",
-        "ext-json": "*"
+        "drupal/webform": "^6.1.5",
+        "drupal/jquery_ui_slider":"^2.0",
+        "drupal/jquery_ui_effects":"^2.0",
+        "ext-json": "*",
+	"seboettg/citeproc-php": "dev-master"
     }
 }

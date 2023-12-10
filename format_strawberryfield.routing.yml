@@ -14,6 +14,7 @@ entity.metadatadisplay_entity.collection:
     _title: 'Metadata Display List'
   requirements:
     _permission: 'administer metadatadisplay entity'
+  _admin_route: TRUE
 
 format_strawberryfield.metadatadisplay_add:
   path: '/metadatadisplay/add'
@@ -65,6 +66,23 @@ format_strawberryfield.iiifbinary:
     format: .+
     _entity_access: 'node.view'
 
+# Direct File access for SBF managed files via UUID.
+format_strawberryfield.binary:
+  path: '/do/{node}/file/{uuid}/download/{format}'
+  methods: [GET,HEAD]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifBinaryController::servefile'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    uuid: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    format: .+
+    _entity_access: 'node.view'
+
 # Direct File access for owner to Temporary files.
 format_strawberryfield.tempiiifbinary:
   path: '/domedia/iiif/{uuid}/full/full/0/{format}'
@@ -93,7 +111,6 @@ format_strawberryfield.metadatadisplay_caster:
   requirements:
     format: .+
     _entity_access: 'node.view'
-#    _entity_access: 'metadataexpose_entity.view'
 
 format_strawberryfield.iiif_admin_settings_form:
   path: '/admin/config/archipelago/iiif'
@@ -244,40 +261,27 @@ format_strawberryfield.deletetmp_webannotations:
 
 # Display settings for each ADO
 format_strawberryfield.display_settings:
-  path: '/node/{node}/{bundle}/display-settings/{view_mode_name}'
+  path: '/node/{node}/display-settings/{bundle}/{view_mode_name}'
   defaults:
     _entity_form: 'entity_view_display.edit'
-    _title: 'Display settings'
+    _title: 'Active Display settings'
     entity_type_id: 'node'
   requirements:
     _entity_access: 'node.update'
     _permission: 'administer node display'
   options:
+    _admin_route: TRUE
     _node_operation_route: TRUE
     parameters:
       node:
         type: 'entity:node'
 
-# Direct access to Metadata display / Views processed API using Metadata API Config Entity.
-format_strawberryfield.metadataapi_caster_base:
-  path: '/ap/api/{metadataapiconfig_entity}/{patharg}'
-  methods: [GET, POST, HEAD]
-  defaults:
-    _controller: '\Drupal\format_strawberryfield\Controller\MetadataAPIController::castViaView'
-    patharg: 'v1'
-  options:
-    parameters:
-      metadataapiconfig_entity:
-        type: 'entity:metadataapi_entity'
-  requirements:
-    _permission: 'search content'
-
-# Search Highlight Endpoint for a given Node file uuid and processor.
+# Search Highlight Endpoint for a given Node file uuid and processor using an Exposed Metadata Display Entity.
 format_strawberryfield.flavor_datasource_search:
-  path: '/do/{node}/flavorsearchwithmetadata/{metadataexposeconfigentity}/{fileuuid}/{processor}/{format}/{page}'
+  path: '/do/{node}/metadata/search_endpoint/{metadataexposeconfigentity}/{fileuuid}/{processor}/{format}/{page}'
   methods: [GET]
   defaults:
-    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithMetadataDisplay'
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
     format: 'json'
     page: 'all'
   options:
@@ -295,3 +299,67 @@ format_strawberryfield.flavor_datasource_search:
       page: 'all'
   requirements:
     _entity_access: 'node.view'
+
+# Search Highlight Endpoint for a given Node file uuid and processor using Metadata Display Entity.
+format_strawberryfield.flavor_datasource_search_template:
+  path: '/do/{node}/metadata/search/{metadatadisplayentity}/{fileuuid}/{processor}/{format}/{page}'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataDisplaySearchController::searchWithExposedMetadataDisplay'
+    format: 'json'
+    page: 'all'
+  options:
+    no_cache: TRUE
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadatadisplayentity:
+        type: 'entity:metadatadisplay_entity'
+      fileuuid: 'all'
+      processor: 'ocr'
+      format: 'json'
+      page: 'all'
+  requirements:
+    _entity_access: 'node.view'
+
+format_strawberryfield.iiif_content_search_exposed:
+  path: '/iiifcontentsearch/{version}/do/{node}/metadatadisplayexposed/{metadataexposeconfig_entity}/mode/{mode}/page/{page}'
+  methods: [GET, POST]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\IiifContentSearchController::searchWithExposedMetadataDisplay'
+    page: 0
+  options:
+    no_cache: TRUE
+    parameters:
+      mode:
+        - simple
+        - advanced
+      version:
+        - v1
+        - v2
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+      metadataexposeconfig_entity:
+        type: 'entity:metadataexpose_entity'
+      page: 0
+  requirements:
+    page: \d+
+    _entity_access: 'node.view'
+
+# Direct access to Metadata display / Views processed API using Metadata API Config Entity.
+format_strawberryfield.metadataapi_caster_base:
+  path: '/ap/api/{metadataapiconfig_entity}/{patharg}'
+  methods: [GET, POST, HEAD]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\MetadataAPIController::castViaView'
+    patharg: 'v1'
+  options:
+    parameters:
+      metadataapiconfig_entity:
+        type: 'entity:metadataapi_entity'
+  requirements:
+    _permission: 'view strawberryfield api'

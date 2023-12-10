@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
@@ -17,7 +18,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Render\RenderContext;
-use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
+use Symfony\Component\Mime\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
@@ -52,7 +53,7 @@ class MetadataExposeDisplayController extends ControllerBase {
   /**
    * The MIME type guesser.
    *
-   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   * @var \Symfony\Component\Mime\MimeTypeGuesserInterface
    */
   protected $mimeTypeGuesser;
 
@@ -72,7 +73,7 @@ class MetadataExposeDisplayController extends ControllerBase {
    *   The Entity Type Manager.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The Drupal Renderer Service.
-   * @param \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface $mime_type_guesser
+   * @param \Symfony\Component\Mime\MimeTypeGuesserInterface $mime_type_guesser
    *   The Drupal Mime type guesser Service.
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    */
@@ -111,11 +112,12 @@ class MetadataExposeDisplayController extends ControllerBase {
   /**
    * Main Controller Method. Casts JSON via Twig.
    *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   * @param \Symfony\Component\HttpFoundation\Request                        $request
+   * @param \Drupal\Core\Entity\ContentEntityInterface                       $node
    *   A Node as argument.
    * @param \Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity $metadataexposeconfig_entity
    *   The Metadata Exposed Config Entity that carries the settings.
-   * @param string $format
+   * @param string                                                           $format
    *   A possible Filename used in the last part of the Route.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
@@ -126,7 +128,7 @@ class MetadataExposeDisplayController extends ControllerBase {
     MetadataExposeConfigEntity $metadataexposeconfig_entity,
     $format = 'default.json'
   ) {
-    // Check if Config entity is actually enablewd.
+    // Check if Config entity is actually enabled.
     if (!$metadataexposeconfig_entity->isActive()) {
       throw new AccessDeniedHttpException(
         "Sorry, this metadata service is currently disabled."
@@ -172,7 +174,7 @@ class MetadataExposeDisplayController extends ControllerBase {
         $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
         // Gues mimetype using $format.
-        $mimetype = $this->mimeTypeGuesser->guess($format);
+        $mimetype = $this->mimeTypeGuesser->guessMimeType($format);
         if ($mimetype != $responsetype) {
           $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], 415);
           return $badresponse;
@@ -200,7 +202,9 @@ class MetadataExposeDisplayController extends ControllerBase {
             // Preorder as:media by sequence
             $ordersubkey = 'sequence';
             foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
-              StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+              StrawberryfieldJsonHelper::orderSequence(
+                $jsondata, $key, $ordersubkey
+              );
             }
 
             if ($offset == 0) {
@@ -211,16 +215,26 @@ class MetadataExposeDisplayController extends ControllerBase {
             }
           }
 
-          $embargo_info = $this->embargoResolver->embargoInfo($node->uuid(), $jsondata);
+          $embargo_info = $this->embargoResolver->embargoInfo(
+            $node->uuid(), $jsondata
+          );
           // This one is for the Twig template
           // We do not need the IP here. No use of showing the IP at all?
-          $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+          $context_embargo = [
+            'data_embargo' => [
+              'embargoed' => FALSE,
+              'until' => NULL
+            ]
+          ];
+          $embargoed = FALSE;
+
           if (is_array($embargo_info)) {
             $embargoed = $embargo_info[0];
             $context_embargo['data_embargo']['embargoed'] = $embargoed;
             $embargo_tags[] = 'format_strawberryfield:all_embargo';
             if ($embargo_info[1]) {
-              $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+              $embargo_tags[] = 'format_strawberryfield:embargo:'
+                . $embargo_info[1];
               $context_embargo['data_embargo']['until'] = $embargo_info[1];
             }
             if ($embargo_info[2]) {
@@ -231,35 +245,56 @@ class MetadataExposeDisplayController extends ControllerBase {
             $embargoed = $embargo_info;
           }
 
-          $context['node'] = $node;
-          $context['iiif_server'] = $this->config(
-            'format_strawberryfield.iiif_settings'
-          )->get('pub_server_url');
-          $original_context = $context + $context_embargo;
-          // Allow other modules to provide extra Context!
-          // Call modules that implement the hook, and let them add items.
-          \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
-          // In case someone decided to wipe the original context?
-          // We bring it back!
-          $context = $context + $original_context;
-
-
-          $cacheabledata = [];
-          // @see https://www.drupal.org/node/2638686 to understand
-          // What cacheable, Bubbleable metadata and early rendering means.
-          $cacheabledata = $this->renderer->executeInRenderContext(
-            new RenderContext(),
-            function () use ($context, $metadatadisplay_entity) {
-              return $metadatadisplay_entity->renderNative($context);
-            }
-          );
+          if ($metadataexposeconfig_entity->getHideOnEmbargo() && $embargoed) {
+            // If embargoed and hide on embargo TRUE,
+            // we ignore  content negotiation
+            // set a JSON response and cache this one.
+            $cacheabledata = [
+              'error' => [
+                'errors' => [
+                  'message' => 'Authentication Required'
+                  ]
+                ],
+              'code' => 401,
+              ];
+            $cacheabledata = json_encode($cacheabledata);
+            // Force Response type to JSON.
+            $responsetype = 'application/json';
+            $status = 401;
+          }
+          else {
+            // Only process if getHideOnEmbargo returns FALSE, embargoed or not.
+            $status = 200;
+            $context['node'] = $node;
+            $context['iiif_server'] = $this->config(
+              'format_strawberryfield.iiif_settings'
+            )->get('pub_server_url');
+            $original_context = $context + $context_embargo;
+            // Allow other modules to provide extra Context!
+            // Call modules that implement the hook, and let them add items.
+            \Drupal::moduleHandler()->alter(
+              'format_strawberryfield_twigcontext', $context
+            );
+            // In case someone decided to wipe the original context?
+            // We bring it back!
+            $context = $context + $original_context;
+            $cacheabledata = [];
+            // @see https://www.drupal.org/node/2638686 to understand
+            // What cacheable, Bubbleable metadata and early rendering means.
+            $cacheabledata = $this->renderer->executeInRenderContext(
+              new RenderContext(),
+              function () use ($context, $metadatadisplay_entity) {
+                return $metadatadisplay_entity->renderNative($context);
+              }
+            );
+          }
         }
         switch ($responsetype) {
           case 'application/json':
           case 'application/ld+json':
             $response = new CacheableJsonResponse(
               $cacheabledata,
-              200,
+              $status,
               ['content-type' => $responsetype],
               TRUE
             );
@@ -272,7 +307,7 @@ class MetadataExposeDisplayController extends ControllerBase {
           case 'text/csv':
             $response = new CacheableResponse(
               $cacheabledata,
-              200,
+              $status,
               ['content-type' => $responsetype]
             );
             break;
