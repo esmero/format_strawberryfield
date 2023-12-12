@@ -358,7 +358,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ) : [];
       unset($parameters[$triggering['#rowtodelete']]);
       $form_state->set('parameters',$parameters);
-      $this->messenger()->addWarning('You have unsaved changes.');
       $userinput = $form_state->getUserInput();
       // Only way to get that tabble drag form to rebuild completely
       // If not we get always the same table back with the last element
@@ -386,7 +385,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       $parameter_clean = $form_state->getValue(['api-argument-config','params']);
       unset($parameter_clean['metadata_api_configure_button']);
       $parameters[$name] = $parameter_clean;
-      $this->messenger()->addWarning('You have unsaved changes.');
       $form_state->set('parameters', $parameters);
     }
     // Re set since they might have get lost during the Ajax/Limited validation
@@ -408,7 +406,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $views = $form_state->getValue(['api-argument-config','views','views_source_ids']);
     if ($views and is_array($views)) {
       $views = array_filter($views);
-      $this->messenger()->addWarning('You have unsaved changes.');
       $form_state->setValue('views_source_ids', $views);
       $form_state->set('views_source_ids_tmp', $views);
     }
@@ -423,7 +420,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->cleanValues();
     $new_form_state = clone $form_state;
     // no need to unset original values, they won't match Entities properties
-    $config['openAPI'] =  $new_form_state->getValue(['api_parameters_list','table-row']);
+    $config['openAPI'] =  $new_form_state->getValue(['api_parameters_list','table-row']) ?? [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
     foreach ($config['openAPI'] as &$openAPIparameter) {
@@ -433,6 +430,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
     $config['api_type'][] = $form_state->getValue('api_type', 'REST');
+    $new_form_state->setValue('views_source_ids', $form_state->get('views_source_ids_tmp') ??  $form_state->getValue('views_source_ids'));
     $new_form_state->setValue('configuration', $config);
     $this->entity = $this->buildEntity($form, $new_form_state);
   }
@@ -458,7 +456,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         $executable = $view->getExecutable();
         $executable->setDisplay($display_id);
         // also check $executable->display_handler->options['arguments']
-        foreach ($executable->display_handler->options['filters'] as $filter) {
+        foreach ($executable->display_handler->getOption('filters') ?? [] as $filter) {
           if ($filter['exposed'] == TRUE) {
             $form['api_source_configs'][$selected_view.':'.$filter['id']]['#type'] = 'fieldset';
             $form['api_source_configs'][$selected_view.':'.$filter['id']]['#attributes']
@@ -476,8 +474,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
             $views_argument_options[$selected_view.':'.$filter['id']] = $selected_view.':'.$filter['id'];
           }
         }
-        foreach ($executable->display_handler->options['arguments'] as $filter)
-        {
+        foreach ($executable->display_handler->getOption('arguments') ?? [] as $filter) {
           $form['api_source_configs'][$selected_view.':'.$filter['id']]['#type'] = 'fieldset';
           $form['api_source_configs'][$selected_view.':'.$filter['id']]['#attributes']
             = ['class' => ['format-strawberryfield-api-source-config-wrapper']];
@@ -935,9 +932,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
    */
   public function save(array $form, FormStateInterface $form_state) {
     $metadataconfig = $this->entity;
-
-    $status = false;
-    //$status = $metadataconfig->save();
+    $status = $metadataconfig->save();
 
     if ($status) {
       $this->messenger()->addMessage(
@@ -948,6 +943,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           ]
         )
       );
+      $form_state->setRedirect('entity.metadataapi_entity.collection');
     }
     else {
       $this->messenger()->addMessage(
@@ -959,9 +955,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         ),
         MessengerInterface::TYPE_ERROR
       );
+      $form_state->setRebuild();
     }
 
-    $form_state->setRedirect('entity.metadataapi_entity.collection');
+
   }
 
   /**
