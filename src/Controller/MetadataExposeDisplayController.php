@@ -270,6 +270,7 @@ class MetadataExposeDisplayController extends ControllerBase {
               'format_strawberryfield.iiif_settings'
             )->get('pub_server_url');
             $original_context = $context + $context_embargo;
+            $cacheabledata = [];
             // @see https://www.drupal.org/node/2638686 to understand
             // What cacheable, Bubbleable metadata and early rendering means.
             $cacheabledata = $this->renderer->executeInRenderContext(
