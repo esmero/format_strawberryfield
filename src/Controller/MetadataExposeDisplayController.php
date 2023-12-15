@@ -270,20 +270,19 @@ class MetadataExposeDisplayController extends ControllerBase {
               'format_strawberryfield.iiif_settings'
             )->get('pub_server_url');
             $original_context = $context + $context_embargo;
-            // Allow other modules to provide extra Context!
-            // Call modules that implement the hook, and let them add items.
-            \Drupal::moduleHandler()->alter(
-              'format_strawberryfield_twigcontext', $context
-            );
-            // In case someone decided to wipe the original context?
-            // We bring it back!
-            $context = $context + $original_context;
-            $cacheabledata = [];
             // @see https://www.drupal.org/node/2638686 to understand
             // What cacheable, Bubbleable metadata and early rendering means.
             $cacheabledata = $this->renderer->executeInRenderContext(
               new RenderContext(),
-              function () use ($context, $metadatadisplay_entity) {
+              function () use ($context, $original_context, $metadatadisplay_entity) {
+                // Allow other modules to provide extra Context!
+                // Call modules that implement the hook, and let them add items.
+                \Drupal::moduleHandler()->alter(
+                  'format_strawberryfield_twigcontext', $context
+                );
+                // In case someone decided to wipe the original context?
+                // We bring it back!
+                $context = $context + $original_context;
                 return $metadatadisplay_entity->renderNative($context);
               }
             );
