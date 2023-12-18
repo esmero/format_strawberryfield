@@ -194,6 +194,7 @@ class MetadataAPIController extends ControllerBase
     }
     // Now make the passed argument in the path one of the parameters if
     // any is Path (first only for now)
+    // @TODO. If i don't use levels = 1 i could avoud the initial {} in path argument at all..
     $path = dirname($full_path, 1);
     $pathargument = '';
     $schema_parameters = [];
@@ -348,45 +349,35 @@ A resumptionToken may be similar to (wrapped for clarity):
         /** @var \Drupal\views\ViewExecutable $executable */
         $view = $this->entityTypeManager->getStorage('view')->load($view_id);
         foreach ($display as $display_id => $arguments_with_values) {
-        $display = $view->getDisplay($display_id);
-        $executable = $view->getExecutable();
-        if ($view && $display) {
-          /** @var \Drupal\views\ViewExecutable $executable */
+          $display = $view->getDisplay($display_id);
+          $executable = $view->getExecutable();
+          if ($view && $display) {
+            /** @var \Drupal\views\ViewExecutable $executable */
 
-          $executable->setDisplay($display_id);
-          // \Drupal\views\ViewExecutable::addCacheContext
-          // \Drupal\views\ViewExecutable::setCurrentPage
-          //
-          // Contextual arguments are order dependant
-          // But our mappings are not
-          // So instead of just passing them
-          // We will bring them first into the right order.
-          // We will do this a bit more expensive
-          // @TODO make this an entity method
-          foreach ($executable->display_handler->getOption('filters') ?? [] as $filter) {
-            if ($filter['exposed'] == TRUE) {
+            $executable->setDisplay($display_id);
+            // \Drupal\views\ViewExecutable::addCacheContext
+            // \Drupal\views\ViewExecutable::setCurrentPage
+            //
+            // Contextual arguments are order dependant
+            // But our mappings are not
+            // So instead of just passing them
+            // We will bring them first into the right order.
+            // We will do this a bit more expensive
+            // @TODO make this an entity method
+            foreach ($executable->display_handler->getOption('filters') ?? [] as $filter) {
+              if ($filter['exposed'] == TRUE) {
+              }
             }
-          }
-          $arguments = [];
-          //@ TODO maybe allow to cast into ANY entity? well...
-          foreach (
-            $executable->display_handler->getOption('arguments') ?? [] as $argument_key =>
-            $filter
-          ) {
-            // The order here matters
-            foreach ($parameters as $param_name => $paramconfig_setting) {
-              foreach (
-                $paramconfig_setting['mapping'] ?? [] as $map_id => $mapped
-              ) {
-                if ($argument_key == $map_id && $mapped) {
+            $arguments = [];
+            //@ TODO maybe allow to cast into ANY entity? well...
+            foreach ($executable->display_handler->getOption('arguments') ?? [] as $argument_key => $filter) {
+              // The order here matters
+              foreach ($arguments_with_values as $param_name => $value) {
+                if ($argument_key == $param_name) {
                   // Why we check this?
                   // If two parameters both map to the same VIEWS Arguments
                   // One is passed, the other empty, then the empty one will override everything.
-                  if (!isset($arguments[$argument_key]) || empty($arguments[$argument_key])) {
-                    $arguments[$argument_key]
-                      = $context_parameters[$paramconfig_setting['param']['in']][$param_name]
-                      ?? NULL;
-                  }
+                  $arguments[$argument_key] = $value ?? NULL;
                   // @TODO Ok kids, drupal is full of bugs
                   // IT WILL TRY TO RENDER A FORM EVEN IF NOT NEEDED FOR REST! DAMN.
                   // @see \Drupal\views\ViewExecutable::build it checks for if ($this->display_handler->usesExposed())
@@ -410,14 +401,7 @@ A resumptionToken may be similar to (wrapped for clarity):
                     // This is validated yet, but validation depends on the user's definition
                     // Users might go rogue.
                     // We can not load an empty
-                    if (!empty($arguments[$argument_key])
-                      && isset($paramconfig_setting['param']['schema']['format'])
-                      && $paramconfig_setting['param']['schema']['format']
-                      == 'uuid'
-                      && \Drupal\Component\Uuid\Uuid::isValid(
-                        $arguments[$argument_key]
-                      )
-                    ) {
+                    if (\Drupal\Component\Uuid\Uuid::isValid($arguments[$argument_key])) {
                       $nodes = $this->entityTypeManager->getStorage('node')
                         ->loadByProperties(
                           ['uuid' => $arguments[$argument_key]]
@@ -426,355 +410,345 @@ A resumptionToken may be similar to (wrapped for clarity):
                         $node = reset($nodes);
                         $arguments[$argument_key] = $node->id();
                       }
-                    } elseif (is_scalar($arguments[$argument_key])) {
-                      $this->entityTypeManager->getStorage('node')
+                    }
+                    elseif (is_scalar($arguments[$argument_key])) {
+                      $node = $this->entityTypeManager->getStorage('node')
                         ->load($arguments[$argument_key]);
+                      $arguments[$argument_key] = $node->id();
                     }
                   }
                 }
               }
             }
-            $arguments[$argument_key] = $arguments[$argument_key] ?? NULL;
-          }
 
-          // We need to destroy the path here ...
-          if ($executable->hasUrl()) {
-            $executable->display_handler->overrideOption('path', '/node');
-          }
-          error_log(print_r(array_values($arguments), true));
-          $executable->setArguments(array_values($arguments));
-          //
-          $views_validation = $executable->validate();
-          if (empty($views_validation)) {
-            try {
-              $this->renderer->executeInRenderContext(
+            // We need to destroy the path here ...
+            if ($executable->hasUrl()) {
+              $executable->display_handler->overrideOption('path', '/node');
+            }
+            error_log(print_r(array_values($arguments), true));
+            $executable->setArguments(array_values($arguments));
+            //
+            $views_validation = $executable->validate();
+            if (empty($views_validation)) {
+              try {
+                $this->renderer->executeInRenderContext(
+                  new RenderContext(),
+                  function () use ($executable) {
+                    // Damn view renders forms and stuff. GOSH!
+                    $executable->execute();
+                  }
+                );
+              }
+              catch (\InvalidArgumentException $exception) {
+                error_log('Views failed to render' . $exception->getMessage());
+                $exception->getMessage();
+                throw new BadRequestHttpException(
+                  "Sorry, this Metadata API has configuration issues."
+                );
+              }
+              // This will be passed to the Wrapper.
+              $processed_nodes_via_templates = [];
+
+              // ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
+              $total = $executable->pager->getTotalItems() != 0
+                ? $executable->pager->getTotalItems() : count($executable->result);
+              $current_page = $executable->pager->getCurrentPage();
+              $num_per_page = $executable->pager->getItemsPerPage();
+              $offset = $executable->pager->getOffset();
+              /** @var \Drupal\views\Plugin\views\cache\CachePluginBase $cache_plugin */
+              $cache_plugin = $executable->display_handler->getPlugin('cache');
+              $cache_id = 'format_strawberry:api:' . $metadataapiconfig_entity->id();
+
+              $cache_id_suffix = $this->generateCacheKey(
+                $executable, $context_parameters
+              );
+              $cache_id = $cache_id . $cache_id_suffix;
+              $cached = $this->cacheGet($cache_id);
+              $cached = FALSE;
+              if ($cached) {
+                $processed_nodes_via_templates = $cached->data ?? [];
+              } else {
+                // NOT CACHED, regenerate
+                foreach ($executable->result as $resultRow) {
+                  if ($resultRow instanceof \Drupal\search_api\Plugin\views\ResultRow) {
+                    //@TODO move to its own method\
+                    $node = $resultRow->_object->getValue() ?? NULL;
+                    if ($node && $sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield($node)) {
+                      foreach ($sbf_fields as $field_name) {
+                        /* @var $field StrawberryFieldItem[] */
+                        $field = $node->get($field_name);
+                        foreach ($field as $offset => $fielditem) {
+                          $jsondata = json_decode($fielditem->value, TRUE);
+                          $json_error = json_last_error();
+                          if ($json_error != JSON_ERROR_NONE) {
+                            $this->loggerFactory->get('format_strawberryfield')
+                              ->error(
+                                'We had an issue decoding as JSON your metadata for node @id, field @field while exposing API @api',
+                                [
+                                  '@id' => $node->id(),
+                                  '@field' => $field_name,
+                                  '@api' => $metadataapiconfig_entity->label(),
+                                ]
+                              );
+                            throw new UnprocessableEntityHttpException(
+                              "Sorry, we could not process metadata for this API service"
+                            );
+                          }
+                          // Preorder as:media by sequence
+                          $ordersubkey = 'sequence';
+                          foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+                            StrawberryfieldJsonHelper::orderSequence(
+                              $jsondata, $key, $ordersubkey
+                            );
+                          }
+
+                          if ($offset == 0) {
+                            $context['data'] = $jsondata;
+                          } else {
+                            $context['data'][$offset] = $jsondata;
+                          }
+                        }
+                        // @TODO make embargo its own method.
+                        $embargo_info = $this->embargoResolver->embargoInfo(
+                          $node->uuid(), $jsondata
+                        );
+                        // This one is for the Twig template
+                        // We do not need the IP here. No use of showing the IP at all?
+                        $context_embargo = [
+                          'data_embargo' => [
+                            'embargoed' => FALSE,
+                            'until' => NULL,
+                          ],
+                        ];
+                        if (is_array($embargo_info)) {
+                          $embargoed = $embargo_info[0];
+                          $context_embargo['data_embargo']['embargoed']
+                            = $embargoed;
+                          $embargo_tags[] = 'format_strawberryfield:all_embargo';
+                          if ($embargo_info[1]) {
+                            $embargo_tags[] = 'format_strawberryfield:embargo:'
+                              . $embargo_info[1];
+                            $context_embargo['data_embargo']['until']
+                              = $embargo_info[1];
+                          }
+                          if ($embargo_info[2]) {
+                            $embargo_context[] = 'ip';
+                          }
+                        } else {
+                          $embargoed = $embargo_info;
+                        }
+
+                        $context['node'] = $node;
+                        $context['data_api'] = $context_parameters;
+                        /* Why? @TODO We should pair actual arguments with what we pass to the template. For now These ones contain too much */
+                        unset($context['data_api']['cookies']);
+                        unset($context['data_api']['headers']);
+                        $context['data_api_context'] = 'item';
+                        $context['iiif_server'] = $this->config('format_strawberryfield.iiif_settings')->get('pub_server_url');
+                        $original_context = $context + $context_embargo;
+                        // Allow other modules to provide extra Context!
+                        // Call modules that implement the hook, and let them add items.
+                        \Drupal::moduleHandler()->alter(
+                          'format_strawberryfield_twigcontext', $context
+                        );
+                        // In case someone decided to wipe the original context?
+                        // We bring it back!
+                        $context = $context + $original_context;
+
+                        $cacheabledata = $this->renderer->executeInRenderContext(
+                          new RenderContext(),
+                          function () use ($context, $metadatadisplay_item_entity) {
+                            return $metadatadisplay_item_entity->renderNative(
+                              $context
+                            );
+                          }
+                        );
+                        if ($cacheabledata) {
+                          $processed_nodes_via_templates[$node->id()]
+                            = $cacheabledata;
+                        }
+                      }
+                    }
+                  }
+                }
+                // Set the cache
+                // EXPIRE?
+                $cache_expire = $metadataapiconfig_entity->getConfiguration()['cache']['expire'] ?? 120;
+                if ($cache_expire !== Cache::PERMANENT) {
+                  $cache_expire += (int)$this->time->getRequestTime();
+                }
+                $tags = [];
+                $tags = CacheableMetadata::createFromObject(
+                  $metadataapiconfig_entity
+                )->getCacheTags();
+                $tags += CacheableMetadata::createFromObject($view)->getCacheTags();
+                $tags += CacheableMetadata::createFromObject(
+                  $metadatadisplay_wrapper_entity
+                )->getCacheTags();
+                $tags += CacheableMetadata::createFromObject(
+                  $metadatadisplay_item_entity
+                )->getCacheTags();
+                $this->cacheSet(
+                  $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
+                );
+              }
+              // Now Render the wrapper -- no caching here
+              $context_wrapper['iiif_server'] = $this->config(
+                'format_strawberryfield.iiif_settings'
+              )->get('pub_server_url');
+              $context_parameters['request_date'] = [
+                  '#type' => 'markup',
+                  '#markup' => date("H:i:s"),
+                  '#cache' => [
+                    'disabled' => TRUE,
+                  ]
+              ];
+              $context_wrapper['data_api'] = $context_parameters;
+              unset($context_wrapper['data_api']['cookies']);
+              unset($context_wrapper['data_api']['headers']);
+              $context_wrapper['data_api_context'] = 'wrapper';
+              $context_wrapper['data'] = $processed_nodes_via_templates;
+              $original_context = $context_wrapper;
+              // Allow other modules to provide extra Context!
+              // Call modules that implement the hook, and let them add items.
+              \Drupal::moduleHandler()->alter(
+                'format_strawberryfield_twigcontext', $context_wrapper
+              );
+              // In case someone decided to wipe the original context?
+              // We bring it back!
+              $context_wrapper = $context_wrapper + $original_context;
+              $cacheabledata_response = $this->renderer->executeInRenderContext(
                 new RenderContext(),
-                function () use ($executable) {
-                  // Damn view renders forms and stuff. GOSH!
-                  $executable->execute();
+                function () use ($context_wrapper, $metadatadisplay_wrapper_entity
+                ) {
+                  return $metadatadisplay_wrapper_entity->renderNative(
+                    $context_wrapper
+                  );
                 }
               );
-            } catch (\InvalidArgumentException $exception) {
-              error_log('Views failed to render' . $exception->getMessage());
-              $exception->getMessage();
+              // @TODO add option that allows the Admin to ask for a rendered VIEW too
+              //$rendered = $executable->preview();
+              $executable->destroy();
+              if ($metadataapiconfig_entity->getConfiguration()['cache']['enabled']
+                ?? FALSE == TRUE
+              ) {
+                switch ($responsetype) {
+                  case 'application/json':
+                  case 'application/ld+json':
+                    $response = new CacheableJsonResponse(
+                      $cacheabledata_response,
+                      200,
+                      ['content-type' => $responsetype],
+                      TRUE
+                    );
+                    break;
+
+                  case 'application/xml':
+                  case 'text/text':
+                  case 'text/turtle':
+                  case 'text/html':
+                  case 'text/csv':
+                    $response = new CacheableResponse(
+                      $cacheabledata_response,
+                      200,
+                      ['content-type' => $responsetype]
+                    );
+                    break;
+
+                  default:
+                    throw new BadRequestHttpException(
+                      "Sorry, this Metadata endpoint has configuration issues."
+                    );
+                }
+
+                if ($response) {
+                  // Set CORS. IIIF and others will assume this is true.
+                  $response->headers->set('access-control-allow-origin', '*');
+                  //$response->addCacheableDependency($node);
+                  //$response->addCacheableDependency($metadatadisplay_entity);
+                  $response->addCacheableDependency($metadataapiconfig_entity);
+                  $response->addCacheableDependency($metadatadisplay_item_entity);
+                  $response->addCacheableDependency(
+                    $metadatadisplay_wrapper_entity
+                  );
+                  //$metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
+                  //$response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
+                  // $response->getCacheableMetadata()->addCacheTags($embargo_tags);
+                  $response->addCacheableDependency($view);
+                  $response->getCacheableMetadata()->addCacheContexts(
+                    ['user.roles']
+                  );
+                  $response->getCacheableMetadata()->addCacheTags(
+                    $view->getCacheTags()
+                  );
+                  $response->getCacheableMetadata()->addCacheContexts(
+                    ['url.path', 'url.query_args']
+                  );
+                  $max_age = 60;
+                  $response->getCacheableMetadata()->setCacheMaxAge($max_age);
+                  $response->setMaxAge($max_age);
+                  $date = new \DateTime(
+                    '@' . ($this->time->getRequestTime() + $max_age)
+                  );
+                  $response->setExpires($date);
+                  //$response->getCacheableMetadata()->addCacheContexts($embargo_context);
+                }
+              } // MEANS no caching
+              else {
+                switch ($responsetype) {
+                  case 'application/json':
+                  case 'application/ld+json':
+                    $response = new JsonResponse(
+                      $cacheabledata_response,
+                      200,
+                      ['content-type' => $responsetype],
+                      TRUE
+                    );
+                    break;
+
+                  case 'application/xml':
+                  case 'text/text':
+                  case 'text/turtle':
+                  case 'text/html':
+                  case 'text/csv':
+                    $response = new Response(
+                      $cacheabledata_response,
+                      200,
+                      ['content-type' => $responsetype]
+                    );
+                    break;
+
+                  default:
+                    throw new BadRequestHttpException(
+                      "Sorry, this Metadata endpoint has configuration issues."
+                    );
+                }
+              }
+              return $response;
+            } else {
+              $this->loggerFactory->get('format_strawberryfield')->error(
+                'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
+                [
+                  '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
+                  '@args' => json_encode($arguments),
+                ]
+              );
               throw new BadRequestHttpException(
                 "Sorry, this Metadata API has configuration issues."
               );
             }
-            $processed_nodes_via_templates = [];
-
-            // ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
-            $total = $executable->pager->getTotalItems() != 0
-              ? $executable->pager->getTotalItems() : count($executable->result);
-            $current_page = $executable->pager->getCurrentPage();
-            $num_per_page = $executable->pager->getItemsPerPage();
-            $offset = $executable->pager->getOffset();
-            /** @var \Drupal\views\Plugin\views\cache\CachePluginBase $cache_plugin */
-            $cache_plugin = $executable->display_handler->getPlugin('cache');
-            $cache_id = 'format_strawberry:api:' . $metadataapiconfig_entity->id();
-
-            $cache_id_suffix = $this->generateCacheKey(
-              $executable, $context_parameters
-            );
-            $cache_id = $cache_id . $cache_id_suffix;
-            $cached = $this->cacheGet($cache_id);
-            if ($cached) {
-              $processed_nodes_via_templates = $cached->data ?? [];
-            } else {
-              // NOT CACHED, regenerate
-              foreach ($executable->result as $resultRow) {
-                if ($resultRow instanceof
-                  \Drupal\search_api\Plugin\views\ResultRow
-                ) {
-                  //@TODO move to its own method\
-                  $node = $resultRow->_object->getValue() ?? NULL;
-                  if ($node
-                    && $sbf_fields
-                      = $this->strawberryfieldUtility->bearsStrawberryfield(
-                      $node
-                    )
-                  ) {
-                    foreach ($sbf_fields as $field_name) {
-                      /* @var $field StrawberryFieldItem[] */
-                      $field = $node->get($field_name);
-                      foreach ($field as $offset => $fielditem) {
-                        $jsondata = json_decode($fielditem->value, TRUE);
-                        $json_error = json_last_error();
-                        if ($json_error != JSON_ERROR_NONE) {
-                          $this->loggerFactory->get('format_strawberryfield')
-                            ->error(
-                              'We had an issue decoding as JSON your metadata for node @id, field @field while exposing API @api',
-                              [
-                                '@id' => $node->id(),
-                                '@field' => $field_name,
-                                '@api' => $metadataapiconfig_entity->label(),
-                              ]
-                            );
-                          throw new UnprocessableEntityHttpException(
-                            "Sorry, we could not process metadata for this API service"
-                          );
-                        }
-                        // Preorder as:media by sequence
-                        $ordersubkey = 'sequence';
-                        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
-                          StrawberryfieldJsonHelper::orderSequence(
-                            $jsondata, $key, $ordersubkey
-                          );
-                        }
-
-                        if ($offset == 0) {
-                          $context['data'] = $jsondata;
-                        } else {
-                          $context['data'][$offset] = $jsondata;
-                        }
-                      }
-                      // @TODO make embargo its own method.
-                      $embargo_info = $this->embargoResolver->embargoInfo(
-                        $node->uuid(), $jsondata
-                      );
-                      // This one is for the Twig template
-                      // We do not need the IP here. No use of showing the IP at all?
-                      $context_embargo = [
-                        'data_embargo' => [
-                          'embargoed' => FALSE,
-                          'until' => NULL,
-                        ],
-                      ];
-                      if (is_array($embargo_info)) {
-                        $embargoed = $embargo_info[0];
-                        $context_embargo['data_embargo']['embargoed']
-                          = $embargoed;
-                        $embargo_tags[] = 'format_strawberryfield:all_embargo';
-                        if ($embargo_info[1]) {
-                          $embargo_tags[] = 'format_strawberryfield:embargo:'
-                            . $embargo_info[1];
-                          $context_embargo['data_embargo']['until']
-                            = $embargo_info[1];
-                        }
-                        if ($embargo_info[2]) {
-                          $embargo_context[] = 'ip';
-                        }
-                      } else {
-                        $embargoed = $embargo_info;
-                      }
-
-                      $context['node'] = $node;
-                      $context['data_api'] = $context_parameters;
-                      $context['data_api_context'] = 'item';
-                      $context['iiif_server'] = $this->config(
-                        'format_strawberryfield.iiif_settings'
-                      )->get('pub_server_url');
-                      $original_context = $context + $context_embargo;
-                      // Allow other modules to provide extra Context!
-                      // Call modules that implement the hook, and let them add items.
-                      \Drupal::moduleHandler()->alter(
-                        'format_strawberryfield_twigcontext', $context
-                      );
-                      // In case someone decided to wipe the original context?
-                      // We bring it back!
-                      $context = $context + $original_context;
-
-                      $cacheabledata = [];
-                      // @see https://www.drupal.org/node/2638686 to understand
-                      // What cacheable, Bubbleable metadata and early rendering means.
-                      $cacheabledata = $this->renderer->executeInRenderContext(
-                        new RenderContext(),
-                        function () use ($context, $metadatadisplay_item_entity) {
-                          return $metadatadisplay_item_entity->renderNative(
-                            $context
-                          );
-                        }
-                      );
-                      if ($cacheabledata) {
-                        $processed_nodes_via_templates[$node->id()]
-                          = $cacheabledata;
-                      }
-                    }
-                  }
-                  /*$rendered[] = !empty($resultRow->_object->getValue())
-                    ? $resultRow->_object->getValue()->id() : NULL;
-                  $rendered2[] = !empty($resultRow->_item->getFields(TRUE))
-                    ? $resultRow->_item->getFields(TRUE) : NULL;
-                  $rendered2[] = !empty($resultRow->_item->getId())
-                    ? $resultRow->_item->getId() : NULL;*/
-                }
-              }
-              // Set the cache
-              // EXPIRE?
-              $cache_expire = $metadataapiconfig_entity->getConfiguration()['cache']['expire'] ?? 120;
-              if ($cache_expire !== Cache::PERMANENT) {
-                $cache_expire += (int)$this->time->getRequestTime();
-              }
-              $tags = [];
-              $tags = CacheableMetadata::createFromObject(
-                $metadataapiconfig_entity
-              )->getCacheTags();
-              $tags += CacheableMetadata::createFromObject($view)->getCacheTags();
-              $tags += CacheableMetadata::createFromObject(
-                $metadatadisplay_wrapper_entity
-              )->getCacheTags();
-              $tags += CacheableMetadata::createFromObject(
-                $metadatadisplay_item_entity
-              )->getCacheTags();
-              $this->cacheSet(
-                $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
-              );
-            }
-            // Now Render the wrapper -- no caching here
-            $context_wrapper['iiif_server'] = $this->config(
-              'format_strawberryfield.iiif_settings'
-            )->get('pub_server_url');
-            $context_parameters['request_date'] = [
-              '#markup' => date("H:i:s"),
-              '#cache' => [
-                'disabled' => TRUE,
-              ],
-            ];
-            $context_wrapper['data_api'] = $context_parameters;
-            $context_wrapper['data_api_context'] = 'wrapper';
-            $context_wrapper['data'] = $processed_nodes_via_templates;
-            $original_context = $context_wrapper;
-            // Allow other modules to provide extra Context!
-            // Call modules that implement the hook, and let them add items.
-            \Drupal::moduleHandler()->alter(
-              'format_strawberryfield_twigcontext', $context_wrapper
-            );
-            // In case someone decided to wipe the original context?
-            // We bring it back!
-            $context_wrapper = $context_wrapper + $original_context;
-
-            $cacheabledata_response = $this->renderer->executeInRenderContext(
-              new RenderContext(),
-              function () use ($context_wrapper, $metadatadisplay_wrapper_entity
-              ) {
-                return $metadatadisplay_wrapper_entity->renderNative(
-                  $context_wrapper
-                );
-              }
-            );
-            // @TODO add option that allows the Admin to ask for a rendered VIEW too
-            //$rendered = $executable->preview();
-            $executable->destroy();
-            if ($metadataapiconfig_entity->getConfiguration()['cache']['enabled']
-              ?? FALSE == TRUE
-            ) {
-              switch ($responsetype) {
-                case 'application/json':
-                case 'application/ld+json':
-                  $response = new CacheableJsonResponse(
-                    $cacheabledata_response,
-                    200,
-                    ['content-type' => $responsetype],
-                    TRUE
-                  );
-                  break;
-
-                case 'application/xml':
-                case 'text/text':
-                case 'text/turtle':
-                case 'text/html':
-                case 'text/csv':
-                  $response = new CacheableResponse(
-                    $cacheabledata_response,
-                    200,
-                    ['content-type' => $responsetype]
-                  );
-                  break;
-
-                default:
-                  throw new BadRequestHttpException(
-                    "Sorry, this Metadata endpoint has configuration issues."
-                  );
-              }
-
-              if ($response) {
-                // Set CORS. IIIF and others will assume this is true.
-                $response->headers->set('access-control-allow-origin', '*');
-                //$response->addCacheableDependency($node);
-                //$response->addCacheableDependency($metadatadisplay_entity);
-                $response->addCacheableDependency($metadataapiconfig_entity);
-                $response->addCacheableDependency($metadatadisplay_item_entity);
-                $response->addCacheableDependency(
-                  $metadatadisplay_wrapper_entity
-                );
-                //$metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
-                //$response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
-                // $response->getCacheableMetadata()->addCacheTags($embargo_tags);
-                $response->addCacheableDependency($view);
-                $response->getCacheableMetadata()->addCacheContexts(
-                  ['user.roles']
-                );
-                $response->getCacheableMetadata()->addCacheTags(
-                  $view->getCacheTags()
-                );
-                $response->getCacheableMetadata()->addCacheContexts(
-                  ['url.path', 'url.query_args']
-                );
-                $max_age = 60;
-                $response->getCacheableMetadata()->setCacheMaxAge($max_age);
-                $response->setMaxAge($max_age);
-                $date = new \DateTime(
-                  '@' . ($this->time->getRequestTime() + $max_age)
-                );
-                $response->setExpires($date);
-                //$response->getCacheableMetadata()->addCacheContexts($embargo_context);
-              }
-            } // MEANS no caching
-            else {
-              switch ($responsetype) {
-                case 'application/json':
-                case 'application/ld+json':
-                  $response = new JsonResponse(
-                    $cacheabledata_response,
-                    200,
-                    ['content-type' => $responsetype],
-                    TRUE
-                  );
-                  break;
-
-                case 'application/xml':
-                case 'text/text':
-                case 'text/turtle':
-                case 'text/html':
-                case 'text/csv':
-                  $response = new Response(
-                    $cacheabledata_response,
-                    200,
-                    ['content-type' => $responsetype]
-                  );
-                  break;
-
-                default:
-                  throw new BadRequestHttpException(
-                    "Sorry, this Metadata endpoint has configuration issues."
-                  );
-              }
-            }
-            return $response;
           } else {
             $this->loggerFactory->get('format_strawberryfield')->error(
-              'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
+              'Metadata API with View Source ID $source_id could not load the configured View/Display. Check your configuration',
               [
                 '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
-                '@args' => json_encode($arguments),
               ]
             );
             throw new BadRequestHttpException(
               "Sorry, this Metadata API has configuration issues."
             );
           }
-        } else {
-          $this->loggerFactory->get('format_strawberryfield')->error(
-            'Metadata API with View Source ID $source_id could not load the configured View/Display. Check your configuration',
-            [
-              '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
-            ]
-          );
-          throw new BadRequestHttpException(
-            "Sorry, this Metadata API has configuration issues."
-          );
         }
-      }
       }
     }
   }
