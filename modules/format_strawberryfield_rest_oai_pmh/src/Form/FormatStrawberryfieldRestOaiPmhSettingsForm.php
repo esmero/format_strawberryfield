@@ -110,7 +110,7 @@ class FormatStrawberryfieldRestOaiPmhSettingsForm extends ConfigFormBase {
     $config = $this->config('format_strawberryfield_rest_oai_pmh.settings');
 
     $query = \Drupal::entityQuery('metadatadisplay_entity')
-      ->condition('mimetype', 'application/xml');
+      ->accessCheck()->condition('mimetype', 'application/xml');
     $results = $query->execute();
     $entities = \Drupal::entityTypeManager()->getStorage('metadatadisplay_entity')->loadMultiple($results);
     $options = [];
