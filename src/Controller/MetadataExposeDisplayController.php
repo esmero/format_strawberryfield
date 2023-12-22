@@ -241,9 +241,6 @@ class MetadataExposeDisplayController extends ControllerBase {
               $embargo_context[] = 'ip';
             }
           }
-          else {
-            $embargoed = $embargo_info;
-          }
 
           if ($metadataexposeconfig_entity->getHideOnEmbargo() && $embargoed) {
             // If embargoed and hide on embargo TRUE,
@@ -329,6 +326,9 @@ class MetadataExposeDisplayController extends ControllerBase {
           $response->getCacheableMetadata()->addCacheTags($embargo_tags);
           $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
           $response->getCacheableMetadata()->addCacheContexts($embargo_context);
+          if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+            $response->getCacheableMetadata()->setCacheMaxAge(0);
+          }
         }
         return $response;
 

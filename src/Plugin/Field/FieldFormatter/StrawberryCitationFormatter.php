@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
@@ -378,6 +379,15 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         ];
       }
     }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
+
     return $elements;
   }
 

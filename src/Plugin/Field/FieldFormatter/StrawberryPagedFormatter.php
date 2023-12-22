@@ -464,7 +464,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'data'        => $jsondata,
             'node'        => $item->getEntity(),
             'iiif_server' => $this->getIiifUrls()['public'],
-          ];
+          ] + $context_embargo;
           $original_context = $context;
           // Allow other modules to provide extra Context!
           // Call modules that implement the hook, and let them add items.
@@ -542,6 +542,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $element['#cache']['max-age'] = 0;
+    }
 
     return $element;
   }
@@ -610,6 +613,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         }
       }
     }
+
     return $element;
   }
 
