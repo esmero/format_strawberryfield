@@ -383,6 +383,9 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
       'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
     return $elements;
   }
 
