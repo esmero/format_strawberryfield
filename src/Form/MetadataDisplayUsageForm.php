@@ -1,5 +1,7 @@
 <?php
 namespace Drupal\format_strawberryfield\Form;
+use Drupal\ami\Entity\amiSetEntity;
+use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
@@ -85,6 +87,7 @@ class MetadataDisplayUsageForm extends FormBase {
 
     // Start with Exposed Metadata display entities
     if ($metadatadisplay_entity) {
+
       $form['metadatadisplay_usage']['metadataexpose_entity'] = [
         '#type' => 'fieldset',
         '#title' => $this->t('Exposed Metadata Display Entities using @label', [
@@ -97,16 +100,67 @@ class MetadataDisplayUsageForm extends FormBase {
             $this->t('Label'),
             $this->t('Replace'),
           ],
-          '#empty' => $this->t('Sorry, There are no items!'),
+          '#empty' => $this->t('No usage.'),
         ]
       ];
-
       $metadataexpose_entities = $this->entityTypeManager->getStorage('metadataexpose_entity')->loadMultiple();
       foreach ($metadataexpose_entities as $metadataexpose_entity) {
         $metadatadisplayentity_uuid = $metadataexpose_entity->getMetadatadisplayentityUuid();
         if ($metadatadisplayentity_uuid && $metadatadisplay_entity->uuid() == $metadatadisplayentity_uuid) {
           $form['metadatadisplay_usage']['metadataexpose_entity']['table'][$metadataexpose_entity->id()]['label'] = $metadataexpose_entity->toLink($this->t('Edit @label', ['@label' => $metadataexpose_entity->label()]), 'edit-form')->toRenderable();
         }
+      }
+      try {
+        $form['metadatadisplay_usage']['ami_set_entity'] = [
+          '#type' => 'fieldset',
+          '#title' => $this->t('AMI sets using @label', [
+            '@label' => $metadatadisplay_entity->label()
+          ]),
+          'table' => [ '#type' => 'table',
+            '#prefix' => '<div id="table-fieldset-wrapper">',
+            '#suffix' => '</div>',
+            '#header' => [
+              $this->t('Label'),
+              $this->t('Replace'),
+            ],
+            '#empty' => $this->t('No usage.'),
+          ]
+        ];
+        $ami_entities_storage = $this->entityTypeManager->getStorage('ami_set_entity');
+        $ami_entities = $ami_entities_storage->loadMultiple();
+        foreach ($ami_entities as $ami_entity) {
+          /** @var amiSetEntity $ami_entity */
+          $in_use = FALSE;
+          foreach ($ami_entity->get('set') as $item) {
+            /** @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $item */
+            $data = $item->provideDecoded(TRUE);
+            switch ($data['mapping']['globalmapping'] ?? NULL) {
+              case 'custom':
+                foreach ($data['mapping']['custommapping_settings'] ?? [] as $type => $settings) {
+                  if ((($settings['metadata'] ?? '') == 'template') && (($settings['metadata_config']['template'] ?? '') == $metadatadisplay_entity->id())) {
+                    $in_use = TRUE;
+                    break;
+                  }
+                }
+                break;
+              case  'template':
+                if (($data['mapping']['globalmapping_settings']['template'] ?? '') == $metadatadisplay_entity->id()) {
+                }
+                break;
+              default:
+                $in_use = FALSE;
+                break;
+            }
+            break; // We only want a single $data here.
+          }
+          if ($in_use) {
+            $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['label'] = $ami_entity->toLink($this->t('Edit @label', ['@label' => $ami_entity->label()]), 'edit-form')->toRenderable();
+          }
+        }
+      }
+      catch (PluginException) {
+        // Means AMI module is not installed, the AMI type entity does not exist. That is Ok.
+        // simply no output
       }
     }
 
