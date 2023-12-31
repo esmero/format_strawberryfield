@@ -87,7 +87,8 @@ class MetadataDisplayUsageForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state, MetadataDisplayInterface $metadatadisplay_entity = NULL) {
 
-
+    $used_metadataexpose_entity = [];
+    $used_entity_view_display = [];
     if ($metadatadisplay_entity) {
       // Start with Exposed Metadata display entities
       $form['metadatadisplay_usage']['metadataexpose_entity'] = [
@@ -109,6 +110,7 @@ class MetadataDisplayUsageForm extends FormBase {
       foreach ($metadataexpose_entities as $metadataexpose_entity) {
         $metadatadisplayentity_uuid = $metadataexpose_entity->getMetadatadisplayentityUuid();
         if ($metadatadisplayentity_uuid && $metadatadisplay_entity->uuid() == $metadatadisplayentity_uuid) {
+          $used_metadataexpose_entity[] = $metadataexpose_entity->id();
           $form['metadatadisplay_usage']['metadataexpose_entity']['table'][$metadataexpose_entity->id()]['label'] = $metadataexpose_entity->toLink($this->t('Edit @label', ['@label' => $metadataexpose_entity->label()]), 'edit-form')->toRenderable();
         }
       }
@@ -190,18 +192,31 @@ class MetadataDisplayUsageForm extends FormBase {
       foreach ($this->configFactory()->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
         $entity_view = $this->configFactory()->get($entity_view_display_config);
         $in_use = FALSE;
+        // metadataexposeentity_source & metadataexposeentity_overlaysource
         if ($entity_view) {
           $data = $entity_view->getRawData();
           if (isset($data['third_party_settings']['ds']['fields'])) {
-            foreach ($data['third_party_settings']['ds']['fields'] as &$field) {
+            foreach ($data['third_party_settings']['ds']['fields'] as $field) {
               if (($field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                $in_use = TRUE;
+              }
+              if (isset($field['settings']['formatter']['metadataexposeentity_source']) && in_array($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+              }
+              if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && in_array($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
               }
             }
           }
           if (isset($data['content'])) {
-            foreach ($data['content'] as &$realfield) {
+            foreach ($data['content'] as $realfield) {
               if (($realfield['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                $in_use = TRUE;
+              }
+              if (isset($realfield['settings']['metadataexposeentity_source']) && in_array($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+              }
+              if (isset($realfield['settings']['metadataexposeentity_overlaysource']) && in_array($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
               }
             }
@@ -210,6 +225,7 @@ class MetadataDisplayUsageForm extends FormBase {
             $entity_view_display_storage = $this->entityTypeManager->getStorage('entity_view_display');
             /** @var EntityViewDisplay $entity_view_display */
             $entity_view_display = $entity_view_display_storage->load($entity_view->get('id'));
+            $used_entity_view_display[] = $entity_view->get('id');
             $bundle = $entity_view_display->getTargetBundle();
             // Default has no label... just named default
             $label = $view_modes[$entity_view_display->getMode()]['label'] ?? 'Default';
