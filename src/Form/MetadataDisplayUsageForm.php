@@ -185,10 +185,9 @@ class MetadataDisplayUsageForm extends FormBase {
           '#empty' => $this->t('No usage.'),
         ]
       ];
-      // Drupal... gosh.
+
       // We need to get first all view modes
       $view_modes = \Drupal::service('entity_display.repository')->getViewModes('node');
-
       foreach ($this->configFactory()->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
         $entity_view = $this->configFactory()->get($entity_view_display_config);
         $in_use = FALSE;
@@ -225,7 +224,7 @@ class MetadataDisplayUsageForm extends FormBase {
             $entity_view_display_storage = $this->entityTypeManager->getStorage('entity_view_display');
             /** @var EntityViewDisplay $entity_view_display */
             $entity_view_display = $entity_view_display_storage->load($entity_view->get('id'));
-            $used_entity_view_display[] = $entity_view->get('id');
+
             $bundle = $entity_view_display->getTargetBundle();
             // Default has no label... just named default
             $label = $view_modes[$entity_view_display->getMode()]['label'] ?? 'Default';
@@ -234,8 +233,66 @@ class MetadataDisplayUsageForm extends FormBase {
               'node_type' => $bundle,
               'view_mode_name' => $entity_view_display->getMode()
             ]);
+            $used_entity_view_display[$bundle][] = $entity_view_display->getMode();
             // Special parameter used to easily recognize all Field UI routes.
             $form['metadatadisplay_usage']['entity_view']['table'][$entity_view_display->id()]['label'] = $entity_view_display_link->toRenderable();
+          }
+        }
+      }
+
+
+      // Let's get Views now.
+
+      $form['metadatadisplay_usage']['view'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Views using @label', [
+          '@label' => $metadatadisplay_entity->label()
+        ]),
+        'table' => ['#type' => 'table',
+          '#prefix' => '<div id="table-fieldset-wrapper">',
+          '#suffix' => '</div>',
+          '#header' => [
+            $this->t('Label'),
+            $this->t('Replace'),
+          ],
+          '#empty' => $this->t('No usage.'),
+        ]
+      ];
+
+      foreach ($this->configFactory()->listAll('views.view.') as $view_config_name) {
+        $view = $this->configFactory()->get($view_config_name);
+        $in_use = FALSE;
+        // metadataexposeentity_source & metadataexposeentity_overlaysource
+        if ($view) {
+          $displays = $view->get('display');
+          foreach ($displays as $display_name => $display) {
+            if (isset($display['display_options']['fields'])) {
+              foreach ($display['display_options']['fields'] as $field) {
+                if (($field['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                  $in_use = TRUE;
+                }
+                if (isset($field['settings']['metadataexposeentity_source']) && in_array($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                  $in_use = TRUE;
+                }
+                if (isset($field['settings']['metadataexposeentity_overlaysource']) && in_array($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                  $in_use = TRUE;
+                }
+              }
+            }
+            if (isset($display['display_options']['row']['options']['view_modes']['entity:node'])) {
+              foreach (($display['display_options']['row']['options']['view_modes']['entity:node'] ?? []) as $bundle => $view_mode ) {
+                if (isset($used_entity_view_display[$bundle]) && in_array($view_mode, $used_entity_view_display[$bundle])) {
+                  $in_use = TRUE;
+                }
+              }
+            }
+
+            if ($in_use) {
+              if (\Drupal::moduleHandler()->moduleExists('views_ui')) {
+                $view_display_link = Link::createFromRoute($this->t('Edit @view_display_label - @display_name', ['@view_display_label' => $view->get('label'), '@display_name' => $display_name]), 'entity.view.edit_display_form', ['view' => $view->get('id'), 'display_id' => $display_name]);
+                $form['metadatadisplay_usage']['view']['table'][$view->get('id').'.'.$display_name]['label'] = $view_display_link->toRenderable();
+              }
+            }
           }
         }
       }
