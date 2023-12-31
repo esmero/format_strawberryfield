@@ -280,6 +280,9 @@ class MetadataDisplayUsageForm extends FormBase {
               }
             }
             if (isset($display['display_options']['row']['options']['view_modes']['entity:node'])) {
+              // GETTING SOME FALSE POSITIVES HERE. SEEMS LIKE $displays does not save the "overrides?"
+              // @TODO before 2024, inspect the structure. There must be some logic
+              // Maybe a simpler solution is not to load the "config" but actually load the Views?
               foreach (($display['display_options']['row']['options']['view_modes']['entity:node'] ?? []) as $bundle => $view_mode ) {
                 if (isset($used_entity_view_display[$bundle]) && in_array($view_mode, $used_entity_view_display[$bundle])) {
                   $in_use = TRUE;
