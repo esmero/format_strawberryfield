@@ -259,13 +259,16 @@ class MetadataDisplayUsageForm extends FormBase {
         ]
       ];
 
-      foreach ($this->configFactory()->listAll('views.view.') as $view_config_name) {
-        $view = $this->configFactory()->get($view_config_name);
-        $in_use = FALSE;
-        // metadataexposeentity_source & metadataexposeentity_overlaysource
-        if ($view) {
-          $displays = $view->get('display');
-          foreach ($displays as $display_name => $display) {
+      // We want all of them , even if disabled.
+      $entity_ids = $this->entityTypeManager->getStorage('view')->getQuery('AND')
+        ->execute();
+
+      foreach ($this->entityTypeManager->getStorage('view')->loadMultiple($entity_ids) as $view) {
+        // Check each display to see if it meets the criteria and is enabled.
+        foreach ($view->get('display') as $display_name => $display) {
+          $in_use = FALSE;
+          $display = $display;
+          if (($display['display_options']['row'] ?? '') == "fields") {
             if (isset($display['display_options']['fields'])) {
               foreach ($display['display_options']['fields'] as $field) {
                 if (($field['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
@@ -279,28 +282,26 @@ class MetadataDisplayUsageForm extends FormBase {
                 }
               }
             }
-            if (isset($display['display_options']['row']['options']['view_modes']['entity:node'])) {
-              // GETTING SOME FALSE POSITIVES HERE. SEEMS LIKE $displays does not save the "overrides?"
-              // @TODO before 2024, inspect the structure. There must be some logic
-              // Maybe a simpler solution is not to load the "config" but actually load the Views?
-              foreach (($display['display_options']['row']['options']['view_modes']['entity:node'] ?? []) as $bundle => $view_mode ) {
-                if (isset($used_entity_view_display[$bundle]) && in_array($view_mode, $used_entity_view_display[$bundle])) {
-                  $in_use = TRUE;
-                }
+          }
+          elseif (isset($display['display_options']['row']['options']['view_modes']['entity:node'])) {
+            // GETTING SOME FALSE POSITIVES HERE. SEEMS LIKE $displays does not save the "overrides?"
+            // @TODO before 2024, inspect the structure. There must be some logic
+            foreach (($display['display_options']['row']['options']['view_modes']['entity:node'] ?? []) as $bundle => $view_mode ) {
+              if (isset($used_entity_view_display[$bundle]) && in_array($view_mode, $used_entity_view_display[$bundle])) {
+                $in_use = TRUE;
               }
             }
-
-            if ($in_use) {
-              if (\Drupal::moduleHandler()->moduleExists('views_ui')) {
-                $view_display_link = Link::createFromRoute($this->t('Edit @view_display_label - @display_name', ['@view_display_label' => $view->get('label'), '@display_name' => $display_name]), 'entity.view.edit_display_form', ['view' => $view->get('id'), 'display_id' => $display_name]);
-                $form['metadatadisplay_usage']['view']['table'][$view->get('id').'.'.$display_name]['label'] = $view_display_link->toRenderable();
-              }
+          }
+          if ($in_use) {
+            if (\Drupal::moduleHandler()->moduleExists('views_ui')) {
+              $view_display_link = Link::createFromRoute($this->t('Edit @view_display_label - @display_name', ['@view_display_label' => $view->get('label'), '@display_name' => $display_name]), 'entity.view.edit_display_form', ['view' => $view->get('id'), 'display_id' => $display_name]);
+              $form['metadatadisplay_usage']['view']['table'][$view->get('id').'.'.$display_name]['label'] = $view_display_link->toRenderable();
             }
           }
         }
       }
     }
-      $form['metadatadisplay_usage']['#markup'] = 'Settings form for Metadata Display Entity. Manage field settings here.';
-      return $form;
-    }
+    $form['metadatadisplay_usage']['#markup'] = 'Settings form for Metadata Display Entity. Manage field settings here.';
+    return $form;
   }
+}
