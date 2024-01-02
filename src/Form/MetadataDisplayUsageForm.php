@@ -268,7 +268,7 @@ class MetadataDisplayUsageForm extends FormBase {
         foreach ($view->get('display') as $display_name => $display) {
           $in_use = FALSE;
           $display = $display;
-          if (($display['display_options']['row'] ?? '') == "fields") {
+          if (in_array(($display['display_options']['row']['type'] ?? ''), ['fields','data_field'])) {
             if (isset($display['display_options']['fields'])) {
               foreach ($display['display_options']['fields'] as $field) {
                 if (($field['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
