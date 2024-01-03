@@ -208,13 +208,13 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
                 $in_use = TRUE;
                 $how = $how + ['@direct' => 'direct'];
               }
-              if (isset($realfield['settings']['metadataexposeentity_source']) && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (!empty($realfield['settings']['metadataexposeentity_source']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
                 $in_use = TRUE;
-                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$realfield['settings']['metadataexposeentity_source']]];
               }
-              if (isset($realfield['settings']['metadataexposeentity_overlaysource']) && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (!empty($realfield['settings']['metadataexposeentity_overlaysource']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
                 $in_use = TRUE;
-                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$realfield['settings']['metadataexposeentity_source']]];
               }
             }
           }
