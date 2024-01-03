@@ -194,11 +194,11 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
               }
               if (isset($field['settings']['formatter']['metadataexposeentity_source']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
-                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['formatter']['metadataexposeentity_source']]];
               }
               if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
-                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['formatter']['metadataexposeentity_source']]];
               }
             }
           }
