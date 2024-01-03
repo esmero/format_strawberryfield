@@ -89,6 +89,7 @@ class MetadataDisplayUsageForm extends FormBase {
 
     $used_metadataexpose_entity = [];
     $used_entity_view_display = [];
+    $how_text = ['@direct' => 'Directly', '@view_mode' => 'Via Entity View Mode: @view_mode', '@metadataexposeentity' => 'Via Exposed Metadata Display Entity: @metadataexposeentity' ];
     if ($metadatadisplay_entity) {
       // Start with Exposed Metadata display entities
       $form['metadatadisplay_usage']['metadataexpose_entity'] = [
@@ -101,7 +102,7 @@ class MetadataDisplayUsageForm extends FormBase {
           '#suffix' => '</div>',
           '#header' => [
             $this->t('Label'),
-            $this->t('Replace'),
+            $this->t('How'),
           ],
           '#empty' => $this->t('No usage.'),
         ]
@@ -110,8 +111,9 @@ class MetadataDisplayUsageForm extends FormBase {
       foreach ($metadataexpose_entities as $metadataexpose_entity) {
         $metadatadisplayentity_uuid = $metadataexpose_entity->getMetadatadisplayentityUuid();
         if ($metadatadisplayentity_uuid && $metadatadisplay_entity->uuid() == $metadatadisplayentity_uuid) {
-          $used_metadataexpose_entity[] = $metadataexpose_entity->id();
+          $used_metadataexpose_entity[$metadataexpose_entity->id()] = $metadataexpose_entity->label();
           $form['metadatadisplay_usage']['metadataexpose_entity']['table'][$metadataexpose_entity->id()]['label'] = $metadataexpose_entity->toLink($this->t('Edit @label', ['@label' => $metadataexpose_entity->label()]), 'edit-form')->toRenderable();
+          $form['metadatadisplay_usage']['metadataexpose_entity']['table'][$metadataexpose_entity->id()]['how']['#markup'] =  $this->t('Direct');
         }
       }
       try {
@@ -126,7 +128,7 @@ class MetadataDisplayUsageForm extends FormBase {
             '#suffix' => '</div>',
             '#header' => [
               $this->t('Label'),
-              $this->t('Replace'),
+              $this->t('How'),
             ],
             '#empty' => $this->t('No usage.'),
           ]
@@ -160,6 +162,7 @@ class MetadataDisplayUsageForm extends FormBase {
           }
           if ($in_use) {
             $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['label'] = $ami_entity->toLink($this->t('Edit @label', ['@label' => $ami_entity->label()]), 'edit-form')->toRenderable();
+            $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['how'] = $this->t('Direct');
           }
         }
       } catch (PluginException) {
@@ -180,7 +183,7 @@ class MetadataDisplayUsageForm extends FormBase {
           '#suffix' => '</div>',
           '#header' => [
             $this->t('Label'),
-            $this->t('Replace'),
+            $this->t('How'),
           ],
           '#empty' => $this->t('No usage.'),
         ]
@@ -193,17 +196,21 @@ class MetadataDisplayUsageForm extends FormBase {
         $in_use = FALSE;
         // metadataexposeentity_source & metadataexposeentity_overlaysource
         if ($entity_view) {
+          $how = [];
           $data = $entity_view->getRawData();
           if (isset($data['third_party_settings']['ds']['fields'])) {
             foreach ($data['third_party_settings']['ds']['fields'] as $field) {
               if (($field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                 $in_use = TRUE;
+                $how = $how + ['@direct' => 'direct'];
               }
-              if (isset($field['settings']['formatter']['metadataexposeentity_source']) && in_array($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (isset($field['settings']['formatter']['metadataexposeentity_source']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
               }
-              if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && in_array($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
               }
             }
           }
@@ -211,12 +218,15 @@ class MetadataDisplayUsageForm extends FormBase {
             foreach ($data['content'] as $realfield) {
               if (($realfield['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                 $in_use = TRUE;
+                $how = $how + ['@direct' => 'direct'];
               }
-              if (isset($realfield['settings']['metadataexposeentity_source']) && in_array($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (isset($realfield['settings']['metadataexposeentity_source']) && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
               }
-              if (isset($realfield['settings']['metadataexposeentity_overlaysource']) && in_array($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+              if (isset($realfield['settings']['metadataexposeentity_overlaysource']) && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
               }
             }
           }
@@ -233,9 +243,11 @@ class MetadataDisplayUsageForm extends FormBase {
               'node_type' => $bundle,
               'view_mode_name' => $entity_view_display->getMode()
             ]);
-            $used_entity_view_display[$bundle][] = $entity_view_display->getMode();
+            $used_entity_view_display[$bundle][$entity_view_display->getMode()] = $label;
             // Special parameter used to easily recognize all Field UI routes.
             $form['metadatadisplay_usage']['entity_view']['table'][$entity_view_display->id()]['label'] = $entity_view_display_link->toRenderable();
+            $how_present_text = array_intersect_key($how_text, array_filter($how));
+            $form['metadatadisplay_usage']['entity_view']['table'][$entity_view_display->id()]['how']['#markup'] =  $this->t(implode(' and ', $how_present_text), $how);
           }
         }
       }
@@ -253,7 +265,7 @@ class MetadataDisplayUsageForm extends FormBase {
           '#suffix' => '</div>',
           '#header' => [
             $this->t('Label'),
-            $this->t('Replace'),
+            $this->t('How'),
           ],
           '#empty' => $this->t('No usage.'),
         ]
@@ -267,18 +279,22 @@ class MetadataDisplayUsageForm extends FormBase {
         // Check each display to see if it meets the criteria and is enabled.
         foreach ($view->get('display') as $display_name => $display) {
           $in_use = FALSE;
+          $how = [];
           $display = $display;
           if (in_array(($display['display_options']['row']['type'] ?? ''), ['fields','data_field'])) {
             if (isset($display['display_options']['fields'])) {
               foreach ($display['display_options']['fields'] as $field) {
                 if (($field['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                   $in_use = TRUE;
+                  $how = $how + ['@direct' => 'direct'];
                 }
-                if (isset($field['settings']['metadataexposeentity_source']) && in_array($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                if (isset($field['settings']['metadataexposeentity_source']) && array_key_exists($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                   $in_use = TRUE;
+                  $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_source']]];
                 }
-                if (isset($field['settings']['metadataexposeentity_overlaysource']) && in_array($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                if (isset($field['settings']['metadataexposeentity_overlaysource']) && array_key_exists($field['settings']['metadataexposeentity_overlaysource'] ?? '', $used_metadataexpose_entity)) {
                   $in_use = TRUE;
+                  $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['metadataexposeentity_overlaysource']]];
                 }
               }
             }
@@ -287,8 +303,9 @@ class MetadataDisplayUsageForm extends FormBase {
             // GETTING SOME FALSE POSITIVES HERE. SEEMS LIKE $displays does not save the "overrides?"
             // @TODO before 2024, inspect the structure. There must be some logic
             foreach (($display['display_options']['row']['options']['view_modes']['entity:node'] ?? []) as $bundle => $view_mode ) {
-              if (isset($used_entity_view_display[$bundle]) && in_array($view_mode, $used_entity_view_display[$bundle])) {
+              if (isset($used_entity_view_display[$bundle]) && array_key_exists($view_mode, $used_entity_view_display[$bundle])) {
                 $in_use = TRUE;
+                $how = $how + ['@view_mode' => $used_entity_view_display[$bundle][$view_mode]];
               }
             }
           }
@@ -296,12 +313,16 @@ class MetadataDisplayUsageForm extends FormBase {
             if (\Drupal::moduleHandler()->moduleExists('views_ui')) {
               $view_display_link = Link::createFromRoute($this->t('Edit @view_display_label - @display_name', ['@view_display_label' => $view->get('label'), '@display_name' => $display_name]), 'entity.view.edit_display_form', ['view' => $view->get('id'), 'display_id' => $display_name]);
               $form['metadatadisplay_usage']['view']['table'][$view->get('id').'.'.$display_name]['label'] = $view_display_link->toRenderable();
+              $how_present_text = array_intersect_key($how_text, array_filter($how));
+              $form['metadatadisplay_usage']['view']['table'][$view->get('id').'.'.$display_name]['how']['#markup'] =  $this->t(implode(' and ', $how_present_text), $how);
             }
           }
         }
       }
     }
-    $form['metadatadisplay_usage']['#markup'] = 'Settings form for Metadata Display Entity. Manage field settings here.';
+    $form['metadatadisplay_usage']['#markup'] = $this->t('Direct and indirect usage listing, across your whole system, of @label', [
+      '@label' => $metadatadisplay_entity->label()
+    ]);
     return $form;
   }
 }
