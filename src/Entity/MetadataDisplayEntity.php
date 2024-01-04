@@ -103,6 +103,7 @@ use Twig\Source;
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
  *     "edit-form" = "/metadatadisplay/{metadatadisplay_entity}/edit",
  *     "delete-form" = "/metadatadisplay/{metadatadisplay_entity}/delete",
+ *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
  *     "collection" = "/metadatadisplay/list"
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
@@ -186,7 +187,6 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // Calculate RelatedCacheTags.
     $this->invalidateTempMetadataDisplayCaches();
     $this->getRelatedCacheTagsToInvalidate(TRUE);
-
   }
 
   /**
