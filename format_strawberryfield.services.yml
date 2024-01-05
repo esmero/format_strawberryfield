@@ -25,3 +25,6 @@ services:
     tags:
       - { name: event_subscriber }
     arguments: ['@entity_type.manager']
+  format_strawberryfield.metadatadisplay_usage_service:
+    class: Drupal\format_strawberryfield\MetadataDisplayUsageService
+    arguments: [ '@entity.repository', '@entity_type.manager', '@config.factory', '@entity_display.repository', '@current_user', '@module_handler' ]

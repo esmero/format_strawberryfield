@@ -40,6 +40,21 @@ entity.metadatadisplay_entity.delete_form:
   requirements:
     _entity_access: 'metadatadisplay_entity.delete'
 
+entity.metadatadisplay_entity.usage_form:
+  path: '/metadatadisplay/{metadatadisplay_entity}/usage'
+  defaults:
+    _form: '\Drupal\format_strawberryfield\Form\MetadataDisplayUsageForm'
+    _title: 'Usage'
+  requirements:
+    _permission: 'administer metadatadisplay entity'
+    _entity_access: 'metadatadisplay_entity.edit'
+  options:
+    parameters:
+      metadatadisplay_entity:
+        type: 'entity:metadatadisplay_entity'
+  _admin_route: TRUE
+
+
 # Metadatadisplay settings route
 
 format_strawberryfield.metadatadisplay_settings:

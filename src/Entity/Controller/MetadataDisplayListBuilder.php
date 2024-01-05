@@ -41,8 +41,10 @@ class MetadataDisplayListBuilder extends EntityListBuilder {
    */
   public function buildHeader() {
     $header['id'] = $this->t('Metadata Display ID');
+    $header['uuid'] = $this->t('UUID');
     $header['name'] = $this->t('Name');
     $header['last update'] = $this->t('Last update');
+    $header['In use'] = $this->t('In use');
     return $header + parent::buildHeader();
   }
 
@@ -52,8 +54,10 @@ class MetadataDisplayListBuilder extends EntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
     $row['id'] = $entity->id();
+    $row['uuid'] = $entity->uuid();
     $row['name'] = $entity->toLink();
     $row['last update'] = \Drupal::service('date.formatter')->format($entity->changed->value, 'custom', 'd/m/Y');
+    $row['In use'] = \Drupal::service('format_strawberryfield.metadatadisplay_usage_service')->getUsage($entity) ? 'YES': 'NO';
     return $row + parent::buildRow($entity);
   }
 

@@ -124,6 +124,7 @@ use Twig\Source;
  *     "revision-delete-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/delete",
  *     "revision-revert-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/revert",
  *     "version-history" = "/metadatadisplay/{metadatadisplay_entity}/revisions",
+ *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
  * )
@@ -206,7 +207,6 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
     // Calculate RelatedCacheTags.
     $this->invalidateTempMetadataDisplayCaches();
     $this->getRelatedCacheTagsToInvalidate(TRUE);
-
   }
 
   /**
