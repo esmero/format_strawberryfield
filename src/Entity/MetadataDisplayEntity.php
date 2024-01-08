@@ -6,11 +6,11 @@ use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
 use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\Entity\RevisionableContentEntityBase;
 use Drupal\Core\Logger\LoggerChannelTrait;
 use Twig\Node\Node;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
@@ -80,31 +80,51 @@ use Twig\Source;
  * @ContentEntityType(
  *   id = "metadatadisplay_entity",
  *   label = @Translation("Metadata Processor Entity"),
+ *   show_revision_ui = TRUE,
  *   handlers = {
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "list_builder" = "Drupal\format_strawberryfield\Entity\Controller\MetadataDisplayListBuilder",
  *     "views_data" = "Drupal\views\EntityViewsData",
+ *     "route_provider" = {
+ *        "revision" = \Drupal\Core\Entity\Routing\RevisionHtmlRouteProvider::class,
+ *     },
  *     "form" = {
  *       "add" = "Drupal\format_strawberryfield\Form\MetadataDisplayForm",
  *       "edit" = "Drupal\format_strawberryfield\Form\MetadataDisplayForm",
  *       "delete" = "Drupal\format_strawberryfield\Form\MetadataDisplayDeleteForm",
+ *       "revision-delete" = \Drupal\Core\Entity\Form\RevisionDeleteForm::class,
+ *       "revision-revert" = \Drupal\Core\Entity\Form\RevisionRevertForm::class,
  *     },
  *     "access" = "Drupal\format_strawberryfield\MetadataDisplayAccessControlHandler",
  *   },
  *   base_table = "strawberryfield_metadatadisplay",
+ *   revision_table = "strawberryfield_metadatadisplay_revision",
+ *   revision_data_table = "strawberryfield_metadatadisplay_field_revision",
  *   admin_permission = "administer metadatadisplay entity",
  *   fieldable = TRUE,
  *   entity_keys = {
  *     "id" = "id",
  *     "label" = "name",
- *     "uuid" = "uuid"
+ *     "uuid" = "uuid",
+ *     "revision" = "vid",
+ *     "revision_translation_affected" = "revision_translation_affected",
+ *   },
+ *   revision_metadata_keys = {
+ *      "revision_user" = "revision_user",
+ *      "revision_default" = "revision_default",
+ *      "revision_created" = "revision_created",
+ *      "revision_log_message" = "revision_log_message",
  *   },
  *   links = {
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
  *     "edit-form" = "/metadatadisplay/{metadatadisplay_entity}/edit",
  *     "delete-form" = "/metadatadisplay/{metadatadisplay_entity}/delete",
+ *     "collection" = "/metadatadisplay/list",
+ *     "revision" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/view",
+ *     "revision-delete-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/delete",
+ *     "revision-revert-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/revert",
+ *     "version-history" = "/metadatadisplay/{metadatadisplay_entity}/revisions",
  *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
- *     "collection" = "/metadatadisplay/list"
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
  * )
@@ -133,7 +153,7 @@ use Twig\Source;
  * the rights privileges can influence the presentation (view, edit) of each
  * field.
  */
-class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplayInterface {
+class MetadataDisplayEntity extends RevisionableContentEntityBase implements MetadataDisplayInterface {
 
   // Implements methods defined by EntityChangedInterface.
   use EntityChangedTrait;
@@ -256,6 +276,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * in the GUI. The behaviour of the widgets used can be determined here.
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
+    // We need to inherit the parent revision log fields
+    $fields = parent::baseFieldDefinitions($entity_type);
 
     // Standard field, used as unique if primary index.
     $fields['id'] = BaseFieldDefinition::create('integer')
@@ -275,7 +297,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
       ->setDescription(t('The name of the Metadata Display entity.'))
-      ->setRevisionable(FALSE)
+      ->setRevisionable(TRUE)
       ->setSettings([
         'default_value' => '',
         'max_length' => 255,
@@ -298,6 +320,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // @TODO see https://twig.symfony.com/doc/2.x/api.html#sandbox-extension
     $fields['twig'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Twig template'))
+      ->setRevisionable(TRUE)
       ->setTranslatable(TRUE)
       ->setDisplayOptions('view', [
         'label' => 'hidden',
@@ -354,6 +377,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
     $fields['changed'] = BaseFieldDefinition::create('changed')
       ->setLabel(t('Changed'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('The time that the Metadata Display was last edited.'));
 
     $fields['link'] = BaseFieldDefinition::create('uri')
@@ -367,6 +391,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // What type of output is expected from the twig template processing.
     $fields['mimetype'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
       ->setSettings([
         'default_value' => 'text/html',
@@ -389,6 +414,25 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('form', TRUE)
       ->addConstraint('NotBlank');
+
+    $fields['revision_default'] = BaseFieldDefinition::create('boolean')
+      ->setName('revision_default')
+      ->setTargetEntityTypeId('metadatadisplay_entity')
+      ->setTargetBundle(NULL)
+      ->setLabel(t('Default revision'))
+      ->setDescription(t('A flag indicating whether this was a default revision when it was saved.'))
+      ->setStorageRequired(TRUE)
+      ->setInternal(TRUE)
+      ->setTranslatable(FALSE)
+      ->setRevisionable(TRUE);
+
+    $fields['revision_translation_affected'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Revision translation affected'))
+      ->setDescription(t('Indicates if the last edit of a translation belongs to current revision.'))
+      ->setReadOnly(TRUE)
+      ->setRevisionable(TRUE)
+      ->setTranslatable(TRUE);
+
 
     return $fields;
   }
@@ -764,7 +808,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $cache_id = static::ERRORED_CACHE_TAG_ID . $this->id();
     $cached = $this->cacheGet($cache_id);
     if ($cached && !$bypass) {
-      /* @var $cached Drupal\Core\Cache\CacheBackendInterface */
+      /* @var $cached \Drupal\Core\Cache\CacheBackendInterface */
       return $cached->data;
     }
     $source = new Source($twigtemplate, $this->label() ?? $this->uuid(), '');
