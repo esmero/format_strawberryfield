@@ -13,6 +13,7 @@
         }
     ],
     "require": {
+	"drupal/core":"^10.1", 
         "strawberryfield/strawberryfield":"1.3.0.x-dev",
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",

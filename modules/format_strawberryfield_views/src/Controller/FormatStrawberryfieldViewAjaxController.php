@@ -14,7 +14,7 @@ use Drupal\Core\Render\BubbleableMetadata;
 use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RedirectDestinationInterface;
-use Drupal\views\Ajax\ScrollTopCommand;
+use Drupal\Core\Ajax\ScrollTopCommand;
 use Drupal\views\Ajax\ViewAjaxResponse;
 use Drupal\views\ViewExecutableFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -122,10 +122,10 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
    *   Thrown when the view was not found.
    */
   public function ajaxView(Request $request) {
-    $name = $request->request->get('view_name');
-    $display_id = $request->request->get('view_display_id');
+    $name = $request->get('view_name');
+    $display_id = $request->get('view_display_id');
     if (isset($name) && isset($display_id)) {
-      $args = $request->request->get('view_args', '');
+      $args = $request->get('view_args', '');
       $args = $args !== '' ? explode('/', Html::decodeEntities($args)) : [];
 
       // Arguments can be empty, make sure they are passed on as NULL so that
@@ -134,15 +134,15 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         return ($arg == '' ? NULL : $arg);
       }, $args);
 
-      $path = $request->request->get('view_path');
+      $path = $request->get('view_path');
       // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path);
-      $dom_id = $request->request->get('view_dom_id');
+      $dom_id = $request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
-      $pager_element = $request->request->get('pager_element');
+      $pager_element = $request->get('pager_element');
       $pager_element = isset($pager_element) ? intval($pager_element) : NULL;
       // Assume its there if not told otherwise
-      $exposed_form_display = (bool) $request->request->get('exposed_form_display', TRUE);
+      $exposed_form_display = (bool) $request->get('exposed_form_display', TRUE);
 
       $response = new ViewAjaxResponse();
 
