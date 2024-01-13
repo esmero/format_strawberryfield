@@ -69,6 +69,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $options['expose']['contains']['advanced_search_fields_remove_one_label'] = ['default' => 'remove one'];
     $options['advanced_search_fields_add_one_label'] = ['default' => ['add one']];
     $options['advanced_search_fields_remove_one_label'] = ['default' => ['remove one']];
+    $options['expose']['contains']['advanced_search_classic_mode'] = ['default' => FALSE];
+    $options['expose']['contains']['advanced_search_multiple_remove'] = ['default' => FALSE];
     $options['fields_label_replace'] = ['default' => NULL];
     return $options;
   }
@@ -80,6 +82,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $this->options['expose']['advanced_search_fields_count'] = 2;
     $this->options['expose']['advanced_search_fields_count_min'] = 1;
     $this->options['expose']['advanced_search_use_operator'] = FALSE;
+    $this->options['expose']['advanced_search_classic_mode'] = FALSE;
+    $this->options['expose']['advanced_search_multiple_remove'] = FALSE;
     $this->options['expose']['advanced_search_operator_id'] = $this->options['id'] . '_group_operator';
     $this->options['expose']['advanced_search_fields_add_one_label'] = $this->options['advanced_search_fields_add_one_label'];
     $this->options['expose']['advanced_search_fields_remove_one_label'] = $this->options['advanced_search_fields_remove_one_label'];
