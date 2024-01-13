@@ -844,7 +844,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
          originally requested OR without values.
     */
    if ($this->options['expose']['advanced_search_classic_mode']) {
-     for($i=1;$i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+     for($i=1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
          if (strpos($key, '#') !== FALSE) {
            $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
@@ -863,6 +863,10 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
          }
        }
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
+       if ($i > max($this->options['expose']['advanced_search_fields_count_min'], $realcount)) {
+         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['class'] = ['hidden'];
+         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['aria-hidden'] = TRUE;
+       }
      }
    }
    else {
