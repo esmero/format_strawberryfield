@@ -801,6 +801,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#weight' => '-100',
         '#group' => 'actions',
       ];
+
+      // Here is where we need one per row! if enabled.
+
       $form[$this->options['id'].'_delone'] = [
         '#type' => 'link',
         '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
@@ -829,26 +832,66 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#value' => $realcount,
     ];
 
-    for($i=1;$i < $realcount && $realcount > 1; $i++) {
-      foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-        if (strpos($key, '#') !== FALSE) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
-        }
-        else {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
-        }
-        if ($key == $this->options['expose']['identifier']) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
-        }
-        elseif (is_array($value) && strpos($key, '#') === FALSE) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
-          if ($key == $advanced_search_operator_id) {
-            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
-          }
-        }
-      }
-      $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
-    }
+    // Pass if Classic Mode is enabled as a hidden form element so we can act via JS.
+    $form[$this->options['id'] . '_advanced_search_classic_mode'] = [
+      '#type' => 'hidden',
+      '#value' => $this->options['expose']['advanced_search_classic_mode']
+    ];
+
+    // Here is where the trick happens if classic mode is enabled. The idea is:
+    /* - instead of only rendering the amount (realcount) based on the max/add more
+         we render all max/allowed ones, but make hide them all the ones that are not
+         originally requested OR without values.
+    */
+   if ($this->options['expose']['advanced_search_classic_mode']) {
+     for($i=1;$i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+       foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
+         if (strpos($key, '#') !== FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+         }
+         else {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+         }
+         if ($key == $this->options['expose']['identifier']) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+         }
+         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
+           if ($key == $advanced_search_operator_id) {
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
+           }
+         }
+       }
+       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
+     }
+   }
+   else {
+     // Normal behavior
+     for($i=1;$i < $realcount && $realcount > 1; $i++) {
+       foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
+         if (strpos($key, '#') !== FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+         }
+         else {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+         }
+         if ($key == $this->options['expose']['identifier']) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+         }
+         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
+           if ($key == $advanced_search_operator_id) {
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
+           }
+         }
+       }
+       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
+     }
+   }
+
+
+
+
     $form = $form;
   }
 
