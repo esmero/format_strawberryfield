@@ -167,6 +167,30 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       ],
     ];
 
+    $form['expose']['advanced_search_classic_mode'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Use Classic Mode'),
+      '#description' => $this->t('This mode mimics older catalog search interfaces, where adding/removing fields does not trigger automatic refreshing of the Search results. Search only triggers on the default Form Filter submit button. Fully depends on Javascript to get around Views Exposed Filters in forms always submitting on any interaction. '),
+      '#default_value' => !empty($this->options['expose']['advanced_search_classic_mode']),
+      '#states' => [
+        'visible' => [
+          ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['expose']['advanced_search_multiple_remove'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Add a Remove button to every Advanced Search Field combo.'),
+      '#description' => $this->t('This will allow a user to remove a specific Advanced Search Field/And/or/Text. Only works on Classic Mode'),
+      '#default_value' => !empty($this->options['expose']['advanced_search_multiple_remove']),
+      '#states' => [
+        'visible' => [
+          ':input[name="options[expose][advanced_search_classic_mode]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
     $form['expose']['advanced_search_operator_id'] = [
       '#type' => 'textfield',
       '#default_value' => $this->options['expose']['advanced_search_operator_id'],
@@ -628,6 +652,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
     $return = parent::acceptExposedInput($input);
     // Now do things a bit differently:
+
+    /* $input here is
+    result = {array[8]}
+ sbf_advanced_search_api_fulltext = ""
+ sbf_advanced_search_api_fulltext_searched_fields = ""
+ sbf_advanced_search_api_fulltext_group_operator = "or"
+ sbf_advanced_search_api_fulltext_advanced_search_fields_count = {int} 1
+ submit = "Apply"
+ form_build_id = "form-qFadZL0soLf1yzlfcjPkunovchJ1RloShoCGc9sSP8w"
+ form_id = "views_exposed_form"
+ op = "Apply"
+    */
+
+
     // Value in our case needs to be multiple values (bc of the multiple options)
     if ($return && $realcount = $input[$this->options['expose']['identifier'].'_advanced_search_fields_count']) {
       $this->value = [];
@@ -705,7 +743,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $advanced_search_operator_id = $this->options['expose']['advanced_search_operator_id'];
       }
       // Group operators are used to connected multiple exposed forms/groups
-      // for this Filters between each other at query time
+      // for these Filters between each other at query time
       $group_operator = [
         'and' => $this->t('AND'),
         'or'  => $this->t('OR'),
@@ -821,6 +859,10 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     ) {
       return;
     }
+
+    // Note to myself ... interesting .. $form_state->isMethodType('POST') so a direct link will be $form_state->isMethodType('GET') ?
+
+
 
     // Store searched fields.
     $searched_fields_identifier = $this->options['id'] . '_searched_fields';
