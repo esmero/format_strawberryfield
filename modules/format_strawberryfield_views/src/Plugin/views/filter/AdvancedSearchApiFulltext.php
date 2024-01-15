@@ -776,8 +776,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Cap it to the max limit
     $realcount = ($realcount <= $this->options['expose']['advanced_search_fields_count']) ? $realcount : $this->options['expose']['advanced_search_fields_count'];
     // Only enable if setup and the realcount is less than the max.
-    $enable_more = $realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'];
-    $enable_less = $realcount > 1;
+    $enable_more = ($realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
+    // If using Classic mode we can't make access false, we still need to attach JS to it.
+    $enable_less = ($realcount > $this->options['expose']['advanced_search_fields_count_min'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
 
     if (empty($this->view->live_preview)) {
       $form[$this->options['id'].'_addone'] = [
@@ -787,7 +788,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#attributes' => [
           'data-disable-refocus' => "true",
           'data-advanced-search-addone' => "true",
+          'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
           'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
+          'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
           'data-advanced-search-prefix' => $this->options['id'],
           'tabindex' => 2,
           'class' => [
@@ -801,6 +804,12 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#weight' => '-100',
         '#group' => 'actions',
       ];
+      // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
+      // trick the JS, won't be able to process more or less than we have defined in the settings.
+      if ($enable_more && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count']) {
+        $form[$this->options['id'].'_addone']['#attributes']['class'][] = 'hidden';
+      }
+
 
       // Here is where we need one per row! if enabled.
       // Pass if Classic Mode is enabled as a data property so we can act via JS.
@@ -811,8 +820,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#attributes' => [
           'data-disable-refocus' => "true",
           'data-advanced-search-delone' => "true",
-          'data-advanced-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
+          'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
           'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
+          'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
           'data-advanced-search-prefix' => $this->options['id'],
           'tabindex' => 3,
           'class' => [
@@ -827,6 +837,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#group' => 'actions',
       ];
     }
+    // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
+    // trick the JS, won't be able to process more or less than we have defined in the settings.
+    if ($enable_less && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count_min']) {
+      $form[$this->options['id'].'_delone']['#attributes']['class'][] = 'hidden';
+    }
 
     $form[$this->options['id'] . '_advanced_search_fields_count'] = [
       '#type' => 'hidden',
@@ -837,7 +852,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
     // Here is where the trick happens if classic mode is enabled. The idea is:
     /* - instead of only rendering the amount (realcount) based on the max/add more
-         we render all max/allowed ones, but make hide them all the ones that are not
+         we render all max/allowed ones, but hide all the ones that are not
          originally requested OR without values.
     */
    if ($this->options['expose']['advanced_search_classic_mode']) {
@@ -862,8 +877,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
        if ($i >= max($this->options['expose']['advanced_search_fields_count_min'], $realcount)) {
          $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['class'] = ['hidden'];
-         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['aria-hidden'] = TRUE;
+         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['aria-hidden'] = "true";
        }
+       $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['data-advanced-wrapper'] = "true";
      }
    }
    else {

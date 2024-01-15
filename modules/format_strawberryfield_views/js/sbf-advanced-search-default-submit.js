@@ -17,8 +17,31 @@
           const $form = defaultSubmitInput.closest('.views-exposed-form');
           let $count = $form.querySelector('input[name="'+$name+'"]');
           if ($count) {
-            $count.value = Number($count.value) + 1;
-            defaultSubmitInput.click();
+            if (ev.target.dataset.advancedSearchMode !== 'undefined' && ev.target.dataset.advancedSearchMax !== 'undefined') {
+              if ($count.value < Number(ev.target.dataset.advancedSearchMax)) {
+                $count.value = Number($count.value) + 1;
+              }
+              if (ev.target.dataset.advancedSearchMode == "true") {
+                if ($count.value <= Number(ev.target.dataset.advancedSearchMax)) {
+                  const $first_hidden_one = $form.querySelector(".hidden[data-advanced-wrapper='true']");
+                  if ($first_hidden_one) {
+                    $first_hidden_one.classList.toggle('hidden');
+                  }
+                }
+                if ($count.value == Number(ev.target.dataset.advancedSearchMax)) {
+                  ev.target.classList.add('hidden');
+                }
+                if ($count.value > Number(ev.target.dataset.advancedSearchMin)) {
+                  const $hidden_del_one = $form.querySelector('.hidden[data-advanced-search-delone]');
+                  if ($hidden_del_one) {
+                    $hidden_del_one.classList.remove('hidden')
+                  }
+                }
+              }
+              else {
+                defaultSubmitInput.click();
+              }
+            }
           }
         }
       };
@@ -31,13 +54,41 @@
           const $form = defaultSubmitInput.closest('.views-exposed-form');
           let $count = $form.querySelector('input[name="'+$name+'"]');
           if ($count) {
-            $count.value = Number($count.value) - 1;
-            const $tounsetSelector = ev.target.dataset.advancedSearchPrefix + '_' + $count.value;
-            let $tounset = $form.querySelector('input[name="' + $tounsetSelector + '"]');
-            if ($tounset) {
-              $tounset.value = '';
+            if (ev.target.dataset.advancedSearchMode !== 'undefined' && ev.target.dataset.advancedSearchMin !== 'undefined') {
+              if ($count.value > Number(ev.target.dataset.advancedSearchMin)) {
+                $count.value = Number($count.value) - 1;
+              }
+              if (ev.target.dataset.advancedSearchMode == "true") {
+                if ($count.value >= Number(ev.target.dataset.advancedSearchMin)) {
+                  const $first_not_hidden_one = $form.querySelector(":not(.hidden)[data-advanced-wrapper='true']");
+                  if ($first_not_hidden_one) {
+                    $first_not_hidden_one.classList.toggle('hidden');
+                    // name^= means starts with.
+                    let $tounset = $first_not_hidden_one.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                    if ($tounset) {
+                      $tounset.value = '';
+                    }
+                  }
+                }
+                if ($count.value == Number(ev.target.dataset.advancedSearchMin)) {
+                  ev.target.classList.add('hidden');
+                }
+                if ($count.value < Number(ev.target.dataset.advancedSearchMax)) {
+                  const $hidden_add_more = $form.querySelector('.hidden[data-advanced-search-addone]');
+                  if ($hidden_add_more) {
+                    $hidden_add_more.classList.remove('hidden')
+                  }
+                }
+              }
+              else {
+                const $tounsetSelector = ev.target.dataset.advancedSearchPrefix + '_' + $count.value;
+                let $tounset = $form.querySelector('input[name="' + $tounsetSelector + '"]');
+                if ($tounset) {
+                  $tounset.value = '';
+                }
+                defaultSubmitInput.click();
+              }
             }
-            defaultSubmitInput.click();
           }
         }
       };
