@@ -9,6 +9,11 @@
         }
       };
 
+      var shiftFormElementValues = function (StartWrapper) {
+
+      }
+
+
       var addMoreInterception = function(defaultSubmitInput, ev) {
         ev.preventDefault();
         ev.stopPropagation();
@@ -23,8 +28,9 @@
               }
               if (ev.target.dataset.advancedSearchMode == "true") {
                 if ($count.value <= Number(ev.target.dataset.advancedSearchMax)) {
-                  const $first_hidden_one = $form.querySelector(".hidden[data-advanced-wrapper='true']");
-                  if ($first_hidden_one) {
+                  const $hidden_ones = $form.querySelectorAll(".hidden[data-advanced-wrapper='true']");
+                  if ($hidden_ones) {
+                    const $first_hidden_one = $hidden_ones[0];
                     $first_hidden_one.classList.toggle('hidden');
                   }
                 }
@@ -60,13 +66,21 @@
               }
               if (ev.target.dataset.advancedSearchMode == "true") {
                 if ($count.value >= Number(ev.target.dataset.advancedSearchMin)) {
-                  const $first_not_hidden_one = $form.querySelector(":not(.hidden)[data-advanced-wrapper='true']");
-                  if ($first_not_hidden_one) {
-                    $first_not_hidden_one.classList.toggle('hidden');
+                  const $not_hidden_one = $form.querySelectorAll(":not(.hidden)[data-advanced-wrapper='true']");
+                  if ($not_hidden_one) {
+                    const $last_not_hidden_one = $not_hidden_one[$not_hidden_one.length - 1];
+                    $last_not_hidden_one.classList.toggle('hidden');
                     // name^= means starts with.
-                    let $tounset = $first_not_hidden_one.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                    let $tounset = $last_not_hidden_one.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
                     if ($tounset) {
                       $tounset.value = '';
+                    }
+                    let $tounsetselect = $last_not_hidden_one.querySelectorAll('select[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                    if ($tounsetselect) {
+                      [].forEach.call($tounsetselect, function(el) {
+                        // -1 means nothing which is not the drupal default...
+                        el.selectedIndex = 0;
+                      });
                     }
                   }
                 }

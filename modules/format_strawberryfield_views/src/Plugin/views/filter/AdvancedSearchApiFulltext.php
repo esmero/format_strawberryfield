@@ -854,8 +854,18 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     /* - instead of only rendering the amount (realcount) based on the max/add more
          we render all max/allowed ones, but hide all the ones that are not
          originally requested OR without values.
+
+        And another trick is needed.
+        - I can't just hide: Numerically (by count). I need to be sure that the ones coming with values from submit
+        - have priority to be shown... the ones without values might be show/not shown based on the inputs
+        - and i can never show more than what the number that comes in/ allows via settings... mmmm
+        - two choices:
+          - put values where they belong hiding in between with complex math
+          - presort values and put them simply in order ...
     */
    if ($this->options['expose']['advanced_search_classic_mode']) {
+     // To keep track which field passed contained an actual search token
+     $index_with_value = [];
      for($i=1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
          if (strpos($key, '#') !== FALSE) {
@@ -865,7 +875,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
          }
          if ($key == $this->options['expose']['identifier']) {
-           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+           $current_search_value = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+           if (strlen($current_search_value) > 0 ) {
+             $index_with_value[] = $i;
+           }
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $current_search_value;
          }
          elseif (is_array($value) && strpos($key, '#') === FALSE) {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
@@ -874,11 +888,12 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
            }
          }
        }
-       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
        if ($i >= max($this->options['expose']['advanced_search_fields_count_min'], $realcount)) {
-         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['class'] = ['hidden'];
-         $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['aria-hidden'] = "true";
+         $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['class'] = ['hidden'];
+         $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['aria-hidden'] = "true";
+         //$hidden_count++;
        }
+       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
        $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['data-advanced-wrapper'] = "true";
      }
    }
@@ -906,9 +921,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
      }
    }
 
-
-
-
     $form = $form;
   }
 
@@ -925,8 +937,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
 
     // Note to myself ... interesting .. $form_state->isMethodType('POST') so a direct link will be $form_state->isMethodType('GET') ?
-
-
 
     // Store searched fields.
     $searched_fields_identifier = $this->options['id'] . '_searched_fields';
@@ -967,14 +977,29 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
 
     $identifiers[] = $identifiers_to_keep[] = $this->options['expose']['identifier'];
-
-    for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
-      if ($i < $current_count) {
-        $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+    // If not running 'classic mode' this is valid, but on classic mode
+    // all is a mess. We can't just use indices to define what is kept or not
+    if ($this->options['expose']['advanced_search_classic_mode']) {
+      // We can't use the Form itself bc validation runs before form_state is rebuild ...
+      // so we need to use input.
+      for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+       // if (!in_array('hidden', $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['class'] ?? [])) {
+          $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+            . $i;
+        //}
+        $identifiers[] = $this->options['expose']['identifier'] . '_'
           . $i;
       }
-      $identifiers[] = $this->options['expose']['identifier'] . '_'
-        . $i;
+    }
+    else {
+      for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+        if ($i < $current_count) {
+          $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+            . $i;
+        }
+        $identifiers[] = $this->options['expose']['identifier'] . '_'
+          . $i;
+      }
     }
 
     foreach ($identifiers as $index => $identifier) {
