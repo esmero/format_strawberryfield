@@ -66,31 +66,51 @@
               }
               if (ev.target.dataset.advancedSearchMode == "true") {
                 if ($count.value >= Number(ev.target.dataset.advancedSearchMin)) {
-                  let $not_hidden_one = [];
+                  let $not_hidden_one = $form.querySelectorAll(":not(.hidden)[data-advanced-wrapper='true']");
                   if (ev.target.dataset.advancedSearchTarget == "last") {
-                    $not_hidden_one = $form.querySelectorAll(":not(.hidden)[data-advanced-wrapper='true']");
+                    if ($not_hidden_one.length > 0) {
+                      const $last_not_hidden_one = $not_hidden_one[$not_hidden_one.length - 1];
+                      $last_not_hidden_one.classList.toggle('hidden');
+                      // name^= means starts with.
+                      let $tounset = $last_not_hidden_one.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                      if ($tounset) {
+                        $tounset.value = '';
+                      }
+                      let $tounsetselect = $last_not_hidden_one.querySelectorAll('select[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                      if ($tounsetselect.length > 0) {
+                        [].forEach.call($tounsetselect, function(el) {
+                          // -1 means nothing which is not the drupal default...
+                          el.selectedIndex = 0;
+                        });
+                      }
+                    }
                   }
                   else if (ev.target.dataset.advancedSearchTarget == "self") {
-                    // I don't use the NodeList object, i just iterate over its members, so this is valid.
-                    $not_hidden_one.push(ev.target.closest(":not(.hidden)[data-advanced-wrapper='true']"));
+                    // But here is the trick. I need to clear this one but hide still the last one...
+                    // and then shift, per wrapper all values one step starting from the one cleared ...
+                    // Side note: there are chances that $not_hidden_one last and $to_clear are the same
+                    // when we are at the "last" remove button.
+                    const $to_clear = ev.target.closest(":not(.hidden)[data-advanced-wrapper='true']");
+                    if ($to_clear) {
+                      // this will clear the values from the current without hiding.
+                      let $tounset = $to_clear.querySelector('input[name^="' + ev.target.dataset.advancedSearchPrefix + '"]');
+                      if ($tounset) {
+                        $tounset.value = '';
+                      }
+                      let $tounsetselect = $to_clear.querySelectorAll('select[name^="' + ev.target.dataset.advancedSearchPrefix + '"]');
+                      if ($tounsetselect.length > 0) {
+                        [].forEach.call($tounsetselect, function (el) {
+                          // -1 means nothing which is not the drupal default...
+                          el.selectedIndex = 0;
+                        });
+                      }
+                    }
+                    // Now, shift values one step back
+                    // Then hide the last.
+                    
                   }
 
-                  if ($not_hidden_one.length > 0) {
-                    const $last_not_hidden_one = $not_hidden_one[$not_hidden_one.length - 1];
-                    $last_not_hidden_one.classList.toggle('hidden');
-                    // name^= means starts with.
-                    let $tounset = $last_not_hidden_one.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
-                    if ($tounset) {
-                      $tounset.value = '';
-                    }
-                    let $tounsetselect = $last_not_hidden_one.querySelectorAll('select[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
-                    if ($tounsetselect.length > 0) {
-                      [].forEach.call($tounsetselect, function(el) {
-                        // -1 means nothing which is not the drupal default...
-                        el.selectedIndex = 0;
-                      });
-                    }
-                  }
+
                 }
                 if ($count.value == Number(ev.target.dataset.advancedSearchMin)) {
                   ev.target.classList.add('hidden');
