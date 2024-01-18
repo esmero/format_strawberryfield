@@ -104,10 +104,46 @@
                           el.selectedIndex = 0;
                         });
                       }
-                    }
+
                     // Now, shift values one step back
+                    if ($not_hidden_one.length > 0) {
+                      let previous = $to_clear;
+                      let found = false;
+                      [].forEach.call($not_hidden_one, function(el) {
+                        if (!found && el.id == $to_clear.id) {
+                          found = true;
+                          // that way we skip this one too.
+                          return;
+                        }
+                        if (!found) {
+                          return;
+                        }
+                        const $tocopy = el.querySelector('input[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                        const $tocopyinto = previous.querySelector('input[name^="' + ev.target.dataset.advancedSearchPrefix + '"]');
+                        if ($tocopy && $tounset) {
+                          $tocopyinto.value = $tocopy.value;
+                        }
+                        let $tocopyselect = el.querySelectorAll('select[name^="' +  ev.target.dataset.advancedSearchPrefix + '"]');
+                        if ($tocopyselect.length > 0 && $tocopy) {
+                          [].forEach.call($tocopyselect, function(select) {
+                            // fetch the same by data attribute from the previous
+                            const $which = select.dataset.advancedSearchType;
+                            const $sameSelectTo = previous.querySelector('[data-advanced-search-type="'+ $which + '"]');
+                            const currentSelectValue = select.selectedIndex;
+                            if (currentSelectValue && $sameSelectTo) {
+                              $sameSelectTo.selectedIndex = currentSelectValue
+                            }
+                            else if ($sameSelectTo) {
+                              //if null set to the first
+                              $sameSelectTo.selectedIndex = 0;
+                            }
+                          });
+                        }
+                        previous = el;
+                      });
+                    }
                     // Then hide the last.
-                    
+                    }
                   }
 
 

@@ -729,6 +729,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#multiple' => $this->options['expose']['multiple'] ?? FALSE,
         '#size'     => $multiple_exposed_fields,
         '#default_value' => $form_state->getValue($searched_fields_identifier),
+        '#attributes' => [
+          'data-advanced-search-type' => 'fields'
+        ]
       ];
 
       if (empty($form[$this->options['id'] . '_wrapper'])) {
@@ -760,6 +763,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#weight' => '-10',
         '#access' => FALSE,
         '#default_value' => $form_state->getValue($advanced_search_operator_id,'or'),
+        '#attributes' => [
+          'data-advanced-search-type' => 'op'
+        ]
       ];
       $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
     }
@@ -889,6 +895,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
            if ($key == $advanced_search_operator_id) {
              $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#attributes']['data-advanced-search-type'] = 'group_op';
            }
          }
        }
