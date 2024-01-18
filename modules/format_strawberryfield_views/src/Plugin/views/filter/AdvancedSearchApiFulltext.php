@@ -781,7 +781,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $enable_less = ($realcount > $this->options['expose']['advanced_search_fields_count_min'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
 
     if (empty($this->view->live_preview)) {
-      $form[$this->options['id'].'_addone'] = [
+      $form[$this->options['id'] . '_addone'] = [
         '#type' => 'link',
         '#title' => t($this->options['expose']['advanced_search_fields_add_one_label'] ?? 'add one'),
         '#url' => Url::fromRoute('<current>'),
@@ -807,40 +807,49 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
       // trick the JS, won't be able to process more or less than we have defined in the settings.
       if ($enable_more && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count']) {
-        $form[$this->options['id'].'_addone']['#attributes']['class'][] = 'hidden';
+        $form[$this->options['id'] . '_addone']['#attributes']['class'][] = 'hidden';
       }
-
+      $multiple_delone = $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple'];
 
       // Here is where we need one per row! if enabled.
       // Pass if Classic Mode is enabled as a data property so we can act via JS.
-      $form[$this->options['id'].'_delone'] = [
-        '#type' => 'link',
-        '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
-        '#url' => Url::fromRoute('<current>'),
-        '#attributes' => [
-          'data-disable-refocus' => "true",
-          'data-advanced-search-delone' => "true",
-          'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
-          'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
-          'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
-          'data-advanced-search-prefix' => $this->options['id'],
-          'tabindex' => 3,
-          'class' => [
-            'adv-search-delone',
-            'button',
-            'btn',
-            'btn-secondary'
+
+        $form[$this->options['id'] . '_delone'] = [
+          '#type' => 'link',
+          '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
+          '#url' => Url::fromRoute('<current>'),
+          '#attributes' => [
+            'data-disable-refocus' => "true",
+            'data-advanced-search-delone' => "true",
+            'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
+            'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
+            'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
+            'data-advanced-search-prefix' => $this->options['id'],
+            'data-advanced-search-target' => 'last',
+            'tabindex' => 3,
+            'class' => [
+              'adv-search-delone',
+              'button',
+              'btn',
+              'btn-secondary'
+            ],
           ],
-        ],
-        '#access' => $enable_less,
-        '#weight' => '-101',
-        '#group' => 'actions',
-      ];
-    }
+          '#access' => $enable_less,
+          '#weight' => '-101',
+          '#group' => 'actions',
+        ];
+      }
     // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
     // trick the JS, won't be able to process more or less than we have defined in the settings.
-    if ($enable_less && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count_min']) {
+    if ($enable_less && $this->options['expose']['advanced_search_classic_mode'] && !$this->options['expose']['advanced_search_fields_multiple'] && $realcount == $this->options['expose']['advanced_search_fields_count_min']) {
       $form[$this->options['id'].'_delone']['#attributes']['class'][] = 'hidden';
+    }
+    $single_delete_one = [];
+    if ($multiple_delone) {
+      $single_delete_one = $form[$this->options['id'] . '_delone'];
+      unset($form[$this->options['id'] . '_delone']);
+      $single_delete_one['#attributes']['data-advanced-search-target'] = 'self';
+      $single_delete_one['#weight'] = '100';
     }
 
     $form[$this->options['id'] . '_advanced_search_fields_count'] = [
@@ -864,8 +873,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           - presort values and put them simply in order ...
     */
    if ($this->options['expose']['advanced_search_classic_mode']) {
-     // To keep track which field passed contained an actual search token
-     $index_with_value = [];
      for($i=1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
          if (strpos($key, '#') !== FALSE) {
@@ -876,9 +883,6 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
          }
          if ($key == $this->options['expose']['identifier']) {
            $current_search_value = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
-           if (strlen($current_search_value) > 0 ) {
-             $index_with_value[] = $i;
-           }
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $current_search_value;
          }
          elseif (is_array($value) && strpos($key, '#') === FALSE) {
@@ -892,6 +896,10 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
          $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['class'] = ['hidden'];
          $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['aria-hidden'] = "true";
          //$hidden_count++;
+       }
+       if ($i >= $this->options['expose']['advanced_search_fields_count_min'] && $multiple_delone) {
+         // Only add a minus for counts larger than the minimum.
+         $form[$this->options['id'] . '_wrapper_' . $i][$this->options['id'] . '_delone_' . $i] = $single_delete_one;
        }
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
        $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['data-advanced-wrapper'] = "true";
