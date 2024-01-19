@@ -815,7 +815,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       if ($enable_more && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count']) {
         $form[$this->options['id'] . '_addone']['#attributes']['class'][] = 'hidden';
       }
-      $multiple_delone = $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple'];
+      $multiple_delone = $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_multiple_remove'];
 
       // Here is where we need one per row! if enabled.
       // Pass if Classic Mode is enabled as a data property so we can act via JS.
