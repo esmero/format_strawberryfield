@@ -324,9 +324,19 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       '#title' => $this->t('Provide a Summary for the associated Facet Source Query Terms. This might be enabled even if no Results'),
       '#default_value' => $config['enable_query'],
     ];
+    $build['multiple_query'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Separate each Query Term into its own facet summary. This might be enabled even if no Results'),
+      '#default_value' => $config['multiple_query'],
+      '#states' => [
+        'visible' => [
+          ':input[name="facets_summary_settings[sbf_last_active_facets][settings][enable_query]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
     $build['quote_query'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes'),
+      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes. If the query itself contains double quotes those will be shown using emphasis e.g <em>"</em> to differentiate them.'),
       '#default_value' => $config['quote_query'],
       '#states' => [
         'visible' => [
