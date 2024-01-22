@@ -153,6 +153,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
                 $current_count = $exposed_input[$field_count_field] ?? ($filter->options['expose']['advanced_search_fields_count'] ?? 1);
               }
               $extra_keys_to_filter = [];
+              $extra_keys_to_filter_flat = [];
               $keys_to_filter[] = $filter->options['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
               if ($filter->options['expose']['identifier'] ?? NULL ) {
@@ -168,17 +169,18 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
                   $i < $filter->options['expose']['advanced_search_fields_count'] ?? 1;
                   $i++
                 ) {
-                  $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter[$i][] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter_flat[] = $key_to_filter . '_' . $i;
                   if (in_array($key_to_filter, $key_with_search_value)){
                     if ($i < $current_count) {
-                      $key_with_search_value[] = $key_to_filter . '_' . $i;
+                      $key_with_search_value[$i] = $key_to_filter . '_' . $i;
                     }
                   }
                 }
               }
 
               $keys_to_filter = array_merge(
-                $keys_to_filter, $extra_keys_to_filter
+                $keys_to_filter, $extra_keys_to_filter_flat
               );
               $keys_to_filter = array_unique($keys_to_filter);
               $keys_to_filter = array_filter($keys_to_filter);
@@ -259,7 +261,8 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         $query_params = [];
         foreach ($params as $key => $param) {
           if (in_array($key, $keys_to_filter)) {
-            if ($numeric = array_search($key, $key_with_search_value)) {
+            $numeric = array_search($key, $key_with_search_value);
+            if ($numeric !== FALSE) {
               $search_terms[$numeric] = $exposed_input[$key] ?? NULL;
             }
             $query_params[$key] = $params[$key];
@@ -271,7 +274,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
           return ((is_string($element) && '' !== trim($element)) || is_numeric($element));
         });
 
-        if (!$config['settings']['multiple_query'] || count($search_terms) == 1) {
+        if (!($config['settings']['multiple_query'] ?? FALSE) || count($search_terms) == 1) {
           if (count($search_terms)) {
             $url_active->setOption('query', $params);
             $display_value = '';
@@ -304,7 +307,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             $build['#items'][] = $item;
           }
         }
-        elseif ($config['settings']['multiple_query']) {
+        elseif ($config['settings']['multiple_query'] ?? FALSE) {
           foreach($search_terms as $numeric_key => $search_term ) {
             $search_term_array = [];
             $search_term_array[] =  $search_term;
