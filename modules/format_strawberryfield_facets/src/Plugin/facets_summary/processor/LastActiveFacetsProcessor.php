@@ -163,6 +163,8 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $keys_to_filter[] = $filter->options['expose']['searched_fields_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['advanced_search_operator_id']
                 ?? NULL;
+              // This adds the base keys in position 0 since they don't have a suffix.
+              $extra_keys_to_filter[0] = $keys_to_filter;
               foreach ($keys_to_filter as $key_to_filter) {
                 for (
                   $i = 1;
@@ -222,6 +224,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $keys_to_filter[]
                 = $filter['expose']['advanced_search_operator_id']
                 ?? NULL;
+              $extra_keys_to_filter[0] = $keys_to_filter;
               foreach ($keys_to_filter as $key_to_filter) {
                 for (
                   $i = 1;
@@ -315,6 +318,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             $new_params = $params;
             // Now we need to get all Queries except the current one
             $extra_keys_to_filter_excluding = $extra_keys_to_filter;
+            // Missing the first one here ...
             unset($extra_keys_to_filter_excluding[$numeric_key]);
             foreach ($extra_keys_to_filter_excluding as $index => $groupedkeys) {
               foreach ($groupedkeys as $groupedkey) {
