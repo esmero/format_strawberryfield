@@ -148,6 +148,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               && $filter->isExposed()
             ) {
               $current_count = 1;
+              $field_count_field = NULL;
               if ($filter->options['expose']['identifier'] ?? NULL ) {
                 $field_count_field = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
                 $current_count = $exposed_input[$field_count_field] ?? ($filter->options['expose']['advanced_search_fields_count'] ?? 1);
@@ -156,9 +157,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $extra_keys_to_filter_flat = [];
               $keys_to_filter[] = $filter->options['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
-              if ($filter->options['expose']['identifier'] ?? NULL ) {
-                $keys_to_filter[] = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
-              }
+
               $key_with_search_value[] = $filter->options['expose']['identifier'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['searched_fields_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['advanced_search_operator_id']
@@ -180,10 +179,12 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
                   }
                 }
               }
-
+              // adds the $field_count_field back. If empty the array filter will get rid of it
+              $keys_to_filter[] = $field_count_field;
               $keys_to_filter = array_merge(
                 $keys_to_filter, $extra_keys_to_filter_flat
               );
+
               $keys_to_filter = array_unique($keys_to_filter);
               $keys_to_filter = array_filter($keys_to_filter);
             }
@@ -203,6 +204,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               && $filter['exposed']
             ) {
               $current_count = 1;
+              $field_count_field = NULL;
               if ($filter['expose']['identifier'] ?? NULL ) {
                 $field_count_field = $filter['expose']['identifier'] . '_advanced_search_fields_count';
                 $current_count = $exposed_input[$field_count_field] ?? ($filter['expose']['advanced_search_fields_count'] ?? 1);
@@ -212,11 +214,6 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $extra_keys_to_filter_flat = [];
               $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
-              // fields count = $filter['expose']['identifier']
-              if ($filter['expose']['identifier'] ?? NULL ) {
-                $keys_to_filter[]
-                  = $filter['expose']['identifier'] . '_advanced_search_fields_count';
-              }
               $key_with_search_value[] = $filter['expose']['identifier'] ??
                 NULL;
               $keys_to_filter[] = $filter['expose']['searched_fields_id'] ??
@@ -242,7 +239,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               }
 
 
-
+              $keys_to_filter[] = $field_count_field;
               $keys_to_filter = array_merge(
                 $keys_to_filter, $extra_keys_to_filter_flat
               );
@@ -315,15 +312,9 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             $search_term_array = [];
             $search_term_array[] =  $search_term;
             $new_url = clone $url_active;
-            $new_params = $params;
-            // Now we need to get all Queries except the current one
-            $extra_keys_to_filter_excluding = $extra_keys_to_filter;
-            // Missing the first one here ...
-            unset($extra_keys_to_filter_excluding[$numeric_key]);
-            foreach ($extra_keys_to_filter_excluding as $index => $groupedkeys) {
-              foreach ($groupedkeys as $groupedkey) {
-                $new_params[$groupedkey] = $query_params[$groupedkey] ?? '';
-              }
+            $new_params = $query_params;
+            foreach ($extra_keys_to_filter[$numeric_key] ?? [] as $groupedkey) {
+                unset($new_params[$groupedkey]);
             }
             // Check if $extra_keys_to_filter_excluding also contains the search term?
 
