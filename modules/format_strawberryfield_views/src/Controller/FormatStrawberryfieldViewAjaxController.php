@@ -227,7 +227,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         // @see the redirect.destination service.
         $origin_destination =  $path;
 
-        $used_query_parameters = $request_clone->query->all();
+        $used_query_parameters = $param_union;
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
           $origin_destination .= '?' . $query;
