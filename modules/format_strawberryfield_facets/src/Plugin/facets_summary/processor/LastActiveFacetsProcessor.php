@@ -31,6 +31,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
    */
   public function build(FacetsSummaryInterface $facets_summary, array $build, array $facets) {
     $config = $facets_summary->getProcessorConfigs()[$this->getPluginId()];
+    $facets_config = $facets_summary->getFacets();
     $results_count = array_sum(array_map(function ($it) {
       /** @var \Drupal\facets\FacetInterface $it */
       return count($it->getResults());
@@ -105,9 +106,9 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         foreach( $facet->getResults() as $result) {
           $urls[] = $result->getUrl();
         }
-
+        $show_count = $facets_config[$facet->id()]['show_count'];
         $results = array_merge(
-          $results, $this->buildResultTree($facet->getResults())
+          $results, $this->buildResultTree($show_count, $facet->getResults())
         );
       }
 
@@ -324,7 +325,9 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $display_value = implode(
                 " ", array_map(
                   function ($string) {
-                    $string = str_replace('"', '<em>"</em>', $string);
+                    ltrim($string, '"');
+                    rtrim($string, '"');
+                    $string = str_replace('"', "'", $string);
                     return '"' . $string . '"';
                   }, $search_term_array
                 )
@@ -364,7 +367,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     $config = $this->getConfiguration();
     $build['message'] = [
       '#type' => 'markdown',
-      '#markdown' => $this->t(' It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
+      '#markdown' => $this->t('It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
     ];
     $build['enable'] = [
       '#type' => 'checkbox',
@@ -388,7 +391,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     ];
     $build['quote_query'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes. If the query itself contains double quotes those will be shown using emphasis e.g <em>"</em> to differentiate them.'),
+      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes. If the query itself is surrounded by double quotes those will be removed and internal ones replaced by single ones (just as output, the real value will be untouched) to differentiate them.'),
       '#default_value' => $config['quote_query'],
       '#states' => [
         'visible' => [
@@ -442,14 +445,14 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
    * @return array
    *   The rendered links to the active facets.
    */
-  protected function buildResultTree(array $results) {
+  protected function buildResultTree(bool $show_count, array $results) {
     $items = [];
     foreach ($results as $result) {
       if ($result->isActive()) {
         $item = [
           '#theme' => 'facets_result_item__summary',
           '#value' => $result->getDisplayValue(),
-          '#show_count' => TRUE,
+          '#show_count' => $show_count,
           '#count' => 0,
           '#is_active' => TRUE,
           '#facet' => $result->getFacet(),
