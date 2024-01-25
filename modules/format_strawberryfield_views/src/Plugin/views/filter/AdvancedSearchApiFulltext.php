@@ -1096,18 +1096,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   private function rewriteFieldLabels($options) {
+    $options_reordered = [];
     $lines = explode("\n", trim($this->options['fields_label_replace'] ?? ''));
     foreach ($lines as $line) {
       if (strpos($line, '|') !== FALSE) {
         [$search, $replace] = array_map('trim', explode('|', $line));
         if (!empty($search)) {
           if (isset($options[$search])) {
-            $options[$search] = $replace;
+            $options_reordered[$search] = $replace;
+            unset($options[$search]);
           }
         }
       }
     }
-    return $options;
+    return $options_reordered + $options;
   }
 
 
