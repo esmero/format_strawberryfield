@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield_views\Controller;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\UrlHelper;
+use Drupal\Core\Ajax\PrependCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\EventSubscriber\AjaxResponseSubscriber;
@@ -181,9 +182,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $this->currentPath->setPath('/' . ltrim($path, '/'), $request);
         }
 
-        // Because Exposed filters use Get and our form is submitting via POST
-        // We end with stale old values.
-
         // Let's check if our view has our advanced search filter
 
         $filters = $view->getDisplay($display_id)->display['display_options']['filters'] ?? [];
@@ -200,6 +198,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               $views_post = $view->getRequest()->request->all();
               unset($views_post['ajax_page_state']);
               $views_get = $view->getRequest()->query->all();
+              unset($views_get['ajax_page_state']);
               if (isset($views_post[$filter['expose']['identifier']])) {
                 foreach ($views_get as $get_args_keys => $value) {
                   if (strpos($get_args_keys, $filter->options['expose']['identifier']) === 0) {
@@ -212,20 +211,23 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           }
         }
 
+        // Create a clone of the request object to avoid mutating the request
+        // object stored in the request stack.
+        $request_clone = clone $request;
 
-        // Add all POST data, because AJAX is always a post and many things,
+
+        // Add all POST data, because AJAX is sometimes a POST and many things,
         // such as tablesorts, exposed filters and paging assume GET.
-        $request_all = $request->request->all();
-        unset($request_all['ajax_page_state']);
-        $query_all = $request->query->all();
-        $request->query->replace($request_all + $query_all);
+        $param_union = $request_clone->request->all() + $request_clone->query->all();
+        unset($param_union['ajax_page_state']);
+        $request_clone->query->replace($param_union);
 
         $response->setView($view);
         // Overwrite the destination.
         // @see the redirect.destination service.
-        $origin_destination = $path;
+        $origin_destination =  $path;
 
-        $used_query_parameters = $request_all;
+        $used_query_parameters = $param_union;
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
           $origin_destination .= '?' . $query;
@@ -255,6 +257,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             ->applyTo($preview);
         }
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
+        $response->addCommand(new PrependCommand(".js-view-dom-id-$dom_id", ['#type' => 'status_messages']));
         //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
         if ($target_url) {
