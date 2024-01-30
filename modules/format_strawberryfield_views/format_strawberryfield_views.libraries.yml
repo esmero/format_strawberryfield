@@ -52,3 +52,4 @@ advanced-search-default-submit:
   dependencies:
     - core/drupal
     - core/jquery
+    - core/once

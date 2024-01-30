@@ -82,6 +82,9 @@ plugin.plugin_configuration.facets_summary_processor.sbf_last_active_facets:
     enable_query:
       type: integer
       label: 'Enable Full text search terms as Facet Summary Entry'
+    multiple_query:
+      type: integer
+      label: 'Multiple Full text search terms as Facet Summary Entries'
     quote_query:
       type: boolean
       label: 'If Full Text search terms will be surrounded by Double Quotes or not'

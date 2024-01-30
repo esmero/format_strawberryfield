@@ -69,6 +69,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $options['expose']['contains']['advanced_search_fields_remove_one_label'] = ['default' => 'remove one'];
     $options['advanced_search_fields_add_one_label'] = ['default' => ['add one']];
     $options['advanced_search_fields_remove_one_label'] = ['default' => ['remove one']];
+    $options['expose']['contains']['advanced_search_classic_mode'] = ['default' => FALSE];
+    $options['expose']['contains']['advanced_search_multiple_remove'] = ['default' => FALSE];
     $options['fields_label_replace'] = ['default' => NULL];
     return $options;
   }
@@ -80,6 +82,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $this->options['expose']['advanced_search_fields_count'] = 2;
     $this->options['expose']['advanced_search_fields_count_min'] = 1;
     $this->options['expose']['advanced_search_use_operator'] = FALSE;
+    $this->options['expose']['advanced_search_classic_mode'] = FALSE;
+    $this->options['expose']['advanced_search_multiple_remove'] = FALSE;
     $this->options['expose']['advanced_search_operator_id'] = $this->options['id'] . '_group_operator';
     $this->options['expose']['advanced_search_fields_add_one_label'] = $this->options['advanced_search_fields_add_one_label'];
     $this->options['expose']['advanced_search_fields_remove_one_label'] = $this->options['advanced_search_fields_remove_one_label'];
@@ -163,6 +167,30 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#states' => [
         'visible' => [
           ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['expose']['advanced_search_classic_mode'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Use Classic Mode'),
+      '#description' => $this->t('This mode mimics older catalog search interfaces, where adding/removing fields does not trigger automatic refreshing of the Search results. Search only triggers on the default Form Filter submit button. Fully depends on Javascript to get around Views Exposed Filters in forms always submitting on any interaction. '),
+      '#default_value' => !empty($this->options['expose']['advanced_search_classic_mode']),
+      '#states' => [
+        'visible' => [
+          ':input[name="options[expose][advanced_search_fields_multiple]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    $form['expose']['advanced_search_multiple_remove'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Add a Remove button to every Advanced Search Field combo.'),
+      '#description' => $this->t('This will allow a user to remove a specific Advanced Search Field/And/or/Text. Only works on Classic Mode'),
+      '#default_value' => !empty($this->options['expose']['advanced_search_multiple_remove']),
+      '#states' => [
+        'visible' => [
+          ':input[name="options[expose][advanced_search_classic_mode]"]' => ['checked' => TRUE],
         ],
       ],
     ];
@@ -628,6 +656,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
     $return = parent::acceptExposedInput($input);
     // Now do things a bit differently:
+
+    /* $input here is
+    result = {array[8]}
+ sbf_advanced_search_api_fulltext = ""
+ sbf_advanced_search_api_fulltext_searched_fields = ""
+ sbf_advanced_search_api_fulltext_group_operator = "or"
+ sbf_advanced_search_api_fulltext_advanced_search_fields_count = {int} 1
+ submit = "Apply"
+ form_build_id = "form-qFadZL0soLf1yzlfcjPkunovchJ1RloShoCGc9sSP8w"
+ form_id = "views_exposed_form"
+ op = "Apply"
+    */
+
+
     // Value in our case needs to be multiple values (bc of the multiple options)
     if ($return && $realcount = $input[$this->options['expose']['identifier'].'_advanced_search_fields_count']) {
       $this->value = [];
@@ -687,6 +729,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#multiple' => $this->options['expose']['multiple'] ?? FALSE,
         '#size'     => $multiple_exposed_fields,
         '#default_value' => $form_state->getValue($searched_fields_identifier),
+        '#attributes' => [
+          'data-advanced-search-type' => 'fields'
+        ]
       ];
 
       if (empty($form[$this->options['id'] . '_wrapper'])) {
@@ -705,7 +750,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $advanced_search_operator_id = $this->options['expose']['advanced_search_operator_id'];
       }
       // Group operators are used to connected multiple exposed forms/groups
-      // for this Filters between each other at query time
+      // for these Filters between each other at query time
       $group_operator = [
         'and' => $this->t('AND'),
         'or'  => $this->t('OR'),
@@ -718,6 +763,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#weight' => '-10',
         '#access' => FALSE,
         '#default_value' => $form_state->getValue($advanced_search_operator_id,'or'),
+        '#attributes' => [
+          'data-advanced-search-type' => 'op'
+        ]
       ];
       $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
     }
@@ -725,7 +773,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Yes over complicated but so far the only way i found to keep the state
     // Of this value between calls/rebuilds and searches.
     // @TODO move this into Accept input. That is easier?
-    $nextcount = (int) ($form_state->getUserInput()[$this->options['id'] . '_advanced_search_fields_count'] ?? 1);
+    $nextcount = (int) ($form_state->getUserInput()[$this->options['id'] . '_advanced_search_fields_count'] ?? ($this->options['expose']['advanced_search_fields_count_min'] ?? 1));
     //$prevcount = $this->view->exposed_raw_input[$this->options['id'].'_advanced_search_fields_count'] ?? NULL;
     $form_state_count = $form_state->getValue($this->options['id'] . '_advanced_search_fields_count', NULL);
 
@@ -734,18 +782,21 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     // Cap it to the max limit
     $realcount = ($realcount <= $this->options['expose']['advanced_search_fields_count']) ? $realcount : $this->options['expose']['advanced_search_fields_count'];
     // Only enable if setup and the realcount is less than the max.
-    $enable_more = $realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'];
-    $enable_less = $realcount > 1;
-
+    $enable_more = ($realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
+    // If using Classic mode we can't make access false, we still need to attach JS to it.
+    $enable_less = ($realcount > $this->options['expose']['advanced_search_fields_count_min'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
+    $multiple_delone = FALSE;
     if (empty($this->view->live_preview)) {
-      $form[$this->options['id'].'_addone'] = [
+      $form[$this->options['id'] . '_addone'] = [
         '#type' => 'link',
         '#title' => t($this->options['expose']['advanced_search_fields_add_one_label'] ?? 'add one'),
         '#url' => Url::fromRoute('<current>'),
         '#attributes' => [
           'data-disable-refocus' => "true",
           'data-advanced-search-addone' => "true",
+          'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
           'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
+          'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
           'data-advanced-search-prefix' => $this->options['id'],
           'tabindex' => 2,
           'class' => [
@@ -759,27 +810,52 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#weight' => '-100',
         '#group' => 'actions',
       ];
-      $form[$this->options['id'].'_delone'] = [
-        '#type' => 'link',
-        '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
-        '#url' => Url::fromRoute('<current>'),
-        '#attributes' => [
-          'data-disable-refocus' => "true",
-          'data-advanced-search-delone' => "true",
-          'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
-          'data-advanced-search-prefix' => $this->options['id'],
-          'tabindex' => 3,
-          'class' => [
-            'adv-search-delone',
-            'button',
-            'btn',
-            'btn-secondary'
+      // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
+      // trick the JS, won't be able to process more or less than we have defined in the settings.
+      if ($enable_more && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count']) {
+        $form[$this->options['id'] . '_addone']['#attributes']['class'][] = 'hidden';
+      }
+      $multiple_delone = $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_multiple_remove'];
+
+      // Here is where we need one per row! if enabled.
+      // Pass if Classic Mode is enabled as a data property so we can act via JS.
+
+        $form[$this->options['id'] . '_delone'] = [
+          '#type' => 'link',
+          '#title' => t($this->options['expose']['advanced_search_fields_remove_one_label'] ?? 'delete one'),
+          '#url' => Url::fromRoute('<current>'),
+          '#attributes' => [
+            'data-disable-refocus' => "true",
+            'data-advanced-search-delone' => "true",
+            'data-advanced-search-mode' => $this->options['expose']['advanced_search_classic_mode'] ? "true" : "false",
+            'data-advanced-search-min' => $this->options['expose']['advanced_search_fields_count_min'],
+            'data-advanced-search-max' => $this->options['expose']['advanced_search_fields_count'],
+            'data-advanced-search-prefix' => $this->options['id'],
+            'data-advanced-search-target' => 'last',
+            'tabindex' => 3,
+            'class' => [
+              'adv-search-delone',
+              'button',
+              'btn',
+              'btn-secondary'
+            ],
           ],
-        ],
-        '#access' => $enable_less,
-        '#weight' => '-101',
-        '#group' => 'actions',
-      ];
+          '#access' => $enable_less,
+          '#weight' => '-101',
+          '#group' => 'actions',
+        ];
+      }
+    // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
+    // trick the JS, won't be able to process more or less than we have defined in the settings.
+    if ($enable_less && $this->options['expose']['advanced_search_classic_mode'] && !$this->options['expose']['advanced_search_fields_multiple'] && $realcount == $this->options['expose']['advanced_search_fields_count_min']) {
+      $form[$this->options['id'].'_delone']['#attributes']['class'][] = 'hidden';
+    }
+    $single_delete_one = [];
+    if ($multiple_delone) {
+      $single_delete_one = $form[$this->options['id'] . '_delone'];
+      unset($form[$this->options['id'] . '_delone']);
+      $single_delete_one['#attributes']['data-advanced-search-target'] = 'self';
+      $single_delete_one['#weight'] = '100';
     }
 
     $form[$this->options['id'] . '_advanced_search_fields_count'] = [
@@ -787,26 +863,79 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#value' => $realcount,
     ];
 
-    for($i=1;$i < $realcount && $realcount > 1; $i++) {
-      foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-        if (strpos($key, '#') !== FALSE) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
-        }
-        else {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
-        }
-        if ($key == $this->options['expose']['identifier']) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
-        }
-        elseif (is_array($value) && strpos($key, '#') === FALSE) {
-          $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
-          if ($key == $advanced_search_operator_id) {
-            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
-          }
-        }
-      }
-      $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
-    }
+
+
+    // Here is where the trick happens if classic mode is enabled. The idea is:
+    /* - instead of only rendering the amount (realcount) based on the max/add more
+         we render all max/allowed ones, but hide all the ones that are not
+         originally requested OR without values.
+
+        And another trick is needed.
+        - I can't just hide: Numerically (by count). I need to be sure that the ones coming with values from submit
+        - have priority to be shown... the ones without values might be show/not shown based on the inputs
+        - and i can never show more than what the number that comes in/ allows via settings... mmmm
+        - two choices:
+          - put values where they belong hiding in between with complex math
+          - presort values and put them simply in order ...
+    */
+   if ($this->options['expose']['advanced_search_classic_mode']) {
+     for($i=1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+       foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
+         if (strpos($key, '#') !== FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+         }
+         else {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+         }
+         if ($key == $this->options['expose']['identifier']) {
+           $current_search_value = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $current_search_value;
+         }
+         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
+           if ($key == $advanced_search_operator_id) {
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#attributes']['data-advanced-search-type'] = 'group_op';
+           }
+         }
+       }
+       if ($i >= max($this->options['expose']['advanced_search_fields_count_min'], $realcount)) {
+         $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['class'] = ['hidden'];
+         $form[$this->options['id'] . '_wrapper_' . $i]['#attributes']['aria-hidden'] = "true";
+         //$hidden_count++;
+       }
+       if ($i >= $this->options['expose']['advanced_search_fields_count_min'] && $multiple_delone) {
+         // Only add a minus for counts larger than the minimum.
+         $form[$this->options['id'] . '_wrapper_' . $i][$this->options['id'] . '_delone_' . $i] = $single_delete_one;
+       }
+       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
+       $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['data-advanced-wrapper'] = "true";
+     }
+   }
+   else {
+     // Normal behavior
+     for($i=1;$i < $realcount && $realcount > 1; $i++) {
+       foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
+         if (strpos($key, '#') !== FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
+         }
+         else {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i] = $value;
+         }
+         if ($key == $this->options['expose']['identifier']) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
+         }
+         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+           $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
+           if ($key == $advanced_search_operator_id) {
+             $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
+           }
+         }
+       }
+       $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
+     }
+   }
+
     $form = $form;
   }
 
@@ -821,6 +950,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     ) {
       return;
     }
+
+    // Note to myself ... interesting .. $form_state->isMethodType('POST') so a direct link will be $form_state->isMethodType('GET') ?
 
     // Store searched fields.
     $searched_fields_identifier = $this->options['id'] . '_searched_fields';
@@ -861,14 +992,29 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     }
 
     $identifiers[] = $identifiers_to_keep[] = $this->options['expose']['identifier'];
-
-    for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
-      if ($i < $current_count) {
-        $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+    // If not running 'classic mode' this is valid, but on classic mode
+    // all is a mess. We can't just use indices to define what is kept or not
+    if ($this->options['expose']['advanced_search_classic_mode']) {
+      // We can't use the Form itself bc validation runs before form_state is rebuild ...
+      // so we need to use input.
+      for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+       // if (!in_array('hidden', $form[$this->options['id'].'_wrapper_'.$i]['#attributes']['class'] ?? [])) {
+          $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+            . $i;
+        //}
+        $identifiers[] = $this->options['expose']['identifier'] . '_'
           . $i;
       }
-      $identifiers[] = $this->options['expose']['identifier'] . '_'
-        . $i;
+    }
+    else {
+      for ($i = 1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
+        if ($i < $current_count) {
+          $identifiers_to_keep[] = $this->options['expose']['identifier'] . '_'
+            . $i;
+        }
+        $identifiers[] = $this->options['expose']['identifier'] . '_'
+          . $i;
+      }
     }
 
     foreach ($identifiers as $index => $identifier) {
@@ -950,18 +1096,20 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
   }
 
   private function rewriteFieldLabels($options) {
+    $options_reordered = [];
     $lines = explode("\n", trim($this->options['fields_label_replace'] ?? ''));
     foreach ($lines as $line) {
       if (strpos($line, '|') !== FALSE) {
         [$search, $replace] = array_map('trim', explode('|', $line));
         if (!empty($search)) {
           if (isset($options[$search])) {
-            $options[$search] = $replace;
+            $options_reordered[$search] = $replace;
+            unset($options[$search]);
           }
         }
       }
     }
-    return $options;
+    return $options_reordered + $options;
   }
 
 
