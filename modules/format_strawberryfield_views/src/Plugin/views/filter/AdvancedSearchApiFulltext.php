@@ -785,7 +785,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $enable_more = ($realcount < $this->options['expose']['advanced_search_fields_count'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
     // If using Classic mode we can't make access false, we still need to attach JS to it.
     $enable_less = ($realcount > $this->options['expose']['advanced_search_fields_count_min'] && $this->options['expose']['advanced_search_fields_multiple'] || $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_fields_multiple']);
-
+    $multiple_delone = FALSE;
     if (empty($this->view->live_preview)) {
       $form[$this->options['id'] . '_addone'] = [
         '#type' => 'link',
