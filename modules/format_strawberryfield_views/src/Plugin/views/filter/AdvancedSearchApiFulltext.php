@@ -1029,7 +1029,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $form_state->setUserInput($userInput);
       }
     }
-
+    $empty_query = TRUE;
+    $all_input = [];
     foreach ($identifiers_to_keep as $index => $identifier) {
       $input = &$form_state->getValue($identifier, '');
       /// @TODO Add all inputs here...
@@ -1048,39 +1049,60 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       while (is_array($input)) {
         $input = $input ? reset($input) : '';
       }
-      if (trim($input) === '') {
-        // No input was given by the user. If the filter was set to "required" and
-        // there is a query (not the case when an exposed filter block is
-        // displayed stand-alone), abort it.
-        if (!empty($this->options['expose']['required'])
-          && $this->getQuery()
-        ) {
-          $this->getQuery()->abort();
-        }
-        // If the input is empty, there is nothing to validate: return early.
-        return;
+      if (trim($input) !== '') {
+        $empty_query = FALSE;
       }
+    }
+    if ($empty_query) {
+      // No input was given by the user. If the filter was set to "required" and
+      // there is a query (not the case when an exposed filter block is
+      // displayed stand-alone), abort it.
+      if (!empty($this->options['expose']['required'])
+        && $this->getQuery()
+      ) {
+        $this->getQuery()->abort();
+      }
+      return;
+    }
+    // Sadly we have to iterate again. Since multiple inputs and required need a different
+    // rule set for each case. This deals with min chars per entry.
+    if ($this->options['min_length'] < 2) {
+      return;
+    }
 
-      // Only continue if there is a minimum word length set.
-      if ($this->options['min_length'] < 2) {
-        return;
+    /// we only validate the ones with values but assuming there is one of course.
+    /// If none found we validate all of them as if they had values.
+    ///
+    $empty_query_length_pass = TRUE;
+    foreach ($identifiers_to_keep as $index => $identifier) {
+      $input = &$form_state->getValue($identifier, '');
+      while (is_array($input)) {
+        $input = $input ? reset($input) : '';
       }
-
-      $words = preg_split('/\s+/', $input);
-      foreach ($words as $i => $word) {
-        if (mb_strlen($word) < $this->options['min_length']) {
-          unset($words[$i]);
+      if (trim($input) !== '') {
+        $empty_query_length_pass = FALSE;
+      }
+      else {
+        $empty_query_length_pass = TRUE;
+      }
+      if (!$empty_query_length_pass || $empty_query) {
+        // Only continue if there is a minimum word length set.
+        $words = preg_split('/\s+/', $input);
+        foreach ($words as $i => $word) {
+          if (mb_strlen($word) < $this->options['min_length']) {
+            unset($words[$i]);
+          }
         }
+        if (!$words) {
+          $vars['@count'] = $this->options['min_length'];
+          $msg = $this->t(
+            'You must include at least one positive keyword with @count characters or more.',
+            $vars
+          );
+          $form_state->setErrorByName($identifier, $msg);
+        }
+        $input = implode(' ', $words);
       }
-      if (!$words) {
-        $vars['@count'] = $this->options['min_length'];
-        $msg = $this->t(
-          'You must include at least one positive keyword with @count characters or more.',
-          $vars
-        );
-        $form_state->setErrorByName($identifier, $msg);
-      }
-      $input = implode(' ', $words);
     }
   }
 
