@@ -813,7 +813,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
       // trick the JS, won't be able to process more or less than we have defined in the settings.
       if ($enable_more && $this->options['expose']['advanced_search_classic_mode'] && $realcount == $this->options['expose']['advanced_search_fields_count']) {
-        $form[$this->options['id'] . '_addone']['#attributes']['class'][] = 'hidden';
+        $form[$this->options['id'] . '_addone']['#attributes']['class'][] = 'visually-hidden';
       }
       $multiple_delone = $this->options['expose']['advanced_search_classic_mode'] && $this->options['expose']['advanced_search_multiple_remove'];
 
