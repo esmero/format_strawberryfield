@@ -35,7 +35,7 @@
                   }
                 }
                 if ($count.value == Number(ev.target.dataset.advancedSearchMax)) {
-                  ev.target.classList.add('hidden');
+                  ev.target.classList.add('visually-hidden');
                 }
                 if ($count.value > Number(ev.target.dataset.advancedSearchMin)) {
                   const $hidden_del_one = $form.querySelector('.hidden[data-advanced-search-delone]');
@@ -162,12 +162,12 @@
                 }
                 if ($count.value == Number(ev.target.dataset.advancedSearchMin) && ev.target.dataset.advancedSearchTarget != "self") {
                   // Don't hide if we are using individual buttons, the last wrapper container already gets hidden.
-                  ev.target.classList.add('hidden');
+                  ev.target.classList.add('visually-hidden');
                 }
                 if ($count.value < Number(ev.target.dataset.advancedSearchMax)) {
-                  const $hidden_add_more = $form.querySelector('.hidden[data-advanced-search-addone]');
+                  const $hidden_add_more = $form.querySelector('.visually-hidden[data-advanced-search-addone]');
                   if ($hidden_add_more) {
-                    $hidden_add_more.classList.remove('hidden')
+                    $hidden_add_more.classList.remove('visually-hidden')
                   }
                 }
               }
