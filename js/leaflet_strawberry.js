@@ -46,8 +46,12 @@
             if (drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'] === 0) {
               $initialzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['initialzoom'];
             }
+            var $scrollWheelZoom = !drupalSettings.format_strawberryfield.leaflet[element_id]['disable_mouse_zoom'];
             // initialize the map
-            var map = L.map(element_id).setView([40.1, -100], $initialzoom);
+            var map = L.map(
+              element_id,
+              {scrollWheelZoom: $scrollWheelZoom}
+            ).setView([40.1, -100], $initialzoom);
             // Use current's user lat/long
             // Does not work without HTTPS
             //  map.locate({setView: true, maxZoom: 8});
