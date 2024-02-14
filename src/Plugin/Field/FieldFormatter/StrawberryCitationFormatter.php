@@ -384,7 +384,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
 
-    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
       $elements['#cache']['max-age'] = 0;
     }
 

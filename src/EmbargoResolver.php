@@ -50,6 +50,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
 
 
   /**
+   * A Per HTTP Request static cache of resolved Embargoes
+   *
+   * @var array
+   */
+  protected array $resolvedEmbargos = [];
+
+
+  /**
    * DisplayResolver constructor.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
@@ -160,8 +168,22 @@ class EmbargoResolver implements EmbargoResolverInterface {
       $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
     }
     $cache[$cache_id] = $embargo_info;
+    $this->resolvedEmbargos[$uuid] = $embargo_info;
     return $embargo_info;
   }
+
+  /**
+   * Getter for the resolved Static embargoe Cache
+   *
+   * @param string $uuid
+   *    The UUID of a node for which an embargo might/not have been resolved
+   * @return array
+   *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+   */
+  public function getResolvedEmbargoesByUUid(string $uuid): array {
+    return $this->resolvedEmbargos[$uuid] ?? [];
+  }
+
 
   /**
    * Get a list of ADO types based on the SBF.

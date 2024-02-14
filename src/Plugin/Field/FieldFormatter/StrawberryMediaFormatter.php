@@ -352,7 +352,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
-    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
       $elements['#cache']['max-age'] = 0;
     }
     return $elements;
