@@ -662,6 +662,9 @@ field.formatter.settings.strawberry_map_formatter:
     min_zoom:
       type: integer
       label: 'Min Zoom for the Map'
+    disable_mouse_zoom:
+      type: string
+      label: "Disable mouse wheel zoom"
     tilemap_url:
       type: string
       label: 'Tile Map URL'
