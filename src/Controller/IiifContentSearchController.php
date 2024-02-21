@@ -296,9 +296,7 @@ class IiifContentSearchController extends ControllerBase {
                   // PDFs Sequence is correctly detected, but on images it should always be "1"
                   // For that we will change the response from the main Solr search using our expected ID (splitting)
 
-
-                  $canvas = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']]
-                    ?? [];
+                  $canvas = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']] ?? [];
                   foreach ($canvas as $canvas_id => $canvas_data) {
                     if ($canvas_id) {
                       $canvas_parts = explode("#xywh=", $canvas_id);
