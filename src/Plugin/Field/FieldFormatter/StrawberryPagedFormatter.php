@@ -217,6 +217,15 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             ],
           ],
         ],
+        'hascover_json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key(s) that provides a boolean (true/false) value to determine if a cover (defaults to YES) .'),
+          '#description' => t('By default IA Book reader will treat any resource as a book with a Book Cover. If this JSON key is present in your Strawberryfield JSON field it will be evaluated as boolean. If the value is or evaluates to "False", when seeing a resource with opposing pages (2up), two opposing pages will be shown initially (a spread) instead of treating the first as the cover. By default the value of this is "TRUE" which is the normal behavior of this IIIF Viewer.'),
+          '#default_value' => $this->getSetting('hascover_json_key_source'),
+          '#required' => FALSE,
+          '#maxlength' => 255,
+          '#size' => 64,
+        ],
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
@@ -303,9 +312,27 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             );
           }
           break;
+        case 'metadataexposeddisplayentity':
+          $entity = NULL;
+          if ($this->getSetting('metadataexposeentity_source')) {
+            $entity = $this->entityTypeManager->getStorage(
+              'metadataexpose_entity'
+            )->load($this->getSetting('metadataexposeentity_source'));
+            if ($entity) {
+              $label = $entity->toLink()->getText();
+              $summary[] = $this->t('Pages processed by the "%manifesturl_source" Metadata Data Display template',
+                [
+                  '%manifesturl_source' => $label,
+                ]
+              );
+            }
+            else {
+              $summary[] = $this->t('This formatter is configured to use an exposed Metadata display entity as source for a IIIF manifest but has no valid one configured (yet).');
+            }
+          }
+          break;
         default:
           $summary[] = $this->t('This formatter still needs to be setup');
-
       }
     }
 
@@ -322,6 +349,11 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       ]
     );
 
+    $summary[] = $this->t('JSON key providing Book Cover configuration: %key',
+      [
+        '%key' => $this->getSetting('hascover_json_key_source') ?? 'hascover'
+      ]
+    );
 
     return $summary;
   }
@@ -364,11 +396,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       }
       // A rendered Manifest.
       switch ($pagestrategy) {
+        // We can pass the processed exposed metadata display url so basically the same strategy
         case 'manifesturl':
+        case 'metadataexposeentity':
           $elements[$delta] = $this->processElementforManifestURL(
             $delta,
             $jsondata,
-            $item
+            $item,
+            $pagestrategy
           );
           break;
         case 'metadatadisplayentity':
@@ -518,14 +553,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             '#type'          => 'container',
             '#default_value' => $htmlid,
             '#attributes'    => [
-              'id'                 => $htmlid,
-              'class'              => [
+              'id' => $htmlid,
+              'class' => [
                 'strawberry-iabook-item',
                 'BookReader',
                 'field-iiif',
                 'container',
               ],
-              'style'              => "width:{$max_width_css}; height:{$max_height}px",
+              'style' => "width:{$max_width_css}; height:{$max_height}px",
               'data-iiif-infojson' => '',
             ],
           ];
@@ -538,6 +573,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'width'    => $max_width_css,
             'height'   => max($max_height, 520),
             'textselection' => $textselection,
+            'hascover' => $hascover ?? TRUE,
             // While Bookreader has a way to enable/disable search via the "enableSearch"
             // parameter, it doesn't work properly at the moment and we have opened an
             // issue to fix it, meanwhile it's hidden via jQuery.
@@ -590,7 +626,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function processElementforManifestURL($delta, array $jsondata, FieldItemInterface $item) {
+  public function processElementforManifestURL($delta, array $jsondata, FieldItemInterface $item, string $pagestrategy) {
     $delta = $delta ?? 0;
     $element = [];
     $entity = NULL;
@@ -601,47 +637,85 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_height = $this->getSetting('max_height');
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargoed = FALSE;
-
-    if ($this->getSetting('manifesturl_source')) {
+    $manifest_url = '';
+    $embargo_context = [];
+    if ($this->getSetting('manifesturl_source') && $pagestrategy == 'manifesturl') {
       $manifest_url_key = $this->getSetting('manifesturl_source');
       if ($jsondata[$manifest_url_key]) {
         $manifest_url = $jsondata[$manifest_url_key];
-        if (UrlHelper::isValid($manifest_url, TRUE)) {
-          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-          $htmlid = $groupid;
-          $element['media'] = [
-            '#type' => 'container',
-            '#default_value' => $htmlid,
-            '#attributes' => [
-              'id' => $htmlid,
-              'class' => [
-                'strawberry-iabook-item',
-                'BookReader',
-                'field-iiif',
-                'container',
-              ],
-              'data-iiif-infojson' => '',
-              'style' => "width:{$max_width_css}; height:{$max_height}px",
-            ],
-          ];
-          if (isset($item->_attributes)) {
-            $element += ['#attributes' => []];
-            $element['#attributes'] += $item->_attributes;
-            // Unset field item attributes since they have been included in the
-            // formatter output and should not be rendered in the field template.
-            unset($item->_attributes);
-          }
-          $element['media']['#attributes']['data-iiif-infojson'] = '';
-          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
-            'nodeuuid' => $nodeuuid,
-            'manifesturl' => $manifest_url,
-            'width' => $max_width_css,
-            'height' => max($max_height, 520),
-            'textselection' => $textselection,
-            // @see self::processElementforMetadatadisplays()
-          ];
-        }
       }
+    }
+    if  ($this->getSetting('metadataexposeentity_source') && $pagestrategy == 'metadataexposeentity') {
+      $entity = $this->entityTypeManager->getStorage(
+        'metadataexpose_entity'
+      )->load($this->getSetting('metadataexposeentity_source'));
+      if ($entity) {
+        $manifest_url = $entity->getUrlForItemFromNodeUUID($nodeuuid, TRUE);
+      }
+    }
+
+    $embargo_info = $this->embargoResolver->embargoInfo(
+      $item->getEntity()->uuid(), $jsondata
+    );
+
+    if (is_array($embargo_info)) {
+      $embargoed = $embargo_info[0];
+      $embargo_tags[] = 'format_strawberryfield:all_embargo';
+      if ($embargo_info[1]) {
+        $embargo_tags[] = 'format_strawberryfield:embargo:'
+          . $embargo_info[1];
+      }
+      if ($embargo_info[2]) {
+        $embargo_context[] = 'ip';
+      }
+    }
+
+    // Only process render elements if hide on embargo is set
+    if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+      if (UrlHelper::isValid($manifest_url, TRUE)) {
+        $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
+        $htmlid = $groupid;
+        $element['media'] = [
+          '#type' => 'container',
+          '#default_value' => $htmlid,
+          '#attributes' => [
+            'id' => $htmlid,
+            'class' => [
+              'strawberry-iabook-item',
+              'BookReader',
+              'field-iiif',
+              'container',
+            ],
+            'data-iiif-infojson' => '',
+            'style' => "width:{$max_width_css}; height:{$max_height}px",
+          ],
+        ];
+        if (isset($item->_attributes)) {
+          $element += ['#attributes' => []];
+          $element['#attributes'] += $item->_attributes;
+          // Unset field item attributes since they have been included in the
+          // formatter output and should not be rendered in the field template.
+          unset($item->_attributes);
+        }
+        $element['media']['#attributes']['data-iiif-infojson'] = '';
+        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
+          'nodeuuid' => $nodeuuid,
+          'manifesturl' => $manifest_url,
+          'width' => $max_width_css,
+          'height' => max($max_height, 520),
+          'textselection' => $textselection,
+          'hascover' => $hascover ?? TRUE,
+          // @see self::processElementforMetadatadisplays()
+        ];
+      }
+    }
+
+    $element['#cache'] = [
+      'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+      $element['#cache']['max-age'] = 0;
     }
 
     return $element;
