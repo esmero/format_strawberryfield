@@ -312,7 +312,6 @@ BookReader.prototype.loadManifest = function () {
                 ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
                 : self.jsonLd.label;
         self.bookUrl = '#';
-        self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
         self.parseSequence(self.options.iiifdefaultsequence);
       },
