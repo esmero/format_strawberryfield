@@ -200,7 +200,7 @@ BookReader.prototype.setup = (function(super_) {
     this.searchInsideUrl = options.searchInsideUrl;
     this.enableSearch = options.enableSearch;
     this.goToFirstResult = false;
-    this.hasCover = false;
+    this.hasCover = true;
 
     // Base server used by some api calls
     this.bookId = options.bookId;
