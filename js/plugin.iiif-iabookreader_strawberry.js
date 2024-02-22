@@ -473,7 +473,19 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     if (image.serviceUrl != null) {
       // Pass also the imageGerArgument to the info.json -- Cantaloupe 4.1.6
       infojson = image.serviceUrl + "/info.json" + image.imageGetArgument;
-      imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
+      // If we don't have image.width at this stage we will check if we have an image.imageUrl already
+      if (image.width == 0) {
+        if (image.imageUrl != "") {
+          imageuri = image.imageUrl;
+        }
+        else {
+          // We have no image url, we have no width, try with full
+          imageuri = image.serviceUrl + "/full/full/0/default.jpg" + image.imageGetArgument;
+        }
+      }
+      else {
+        imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
+      }
     } else {
       imageuri = image.imageUrl;
     }
