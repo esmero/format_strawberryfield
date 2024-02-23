@@ -12,6 +12,7 @@
               var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
               var server = window.location.origin + '/';
               let textselection = false;
+              let hascover = true;
 
               // Check if we got some data passed via Drupal settings.
               if (typeof(strawberrySettings) != 'undefined') {
@@ -22,6 +23,10 @@
                 if (typeof(strawberrySettings['textselection']) != 'undefined') {
                   textselection = strawberrySettings['textselection'];
                 }
+                if (typeof(strawberrySettings['hascover']) != 'undefined') {
+                  hascover = strawberrySettings['hascover'];
+                }
+
                 $(this).height(strawberrySettings.height);
                 $(this).css("width", strawberrySettings.width);
 
@@ -44,6 +49,7 @@
                         server: server,
                         bookId: node_uuid,
                         enableSearch: true,
+                        hasCover: hascover,
                         searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
                         plugins: {
                           textSelection: {
@@ -62,7 +68,6 @@
                     }
                   }
                 });
-
               }
             });
         }

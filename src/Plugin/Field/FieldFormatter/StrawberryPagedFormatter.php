@@ -129,7 +129,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
         'textselection' => FALSE,
-        'hascover_json_key_soyrce' => 'hascover',
+        'hascover_json_key_source' => 'hascover',
         'metadataexposeentity_source' => NULL,
       ];
   }
@@ -476,6 +476,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $embargo_context = [];
     $embargo_tags = [];
     $embargoed = FALSE;
+    $hascover = TRUE;
+    if ($this->getSetting('hascover_json_key_source')) {
+      $key = is_string($this->getSetting('hascover_json_key_source')) ? trim($this->getSetting('hascover_json_key_source')) : NULL;
+      if ($key && isset($jsondata[$key])) {
+        $hascover = (bool) $jsondata[$key];
+      }
+    }
 
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       /* @var $metadatadisplayentity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
@@ -638,6 +645,16 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargoed = FALSE;
     $manifest_url = '';
+    $hascover = TRUE;
+    if ($this->getSetting('hascover_json_key_source')) {
+      $key = is_string($this->getSetting('hascover_json_key_source')) ? trim($this->getSetting('hascover_json_key_source')) : NULL;
+      if ($key && isset($jsondata[$key])) {
+        $hascover = (bool) $jsondata[$key];
+      }
+    }
+
+
+
     $embargo_context = [];
     if ($this->getSetting('manifesturl_source') && $pagestrategy == 'manifesturl') {
       $manifest_url_key = $this->getSetting('manifesturl_source');

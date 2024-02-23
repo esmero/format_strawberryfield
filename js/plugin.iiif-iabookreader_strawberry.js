@@ -182,7 +182,8 @@ jQuery.extend(BookReader.defaultOptions, {
   enableSearch: true,
   searchInsideUrl: '',
   initialSearchTerm: null,
-  mobileNavTitle: ''
+  mobileNavTitle: '',
+  hasCover: true
 });
 
 BookReader.prototype.setup = (function(super_) {
@@ -200,7 +201,7 @@ BookReader.prototype.setup = (function(super_) {
     this.searchInsideUrl = options.searchInsideUrl;
     this.enableSearch = options.enableSearch;
     this.goToFirstResult = false;
-    this.hasCover = true;
+    this.hasCover = options.hasCover;
 
     // Base server used by some api calls
     this.bookId = options.bookId;
