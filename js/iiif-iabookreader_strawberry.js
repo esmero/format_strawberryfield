@@ -227,7 +227,7 @@ BookReader.prototype.buildToolbarElement = (function (super_) {
     var $el = super_.call(this);
     var readIcon = '';
     $el.find('.BRtoolbarRight').append("<span class='BRtoolbarSection Islandora'>"
-      + "<button class='BRpill zoomPage js-tooltip' title='Fine zoom'>ZOOM</button>"
+      + "<button class='BRpill zoomPage js-tooltip text-uppercase' title='Fine zoom'>Zoom</button>"
       + "</span>");
     //set div class to render osd
     $('<div style="display: none;"></div>').append('<div class="BRfloat" id="BRviewpage"></div>').appendTo($('body'));
