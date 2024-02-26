@@ -320,6 +320,10 @@ field.formatter.settings.strawberry_paged_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    iareaderimagesbaseurl:
+      type: string
+      label: 'Base URL for IA Reader Images'
+      default: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/'
     textselection:
       type: boolean
       label: 'If textselection from DjaVUXML should be enabled or not'
