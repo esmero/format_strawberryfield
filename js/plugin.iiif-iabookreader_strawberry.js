@@ -374,14 +374,15 @@ function processBehaviorToIABookreaderModeV2(jsonLd) {
       return 1;
     }
   }
-  return 2;
+  return 0;
+  // Why 0? because i will use a failure to try with a sequence instead
 }
 
 
 
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
-  // viewingDirection is the same in V2 and V3
+  // viewingDirection is the same in V2 and V3 BUT on V2 it can be inside a sequence ..
   if (typeof(self.jsonLd.viewingDirection) !== "undefined") {
     if (self.jsonLd.viewingDirection == "right-to-left") {
       self.pageProgression = 'rl';
@@ -400,7 +401,8 @@ BookReader.prototype.parseSequence = function (sequenceId) {
       self.numLeafs = self.IIIFsequence.imagesList.length;
   }
   else {
-    self.defaults = "mode/" + processBehaviorToIABookreaderModeV2(self.jsonLd) + 'up';
+    let top_level_behavior = processBehaviorToIABookreaderModeV2(self.jsonLd);
+    let sequence_level_behavior = 0;
 
     jQuery.each(self.jsonLd.sequences, function(index, sequence) {
       // try with a specific sequenceID
@@ -410,15 +412,50 @@ BookReader.prototype.parseSequence = function (sequenceId) {
           self.IIIFsequence.bookUrl = "http://iiif.io";
           self.IIIFsequence.imagesList = getImagesList(sequence);
           self.numLeafs = self.IIIFsequence.imagesList.length;
+          sequence_level_behavior = processBehaviorToIABookreaderModeV2(sequence);
+          // In case the sequence has the hit, it wins over the manifest one.
+          if (typeof(sequence.viewingDirection) !== "undefined") {
+            if (sequence.viewingDirection == "right-to-left") {
+              self.pageProgression = 'rl';
+            }
+            if (sequence.viewingDirection == "left-to-right") {
+              self.pageProgression = 'lr';
+            }
+          }
         }
       } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
         self.IIIFsequence.imagesList = getImagesList(sequence);
         self.numLeafs = self.IIIFsequence.imagesList.length;
-        // Just take the first one if no default one set
+        sequence_level_behavior = processBehaviorToIABookreaderModeV2(sequence);
+        // In case the sequence has the hit, it wins over the manifest one.
+        if (typeof(sequence.viewingDirection) !== "undefined") {
+          if (sequence.viewingDirection == "right-to-left") {
+            self.pageProgression = 'rl';
+          }
+          if (sequence.viewingDirection == "left-to-right") {
+            self.pageProgression = 'lr';
+          }
+        }
       }
     });
+    if (top_level_behavior != 0) {
+      if (sequence_level_behavior == 0) {
+        self.defaults = "mode/" + top_level_behavior + 'up';
+      }
+      else {
+        self.defaults = "mode/" + sequence_level_behavior + 'up';
+      }
+    }
+    else if (top_level_behavior == 0) {
+      if (sequence_level_behavior == 0) {
+        self.defaults = "mode/" + 2 + 'up';
+      }
+      else {
+        self.defaults = "mode/" + sequence_level_behavior + 'up';
+      }
+    }
   }
 
   var tmpdata = [];
