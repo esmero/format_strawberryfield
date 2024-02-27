@@ -125,12 +125,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'json_key_source' => 'as:image',
         'metadatadisplayentity_uuid' => NULL,
         'manifesturl_source' => 'iiifmanifest',
+        'metadataexposeentity_source' => NULL,
         'max_width' => 720,
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
         'textselection' => FALSE,
         'hascover_json_key_source' => 'hascover',
-        'metadataexposeentity_source' => NULL,
+        'ia_reader_images_base_url' => 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
       ];
   }
 
@@ -247,6 +248,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           '#min' => 0,
           '#required' => TRUE
         ],
+        'ia_reader_images_base_url' => [
+          '#type' => 'textfield',
+          '#title' => t(
+            'Base-URL for IA Reader images (optional)'
+          ),
+          '#description' => 'If you don\'t specify a URL, the system automatically uses the default base URL ('.self::defaultSettings()['ia_reader_images_base_url'].') for the IA Reader. You have the option to specify a different location by providing either: An absolute URL (starting with \'https://...\'), or a relative path from your filesystem (e.g., \'/libraries/BookReader/images/\'). Please ensure to add a trailing slash at the end of the path.',
+          '#default_value' => $this->getSetting('ia_reader_images_base_url'),
+        ],
         'hide_on_embargo' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
@@ -259,7 +268,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         ],
         'textselection' => [
           '#type' => 'checkbox',
-          '#title' => $this->t('Enable the Textselection plugin via the internal DjvuXml Endpoint.'),
+          '#title' => $this->t('Enable the Text Selection plugin via the internal DjvuXml Endpoint.'),
           '#description' => $this->t('If enabled, direct selection on OCRed pages will be possible. Do not enable if the manifest combines more than a single OCRed resource (multiple PDFs etc)'),
           '#default_value' => $this->getSetting('textselection') ?? FALSE,
           '#required' => FALSE,
@@ -335,6 +344,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           $summary[] = $this->t('This formatter still needs to be setup');
       }
     }
+    $ia_reader_images_base_url = $this->getSetting('ia_reader_images_base_url');
+
+    $summary[] = $this->t('Base IA Reader images URL: %ia_reader_images_base_url',
+      [
+        '%ia_reader_images_base_url' => $ia_reader_images_base_url
+      ]
+    );
 
     $summary[] = $this->t('Maximum size: %max_width x %max_height',
       [
@@ -472,6 +488,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $ia_reader_images_base_url = self::defaultSettings()['ia_reader_images_base_url'];
+    if ($this->getSetting('ia_reader_images_base_url') &&
+      is_string($this->getSetting('ia_reader_images_base_url')
+      && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1)) {
+      $ia_reader_images_base_url = trim($this->getSetting('ia_reader_images_base_url'));
+    }
+
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
@@ -579,6 +602,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifest' => json_decode($manifest),
             'width'    => $max_width_css,
             'height'   => max($max_height, 520),
+            'iareaderimagesbaseurl' => $ia_reader_images_base_url,
             'textselection' => $textselection,
             'hascover' => $hascover ?? TRUE,
             // While Bookreader has a way to enable/disable search via the "enableSearch"
@@ -642,6 +666,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $ia_reader_images_base_url = self::defaultSettings()['ia_reader_images_base_url'];
+    if ($this->getSetting('ia_reader_images_base_url') &&
+      is_string($this->getSetting('ia_reader_images_base_url')
+        && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1)) {
+      $ia_reader_images_base_url = trim($this->getSetting('ia_reader_images_base_url'));
+    }
+
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargoed = FALSE;
     $manifest_url = '';
@@ -722,6 +753,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           'height' => max($max_height, 520),
           'textselection' => $textselection,
           'hascover' => $hascover ?? TRUE,
+          'iareaderimagesbaseurl' => $ia_reader_images_base_url,
           // @see self::processElementforMetadatadisplays()
         ];
       }

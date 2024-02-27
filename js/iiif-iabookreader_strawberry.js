@@ -1,77 +1,78 @@
 (function ($, Drupal, once, drupalSettings) {
 
-    'use strict';
+  'use strict';
 
-    Drupal.behaviors.format_strawberryfield_iabookreader_initiate = {
-        attach: function(context, settings) {
+  Drupal.behaviors.format_strawberryfield_iabookreader_initiate = {
+    attach: function(context, settings) {
 
-          const elementsToAttach = once('attach_iab', '.strawberry-iabook-item[data-iiif-infojson]', context);
-          $(elementsToAttach).each(function (index, value) {
-              // Get the node uuid for this element
-              var element_id = $(this).attr("id");
-              var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
-              var server = window.location.origin + '/';
-              let textselection = false;
-              let hascover = true;
+      const elementsToAttach = once('attach_iab', '.strawberry-iabook-item[data-iiif-infojson]', context);
+      $(elementsToAttach).each(function (index, value) {
+        // Get the node uuid for this element
+        var element_id = $(this).attr("id");
+        var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
+        var server = window.location.origin + '/';
+        let textselection = false;
+        let hascover = true;
+        let iareaderimagesbaseurl = 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/';
 
-              // Check if we got some data passed via Drupal settings.
-              if (typeof(strawberrySettings) != 'undefined') {
-                var node_uuid = strawberrySettings['nodeuuid'];
-                if (typeof(strawberrySettings['server']) != 'undefined') {
-                  server = strawberrySettings['server'];
+        // Check if we got some data passed via Drupal settings.
+        if (typeof(strawberrySettings) != 'undefined') {
+          var node_uuid = strawberrySettings['nodeuuid'];
+          if (typeof(strawberrySettings['server']) != 'undefined') {
+            server = strawberrySettings['server'];
+          }
+          if (typeof(strawberrySettings['textselection']) != 'undefined') {
+            textselection = strawberrySettings['textselection'];
+          }
+          if (typeof(strawberrySettings['iareaderimagesbaseurl']) !== 'undefined') {
+            iareaderimagesbaseurl = strawberrySettings['iareaderimagesbaseurl'];
+          }
+
+          $(this).height(strawberrySettings.height);
+          $(this).css("width", strawberrySettings.width);
+
+          // Defines our basic options for IIIF.
+
+          // Check if Book has or not OCR using Ajax callback
+          $.ajax({
+            type: 'GET',
+            url: '/do/' + node_uuid + '/flavorcount/ocr/',
+            success: function (data) {
+              {
+                var options = {
+                  ui: 'full', // embed, full (responsive)
+                  el: '#' + element_id,
+                  iiifmanifesturl: strawberrySettings['manifesturl'],
+                  iiifmanifest: strawberrySettings['manifest'],
+                  iiifdefaultsequence: null, //If null given will use the first sequence found.
+                  maxWidth: 800,
+                  imagesBaseURL: iareaderimagesbaseurl,
+                  server: server,
+                  bookId: node_uuid,
+                  enableSearch: true,
+                  hasCover: hascover,
+                  searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
+                  plugins: {
+                    textSelection: {
+                      enabled: (data.count == 0 ? false : textselection),
+                      singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
+                    },
+                  },
+                  padding: 11,
+                };
+
+                var br = new BookReader(options);
+                br.init();
+                if (data.count == 0) {
+                  $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
                 }
-                if (typeof(strawberrySettings['textselection']) != 'undefined') {
-                  textselection = strawberrySettings['textselection'];
-                }
-                if (typeof(strawberrySettings['hascover']) != 'undefined') {
-                  hascover = strawberrySettings['hascover'];
-                }
-
-                $(this).height(strawberrySettings.height);
-                $(this).css("width", strawberrySettings.width);
-
-                // Defines our basic options for IIIF.
-
-                // Check if Book has or not OCR using Ajax callback
-                $.ajax({
-                  type: 'GET',
-                  url: '/do/' + node_uuid + '/flavorcount/ocr/',
-                  success: function (data) {
-                    {
-                      var options = {
-                        ui: 'full', // embed, full (responsive)
-                        el: '#' + element_id,
-                        iiifmanifesturl: strawberrySettings['manifesturl'],
-                        iiifmanifest: strawberrySettings['manifest'],
-                        iiifdefaultsequence: null, //If null given will use the first sequence found.
-                        maxWidth: 800,
-                        imagesBaseURL: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
-                        server: server,
-                        bookId: node_uuid,
-                        enableSearch: true,
-                        hasCover: hascover,
-                        searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
-                        plugins: {
-                          textSelection: {
-                            enabled: (data.count == 0 ? false : textselection),
-                            singlePageDjvuXmlUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/djvuxml/{{pageIndex}}',
-                          },
-                        },
-                        padding: 11,
-                      };
-
-                      var br = new BookReader(options);
-                      br.init();
-                      if (data.count == 0) {
-                        $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
-                      }
-                    }
-                  }
-                });
               }
-            });
+            }
+          });
         }
+      });
     }
+  }
 })(jQuery, Drupal, once, drupalSettings);
 
 // override setupTooltips()
@@ -229,57 +230,57 @@ BookReader.prototype.buildShareDiv = function(e) {
 // Extend buildToolbarElement: add ZoomPage button
 BookReader.prototype.buildToolbarElement = (function (super_) {
   return function () {
-      var $el = super_.call(this);
-      var readIcon = '';
-      $el.find('.BRtoolbarRight').append("<span class='BRtoolbarSection Islandora'>"
-		  	+ "<button class='BRpill zoomPage js-tooltip' title='Fine zoom'>ZOOM</button>"
-		  	+ "</span>");
-			//set div class to render osd
-			$('<div style="display: none;"></div>').append('<div class="BRfloat" id="BRviewpage"></div>').appendTo($('body'));
-    	return $el;
-	};
+    var $el = super_.call(this);
+    var readIcon = '';
+    $el.find('.BRtoolbarRight').append("<span class='BRtoolbarSection Islandora'>"
+      + "<button class='BRpill zoomPage js-tooltip text-uppercase' title='Fine zoom'>Zoom</button>"
+      + "</span>");
+    //set div class to render osd
+    $('<div style="display: none;"></div>').append('<div class="BRfloat" id="BRviewpage"></div>').appendTo($('body'));
+    return $el;
+  };
 })(BookReader.prototype.buildToolbarElement);
 
 // Extend initToolbar: add ZoomPage button click code
 BookReader.prototype.initToolbar = (function (super_) {
   return function (mode, ui) {
     super_.apply(this, arguments);
-		var self = this;
+    var self = this;
 
-			this.refs.$BRtoolbar.find('.zoomPage').colorbox({
-				inline: true,
-				opacity: "0.5",
-				href: "#BRviewpage",
-				width: "90%",
-				height: "90%",
-				fastIframe: false,
-				reposition: false,
-				onOpen: function() {
-					if (1 == self.mode) {
-					      	$('#BRviewpage').html('<div class="textTop loader"></div>');
-					} else if (2 == self.mode) {
-					      	$('#BRviewpage').html('<div class="viewpLeft loader"></div><div class="viewpRight loader"></div>');
-					};
-				},
-				onLoad: function() {
-				    	self.trigger('stop');
-				},
-				onComplete: function() {
-					self.buildViewpageDiv($('#BRviewpage'));
-					self.modeBeforePageview = self.mode;
-					if (1 == self.mode) {
-						self.indexBeforePageview = self.currentIndex();
-						self.switchMode(2);
-					};
-				},
-				onClosed: function() {
-					self.resize()
-					if (1 == self.modeBeforePageview) {
-						self.switchMode(1);
-						self.jumpToIndex(self.indexBeforePageview);
-					};
-				},
-			});
+    this.refs.$BRtoolbar.find('.zoomPage').colorbox({
+      inline: true,
+      opacity: "0.5",
+      href: "#BRviewpage",
+      width: "90%",
+      height: "90%",
+      fastIframe: false,
+      reposition: false,
+      onOpen: function() {
+        if (1 == self.mode) {
+          $('#BRviewpage').html('<div class="textTop loader"></div>');
+        } else if (2 == self.mode) {
+          $('#BRviewpage').html('<div class="viewpLeft loader"></div><div class="viewpRight loader"></div>');
+        };
+      },
+      onLoad: function() {
+        self.trigger('stop');
+      },
+      onComplete: function() {
+        self.buildViewpageDiv($('#BRviewpage'));
+        self.modeBeforePageview = self.mode;
+        if (1 == self.mode) {
+          self.indexBeforePageview = self.currentIndex();
+          self.switchMode(2);
+        };
+      },
+      onClosed: function() {
+        self.resize()
+        if (1 == self.modeBeforePageview) {
+          self.switchMode(1);
+          self.jumpToIndex(self.indexBeforePageview);
+        };
+      },
+    });
 
   };
 })(BookReader.prototype.initToolbar);
@@ -288,28 +289,28 @@ BookReader.prototype.initToolbar = (function (super_) {
 BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
 
   var osd_common = '<div id=[ID] allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
-    osd_common += '<script type="text/javascript">';
-    osd_common += 'var viewer = OpenSeadragon({';
-    osd_common += 'id: "[ID]",';
-    osd_common += 'prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/images/",';
-    osd_common += 'homeFillsViewer: false,';
-    osd_common += 'showZoomControl: true,';
-    osd_common += 'showNavigator:  false,';
-    osd_common += 'showHomeControl: false,';
-    osd_common += 'showFullPageControl: true,';
-    osd_common += 'showRotationControl: true,';
-    osd_common += 'navigatorPosition: 0,';
-    osd_common += 'navigationControlAnchor: 2,';
-    osd_common += 'sequenceMode: false,';
-    osd_common += 'preserveViewport: true,';
-    osd_common += 'defaultZoomLevel: 0,';
-    osd_common += 'constrainDuringPan: false,';
-    osd_common += 'visibilityRatio: 1,';
-    osd_common += 'maxZoomPixelRatio: 2,';
-    osd_common += 'minZoomImageRatio: 0.9,';
-    osd_common += 'tileSources: "[TS]",';
-    osd_common += '});';
-    osd_common += '</script>';
+  osd_common += '<script type="text/javascript">';
+  osd_common += 'var viewer = OpenSeadragon({';
+  osd_common += 'id: "[ID]",';
+  osd_common += 'prefixUrl: "https://cdn.jsdelivr.net/npm/openseadragon@2.4/build/openseadragon/images/",';
+  osd_common += 'homeFillsViewer: false,';
+  osd_common += 'showZoomControl: true,';
+  osd_common += 'showNavigator:  false,';
+  osd_common += 'showHomeControl: false,';
+  osd_common += 'showFullPageControl: true,';
+  osd_common += 'showRotationControl: true,';
+  osd_common += 'navigatorPosition: 0,';
+  osd_common += 'navigationControlAnchor: 2,';
+  osd_common += 'sequenceMode: false,';
+  osd_common += 'preserveViewport: true,';
+  osd_common += 'defaultZoomLevel: 0,';
+  osd_common += 'constrainDuringPan: false,';
+  osd_common += 'visibilityRatio: 1,';
+  osd_common += 'maxZoomPixelRatio: 2,';
+  osd_common += 'minZoomImageRatio: 0.9,';
+  osd_common += 'tileSources: "[TS]",';
+  osd_common += '});';
+  osd_common += '</script>';
 
   if (1 == this.mode) {
     var index = this.currentIndex();
@@ -318,10 +319,12 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
     var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(index, 1, 0));
     var dosd = $(osd_common.replace(/\[ID\]/g, "osd_s").replace('[TS]', tilesourceUri));
     jViewpageDiv.html(dosd);
-  } else if (3 == this.mode) {
+  }
+  else if (3 == this.mode) {
     var osd = $('<div style="color: black;"><strong>' + Drupal.t('View page not supported for this view.') + '</strong></div>');
     jViewpageDiv.html(osd);
-  } else {
+  }
+  else {
     var indices = this.getSpreadIndices(this.currentIndex());
 
     // is left page blank?
@@ -330,7 +333,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
       //var tilesourceUri_left = this.getPageProp(indices[0], 'infojson');
       var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[0], 1, 0));
       var osd_left = osd_common.replace(/\[ID\]/g, "osd_l").replace('[TS]', tilesourceUri_left);
-		} else {
+    }
+    else {
       var osd_left = '<div id=osd_l allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
     }
     var dosd_left = $(osd_left);
@@ -341,7 +345,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
       //var tilesourceUri_right = this.getPageProp(indices[1], 'infojson');
       var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[1], 1, 0));
       var osd_right = osd_common.replace(/\[ID\]/g, "osd_r").replace('[TS]', tilesourceUri_right);
-		} else {
+    }
+    else {
       var osd_right = '<div id=osd_r allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
     }
     var dosd_right = $(osd_right);
