@@ -366,7 +366,6 @@ function processBehaviorToIABookreaderModeV2(jsonLd) {
   // normally we would use https://github.com/internetarchive/bookreader/blob/4dab4cef30c0af05fa864e57578a834b89fbaba2/src/BookReader.js#L62
   // but these have not changed in 10 years ... passing this would be an overkill just to read that.
   if (typeof(jsonLd.viewingHint) !== "undefined") {
-    console.log (jsonLd.viewingHint);
     if (jsonLd.viewingHint == 'paged') {
         return 2;
     }
