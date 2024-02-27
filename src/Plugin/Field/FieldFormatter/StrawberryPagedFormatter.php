@@ -120,16 +120,17 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    */
   public static function defaultSettings() {
     return parent::defaultSettings() + [
-      'iiif_group' => TRUE,
-      'mediasource' => 'json_key',
-      'json_key_source' => 'as:image',
-      'metadatadisplayentity_uuid' => NULL,
-      'manifesturl_source' => 'iiifmanifest',
-      'max_width' => 720,
-      'max_height' => 480,
-      'hide_on_embargo' => FALSE,
-      'textselection' => FALSE,
-    ];
+        'iiif_group' => TRUE,
+        'mediasource' => 'json_key',
+        'json_key_source' => 'as:image',
+        'metadatadisplayentity_uuid' => NULL,
+        'manifesturl_source' => 'iiifmanifest',
+        'max_width' => 720,
+        'max_height' => 480,
+        'ia_reader_images_base_url' => 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
+        'hide_on_embargo' => FALSE,
+        'textselection' => FALSE,
+      ];
   }
 
   /**
@@ -208,6 +209,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           '#min' => 0,
           '#required' => TRUE
         ],
+        'ia_reader_images_base_url' => [
+          '#type' => 'textfield',
+          '#title' => t(
+            'Base-URL for IA Reader images (optional)'
+          ),
+          '#description' => 'If you don\'t specify a URL, the system automatically uses the default base URL ('.self::defaultSettings()['ia_reader_images_base_url'].') for the IA Reader. You have the option to specify a different location by providing either: An absolute URL (starting with \'https://...\'), or a relative path from your filesystem (e.g., \'/libraries/BookReader/images/\'). Please ensure to add a trailing slash at the end of the path.',
+          '#default_value' => $this->getSetting('ia_reader_images_base_url'),
+        ],
         'hide_on_embargo' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
@@ -279,6 +288,12 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       }
     }
 
+    $summary[] = $this->t('Base IA Reader images URL: %ia_reader_images_base_url',
+      [
+        '%ia_reader_images_base_url' => (string) strlen($this->getSetting('ia_reader_images_base_url')) <= 0 ? self::defaultSettings()['ia_reader_images_base_url'] : $this->getSetting('ia_reader_images_base_url')
+      ]
+    );
+
     $summary[] = $this->t('Maximum size: %max_width x %max_height',
       [
         '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
@@ -288,7 +303,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
 
     $summary[] = $this->t('Viewer for embargoed Objects is %hide',
       [
-         '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
+        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
       ]
     );
 
@@ -407,6 +422,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $ia_reader_images_base_url = (string) strlen($this->getSetting('ia_reader_images_base_url')) <= 0 ? self::defaultSettings()['ia_reader_images_base_url'] : $this->getSetting('ia_reader_images_base_url');
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
@@ -461,10 +477,10 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // Only process render elements if hide on embargo is set
         if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
           $context = [
-            'data'        => $jsondata,
-            'node'        => $item->getEntity(),
-            'iiif_server' => $this->getIiifUrls()['public'],
-          ] + $context_embargo;
+              'data'        => $jsondata,
+              'node'        => $item->getEntity(),
+              'iiif_server' => $this->getIiifUrls()['public'],
+            ] + $context_embargo;
           $original_context = $context;
           // Allow other modules to provide extra Context!
           // Call modules that implement the hook, and let them add items.
@@ -507,6 +523,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifest' => json_decode($manifest),
             'width'    => $max_width_css,
             'height'   => max($max_height, 520),
+            'iareaderimagesbaseurl' => $ia_reader_images_base_url,
             'textselection' => $textselection,
             // While Bookreader has a way to enable/disable search via the "enableSearch"
             // parameter, it doesn't work properly at the moment and we have opened an
@@ -569,6 +586,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $ia_reader_images_base_url = (string) strlen($this->getSetting('ia_reader_images_base_url')) <= 0 ? self::defaultSettings()['ia_reader_images_base_url'] : $this->getSetting('ia_reader_images_base_url');
     $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargoed = FALSE;
 
@@ -607,6 +625,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifesturl' => $manifest_url,
             'width' => $max_width_css,
             'height' => max($max_height, 520),
+            'iareaderimagesbaseurl' => $ia_reader_images_base_url,
             'textselection' => $textselection,
             // @see self::processElementforMetadatadisplays()
           ];
