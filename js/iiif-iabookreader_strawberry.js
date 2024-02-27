@@ -27,6 +27,9 @@
           if (typeof(strawberrySettings['iareaderimagesbaseurl']) !== 'undefined') {
             iareaderimagesbaseurl = strawberrySettings['iareaderimagesbaseurl'];
           }
+          if (typeof(strawberrySettings['hascover']) != 'undefined') {
+            hascover = strawberrySettings['hascover'];
+          }
 
           $(this).height(strawberrySettings.height);
           $(this).css("width", strawberrySettings.width);
