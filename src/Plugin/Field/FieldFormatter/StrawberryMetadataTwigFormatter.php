@@ -306,6 +306,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         ];
       }
     }
+
     $elements['#cache'] = [
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),

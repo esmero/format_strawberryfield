@@ -12,6 +12,8 @@
         var strawberrySettings = drupalSettings.format_strawberryfield.iabookreader[element_id];
         var server = window.location.origin + '/';
         let textselection = false;
+        let hascover = true;
+        let iareaderimagesbaseurl = 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/';
 
         // Check if we got some data passed via Drupal settings.
         if (typeof(strawberrySettings) != 'undefined') {
@@ -22,6 +24,13 @@
           if (typeof(strawberrySettings['textselection']) != 'undefined') {
             textselection = strawberrySettings['textselection'];
           }
+          if (typeof(strawberrySettings['iareaderimagesbaseurl']) !== 'undefined') {
+            iareaderimagesbaseurl = strawberrySettings['iareaderimagesbaseurl'];
+          }
+          if (typeof(strawberrySettings['hascover']) != 'undefined') {
+            hascover = strawberrySettings['hascover'];
+          }
+
           $(this).height(strawberrySettings.height);
           $(this).css("width", strawberrySettings.width);
 
@@ -40,10 +49,11 @@
                   iiifmanifest: strawberrySettings['manifest'],
                   iiifdefaultsequence: null, //If null given will use the first sequence found.
                   maxWidth: 800,
-                  imagesBaseURL: typeof(strawberrySettings['iareaderimagesbaseurl']) !== 'undefined' ? strawberrySettings['iareaderimagesbaseurl'] : 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
+                  imagesBaseURL: iareaderimagesbaseurl,
                   server: server,
                   bookId: node_uuid,
                   enableSearch: true,
+                  hasCover: hascover,
                   searchInsideUrl: '/do/' + node_uuid + '/flavorsearch/all/ocr/',
                   plugins: {
                     textSelection: {
@@ -62,7 +72,6 @@
               }
             }
           });
-
         }
       });
     }
@@ -313,10 +322,12 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
     var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(index, 1, 0));
     var dosd = $(osd_common.replace(/\[ID\]/g, "osd_s").replace('[TS]', tilesourceUri));
     jViewpageDiv.html(dosd);
-  } else if (3 == this.mode) {
+  }
+  else if (3 == this.mode) {
     var osd = $('<div style="color: black;"><strong>' + Drupal.t('View page not supported for this view.') + '</strong></div>');
     jViewpageDiv.html(osd);
-  } else {
+  }
+  else {
     var indices = this.getSpreadIndices(this.currentIndex());
 
     // is left page blank?
@@ -325,7 +336,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
       //var tilesourceUri_left = this.getPageProp(indices[0], 'infojson');
       var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[0], 1, 0));
       var osd_left = osd_common.replace(/\[ID\]/g, "osd_l").replace('[TS]', tilesourceUri_left);
-    } else {
+    }
+    else {
       var osd_left = '<div id=osd_l allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
     }
     var dosd_left = $(osd_left);
@@ -336,7 +348,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
       //var tilesourceUri_right = this.getPageProp(indices[1], 'infojson');
       var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[1], 1, 0));
       var osd_right = osd_common.replace(/\[ID\]/g, "osd_r").replace('[TS]', tilesourceUri_right);
-    } else {
+    }
+    else {
       var osd_right = '<div id=osd_r allowfullscreen style="height: 100%; width: 100%; display: inline-block;"></div>';
     }
     var dosd_right = $(osd_right);
