@@ -1,0 +1,4 @@
+format_strawberryfield_rest_oai_pmh.config:
+  route_name: format_strawberryfield_rest_oai_pmh.settings_form
+  base_route: rest_oai_pmh.rest_oai_pmh_settings_form
+  title: Templates

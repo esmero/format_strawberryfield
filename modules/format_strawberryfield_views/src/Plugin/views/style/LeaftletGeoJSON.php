@@ -106,18 +106,7 @@ class LeaftletGeoJSON extends StylePluginBase {
       'callback' => __CLASS__ . '::ajaxCallbackMainSource',
       'wrapper'  => 'main-mediasource-ajax-container',
     ];
-    // Because main media source needs to update its choices based on
-    // Media Source checked options, we need to recalculate its default
-    // Value also.
-    $default_value_main_mediasoruce = ($this->options['main_mediasource']
-      && array_key_exists(
-        $this->options['main_mediasource'],
-        $options_for_mainsource
-      ))
-      ? $this->options['main_mediasource']
-      : reset(
-        $options_for_mainsource
-      );
+
 
     $form['tilemap_url'] = [
       '#type'          => 'textfield',

@@ -155,13 +155,13 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
 
     $elements = [];
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
 
@@ -269,6 +269,9 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
     return $elements;
   }
 
@@ -388,7 +391,6 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
     array $form,
     FormStateInterface $form_state
   ) {
-    error_log('changeSceneCallBack called');
     $button = $form_state->getTriggeringElement();
     $element = NestedArray::getValue(
       $form,

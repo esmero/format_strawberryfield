@@ -116,7 +116,7 @@ class IiifHelper {
    * @return string
    */
   public function getInternalInfoJson($id) {
-      return "{$this->internalUrl}/{$id}/info.json";
+    return "{$this->internalUrl}/{$id}/info.json";
   }
 
   /**
@@ -127,6 +127,49 @@ class IiifHelper {
    */
   public function getPublicInfoJson($id) {
     return "{$this->publicUrl}/{$id}/info.json";
+  }
+
+  /**
+   * Based on a service or image url get the IIIF identifier.
+   *
+   * @param $id string
+   * @return string
+   */
+  static public function extract_iiif_id($image_url) {
+    $path = pathinfo($image_url);
+    if ($path['filename'] == 'default') {
+      //[dirname] => http://localhost:8183/iiif/2/PERRITO.jpg/full/max/0
+      $parts = explode("/", $path['dirname']);
+      $parts = array_reverse($parts);
+      $params = [];
+      $id = $parts[3] ?? NULL;
+      $url_components = parse_url($path['basename']);
+      if ($url_components) {
+        parse_str($url_components['query'] ?? '', $params);
+        if ($id) {
+          // @TODO in the future we might have a different ID
+          // TO allow IIIF backend (for now Cantaloupe)
+          // to allow authenticated access
+          // So $id should not be used directly
+          // but pass through a function that converts whatever
+          // we are using globally in the repo
+          // to the common approach.
+          $id = urldecode($id);
+          if (isset($params['page'])) {
+            $id = $id . ';' . $params['page'];
+          }
+        }
+        return $id;
+      }
+      else {
+        // This means it failed/not an URL, etc.
+        // For now just return the basename
+        return urldecode($path['basename']);
+      }
+    }
+    else {
+      return urldecode($path['basename']);
+    }
   }
 
 }

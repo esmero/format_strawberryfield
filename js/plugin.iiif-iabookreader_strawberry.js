@@ -182,6 +182,7 @@ jQuery.extend(BookReader.defaultOptions, {
   enableSearch: true,
   searchInsideUrl: '',
   initialSearchTerm: null,
+  mobileNavTitle: ''
 });
 
 BookReader.prototype.setup = (function(super_) {

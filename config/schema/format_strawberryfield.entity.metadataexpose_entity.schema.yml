@@ -25,3 +25,6 @@
     active:
       type: boolean
       label: 'Whether this endpoint is active'
+    hide_on_embargo:
+      type: boolean
+      label: 'If a 401 should be returned on a resolved Embargo'

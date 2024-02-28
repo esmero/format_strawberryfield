@@ -2,8 +2,8 @@ name: Strawberry Metadata and Media Field Formatters Views Submodule
 description: Provides Various Strawberry field formatters integration with Drupal Views.
 package: Archipelago
 type: module
-core_version_requirement: ^8.9 || ^9
-php: 7.2
+core_version_requirement: ^9.5 || ^10
+php: 8
 dependencies:
   - 'drupal:views'
   - 'format_strawberryfield'

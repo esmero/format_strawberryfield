@@ -141,11 +141,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     // @TODO maybe we want the opposite? like add the slash always?
     // Also why are we not removing on save but on fetch?
     $urls = [
-      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url'),"/") : rtrim($this->getSetting('iiif_base_url'), "/"),
-      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url'),"/") : rtrim($this->getSetting('iiif_base_url_internal'), "/"),
+      'public' => boolval($this->getSetting('use_iiif_globals')) === TRUE ?  rtrim($this->iiifConfig->get('pub_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url') ?? '', "/"),
+      'internal' => boolval($this->getSetting('use_iiif_globals')) === TRUE ? rtrim($this->iiifConfig->get('int_server_url') ?? '',"/") : rtrim($this->getSetting('iiif_base_url_internal') ?? '', "/"),
     ];
     return $urls;
-
   }
 
   /**
@@ -163,10 +162,10 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       '%url' => $this->getIiifUrls()['internal'],
     ]);
     $summary[] = $this->t('Limited to the following file upload JSON Keys: %value', [
-      '%value' => strlen(trim($this->getSetting('upload_json_key_source' ))) == 0 ? 'Fetch from any available' : $this->getSetting('upload_json_key_source')
+      '%value' => strlen(trim($this->getSetting('upload_json_key_source' ) ?? '')) == 0 ? 'Fetch from any available' : $this->getSetting('upload_json_key_source')
     ]);
     $summary[] = $this->t('Embargo Alternate upload JSON Keys: %value', [
-      '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ))) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
+      '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ) ?? '')) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
     ]);
     return $summary;
   }
@@ -188,7 +187,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       '#type' => 'textfield',
       '#title' => t('When embargo is used or applied, alternate JSON Key(s) where the files to be used by this formatter where uploaded/store in your JSON.'),
       '#description' => t('Be careful about providing same keys used for user that can by pass an embargo. You can add multiple ones separated by comma. Some viewers use multiple file types, e.g audios and Subtitles, in that case please add all of them. In case of multiple Keys for the same type e.g "audios1", "audios2", the key names will be also used for grouping. Leave empty to not provide any alternate embargo option at all.'),
-      '#default_value' => $this->getSetting('upload_json_key_source'),
+      '#default_value' => $this->getSetting('embargo_json_key_source'),
       '#required' => FALSE,
       '#maxlength' => 255,
       '#size' => 64,
@@ -272,6 +271,32 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         $form_state->setErrorByName(implode('][', $parents), t("We could not contact your @urltype IIIF server", [
           '@urltype' => $url_type,
         ]));
+      }
+    }
+  }
+
+  /**
+   * Validates a JSON.
+   *
+   * @param array $element
+   *   The Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The Form State Object.
+   * @param array $complete_form
+   *   The complete form structure.
+   */
+  public function validateJSON(array &$element, FormStateInterface $form_state, array &$complete_form) {
+    $parents = $element['#parents'];
+    if (strlen(trim($element['#value']) ?? '') > 0) {
+      try {
+        $json = json_decode($element['#value'], TRUE);
+        $json_error = json_last_error();
+        if ($json_error != JSON_ERROR_NONE) {
+          $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
+        }
+      }
+      catch (\Exception $e) {
+        $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
       }
     }
   }

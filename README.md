@@ -24,7 +24,6 @@ Having issues with this module? Check out the Archipelago Commons google groups 
 
 * [Diego Pino](https://github.com/DiegoPino)
 * [Giancarlo Birello](https://github.com/giancarlobi)
-* [Albert Min](https://github.com/aksm)
 
 ## Acknowledgments
 

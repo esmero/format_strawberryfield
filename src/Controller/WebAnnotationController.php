@@ -9,7 +9,7 @@ use Drupal\Core\Render\RendererInterface;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface;
+use Symfony\Component\Mime\MimeTypeGuesserInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,9 +53,16 @@ class WebAnnotationController extends ControllerBase {
   /**
    * The MIME type guesser.
    *
-   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   * @var \Symfony\Component\Mime\MimeTypeGuesserInterface
    */
   protected $mimeTypeGuesser;
+
+  /**
+   * The tempstore.
+   *
+   * @var \Drupal\Core\TempStore\SharedTempStore
+   */
+  protected $tempStore;
 
   /**
    * WebAnnotationController constructor.
@@ -68,7 +75,7 @@ class WebAnnotationController extends ControllerBase {
    *   The Entity Type Manager.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The Drupal Renderer Service.
-   * @param \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface $mime_type_guesser
+   * @param \Symfony\Component\Mime\MimeTypeGuesserInterface $mime_type_guesser
    *   The Drupal Mime type guesser Service.
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $temp_store_factory
    *   The tempstore factory.
@@ -131,9 +138,12 @@ class WebAnnotationController extends ControllerBase {
         // but less traffic?
         /* @var $field StrawberryFieldItem */
         $field = $node->get($field_name);
-        $annotations = $this->requestStack->getCurrentRequest()->request->get('data');
-        $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
-        $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
+        // Symfony6 deprecated getting arrays via get()... like c'mom
+        // we have to use all()[
+        $everything = $this->requestStack->getCurrentRequest()->request->all();
+        $annotations = $everything['data'] ?? NULL;
+        $target =  $everything['target_resource'] ?? NULL;
+        $keystoreid = $everything['keystoreid'] ?? NULL;
         $data = [
           'success' => true
         ];
@@ -179,9 +189,12 @@ class WebAnnotationController extends ControllerBase {
     )) {
 
       // We are getting which field originate the annotations from AJAX.
-      $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
-      $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
-      $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
+      // Symfony6 deprecated getting arrays via get()... like c'mom
+      // we have to use all()[
+      $everything = $this->requestStack->getCurrentRequest()->request->all();
+      $annotation = $everything['data'] ?? NULL;
+      $target =  $everything['target_resource'] ?? NULL;
+      $keystoreid = $everything['keystoreid'] ?? NULL;
       $data = [
         'success' => true
       ];
@@ -205,7 +218,7 @@ class WebAnnotationController extends ControllerBase {
               );
             } // means it was new
           }
-           $this->tempStore->set($keystoreid, $existingannotations);
+          $this->tempStore->set($keystoreid, $existingannotations);
         }
         else {
           throw new BadRequestHttpException(
@@ -248,16 +261,19 @@ class WebAnnotationController extends ControllerBase {
       $node
     )) {
 
-        // We are getting which field originate the annotations from AJAX.
-        $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
-        $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
-        $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
-        $data = [
-          'success' => true
-        ];
-        try {
-          $persisted = FALSE;
-          if (isset($annotation['id'])) {
+      // We are getting which field originate the annotations from AJAX.
+      // Symfony6 deprecated getting arrays via get()... like c'mom
+      // we have to use all()[
+      $everything = $this->requestStack->getCurrentRequest()->request->all();
+      $annotation = $everything['data'] ?? NULL;
+      $target =  $everything['target_resource'] ?? NULL;
+      $keystoreid = $everything['keystoreid'] ?? NULL;
+      $data = [
+        'success' => true
+      ];
+      try {
+        $persisted = FALSE;
+        if (isset($annotation['id'])) {
           $existingannotations = $this->tempStore->get($keystoreid);
           $existingannotations = is_array($existingannotations) ? $existingannotations : [];
           if (isset($existingannotations[$target])) {
@@ -272,18 +288,18 @@ class WebAnnotationController extends ControllerBase {
 
           $existingannotations[$target][] = $annotation;
           $this->tempStore->set($keystoreid, $existingannotations);
-          }
-          else {
-            throw new BadRequestHttpException(
-              "The Annotation has no unique id!"
-            );
-          }
         }
-        catch (\Drupal\Core\TempStore\TempStoreException $exception) {
-          $data = [
-            'success' => false
-          ];
+        else {
+          throw new BadRequestHttpException(
+            "The Annotation has no unique id!"
+          );
         }
+      }
+      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+        $data = [
+          'success' => false
+        ];
+      }
     }
     else {
       throw new BadRequestHttpException(
@@ -375,8 +391,8 @@ class WebAnnotationController extends ControllerBase {
     $target = $this->requestStack->getCurrentRequest()->query->get('target_resource');
 
     if (($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
-      $node
-    )) && !empty(trim($target))) {
+        $node
+      )) && !empty(trim($target))) {
 
       // We are getting which field originate the annotations from AJAX.
       // This time Ajax
@@ -390,7 +406,6 @@ class WebAnnotationController extends ControllerBase {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
         // It would have set initial values so we do not need to read/iterate everytime
         $existingannotations = $this->tempStore->get($keystoreid);
-
         if ($existingannotations == null) {
           foreach ($sbf_fields as $field_name) {
             /* @var $field \Drupal\Core\Field\FieldItemInterface */
@@ -448,9 +463,10 @@ class WebAnnotationController extends ControllerBase {
     )) {
 
       // We are getting which field originate the annotations from AJAX.
-      $annotation = $this->requestStack->getCurrentRequest()->request->get('data');
-      $target = $this->requestStack->getCurrentRequest()->request->get('target_resource');
-      $keystoreid = $this->requestStack->getCurrentRequest()->request->get('keystoreid');
+      $everything = $this->requestStack->getCurrentRequest()->request->all();
+      $annotation = $everything['data'] ?? NULL;
+      $target =  $everything['target_resource'] ?? NULL;
+      $keystoreid = $everything['keystoreid'] ?? NULL;
 
       $data = [
         'success' => true
@@ -468,10 +484,10 @@ class WebAnnotationController extends ControllerBase {
             }
             // Make sure we reorder them so they stay as indexed arrays
             if (empty(!$existingannotations[$target])) {
-                $existingannotations[$target] = array_values($existingannotations[$target]);
+              $existingannotations[$target] = array_values($existingannotations[$target]);
             } else {
-                //If empty totally remove
-                unset($existingannotations[$target]);
+              //If empty totally remove
+              unset($existingannotations[$target]);
             }
           }
           $this->tempStore->set($keystoreid, $existingannotations);

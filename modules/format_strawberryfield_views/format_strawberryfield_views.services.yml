@@ -1,0 +1,9 @@
+services:
+  format_strawberryfield_views.route_subscriber:
+    class: Drupal\format_strawberryfield_views\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
+  format_strawberryfield_views.search_api_solr_subscriber:
+    class: Drupal\format_strawberryfield_views\EventSubscriber\SearchApiSolrEventSubscriber
+    tags:
+      - { name: event_subscriber }

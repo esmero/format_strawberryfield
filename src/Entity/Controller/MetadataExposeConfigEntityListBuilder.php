@@ -5,7 +5,6 @@ namespace Drupal\format_strawberryfield\Entity\Controller;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Config\Entity\ConfigEntityListBuilder;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
-use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
  * Provides a list controller for the MetadataDisplay entity.
@@ -116,17 +115,15 @@ class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
     $responsetype = !empty($responsetype['value']) ? $responsetype['value'] : 'text/html';
 
     // Guess extension based on mime,
-    // \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeExtensionGuesser
-    // has no application/ld+json even if recent
+    // Symfony has no application/ld+json even if recent
     // And Drupal provides no mime to extension.
-    // @TODO maybe we could have https://github.com/FileEye/MimeMap as
-    // a dependency in SBF. That way the next hack would not needed.
     if ($responsetype == 'application/ld+json') {
       $extension = 'jsonld';
     }
     else {
-      $guesser = ExtensionGuesser::getInstance();
-      $extension = $guesser->guess($responsetype);
+      $extension = \Drupal::service(
+        'strawberryfield.mime_type.guesser.mime'
+      )->inverseguess($responsetype);
     }
 
     $filename = !empty($extension) ? 'default.' . $extension : 'default.html';
@@ -168,7 +165,7 @@ class MetadataExposeConfigEntityListBuilder extends ConfigEntityListBuilder {
       $query->condition('status', 1);
       $query->condition('type', $bundle);
       $query->range(0, 1);
-      $node_ids = $query->execute();
+      $node_ids = $query->accessCheck()->execute();
     }
     foreach (\Drupal::entityTypeManager()->getStorage('node')->loadMultiple(
       $node_ids

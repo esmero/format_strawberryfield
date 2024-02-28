@@ -7,7 +7,6 @@ use Drupal\format_strawberryfield\MetadataConfigInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
-use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
 
 /**
  * Defines the MetadataExposeConfigEntity entity.*.
@@ -46,6 +45,7 @@ use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
  *     "metadatadisplayentity_uuid",
  *     "cache",
  *     "active",
+ *     "hide_on_embargo",
  *   },
  *   links = {
  *     "edit-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/edit",
@@ -123,6 +123,36 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    * @var bool
    */
   protected $active = TRUE;
+
+
+  /**
+   * If a 401 should be returned on a resolved embargo.
+   *
+   * @var bool
+   */
+  protected $hide_on_embargo = FALSE;
+
+
+  /**
+   * The $hide_on_embargo getter.
+   *
+   * @return bool
+   *   The label.
+   */
+  public function getHideOnEmbargo(): bool {
+    return $this->hide_on_embargo ?? FALSE;
+  }
+
+  /**
+   * $hide_on_embargo setter.
+   *
+   * @param bool $flag
+   *   If it should hide or not.
+   */
+  public function setHideOnEmbargo(bool $flag): void {
+    $this->hide_on_embargo = $flag;
+  }
+
 
   /**
    * The Label for this config entity.
@@ -380,8 +410,9 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
       $extension = 'jsonld';
     }
     else {
-      $guesser = ExtensionGuesser::getInstance();
-      $extension = $guesser->guess($responsetype);
+      $extension = \Drupal::service(
+        'strawberryfield.mime_type.guesser.mime'
+      )->inverseguess($responsetype);
     }
 
     $filename = !empty($extension) ? 'default.' . $extension : 'default.html';
@@ -400,7 +431,5 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
       );
     return $url;
   }
-
-
 
 }

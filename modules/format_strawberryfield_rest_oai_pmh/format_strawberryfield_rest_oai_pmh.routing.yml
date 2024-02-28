@@ -1,0 +1,9 @@
+format_strawberryfield_rest_oai_pmh.settings_form:
+  path: '/admin/config/services/rest/oai-pmh/fs'
+  defaults:
+    _form: '\Drupal\format_strawberryfield_rest_oai_pmh\Form\FormatStrawberryfieldRestOaiPmhSettingsForm'
+    _title: 'Format Strawberryfield OAI-PMH Settings'
+  requirements:
+    _permission: 'administer rest resources'
+  options:
+    _admin_route: TRUE

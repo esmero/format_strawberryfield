@@ -127,6 +127,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
       'manifesturl_source' => 'iiifmanifest',
       'max_width' => 720,
       'max_height' => 480,
+      'hide_on_embargo' => FALSE,
+      'textselection' => FALSE,
     ];
   }
 
@@ -206,6 +208,26 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           '#min' => 0,
           '#required' => TRUE
         ],
+        'hide_on_embargo' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
+          '#description' => $this->t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
+          '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'hide_on_embargo',
+          ],
+        ],
+        'textselection' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Enable the Textselection plugin via the internal DjvuXml Endpoint.'),
+          '#description' => $this->t('If enabled, direct selection on OCRed pages will be possible. Do not enable if the manifest combines more than a single OCRed resource (multiple PDFs etc)'),
+          '#default_value' => $this->getSetting('textselection') ?? FALSE,
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'textselection',
+          ],
+        ]
       ] + parent::settingsForm($form, $form_state);
   }
 
@@ -263,6 +285,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
+
+    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
+      [
+         '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
+      ]
+    );
+
 
     return $summary;
   }
@@ -374,11 +403,14 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $textselection = $this->getSetting('textselection') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
+    $embargoed = FALSE;
 
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       /* @var $metadatadisplayentity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity */
@@ -393,20 +425,29 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         // @TODO add a config option for this key too.
         $mainkey = 'as:image';
         $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $mainkey, $ordersubkey);
+        StrawberryfieldJsonHelper::orderSequence(
+          $jsondata, $mainkey, $ordersubkey
+        );
 
-        $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
+        $embargo_info = $this->embargoResolver->embargoInfo(
+          $item->getEntity()->uuid(), $jsondata
+        );
         // This one is for the Twig template
         // We do not need the IP here. No use of showing the IP at all?
-        $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+        $context_embargo = [
+          'data_embargo' => [
+            'embargoed' => FALSE,
+            'until'     => NULL
+          ]
+        ];
 
         if (is_array($embargo_info)) {
           $embargoed = $embargo_info[0];
           $context_embargo['data_embargo']['embargoed'] = $embargoed;
-
           $embargo_tags[] = 'format_strawberryfield:all_embargo';
           if ($embargo_info[1]) {
-            $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
+            $embargo_tags[] = 'format_strawberryfield:embargo:'
+              . $embargo_info[1];
             $context_embargo['data_embargo']['until'] = $embargo_info[1];
           }
           if ($embargo_info[2]) {
@@ -416,64 +457,94 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         else {
           $context_embargo['data_embargo']['embargoed'] = $embargo_info;
         }
-        $context = [
-          'data' => $jsondata,
-          'node' => $item->getEntity(),
-          'iiif_server' => $this->getIiifUrls()['public'],
-        ];
-        $original_context = $context;
-        // Allow other modules to provide extra Context!
-        // Call modules that implement the hook, and let them add items.
-        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
-        // In case someone decided to wipe the original context?
-        // We bring it back!
-        $context = $context + $original_context;
 
-        $manifestrenderelement = $metadatadisplayentity->renderNative($context);
+        // Only process render elements if hide on embargo is set
+        if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+          $context = [
+            'data'        => $jsondata,
+            'node'        => $item->getEntity(),
+            'iiif_server' => $this->getIiifUrls()['public'],
+          ] + $context_embargo;
+          $original_context = $context;
+          // Allow other modules to provide extra Context!
+          // Call modules that implement the hook, and let them add items.
+          \Drupal::moduleHandler()->alter(
+            'format_strawberryfield_twigcontext', $context
+          );
+          // In case someone decided to wipe the original context?
+          // We bring it back!
+          $context = $context + $original_context;
 
-        $manifest = $manifestrenderelement->jsonSerialize();
-        $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta . '-media';
-        $htmlid = $groupid;
+          $manifestrenderelement = $metadatadisplayentity->renderNative(
+            $context
+          );
 
-        $element['media'] = [
-          '#type' => 'container',
-          '#default_value' => $htmlid,
-          '#attributes' => [
-            'id' => $htmlid,
-            'class' => [
-              'strawberry-iabook-item',
-              'BookReader',
-              'field-iiif',
-              'container',
+          $manifest = $manifestrenderelement->jsonSerialize();
+          $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta
+            . '-media';
+          $htmlid = $groupid;
+
+          $element['media'] = [
+            '#type'          => 'container',
+            '#default_value' => $htmlid,
+            '#attributes'    => [
+              'id'                 => $htmlid,
+              'class'              => [
+                'strawberry-iabook-item',
+                'BookReader',
+                'field-iiif',
+                'container',
+              ],
+              'style'              => "width:{$max_width_css}; height:{$max_height}px",
+              'data-iiif-infojson' => '',
             ],
-            'style' => "width:{$max_width_css}; height:{$max_height}px",
-            'data-iiif-infojson' => '',
-          ],
-        ];
-        if (isset($item->_attributes)) {
-          $element += ['#attributes' => []];
-          $element['#attributes'] += $item->_attributes;
-          // Unset field item attributes since they have been included in the
-          // formatter output and should not be rendered in the field template.
-          unset($item->_attributes);
+          ];
+
+          $element['media']['#attributes']['data-iiif-infojson'] = '';
+          $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid]
+            = [
+            'nodeuuid' => $nodeuuid,
+            'manifest' => json_decode($manifest),
+            'width'    => $max_width_css,
+            'height'   => max($max_height, 520),
+            'textselection' => $textselection,
+            // While Bookreader has a way to enable/disable search via the "enableSearch"
+            // parameter, it doesn't work properly at the moment and we have opened an
+            // issue to fix it, meanwhile it's hidden via jQuery.
+            // @see https://github.com/internetarchive/bookreader/pull/613
+          ];
         }
-        $element['media']['#attributes']['data-iiif-infojson'] = '';
-        $element['media']['#attached']['drupalSettings']['format_strawberryfield']['iabookreader'][$htmlid] = [
-          'nodeuuid' => $nodeuuid,
-          'manifest' => json_decode($manifest),
-          'width' => $max_width_css,
-          'height' => max($max_height, 520),
-          // While Bookreader has a way to enable/disable search via the "enableSearch"
-          // parameter, it doesn't work properly at the moment and we have opened an
-          // issue to fix it, meanwhile it's hidden via jQuery.
-          // @see https://github.com/internetarchive/bookreader/pull/613
-        ];
       }
     }
-    $elements['#cache'] = [
+
+    if (empty($element)) {
+      $element = [
+        '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+        '#prefix' => '<span>',
+        '#suffix' => '</span>',
+      ];
+    }
+
+    if (isset($item->_attributes)) {
+      $element += ['#attributes' => []];
+      $element['#attributes'] += $item->_attributes;
+      // Unset field item attributes since they have been included in the
+      // formatter output and should not be rendered in the field template.
+      unset($item->_attributes);
+    }
+
+    // Get rid of empty #attributes key to avoid render error
+    if (isset($element["#attributes"]) && empty($elements["#attributes"])) {
+      unset($element["#attributes"]);
+    }
+
+    $element['#cache'] = [
       'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $element['#cache']['max-age'] = 0;
+    }
 
     return $element;
   }
@@ -495,8 +566,11 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $max_width = $this->getSetting('max_width');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $textselection = $this->getSetting('textselection') ?? FALSE;
+    $embargoed = FALSE;
 
     if ($this->getSetting('manifesturl_source')) {
       $manifest_url_key = $this->getSetting('manifesturl_source');
@@ -533,11 +607,13 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
             'manifesturl' => $manifest_url,
             'width' => $max_width_css,
             'height' => max($max_height, 520),
+            'textselection' => $textselection,
             // @see self::processElementforMetadatadisplays()
           ];
         }
       }
     }
+
     return $element;
   }
 

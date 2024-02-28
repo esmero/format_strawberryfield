@@ -268,7 +268,7 @@ function format_strawberryfield_contextual_links_alter(array &$links, $group, ar
  * Implements hook_ENTITY_TYPE_view_alter().
  */
 function format_strawberryfield_node_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
-  // Empty. Issue is if this hook does not exist, the broader one fail;
+  // Empty. Issue is if this hook does not exist, the broader one will fail.
 }
 
 /**
@@ -364,3 +364,40 @@ function format_strawberryfield_cron() {
 
 }
 
+/**
+ * Provides custom PHP error handling when processing ajax previews.
+ *
+ * Throws exceptions for E_USER_WARNING and E_USER_ERROR only
+ * to be caught by
+ * \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview().
+ * All other errors are passed back to Drupal's error handler.
+ *
+ * @param int $error_level
+ *   The level of the error raised.
+ * @param string $message
+ *   The error message.
+ * @param string $filename
+ *   (optional) The filename that the error was raised in.
+ * @param string $line
+ *   (optional) The line number the error was raised at.
+ * @param array $context
+ *   (optional) An array that points to the active symbol table at the point the
+ *   error occurred.
+ *
+ * @throws \ErrorException
+ *   Throw ErrorException for E_USER_WARNING and E_USER_ERROR only.
+ *
+ * @see \Drupal\format_strawberryfield\MetadataDisplayForm::ajaxPreview()
+ */
+function _format_strawberryfield_metadata_preview_error_handler($error_level, $message, $filename = NULL, $line = NULL, $context = NULL) {
+    switch($error_level)
+    {
+      case E_USER_WARNING:
+      case E_USER_ERROR:
+        _drupal_error_handler($error_level, $message, $filename, $line, $context);
+        throw new ErrorException($message, $error_level, 0, $filename, $line);
+      default:
+        _drupal_error_handler($error_level, $message, $filename, $line, $context);
+        break;
+    }
+}

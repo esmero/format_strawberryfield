@@ -45,4 +45,15 @@ interface MetadataDisplayInterface extends ContentEntityInterface, EntityOwnerIn
    */
   public function getTwigVariablesUsed();
 
+  /**
+   * Calculates or Returns cached related Cache tags.
+   *
+   * @param bool $force
+   *
+   * @return array
+   * @throws \Twig\Error\SyntaxError
+   */
+  public function getRelatedCacheTagsToInvalidate(bool $force);
+
 }
+

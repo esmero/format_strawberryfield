@@ -153,13 +153,13 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
 
     $elements = [];
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
 
@@ -167,7 +167,7 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
-    // Basically min 90px height if using VTT	  
+    // Basically min 90px height if using VTT
     $max_height_vtt_css = empty($max_height) || $max_height == 0 ? 'auto' : ($max_height <= 90 ? 90 : $max_height) .'px';
 
     $current_language = $items->getEntity()->get('langcode')->value;
@@ -248,7 +248,7 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
           $upload_keys, []);
         if (count($media)) {
           $conditions[] = [
-            'source' => ['dr:mimetype'],
+            'source'    => ['dr:mimetype'],
             'condition' => 'text/vtt',
           ];
           // WE call the parent here since we do not want/nor have a JMESPATH
@@ -257,43 +257,53 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
             $elements,
             FALSE, $jsondata, 'Text', 'as:text', $ordersubkey, $number_media,
             $upload_keys, $conditions);
-          /* This may be a bit more complex, possible situations
+          /* This may be a bit more complex, possible situations we cover
             1.- NO vtt, all good
             2.- One Media, multiple vtt, all good
-            3.- Multiple media, single vtt (all good?)
-            4.- Multiple media, multiple vtt. But there is a single media per upload_key and vtt share the upload key
-            5.- Multiple media, multiple vtt, all in different upload keys. We can match by filename prefix?
+            3.- Multiple media, multiple vtt. need to grouped by sourcekey
             */
           if (count($vtt)) {
-            // Yep, redundant but we have no longer these settings here
-
+            // If $media is a single one, we will assume all VTTS belong to it, bypassing the dr:for grouping
             foreach ($media as $drforkey => $media_item) {
-              if (isset($vtt[$drforkey])) {
+              if (isset($vtt[$drforkey]) || count($media) == 1) {
                 foreach ($media_item as $key => $media_entry) {
                   $elements[$delta]['video_hmtl5_' . $key]['video']['#attributes']['style'] = "width:{$max_width_css}; height:{$max_height_vtt_css}";
-                  foreach ($vtt[$drforkey] as $vtt_key => &$vtt_item) {
-                    $route_parameters = [
-                      'node' => $nodeid,
-                      'uuid' => $vtt_item['file']->uuid(),
-                      'format' => 'default.' . pathinfo($vtt_item['file']->getFilename(),
-                          PATHINFO_EXTENSION)
-                    ];
-                    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
-                      $route_parameters);
-                    //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
-                    // tracks need at least 30px more up. Wonder if we should add those here
-                    // Or document it as min: 90px height?
-                    $elements[$delta]['video_hmtl5_' . $key]['video']['track' . $vtt_key] = [
-                      '#type' => 'html_tag',
-                      '#tag' => 'track',
-                      '#attributes' => [
-                        'label' => $this->t('Transcript ' . $current_language),
-                        'kind' => 'subtitles',
-                        'srclang' => $current_language,
-                        'src' => $publicurl->toString(),
-                        'default' => TRUE
-                      ]
-                    ];
+                  foreach ($vtt as $vtt_drforkey => $vtt_entries) {
+                    if (count($media) == 1 || $drforkey == $vtt_drforkey) {
+                      foreach ($vtt_entries as $vtt_key => &$vtt_item) {
+                        $route_parameters = [
+                          'node'   => $nodeid,
+                          'uuid'   => $vtt_item['file']->uuid(),
+                          'format' => 'default.' . pathinfo(
+                              $vtt_item['file']->getFilename(),
+                              PATHINFO_EXTENSION
+                            )
+                        ];
+                        $publicurl = Url::fromRoute(
+                          'format_strawberryfield.iiifbinary',
+                          $route_parameters
+                        );
+                        //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
+                        // tracks need at least 30px more up. Wonder if we should add those here
+                        // Or document it as min: 90px height?
+                        $elements[$delta]['video_hmtl5_'
+                        . $key]['video']['track'
+                        . $vtt_key]
+                          = [
+                          '#type'       => 'html_tag',
+                          '#tag'        => 'track',
+                          '#attributes' => [
+                            'label'   => $this->t(
+                              'Transcript ' . $current_language ." ({$vtt_item['file_name']})"
+                            ),
+                            'kind'    => 'subtitles',
+                            'srclang' => $current_language,
+                            'src'     => $publicurl->toString(),
+                            'default' => TRUE
+                          ]
+                        ];
+                      }
+                    }
                   }
                 }
               }
@@ -322,6 +332,9 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
     return $elements;
   }
 
@@ -336,7 +349,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
 
     // We assume here file could not be accessible publicly
     $route_parameters = [

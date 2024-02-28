@@ -37,11 +37,12 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
    */
   public static function defaultSettings() {
     return parent::defaultSettings() + [
-      'json_key_source' => 'as:model',
-      'max_width' => 600,
-      'max_height' => 400,
-      'number_models' => 1,
-    ];
+        'json_key_source' => 'as:model',
+        'max_width' => 600,
+        'max_height' => 400,
+        'number_models' => 1,
+        'invert_up_axis' => FALSE,
+      ];
   }
 
   /**
@@ -86,6 +87,12 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
           '#min' => 0,
           '#required' => TRUE
         ],
+        'invert_up_axis' => [
+          '#type' => 'checkbox',
+          '#title' => t('Check this in case your Model was exported with inverted UP axis. e.g OBJ coming from Blender.'),
+          '#description' => t('You can always provide per ADO a json key under <code>"ap:viewerhints":{"strawberry_3d_formatter":{"cameraUpVector":[0,0,1]}}</code> with [x=0,y=0,z=1] being the default and [0,1,0] what this checkbox generates. It needs to be exactly a three entries array with 0 or 1 values. If present that will always override this setting.'),
+          '#default_value' => $this->getSetting('invert_up_axis') ?? FALSE,
+        ],
       ] + parent::settingsForm($form, $form_state);
   }
 
@@ -94,11 +101,16 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
    */
   public function settingsSummary() {
     $summary = parent::settingsSummary();
-    $summary[] = $this->t('Displays 3 Models from JSON using the JSM Modeller Library');
+    $summary[] = $this->t('Displays 3D Models from JSON using the JSM Modeller Library');
 
     if ($this->getSetting('json_key_source')) {
       $summary[] = $this->t('Media fetched from JSON "%json_key_source" key', [
         '%json_key_source' => $this->getSetting('json_key_source'),
+      ]);
+    }
+    if ($this->getSetting('invert_up_axis')) {
+      $summary[] = $this->t('Inverted Up Axis: "%inverted"', [
+        '%inverted' => $this->getSetting('invert_up_axis') ? 'YES' : 'NO',
       ]);
     }
     if ($this->getSetting('number_models')) {
@@ -107,12 +119,12 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       ]);
     }
     $summary[] = $this->t(
-        'Maximum size: %max_width x %max_height',
-        [
-          '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
-          '%max_height' => $this->getSetting('max_height') . ' pixels',
-        ]
-      );
+      'Maximum size: %max_width x %max_height',
+      [
+        '%max_width' => (int) $this->getSetting('max_width') == 0 ? '100%' : $this->getSetting('max_width') . ' pixels',
+        '%max_height' => $this->getSetting('max_height') . ' pixels',
+      ]
+    );
 
     return $summary;
   }
@@ -123,14 +135,14 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
 
     $elements = [];
-    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source'))) > 0 ? trim($this->getSetting('upload_json_key_source')) : NULL;
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
 
-    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source'))) > 0 ? trim($this->getSetting('embargo_json_key_source')) : NULL;
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
     $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
     $embargo_upload_keys_string = array_filter($embargo_upload_keys_string);
     $public_iiif_image_url = NULL;
@@ -143,6 +155,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
 
     $number_media = $this->getSetting('number_models') ?? 1;
     $key = $this->getSetting('json_key_source');
+    $inverted = $this->getSetting('invert_up_axis');
 
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()
@@ -200,7 +213,31 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
           TRUE, $jsondata, 'Model', $key, $ordersubkey, $number_media,
           $upload_keys, $conditions_model);
 
+        if ($inverted) {
+          $camera_up = [0.0, 1.0, 0.0];
+        }
+        else {
+          $camera_up = [0.0, 0.0, 1.0];
+        }
+
         if (count($media)) {
+          // check if we have a metadata level override for the camera
+          if (isset($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"]) &&
+            is_array($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"]) &&
+            count($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"]) == 3) {
+            $vector = array_filter($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"],
+              function($item) {
+                return ($item == 1 ||  $item == 0);
+              }
+            );
+            if (count($vector) == 3) {
+              $camera_up = $vector;
+            }
+          }
+
+
+
+
           // Now get me materials
           $conditions_mtl[] = [
             'source' => ['dr:mimetype'],
@@ -266,16 +303,21 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
         }
         // Attach the Library
         $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_modeler';
-          // Add the texture
-          // Its always the same.
+        // Add the texture
+        // It is always the same.
 
         foreach ($elements[$delta] as &$element) {
-            if (isset($element['#attributes'])) {
-              $element['#attributes']['data-iiif-texture'] = $publicimageurl ?? 'null';
-              $element['#attributes']['data-iiif-filename2texture'] = implode('|', $publicimageurls);
+          if (isset($element['#attributes'])) {
+            $uniqueid = $element['#attributes']['id'] ?? NULL;
+            $element['#attributes']['data-iiif-texture'] = $publicimageurl ?? 'null';
+            $element['#attributes']['data-iiif-filename2texture'] = implode('|', $publicimageurls);
+            $element['#attributes']['data-iiif-camera-up-vector'] = $camera_up ?? 'null';
+            if ($uniqueid) {
+              $element['#attached']['drupalSettings']['format_strawberryfield']['strawberry_3d_formatter'][$uniqueid]['camera-up-vector'] = $camera_up ?? 'null';
+              }
             }
-          }
         }
+      }
 
       if (empty($elements[$delta])) {
         $elements[$delta] = [
@@ -299,6 +341,10 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
+
     return $elements;
   }
 
@@ -307,68 +353,68 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
    */
   protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
 
-      $max_width = $this->getSetting('max_width');
-      $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-      // Because canvases can not be dynamic. But we can make them scale with JS?
-      $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
-      $max_height = $this->getSetting('max_height');
-      $nodeuuid = $items->getEntity()->uuid();
-      $nodeid = $items->getEntity()->id();
-      $imagefile = NULL;
-      $publicimageurl = NULL;
+    $max_width = $this->getSetting('max_width');
+    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
+    // Because canvases can not be dynamic. But we can make them scale with JS?
+    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
+    $max_height = $this->getSetting('max_height');
+    $nodeuuid = $items->getEntity()->uuid();
+    $nodeid = $items->getEntity()->id();
+    $imagefile = NULL;
+    $publicimageurl = NULL;
 
-      // We assume here file could not be accessible publicly
-      $route_parameters = [
-        'node' => $nodeid,
-        'uuid' => $file->uuid(),
-        'format' => 'default.' . pathinfo($file->getFilename(),
-            PATHINFO_EXTENSION)
-      ];
-      $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
-        $route_parameters);
+    // We assume here file could not be accessible publicly
+    $route_parameters = [
+      'node' => $nodeid,
+      'uuid' => $file->uuid(),
+      'format' => 'default.' . pathinfo($file->getFilename(),
+          PATHINFO_EXTENSION)
+    ];
+    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+      $route_parameters);
 
-      $filecachetags = $file->getCacheTags();
-      //@TODO check this filecachetags and see if they make sense
+    $filecachetags = $file->getCacheTags();
+    //@TODO check this filecachetags and see if they make sense
 
-      $uniqueid =
-        'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-model' . $i;
-      $htmlid = $uniqueid;
+    $uniqueid =
+      'iiif-' . $items->getName() . '-' . $nodeuuid . '-' . $delta . '-model' . $i;
+    $htmlid = $uniqueid;
 
-      $cache_contexts = [
-        'url.site',
-        'url.path',
-        'url.query_args',
-        'user.permissions'
-      ];
+    $cache_contexts = [
+      'url.site',
+      'url.path',
+      'url.query_args',
+      'user.permissions'
+    ];
 
-      // For Textures and materials see
-      // https://github.com/kovacsv/Online3DViewer/blob/master/embeddable/multiple.html
-      $elements[$delta]['model' . $i] = [
-        '#type' => 'html_tag',
-        '#tag' => 'canvas',
-        '#attributes' => [
-          'class' => ['field-iiif', 'strawberry-3d-item'],
-          'id' => $htmlid,
-          'data-iiif-model' => $publicurl->toString(),
-          'data-iiif-texture' => $publicimageurl,
-          'data-iiif-image-width' => $max_width,
-          'data-iiif-image-height' => $max_height,
-          'data-ado-title' => substr($items->getEntity()->label(),0,16) . '...',
-          'height' => $max_height,
-          'style' => "width:{$max_width_css}; height:{$max_height}px"
-        ],
-        '#title' => $this->t(
-          '3D Model for @label',
-          ['@label' => $items->getEntity()->label()]
-        ),
-        '#cache' => [
-          'context' => $file->getCacheContexts(),
-          'tags' => $file->getCacheTags(),
-        ],
-      ];
-      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_model_strawberry';
-      if ($max_width) {
-        $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
-      }
+    // For Textures and materials see
+    // https://github.com/kovacsv/Online3DViewer/blob/master/embeddable/multiple.html
+    $elements[$delta]['model' . $i] = [
+      '#type' => 'html_tag',
+      '#tag' => 'canvas',
+      '#attributes' => [
+        'class' => ['field-iiif', 'strawberry-3d-item'],
+        'id' => $htmlid,
+        'data-iiif-model' => $publicurl->toString(),
+        'data-iiif-texture' => $publicimageurl,
+        'data-iiif-image-width' => $max_width,
+        'data-iiif-image-height' => $max_height,
+        'data-ado-title' => substr($items->getEntity()->label(),0,16) . '...',
+        'height' => $max_height,
+        'style' => "width:{$max_width_css}; height:{$max_height}px"
+      ],
+      '#title' => $this->t(
+        '3D Model for @label',
+        ['@label' => $items->getEntity()->label()]
+      ),
+      '#cache' => [
+        'context' => $file->getCacheContexts(),
+        'tags' => $file->getCacheTags(),
+      ],
+    ];
+    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/jsm_model_strawberry';
+    if ($max_width) {
+      $elements[$delta]['model' . $i]['#attributes']['width'] = $max_width;
     }
+  }
 }

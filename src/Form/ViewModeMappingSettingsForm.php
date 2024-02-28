@@ -165,7 +165,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         ];
       }
       else {
-        // The View Mode saved in our settings is not longer available, show a select box
+        // The View Mode saved in our settings is no longer available, show a select box
         $form['table-row'][$key]['vm'] = [
           '#prefix' => '<div>' . $view_mode_mapping_for_this_row . '</div>',
           '#type' => 'select',

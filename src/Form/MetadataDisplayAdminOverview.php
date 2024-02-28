@@ -143,6 +143,7 @@ class MetadataDisplayAdminOverview extends FormBase {
     $cids = $this->entityTypeManager->getStorage('metadatadisplay_entity')->getQuery()
       ->tableSort($header)
       ->pager(50)
+      ->accessCheck(TRUE)
       ->execute();
 
     /** @var $metadatadisplays \Drupal\comment\CommentInterface[] */

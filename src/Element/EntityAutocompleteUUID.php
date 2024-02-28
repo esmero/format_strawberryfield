@@ -47,13 +47,13 @@ use Ramsey\Uuid\Uuid;
  * Usage example:
  * @code
  * $form['my_element'] = [
- *  '#type' => 'entity_autocomplete',
+ *  '#type' => 'sbf_entity_autocomplete_uuid',
  *  '#target_type' => 'node',
  *  '#tags' => TRUE,
  *  '#default_value' => $node,
- *  '#selection_handler' => 'default',
+ *  '#selection_handler' => 'default:nodewithstrawberry',
  *  '#selection_settings' => [
- *    'target_bundles' => ['article', 'page'],
+ *    'target_bundles' => ['digital_object', 'digital_object_collection'],
  *   ],
  *  '#autocreate' => [
  *    'bundle' => 'article',
@@ -109,10 +109,30 @@ class EntityAutocompleteUUID extends Textfield {
         // static::getEntityLabels().
         $element['#default_value'] = [$element['#default_value']];
       }
-
+      // Allow an empty array in case of multiple as default value.
       if ($element['#default_value']) {
         if (!(reset($element['#default_value']) instanceof EntityInterface)) {
-          throw new \InvalidArgumentException('The #default_value property has to be an entity object or an array of entity objects.');
+          // try loading a UUID or an ID if not an entity already
+          $entity_uuids = [];
+          $entity_uuids = array_filter($element['#default_value'], function ($item) {
+            if (!is_array($item)) {
+              return Uuid::isValid($item);
+            }
+            else {
+              return FALSE;
+            }
+          });
+          if (count($entity_uuids)) {
+            $entities = \Drupal::entityTypeManager()->getStorage(
+              $element['#target_type']
+            )->loadByProperties(['uuid' => $entity_uuids]);
+            return static::getEntityLabels($entities);
+          }
+          else {
+            throw new \InvalidArgumentException(
+              'The #default_value property has to be either an entity object, an UUID string, an array of entity objects or an array of UUIDs.'
+            );
+          }
         }
 
         // Extract the labels from the passed-in entity objects, taking access
@@ -128,17 +148,14 @@ class EntityAutocompleteUUID extends Textfield {
         return $item['target_id'];
       }, $input);
 
-      $entity_uuids = array_map(function (array $item) {
-        return Uuid::isValid($item['target_id']);
-      }, $input);
+      $entity_uuids = array_filter($input, function (array $item) {
+        return Uuid::isValid($item['target_id'] ?? '');
+      });
       if (count($entity_uuids)) {
         $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadByProperties(['uuid' => $entity_uuids]);
       } else {
         $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($entity_ids);
       }
-
-
-
       return static::getEntityLabels($entities);
     }
   }
@@ -222,7 +239,7 @@ class EntityAutocompleteUUID extends Textfield {
         $value = $element['#value'];
       }
       else {
-        $input_values = $element['#tags'] ? Tags::explode($element['#value']) : [$element['#value']];
+        $input_values = $element['#tags'] ? Tags::explode($element['#value'] ?? '') : [$element['#value']];
 
         foreach ($input_values as $input) {
           $match = static::extractEntityIdFromAutocompleteInput($input);
@@ -300,18 +317,34 @@ class EntityAutocompleteUUID extends Textfield {
         $value = isset($last_value['target_id']) ? $last_value['target_id'] : $last_value;
       }
     }
+    if (empty($value)) {
+      return;
+    }
     // Now we need to turn the IDs into UUIDs.
     if (is_array($value)) {
-      //$entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($entity_ids);
+      // Check if target ID is being passed
+      $values = $value;
+      $value = [];
+      foreach ($values as $value_entry ) {
+        if (isset($value_entry['target_id'])) {
+          $value[] = $value_entry['target_id'];
+        }
+      }
+      $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadMultiple($value);
+      // We have to reset again or we will end with both the UUID and the ID stored at the same time.
+      $value = [];
+      if ($entities) {
+        foreach($entities as $entity) {
+          $value[] = $entity->uuid();
+        }
+      }
     }
-    else {
+    elseif ($value) {
       $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->load($value);
       if ($entities) {
         $value = $entities->uuid();
       }
     }
-
-
 
     $form_state->setValueForElement($element, $value);
   }
