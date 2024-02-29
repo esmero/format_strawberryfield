@@ -122,7 +122,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
     }
     else {
       // Check the actual embargo options
-      $date_embargo_key = $this->embargoConfig->get('date_until_json_key');
+      $date_embargo_key = $this->embargoConfig->get('date_until_json_key') ?? '';
       if (strlen($date_embargo_key) > 0 && !empty($jsondata[$date_embargo_key]) && is_string($jsondata[$date_embargo_key])) {
         $date = $this->parseStringToDate(trim($jsondata[$date_embargo_key]));
         if ($date) {
@@ -135,7 +135,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
           }
         }
       }
-      $ip_embargo_key = $this->embargoConfig->get('ip_json_key');
+      $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
       if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
         $current_ip =  $this->requestStack->getCurrentRequest()->getClientIp();
         if ($this->currentUser->isAnonymous()) {
