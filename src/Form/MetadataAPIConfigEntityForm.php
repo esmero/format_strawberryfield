@@ -496,13 +496,13 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         // @TODO: We could also read the "default" display handler which is the not overriden one ... might not even be visible
         // but should we?
         if ($executable->pager && $executable->display_handler->getType() !== "entity_reference") {
-          $views_argument_options[$selected_view.':pager:page'] = $selected_view.':pager:page';
+          $views_argument_options[$selected_view.':pager:page'] = "Views Pager";
         }
         elseif ($executable->display_handler->getType() == "entity_reference") {
           $pager = $executable->display_handler->getOption('pager');
           if (!in_array(($pager['type'] ?? null), ['some', 'none'])) {
             // means mini, full or any other contributed module that decides to page.
-            $views_argument_options[$selected_view.':pager:page'] = $selected_view.':pager:page';
+            $views_argument_options[$selected_view.':pager:page'] = "Views Pager";
           }
         }
       }
