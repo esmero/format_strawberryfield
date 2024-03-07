@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield\Controller;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Utility\Crypt;
+use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheBackendInterface;
@@ -260,16 +261,20 @@ class MetadataAPIController extends ControllerBase
         $responsetype = $responsetypefield->first()->getValue();
         $responsetype_item = $responsetypefield_item->first()->getValue();
         if ($responsetype_item !== $responsetype) {
-          error_log('Output Format differs');
+          $this->loggerFactory->get('format_strawberryfield')
+            ->error('Exposed Metadata API: Output Format differs, item response type is @item and the API wrapper one is @wrapper ', [
+              '@item' => $responsetype_item,
+              '@wrapper' => $responsetype
+            ]);
           throw new \Exception(
-            'Output Format differs between Wrapper and Item level templates. They need to match.'
+            "Sorry, this Metadata API has configuration issues."
           );
         }
         $responsetype = reset($responsetype);
         // We can have a LogicException or a Data One, both extend different
         // classes, so better catch any.
-      } catch (\Exception $exception) {
-        error_log('metadatadisplay errors');
+      }
+      catch (\Exception $exception) {
         $this->loggerFactory->get('format_strawberryfield')->error(
           'Metadata API using @metadatadisplay and/or @metadatadisplay_item have issues. Error message is @e',
           [
@@ -340,7 +345,7 @@ A resumptionToken may be similar to (wrapped for clarity):
           $views_with_values[$view_id][$display_id][$argument] = $value;
         }
       }
-      // Dec. 2023. We need to make this really different.
+      // Dec. 2023. We should to make this really different.
       // We only need to load the VIEW(s) that are present in the called/matched arguments
       // No others. Why call others? Maybe there is a need WHEN USING A PLUGIN
       // OR we need to have a SINGLE VIEW? But not load all of them. when using the direct call.
@@ -366,6 +371,7 @@ A resumptionToken may be similar to (wrapped for clarity):
             // @TODO make this an entity method
             foreach ($executable->display_handler->getOption('filters') ?? [] as $filter) {
               if ($filter['exposed'] == TRUE) {
+                // TODO. What are we doing with exposed ones??
               }
             }
             $arguments = [];
@@ -387,9 +393,8 @@ A resumptionToken may be similar to (wrapped for clarity):
                   // check how many % we find. If for each one we find we will have to give
                   // THIS stuff a 0 (YES a cero)
                   // @TODO 2: Another option would be to enforce any argument that is mapped as required.
-
                   // means it is time to transform our mapped argument to a NODE.
-                  // If not sure, we will let this pass let the View deal with the exception.
+                  // If not sure, we will let this pass, let the View deal with the exception.
                   if ($filter['default_argument_type'] == 'node'
                     || (isset($filter['validate']['type'])
                       && $filter['validate']['type'] == "entity:node")
@@ -401,7 +406,7 @@ A resumptionToken may be similar to (wrapped for clarity):
                     // This is validated yet, but validation depends on the user's definition
                     // Users might go rogue.
                     // We can not load an empty
-                    if (\Drupal\Component\Uuid\Uuid::isValid($arguments[$argument_key])) {
+                    if (Uuid::isValid($arguments[$argument_key])) {
                       $nodes = $this->entityTypeManager->getStorage('node')
                         ->loadByProperties(
                           ['uuid' => $arguments[$argument_key]]
@@ -412,9 +417,12 @@ A resumptionToken may be similar to (wrapped for clarity):
                       }
                     }
                     elseif (is_scalar($arguments[$argument_key])) {
+                      // Deals with NODE ids instead.
                       $node = $this->entityTypeManager->getStorage('node')
                         ->load($arguments[$argument_key]);
-                      $arguments[$argument_key] = $node->id();
+                      if ($node) {
+                        $arguments[$argument_key] = $node->id();
+                      }
                     }
                   }
                 }
@@ -440,8 +448,11 @@ A resumptionToken may be similar to (wrapped for clarity):
                 );
               }
               catch (\InvalidArgumentException $exception) {
-                error_log('Views failed to render' . $exception->getMessage());
-                $exception->getMessage();
+                $this->loggerFactory->get('format_strawberryfield')
+                  ->error('Exposed Metadata API: Views with id @id failed to render with error @error', [
+                    '@id' => $view_id,
+                    '@error' => $exception->getMessage()
+                    ]);
                 throw new BadRequestHttpException(
                   "Sorry, this Metadata API has configuration issues."
                 );
@@ -464,6 +475,7 @@ A resumptionToken may be similar to (wrapped for clarity):
               );
               $cache_id = $cache_id . $cache_id_suffix;
               $cached = $this->cacheGet($cache_id);
+              // Here we go .. cache or not cache?
               $cached = FALSE;
               if ($cached) {
                 $processed_nodes_via_templates = $cached->data ?? [];
@@ -664,8 +676,6 @@ A resumptionToken may be similar to (wrapped for clarity):
                 if ($response) {
                   // Set CORS. IIIF and others will assume this is true.
                   $response->headers->set('access-control-allow-origin', '*');
-                  //$response->addCacheableDependency($node);
-                  //$response->addCacheableDependency($metadatadisplay_entity);
                   $response->addCacheableDependency($metadataapiconfig_entity);
                   $response->addCacheableDependency($metadatadisplay_item_entity);
                   $response->addCacheableDependency(
@@ -725,7 +735,8 @@ A resumptionToken may be similar to (wrapped for clarity):
                 }
               }
               return $response;
-            } else {
+            }
+            else {
               $this->loggerFactory->get('format_strawberryfield')->error(
                 'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
                 [
@@ -737,7 +748,8 @@ A resumptionToken may be similar to (wrapped for clarity):
                 "Sorry, this Metadata API has configuration issues."
               );
             }
-          } else {
+          }
+          else {
             $this->loggerFactory->get('format_strawberryfield')->error(
               'Metadata API with View Source ID $source_id could not load the configured View/Display. Check your configuration',
               [
@@ -753,29 +765,6 @@ A resumptionToken may be similar to (wrapped for clarity):
     }
   }
 
-  /*
-
-       if ($response) {
-         // Set CORS. IIIF and others will assume this is true.
-         $response->headers->set('access-control-allow-origin','*');
-         $response->addCacheableDependency($node);
-         $response->addCacheableDependency($metadatadisplay_entity);
-         $response->addCacheableDependency($metadataapiconfig_entity);
-         $metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
-         $response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
-         $response->getCacheableMetadata()->addCacheTags($embargo_tags);
-         $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
-         $response->getCacheableMetadata()->addCacheContexts($embargo_context);
-       }
-       return $response;
-
-     }
-   else {
-     throw new UnprocessableEntityHttpException(
-       "Sorry, this Content has no Metadata."
-     );
-   }
-  }*/
 
   /**
    * @param \Drupal\views\ViewExecutable $view_executable
@@ -785,9 +774,7 @@ A resumptionToken may be similar to (wrapped for clarity):
    *
    * @return mixed
    */
-  public function generateCacheKey(ViewExecutable $view_executable,
-                                   array          $api_arguments
-  )
+  public function generateCacheKey(ViewExecutable $view_executable, array $api_arguments)
   {
 
     $build_info = $view_executable->build_info;
