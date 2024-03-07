@@ -461,11 +461,13 @@ A resumptionToken may be similar to (wrapped for clarity):
               $processed_nodes_via_templates = [];
 
               // ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
+              // @TODO these need to be passed to the wrapper.
               $total = $executable->pager->getTotalItems() != 0
                 ? $executable->pager->getTotalItems() : count($executable->result);
               $current_page = $executable->pager->getCurrentPage();
               $num_per_page = $executable->pager->getItemsPerPage();
               $offset = $executable->pager->getOffset();
+
               /** @var \Drupal\views\Plugin\views\cache\CachePluginBase $cache_plugin */
               $cache_plugin = $executable->display_handler->getPlugin('cache');
               $cache_id = 'format_strawberry:api:' . $metadataapiconfig_entity->id();

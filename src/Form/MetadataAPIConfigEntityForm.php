@@ -491,6 +491,20 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           );
           $views_argument_options[$selected_view.':'.$filter['id']] = $selected_view.':'.$filter['id'];
         }
+        // If paging is enabled we need to allow the API to re-map the argument too.
+        // But entity reference will not show/expose a pager. Still will have the option so we read from there
+        // @TODO: We could also read the "default" display handler which is the not overriden one ... might not even be visible
+        // but should we?
+        if ($executable->pager && $executable->display_handler->getType() !== "entity_reference") {
+          $views_argument_options[$selected_view.':pager:page'] = $selected_view.':pager:page';
+        }
+        elseif ($executable->display_handler->getType() == "entity_reference") {
+          $pager = $executable->display_handler->getOption('pager');
+          if (!in_array(($pager['type'] ?? null), ['some', 'none'])) {
+            // means mini, full or any other contributed module that decides to page.
+            $views_argument_options[$selected_view.':pager:page'] = $selected_view.':pager:page';
+          }
+        }
       }
       $form_state->set('views_argument_options', $views_argument_options);
     }
