@@ -22,7 +22,7 @@
         "cebe/php-openapi":"^1",
         "league/openapi-psr7-validator": "^0.2",
         "ext-json": "*",
-	      "seboettg/citeproc-php": "dev-master"
+	"seboettg/citeproc-php": "dev-master"
     },
     "conflict": {
         "drupal/core":"<10.1"
