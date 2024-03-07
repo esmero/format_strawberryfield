@@ -355,11 +355,33 @@ A resumptionToken may be similar to (wrapped for clarity):
         $view = $this->entityTypeManager->getStorage('view')->load($view_id);
         foreach ($display as $display_id => $arguments_with_values) {
           $display = $view->getDisplay($display_id);
+
+          /*  // Pass options to the display handler to make them available later.
+    $entity_reference_options = [
+      'match' => $match,
+      'match_operator' => $match_operator,
+      'limit' => $limit,
+      'ids' => $ids,
+    ];
+    $this->view->displayHandlers->get($display_name)->setOption('entity_reference_options', $entity_reference_options);
+          */
+
+
           $executable = $view->getExecutable();
           if ($view && $display) {
             /** @var \Drupal\views\ViewExecutable $executable */
 
             $executable->setDisplay($display_id);
+            $executable->initPager();
+            $items_per_page = $executable->getItemsPerPage();
+            // None of this will have any effect at all bc the handler (entity_reference overrides limit and has 0 offset)
+            // BUT we are smart. Before executing it, we will build and set it at the query level!.
+            $limit = 100; // Just to avoid someone letting fetch like 10K records.
+            $offset = 0; // We will parse/process offset based on the actual pager. Pager can do that for us?.
+            if ($items_per_page > 0) {
+              $limit = $items_per_page;
+            }
+
             // \Drupal\views\ViewExecutable::addCacheContext
             // \Drupal\views\ViewExecutable::setCurrentPage
             //
@@ -441,8 +463,12 @@ A resumptionToken may be similar to (wrapped for clarity):
               try {
                 $this->renderer->executeInRenderContext(
                   new RenderContext(),
-                  function () use ($executable) {
+                  function () use ($executable, $limit, $offset) {
                     // Damn view renders forms and stuff. GOSH!
+                    // WE will build the view first so we can alter the query!
+                    $executable->build();
+                    $executable->getQuery()->setLimit($limit);
+                    $executable->getQuery()->setLimit($offset);
                     $executable->execute();
                   }
                 );
