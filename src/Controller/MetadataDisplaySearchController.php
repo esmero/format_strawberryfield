@@ -141,6 +141,7 @@ class MetadataDisplaySearchController extends
                 foreach ($searchresult as $canvas_order => $canvas) {
                   foreach ($canvas['items'] as $item) {
                     $images = $item['service_ids'] ?? ($item['image_ids'] ?? []);
+
                     foreach ($images as $image_url) {
                       $image_id = IiifHelper::extract_iiif_id($image_url);
                       $hash_images[$image_id] = array_merge($hash_images[$image_id] ?? [], [$canvas['canvas_id']]);
@@ -148,7 +149,7 @@ class MetadataDisplaySearchController extends
                     if (count($images)) {
                       $hash[$canvas['canvas_id']] = array_merge($hash[$canvas['canvas_id']] ?? [], $images);
                     }
-                    // We copunt even if there are no images because the order is what we want here
+                    // We count even if there are no images because the order is what we want here
                     $canvas_natural_order[$canvas['canvas_id']] = $canvas_order;
                   }
                 }

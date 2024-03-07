@@ -70,9 +70,11 @@
     // Refresh view.
     if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
       var views_parameters = Drupal.Views.parseQueryString(href);
-      // Note this is wrong. Assumes the Views Path is 'search'
-      // We should use view_path!
-      var views_arguments = Drupal.Views.parseViewArgs(href, 'search');
+      let views_path = 'search';
+      if (Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path !== 'undefined') {
+        views_path = Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path;
+      }
+      var views_arguments = Drupal.Views.parseViewArgs(href, views_path);
       var views_settings = $.extend(
         {},
         Drupal.views.instances['views_dom_id:' + current_dom_id].settings,
@@ -83,7 +85,8 @@
       // Update View.
       var views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
       views_ajax_settings.submit = views_settings;
-      views_ajax_settings.url = view_path + '?q=' + href;
+      // Used to be the way in Drupal 9.x to 10.0 ... views_ajax_settings.url = view_path + '?q=' + href;
+      views_ajax_settings.url = view_path;
 
       var viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
       viewRefreshAjaxObject.execute();

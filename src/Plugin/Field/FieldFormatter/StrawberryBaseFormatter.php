@@ -17,7 +17,6 @@ use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
-use mysql_xdevapi\Exception;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
@@ -296,7 +295,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
           $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
         }
       }
-      catch (Exception $e) {
+      catch (\Exception $e) {
         $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
       }
     }

@@ -9,9 +9,9 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
@@ -32,23 +32,23 @@ use Drupal\Core\StreamWrapper\StreamWrapperManager;
  * )
  */
 class StrawberryImageFormatter extends StrawberryBaseFormatter {
-  
+
   /**
    * {@inheritdoc}
    */
   public static function defaultSettings() {
     return
       parent::defaultSettings() + [
-      'json_key_source' => 'as:image',
-      'max_width' => 180,
-      'max_height' => 0,
-      'image_type' => 'jpg',
-      'number_images' => 1,
-      'quality' => 'default',
-      'rotation' => '0',
-      'image_link' =>  TRUE,
-      'webannotations' => FALSE,
-    ];
+        'json_key_source' => 'as:image',
+        'max_width' => 180,
+        'max_height' => 0,
+        'image_type' => 'jpg',
+        'number_images' => 1,
+        'quality' => 'default',
+        'rotation' => '0',
+        'image_link' =>  TRUE,
+        'webannotations' => FALSE,
+      ];
   }
 
   /**
@@ -134,17 +134,21 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
-    $max_width = $this->getSetting('max_width');
-    $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
-    $max_height = $this->getSetting('max_height');
+    $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
+    $upload_keys = explode(',', $upload_keys_string);
+    $upload_keys = array_filter($upload_keys);
+    $embargo_upload_keys_string = strlen(trim($this->getSetting('embargo_json_key_source') ?? '')) > 0 ? trim($this->getSetting('embargo_json_key_source')) : '';
+    $embargo_upload_keys_string = explode(',', $embargo_upload_keys_string);
+    $embargo_upload_keys = array_filter($embargo_upload_keys_string);
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $number_images =  $this->getSetting('number_images');
     /* @var \Drupal\file\FileInterface[] $files */
     // Fixing the key to extract while coding to 'Media'
     $key = $this->getSetting('json_key_source');
+    $embargo_context = [];
+    $embargo_tags = [];
+    $embargoed = FALSE;
 
-    $nodeuuid = $items->getEntity()->uuid();
-    $nodeid = $items->getEntity()->id();
-    $fieldname = $items->getName();
     foreach ($items as $delta => $item) {
       $main_property = $item->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
       $value = $item->{$main_property};
@@ -157,14 +161,30 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        $message= $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
-          [
-            '@id' => $nodeid,
-            '@field' => $items->getName(),
-          ]);
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
-      /* Expected structure of an Media item inside JSON
+
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      // This one is for the Twig template
+      // We do not need the IP here. No use of showing the IP at all?
+      $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
+
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $context_embargo['data_embargo']['embargoed'] = $embargoed;
+
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
+          $context_embargo['data_embargo']['until'] = $embargo_info[1];
+        }
+        if ($embargo_info[2]) {
+          $embargo_context[] = 'ip';
+        }
+      } else {
+        $context_embargo['data_embargo']['embargoed'] = $embargo_info;
+      }
+      /* Expected structure of a Media item inside JSON
       "as:image": {
          "s3:\/\/f23\/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.jpg": {
          "dr:fid": 32, // Drupal's FID
@@ -175,146 +195,108 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      $i = 0;
-      if (isset($jsondata[$key])) {
-        // Order Images based on a given 'sequence' key
+      if ($embargoed) {
+        $upload_keys = $embargo_upload_keys;
+      }
+
+      if (!$embargoed || (!empty($embargo_upload_keys_string))) {
         $ordersubkey = 'sequence';
-        StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
-        foreach ($jsondata[$key] as $mediaitem) {
-          $i++;
-          if ($i > $number_images) {
-            break;
-          }
-          if (isset($mediaitem['type']) && $mediaitem['type'] == 'Image') {
-            if (isset($mediaitem['dr:fid'])) {
-              // @TODO check if loading the entity is really needed to check access.
-              // @TODO we can refactor a lot here and move it to base methods
-              $file = OcflHelper::resolvetoFIDtoURI(
-                $mediaitem['dr:fid']
-              );
-              if (!$file) {
-                continue;
-              }
-              //@TODO if no media key to file loading was possible
-              // means we have a broken/missing media reference
-              // we should inform to logs and continue
-              if ($this->checkAccess($file)) {
-                $iiifidentifier = urlencode(
-                  StreamWrapperManager::getTarget($file->getFileUri())
-                );
-
-                if ($iiifidentifier == NULL || empty($iiifidentifier)) {
-                  continue;
-                  // @TODO add a default Thumbnail here.
-                }
-                $filecachetags = $file->getCacheTags();
-                //@TODO check this filecachetags and see if they make sense
-
-
-                $uniqueid =
-                  'iiif-'.$items->getName(
-                  ).'-'.$nodeuuid.'-'.$delta.'-image'.$i;
-
-                $cache_contexts = ['url.site', 'url.path', 'url.query_args','user.permissions'];
-                // @ see https://www.drupal.org/files/issues/2517030-125.patch
-                $cache_tags = Cache::mergeTags($filecachetags, $items->getEntity()->getCacheTags());
-                // http://localhost:8183/iiif/2/e8c%2Fa-new-label-en-image-05066d9ae32580cffb38342323f145f74faf99a1.jpg/full/220,/0/default.jpg
-
-                $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
-                $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
-
-                if (!$iiifsizes) {
-                  $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
-                    [
-                      '@url' => $iiifpublicinfojson,
-                      '@id' => $nodeid,
-                    ]);
-                  \Drupal::logger('format_strawberryfield')->warning($message);
-                  //continue; // Nothing can be done here?
-                }
-                else {
-                  //@see \template_preprocess_image for further theme_image() attributes.
-                  // Look. This one uses the public accesible base URL. That is how world works.
-                  if (($max_width == 0) && ($max_height == 0)) {
-                    $max_width = $iiifsizes[0]['width'];
-                    $max_height = $iiifsizes[0]['height'];
-                  }
-                  if (($max_width == 0) &&  ($max_height > 0)){
-                    $max_width = round($iiifsizes[0]['width']/$iiifsizes[0]['height'] * $max_height,0);
-
-                  }
-                  elseif (($max_width > 0) &&  ($max_height == 0)){
-                    $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
-                  }
-
-                  $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
-                  $image_render_array = [
-                    '#theme' => 'image',
-                    '#attributes' => [
-                      'class' => ['field-iiif', 'image-iiif'],
-                      'id' => 'thumb_' . $uniqueid,
-                      'src' => $iiifserverthumb,
-
-                    ],
-                    '#alt' => $this->t(
-                      'Thumbnail for @label',
-                      ['@label' => $items->getEntity()->label()]
-                    ),
-                    '#width' => $max_width,
-                    '#height' => $max_height,
-                  ];
-
-                  // With Link
-                  if (boolval($this->getSetting('image_link')) === TRUE && !$items->getEntity()->isNew()) {
-                    $elements[$delta]['media_thumb' . $i] = [
-                      '#type' => 'link',
-                      '#title' => $image_render_array,
-                      '#url' => $items->getEntity()->toUrl(),
-                      '#attributes' => [
-                        'alt' => $items->getEntity()->label()
-                        ]
-                      ];
-                  }
-                  else {
-                    $elements[$delta]['media_thumb' . $i] = $image_render_array;
-                  }
-
-                  if (isset($item->_attributes)) {
-                    $elements[$delta] += ['#attributes' => []];
-                    $elements[$delta]['#attributes'] += $item->_attributes;
-                    // Unset field item attributes since they have been included in the
-                    // formatter output and should not be rendered in the field template.
-                    unset($item->_attributes);
-                  }
-                }
-              }
-              else {
-                // @TODO Deal with no access here
-                // Should we put a thumb? Just hide?
-                // @TODO we can bring a plugin here and there that deals with
-                $elements[$delta]['media_thumb'.$i] = [
-                  '#markup' => '<i class="fas fa-times-circle"></i>',
-                  '#prefix' => '<span>',
-                  '#suffix' => '</span>',
-                ];
-              }
-            } elseif (isset($mediaitem['url'])) {
-              $elements[$delta]['media_thumb'.$i] = [
-                '#markup' => 'Non managed '.$mediaitem['url'],
-                '#prefix' => '<pre>',
-                '#suffix' => '</pre>',
-              ];
-            }
-
-          }
-        }
+        $media = $this->fetchMediaFromJsonWithFilter(
+          $delta, $items, $elements,
+          TRUE, $jsondata, 'Image', $key, $ordersubkey, $number_images, $upload_keys
+        );
       }
       // Get rid of empty #attributes key to avoid render error
       if (isset( $elements[$delta]["#attributes"]) && empty( $elements[$delta]["#attributes"])) {
         unset($elements[$delta]["#attributes"]);
       }
     }
+
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
     return $elements;
+  }
+
+  protected function generateElementForItem(int $delta, FieldItemListInterface $items, FileInterface $file, IiifHelper $iiifhelper, int $i, array &$elements, array $jsondata, array $mediaitem) {
+
+    $max_width = $this->getSetting('max_width');
+    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
+    $max_height = $this->getSetting('max_height');
+    $nodeuuid = $items->getEntity()->uuid();
+    $nodeid = $items->getEntity()->id();
+    $uniqueid = 'iiif-'.$items->getName().'-'.$nodeuuid.'-'.$delta.'-image-'.$i;
+
+    $iiifidentifier = urlencode(
+      StreamWrapperManager::getTarget($file->getFileUri())
+    );
+
+    if ($iiifidentifier == NULL || empty($iiifidentifier)) {
+      return;
+    }
+
+    $iiifpublicinfojson = $iiifhelper->getPublicInfoJson($iiifidentifier);
+    $iiifsizes = $iiifhelper->getImageSizes($iiifidentifier);
+
+    if (!$iiifsizes) {
+      $message= $this->t('We could not fetch Image sizes from IIIF @url <br> for node @id, defaulting to base formatter configuration.',
+        [
+          '@url' => $iiifpublicinfojson,
+          '@id' => $nodeid,
+        ]);
+      \Drupal::logger('format_strawberryfield')->warning($message);
+      //continue; // Nothing can be done here?
+    }
+    else {
+      //@see \template_preprocess_image for further theme_image() attributes.
+      // Look. This one uses the public accesible base URL. That is how world works.
+      if (($max_width == 0) && ($max_height == 0)) {
+        $max_width = $iiifsizes[0]['width'];
+        $max_height = $iiifsizes[0]['height'];
+      }
+      if (($max_width == 0) &&  ($max_height > 0)){
+        $max_width = round($iiifsizes[0]['width']/$iiifsizes[0]['height'] * $max_height,0);
+
+      }
+      elseif (($max_width > 0) &&  ($max_height == 0)){
+        $max_height = round($iiifsizes[0]['height']/$iiifsizes[0]['width'] * $max_width,0);
+      }
+
+      $iiifserverthumb = "{$this->getIiifUrls()['public']}/{$iiifidentifier}"."/full/{$max_width},/0/default.jpg";
+      $image_render_array = [
+        '#theme' => 'image',
+        '#attributes' => [
+          'class' => ['field-iiif', 'image-iiif'],
+          'id' => 'thumb_' . $uniqueid,
+          'src' => $iiifserverthumb,
+
+        ],
+        '#alt' => $this->t(
+          'Thumbnail for @label',
+          ['@label' => $items->getEntity()->label()]
+        ),
+        '#width' => $max_width,
+        '#height' => $max_height,
+      ];
+
+      // With Link
+      if (boolval($this->getSetting('image_link')) === TRUE && !$items->getEntity()->isNew()) {
+        $elements[$delta]['media_thumb' . $i] = [
+          '#type' => 'link',
+          '#title' => $image_render_array,
+          '#url' => $items->getEntity()->toUrl(),
+          '#attributes' => [
+            'alt' => $items->getEntity()->label()
+          ]
+        ];
+      }
+      else {
+        $elements[$delta]['media_thumb' . $i] = $image_render_array;
+      }
+    }
   }
 }

@@ -241,9 +241,6 @@ class MetadataExposeDisplayController extends ControllerBase {
               $embargo_context[] = 'ip';
             }
           }
-          else {
-            $embargoed = $embargo_info;
-          }
 
           if ($metadataexposeconfig_entity->getHideOnEmbargo() && $embargoed) {
             // If embargoed and hide on embargo TRUE,
@@ -270,20 +267,20 @@ class MetadataExposeDisplayController extends ControllerBase {
               'format_strawberryfield.iiif_settings'
             )->get('pub_server_url');
             $original_context = $context + $context_embargo;
-            // Allow other modules to provide extra Context!
-            // Call modules that implement the hook, and let them add items.
-            \Drupal::moduleHandler()->alter(
-              'format_strawberryfield_twigcontext', $context
-            );
-            // In case someone decided to wipe the original context?
-            // We bring it back!
-            $context = $context + $original_context;
             $cacheabledata = [];
             // @see https://www.drupal.org/node/2638686 to understand
             // What cacheable, Bubbleable metadata and early rendering means.
             $cacheabledata = $this->renderer->executeInRenderContext(
               new RenderContext(),
-              function () use ($context, $metadatadisplay_entity) {
+              function () use ($context, $original_context, $metadatadisplay_entity) {
+                // Allow other modules to provide extra Context!
+                // Call modules that implement the hook, and let them add items.
+                \Drupal::moduleHandler()->alter(
+                  'format_strawberryfield_twigcontext', $context
+                );
+                // In case someone decided to wipe the original context?
+                // We bring it back!
+                $context = $context + $original_context;
                 return $metadatadisplay_entity->renderNative($context);
               }
             );
@@ -329,6 +326,9 @@ class MetadataExposeDisplayController extends ControllerBase {
           $response->getCacheableMetadata()->addCacheTags($embargo_tags);
           $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
           $response->getCacheableMetadata()->addCacheContexts($embargo_context);
+          if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+            $response->getCacheableMetadata()->setCacheMaxAge(0);
+          }
         }
         return $response;
 

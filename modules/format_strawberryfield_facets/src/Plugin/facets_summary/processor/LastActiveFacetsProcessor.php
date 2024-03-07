@@ -31,6 +31,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
    */
   public function build(FacetsSummaryInterface $facets_summary, array $build, array $facets) {
     $config = $facets_summary->getProcessorConfigs()[$this->getPluginId()];
+    $facets_config = $facets_summary->getFacets();
     $results_count = array_sum(array_map(function ($it) {
       /** @var \Drupal\facets\FacetInterface $it */
       return count($it->getResults());
@@ -105,9 +106,9 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         foreach( $facet->getResults() as $result) {
           $urls[] = $result->getUrl();
         }
-
+        $show_count = $facets_config[$facet->id()]['show_count'];
         $results = array_merge(
-          $results, $this->buildResultTree($facet->getResults())
+          $results, $this->buildResultTree($show_count, $facet->getResults())
         );
       }
 
@@ -148,38 +149,43 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               && $filter->isExposed()
             ) {
               $current_count = 1;
+              $field_count_field = NULL;
               if ($filter->options['expose']['identifier'] ?? NULL ) {
                 $field_count_field = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
                 $current_count = $exposed_input[$field_count_field] ?? ($filter->options['expose']['advanced_search_fields_count'] ?? 1);
               }
               $extra_keys_to_filter = [];
+              $extra_keys_to_filter_flat = [];
               $keys_to_filter[] = $filter->options['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['identifier'] ?? NULL;
-              if ($filter->options['expose']['identifier'] ?? NULL ) {
-                $keys_to_filter[] = $filter->options['expose']['identifier'] . '_advanced_search_fields_count';
-              }
+
               $key_with_search_value[] = $filter->options['expose']['identifier'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['searched_fields_id'] ?? NULL;
               $keys_to_filter[] = $filter->options['expose']['advanced_search_operator_id']
                 ?? NULL;
+              // This adds the base keys in position 0 since they don't have a suffix.
+              $extra_keys_to_filter[0] = $keys_to_filter;
               foreach ($keys_to_filter as $key_to_filter) {
                 for (
                   $i = 1;
                   $i < $filter->options['expose']['advanced_search_fields_count'] ?? 1;
                   $i++
                 ) {
-                  $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter[$i][] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter_flat[] = $key_to_filter . '_' . $i;
                   if (in_array($key_to_filter, $key_with_search_value)){
                     if ($i < $current_count) {
-                      $key_with_search_value[] = $key_to_filter . '_' . $i;
+                      $key_with_search_value[$i] = $key_to_filter . '_' . $i;
                     }
                   }
                 }
               }
-
+              // adds the $field_count_field back. If empty the array filter will get rid of it
+              $keys_to_filter[] = $field_count_field;
               $keys_to_filter = array_merge(
-                $keys_to_filter, $extra_keys_to_filter
+                $keys_to_filter, $extra_keys_to_filter_flat
               );
+
               $keys_to_filter = array_unique($keys_to_filter);
               $keys_to_filter = array_filter($keys_to_filter);
             }
@@ -199,19 +205,16 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               && $filter['exposed']
             ) {
               $current_count = 1;
+              $field_count_field = NULL;
               if ($filter['expose']['identifier'] ?? NULL ) {
                 $field_count_field = $filter['expose']['identifier'] . '_advanced_search_fields_count';
                 $current_count = $exposed_input[$field_count_field] ?? ($filter['expose']['advanced_search_fields_count'] ?? 1);
               }
 
               $extra_keys_to_filter = [];
+              $extra_keys_to_filter_flat = [];
               $keys_to_filter[] = $filter['expose']['operator_id'] ?? NULL;
               $keys_to_filter[] = $filter['expose']['identifier'] ?? NULL;
-              // fields count = $filter['expose']['identifier']
-              if ($filter['expose']['identifier'] ?? NULL ) {
-                $keys_to_filter[]
-                  = $filter['expose']['identifier'] . '_advanced_search_fields_count';
-              }
               $key_with_search_value[] = $filter['expose']['identifier'] ??
                 NULL;
               $keys_to_filter[] = $filter['expose']['searched_fields_id'] ??
@@ -219,22 +222,27 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               $keys_to_filter[]
                 = $filter['expose']['advanced_search_operator_id']
                 ?? NULL;
+              $extra_keys_to_filter[0] = $keys_to_filter;
               foreach ($keys_to_filter as $key_to_filter) {
                 for (
                   $i = 1;
                   $i < $filter['expose']['advanced_search_fields_count'] ?? 1;
                   $i++
                 ) {
-                  $extra_keys_to_filter[] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter[$i][] = $key_to_filter . '_' . $i;
+                  $extra_keys_to_filter_flat[] = $key_to_filter . '_' . $i;
                   if (in_array($key_to_filter, $key_with_search_value)) {
                     if ($i < $current_count) {
-                      $key_with_search_value[] = $key_to_filter . '_' . $i;
+                      $key_with_search_value[$i] = $key_to_filter . '_' . $i;
                     }
                   }
                 }
               }
+
+
+              $keys_to_filter[] = $field_count_field;
               $keys_to_filter = array_merge(
-                $keys_to_filter, $extra_keys_to_filter
+                $keys_to_filter, $extra_keys_to_filter_flat
               );
               $keys_to_filter = array_unique($keys_to_filter);
               $keys_to_filter = array_filter($keys_to_filter);
@@ -251,12 +259,14 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
         );
         $params = $request->query->all();
         $search_terms = [];
+        $query_params = [];
         foreach ($params as $key => $param) {
           if (in_array($key, $keys_to_filter)) {
-            $search_term = NULL;
-            if (in_array($key, $key_with_search_value)) {
-              $search_terms[] = $exposed_input[$key] ?? NULL;
+            $numeric = array_search($key, $key_with_search_value);
+            if ($numeric !== FALSE) {
+              $search_terms[$numeric] = $exposed_input[$key] ?? NULL;
             }
+            $query_params[$key] = $params[$key];
             unset($params[$key]);
           }
         }
@@ -265,38 +275,83 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
           return ((is_string($element) && '' !== trim($element)) || is_numeric($element));
         });
 
+        if (!($config['settings']['multiple_query'] ?? FALSE) || count($search_terms) == 1) {
+          if (count($search_terms)) {
+            $url_active->setOption('query', $params);
+            $display_value = '';
+            if ($config['settings']['quote_query'] ?? FALSE) {
+              $display_value = implode(
+                " ", array_map(
+                  function ($string) {
+                    return '"' . $string . '"';
+                  }, $search_terms
+                )
+              );
+            } else {
+              $display_value = implode(" ", $search_terms);
+            }
 
-        if (count($search_terms)) {
-          $url_active->setOption('query', $params);
-          $display_value = '';
-          if ($config['settings']['quote_query'] ?? FALSE) {
-            $display_value = implode(
-              " ", array_map(
-                function ($string) {
-                  return '"' . $string . '"';
-                }, $search_terms
-              )
-            );
+            $item = [
+              '#theme' => 'facets_result_item__summary',
+              '#value' => $display_value,
+              '#show_count' => FALSE,
+              '#count' => 0,
+              '#is_active' => TRUE,
+            ];
+            $item = (new Link($item, $url_active))->toRenderable();
+            $item['#wrapper_attributes'] = [
+              'class' => [
+                'facet-summary-item--facet',
+                'facet-summary-item--query',
+              ],
+            ];
+            $build['#items'][] = $item;
           }
-          else {
-            $display_value =  implode(" ", $search_terms);
-          }
+        }
+        elseif ($config['settings']['multiple_query'] ?? FALSE) {
+          foreach($search_terms as $numeric_key => $search_term ) {
+            $search_term_array = [];
+            $search_term_array[] =  $search_term;
+            $new_url = clone $url_active;
+            $new_params = $query_params;
+            foreach ($extra_keys_to_filter[$numeric_key] ?? [] as $groupedkey) {
+                unset($new_params[$groupedkey]);
+            }
+            // Check if $extra_keys_to_filter_excluding also contains the search term?
 
-          $item = [
-            '#theme' => 'facets_result_item__summary',
-            '#value' =>  $display_value,
-            '#show_count' => FALSE,
-            '#count' => 0,
-            '#is_active' => TRUE,
-          ];
-          $item = (new Link($item, $url_active))->toRenderable();
-          $item['#wrapper_attributes'] = [
-            'class' => [
-              'facet-summary-item--facet',
-              'facet-summary-item--query',
-            ],
-          ];
-          $build['#items'][] = $item;
+            $new_params = $params + $new_params;
+            $new_url->setOption('query', $new_params);
+            if ($config['settings']['quote_query'] ?? FALSE) {
+              $display_value = implode(
+                " ", array_map(
+                  function ($string) {
+                    ltrim($string, '"');
+                    rtrim($string, '"');
+                    $string = str_replace('"', "'", $string);
+                    return '"' . $string . '"';
+                  }, $search_term_array
+                )
+              );
+            } else {
+              $display_value = implode(" ", $search_term_array);
+            }
+
+            $item = [
+              '#theme' => 'facets_result_item__summary',
+              '#value' => $display_value,
+              '#show_count' => FALSE,
+              '#count' => 0,
+              '#is_active' => TRUE,
+            ];
+            $item = (new Link($item, $new_url))->toRenderable();
+            $item['#wrapper_attributes'] = [
+              'class' => [
+                'facet-summary-item--facet',
+                'facet-summary-item--query',
+              ],
+            ];
+            $build['#items'][] = $item;
+          }
         }
       }
     }
@@ -312,7 +367,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     $config = $this->getConfiguration();
     $build['message'] = [
       '#type' => 'markdown',
-      '#markdown' => $this->t(' It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
+      '#markdown' => $this->t('It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
     ];
     $build['enable'] = [
       '#type' => 'checkbox',
@@ -324,9 +379,19 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       '#title' => $this->t('Provide a Summary for the associated Facet Source Query Terms. This might be enabled even if no Results'),
       '#default_value' => $config['enable_query'],
     ];
+    $build['multiple_query'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Separate each Query Term into its own facet summary. This might be enabled even if no Results'),
+      '#default_value' => $config['multiple_query'],
+      '#states' => [
+        'visible' => [
+          ':input[name="facets_summary_settings[sbf_last_active_facets][settings][enable_query]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
     $build['quote_query'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes'),
+      '#title' => $this->t('If Query Terms should be surrounded by Double Quotes. If the query itself is surrounded by double quotes those will be removed and internal ones replaced by single ones (just as output, the real value will be untouched) to differentiate them.'),
       '#default_value' => $config['quote_query'],
       '#states' => [
         'visible' => [
@@ -360,6 +425,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
       'enable' => TRUE,
       'enable_empty_message' => TRUE,
       'enable_query' => FALSE,
+      'multiple_query' => FALSE,
       'quote_query' => TRUE,
       'text' => [
         'format' => 'plain_text',
@@ -379,14 +445,14 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
    * @return array
    *   The rendered links to the active facets.
    */
-  protected function buildResultTree(array $results) {
+  protected function buildResultTree(bool $show_count, array $results) {
     $items = [];
     foreach ($results as $result) {
       if ($result->isActive()) {
         $item = [
           '#theme' => 'facets_result_item__summary',
           '#value' => $result->getDisplayValue(),
-          '#show_count' => TRUE,
+          '#show_count' => $show_count,
           '#count' => 0,
           '#is_active' => TRUE,
           '#facet' => $result->getFacet(),

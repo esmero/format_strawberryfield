@@ -182,7 +182,8 @@ jQuery.extend(BookReader.defaultOptions, {
   enableSearch: true,
   searchInsideUrl: '',
   initialSearchTerm: null,
-  mobileNavTitle: ''
+  mobileNavTitle: '',
+  hasCover: true
 });
 
 BookReader.prototype.setup = (function(super_) {
@@ -200,6 +201,7 @@ BookReader.prototype.setup = (function(super_) {
     this.searchInsideUrl = options.searchInsideUrl;
     this.enableSearch = options.enableSearch;
     this.goToFirstResult = false;
+    this.hasCover = options.hasCover;
 
     // Base server used by some api calls
     this.bookId = options.bookId;
@@ -219,6 +221,47 @@ BookReader.prototype.init = (function(super_) {
     super_.call(this, options);
   };
 })(BookReader.prototype.init);
+
+/**
+ * Return which side, left or right, that a given page should be
+ * displayed on. override allows a no-cover situation.
+ */
+BookReader.prototype.getPageSide = function(index) {
+  if ('rl' != this.pageProgression) {
+    // If pageProgression is not set RTL we assume it is LTR
+    if (0 == (index & 0x1)) {
+      // Even-numbered page
+      if (false === this.hasCover) {
+        return 'L';
+      }
+      return 'R';
+    }
+    else {
+      // Odd-numbered page
+      if (false === this.hasCover) {
+        return 'R';
+      }
+      return 'L';
+    }
+  }
+  else {
+    // RTL
+    if (0 == (index & 0x1)) {
+      if (false === this.hasCover) {
+        return 'R';
+      }
+      return 'L';
+    }
+    else {
+      if (false === this.hasCover) {
+        return 'L';
+      }
+      return 'R';
+    }
+  }
+}
+
+
 
 BookReader.prototype.getApiVersion = function() {
   var self = this;
@@ -252,7 +295,7 @@ BookReader.prototype.loadManifest = function () {
     self.bookUrl = '#';
     // self.thumbnail = self.jsonLd.thumbnail['@id'];
     self.metadata = self.jsonLd.metadata;
-    // Assuming i have no default sequence so first one is the good one.
+    // Assuming we have no default sequence so first one is the good one.
     self.parseSequence(null);
   }
   else {
@@ -270,7 +313,6 @@ BookReader.prototype.loadManifest = function () {
                 ? self.jsonLd.label[Object.keys(self.jsonLd.label)[0]].join("; ")
                 : self.jsonLd.label;
         self.bookUrl = '#';
-        self.thumbnail = jsonLd.thumbnail['@id'];
         self.metadata = jsonLd.metadata;
         self.parseSequence(self.options.iiifdefaultsequence);
       },
@@ -288,27 +330,79 @@ BookReader.prototype.loadManifest = function () {
 BookReader.prototype.setupTooltips = function() {
 };
 
+function processBehaviorToIABookreaderModeV3(jsonLd) {
+  // Bookreader supports only two modes but also a book cover or not
+  // IIIF Presentation API V2 and V3 supports more
+  // So we need to reduce/map back to only 2 options
+  // V3 key at manifest level/and/or Sequence level is `behavior`
+  // V2 key at manifest level/and/or Sequence is `viewingHint`
+  if (typeof (jsonLd.behavior) !== "undefined") {
+    if (typeof jsonLd.behavior === 'string') {
+      if (jsonLd.behavior == 'paged') {
+        return 2;
+      }
+      if (jsonLd.behavior == 'individuals') {
+        return 1;
+      }
+    } else if (jsonLd.behavior.constructor.name == "Array") {
+      if (jsonLd.behavior.includes("paged")) {
+        return 2;
+      }
+      if (jsonLd.behavior.includes("individuals")) {
+        return 1;
+      }
+    }
+  }
+
+return 2;
+}
+
+function processBehaviorToIABookreaderModeV2(jsonLd) {
+  // Bookreader supports only two modes but also a book cover or not
+  // IIIF Presentation API V2 and V3 supports more
+  // So we need to reduce/map back to only 2 options
+  // V3 key at manifest level/and/or Sequence level is `behavior`
+  // V2 key at manifest level/and/or Sequence is `viewingHint`
+  // normally we would use https://github.com/internetarchive/bookreader/blob/4dab4cef30c0af05fa864e57578a834b89fbaba2/src/BookReader.js#L62
+  // but these have not changed in 10 years ... passing this would be an overkill just to read that.
+  if (typeof(jsonLd.viewingHint) !== "undefined") {
+    if (jsonLd.viewingHint == 'paged') {
+        return 2;
+    }
+    if (jsonLd.viewingHint == 'individuals') {
+      return 1;
+    }
+  }
+  return 0;
+  // Why 0? because i will use a failure to try with a sequence instead
+}
+
+
+
 BookReader.prototype.parseSequence = function (sequenceId) {
   var self = this;
+  // viewingDirection is the same in V2 and V3 BUT on V2 it can be inside a sequence ..
+  if (typeof(self.jsonLd.viewingDirection) !== "undefined") {
+    if (self.jsonLd.viewingDirection == "right-to-left") {
+      self.pageProgression = 'rl';
+    }
+    if (self.jsonLd.viewingDirection == "left-to-right") {
+      self.pageProgression = 'lr';
+    }
+  }
+
   if(self.getApiVersion() == "3.x") {
-    // try with a specific sequenceID
-    if (sequenceId!= null) {
-      if (item['id'] === sequenceId) {
-        self.IIIFsequence.title = "Sequence";
-        self.IIIFsequence.bookUrl = "http://iiif.io";
-        self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
-        self.numLeafs = self.IIIFsequence.imagesList.length;
-      }
-    } else {
+      //  WE can't try with a specific sequenceID, bc that is not a V3 thing at all
+      self.defaults = "mode/" + processBehaviorToIABookreaderModeV3(self.jsonLd) + 'up';
       self.IIIFsequence.title = "Sequence";
       self.IIIFsequence.bookUrl = "http://iiif.io";
       self.IIIFsequence.imagesList = getImagesListApi3(self.jsonLd.items);
       self.numLeafs = self.IIIFsequence.imagesList.length;
-      // return false;
-      // Just take the first one if no default one set
-    }
   }
   else {
+    let top_level_behavior = processBehaviorToIABookreaderModeV2(self.jsonLd);
+    let sequence_level_behavior = 0;
+
     jQuery.each(self.jsonLd.sequences, function(index, sequence) {
       // try with a specific sequenceID
       if (sequenceId!= null) {
@@ -317,16 +411,50 @@ BookReader.prototype.parseSequence = function (sequenceId) {
           self.IIIFsequence.bookUrl = "http://iiif.io";
           self.IIIFsequence.imagesList = getImagesList(sequence);
           self.numLeafs = self.IIIFsequence.imagesList.length;
+          sequence_level_behavior = processBehaviorToIABookreaderModeV2(sequence);
+          // In case the sequence has the hit, it wins over the manifest one.
+          if (typeof(sequence.viewingDirection) !== "undefined") {
+            if (sequence.viewingDirection == "right-to-left") {
+              self.pageProgression = 'rl';
+            }
+            if (sequence.viewingDirection == "left-to-right") {
+              self.pageProgression = 'lr';
+            }
+          }
         }
       } else {
         self.IIIFsequence.title = "Sequence";
         self.IIIFsequence.bookUrl = "http://iiif.io";
         self.IIIFsequence.imagesList = getImagesList(sequence);
         self.numLeafs = self.IIIFsequence.imagesList.length;
-        return false;
-        // Just take the first one if no default one set
+        sequence_level_behavior = processBehaviorToIABookreaderModeV2(sequence);
+        // In case the sequence has the hit, it wins over the manifest one.
+        if (typeof(sequence.viewingDirection) !== "undefined") {
+          if (sequence.viewingDirection == "right-to-left") {
+            self.pageProgression = 'rl';
+          }
+          if (sequence.viewingDirection == "left-to-right") {
+            self.pageProgression = 'lr';
+          }
+        }
       }
     });
+    if (top_level_behavior != 0) {
+      if (sequence_level_behavior == 0) {
+        self.defaults = "mode/" + top_level_behavior + 'up';
+      }
+      else {
+        self.defaults = "mode/" + sequence_level_behavior + 'up';
+      }
+    }
+    else if (top_level_behavior == 0) {
+      if (sequence_level_behavior == 0) {
+        self.defaults = "mode/" + 2 + 'up';
+      }
+      else {
+        self.defaults = "mode/" + sequence_level_behavior + 'up';
+      }
+    }
   }
 
   var tmpdata = [];
@@ -382,7 +510,19 @@ BookReader.prototype.parseSequence = function (sequenceId) {
     if (image.serviceUrl != null) {
       // Pass also the imageGerArgument to the info.json -- Cantaloupe 4.1.6
       infojson = image.serviceUrl + "/info.json" + image.imageGetArgument;
-      imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
+      // If we don't have image.width at this stage we will check if we have an image.imageUrl already
+      if (image.width == 0) {
+        if (image.imageUrl != "") {
+          imageuri = image.imageUrl;
+        }
+        else {
+          // We have no image url, we have no width, try with full
+          imageuri = image.serviceUrl + "/full/full/0/default.jpg" + image.imageGetArgument;
+        }
+      }
+      else {
+        imageuri = image.serviceUrl + "/full/" + image.width + ",/0/default.jpg" + image.imageGetArgument;
+      }
     } else {
       imageuri = image.imageUrl;
     }
@@ -538,15 +678,14 @@ BookReader.prototype.getPageWidth = function(index) {
   var self = this;
   if (isNaN(index)) return;
 
-  var pagewidth = this.getPageProp(index, 'width');
+  const pagewidth = self.getPageProp(index, 'width');
   if (pagewidth == 0 || pagewidth == null || typeof pagewidth === "undefined") {
     if (typeof self.options.dataDimensions[index] === "undefined") {
-      var imageInfo = this.getRemoteInfoJson(index);
-
+      const imageInfo = this.getRemoteInfoJson(index);
       self.options.dataDimensions[index] = imageInfo;
       // Means computed height is different to one set by the manifest in the resource
       // Here self.getPageHeight should never return cero, if so means all is bad, bad
-      var height = self.getPageHeight(index);
+      const height = self.getPageHeight(index);
       if (height != imageInfo.height) {
         scale = height/imageInfo.height || 1;
         return Math.round(imageInfo.width * scale);
@@ -560,8 +699,8 @@ BookReader.prototype.getPageWidth = function(index) {
       return self.options.dataDimensions[index].width;
     }
 
-  } else {
-
+  }
+  else {
     return pagewidth;
   }
 };
@@ -613,13 +752,11 @@ BookReader.prototype.getPageHeight = function(index) {
 BookReader.prototype.getRemoteInfoJson = function(index) {
 
   var self = this;
-  var remotedimensions = {};
+  let remotedimensions = {};
 
   var infojsonurl = this.getPageProp(index, 'infojson');
   if (infojsonurl == null) {
     console.log('Service Level 0, Defaulting to fixed Dimensions ' + self.options.maxWidth + ' px')
-    console.log(this.getPageProp(index, 'width'));
-    console.log(this.getPageProp(index, 'height'));
     remotedimensions.width = self.options.maxWidth;
     remotedimensions.height = self.options.maxWidth;
   } else {
@@ -630,7 +767,6 @@ BookReader.prototype.getRemoteInfoJson = function(index) {
       success: function (infojson) {
         remotedimensions.width = infojson.width;
         remotedimensions.height = infojson.height;
-
       },
 
       error: function () {
@@ -641,8 +777,6 @@ BookReader.prototype.getRemoteInfoJson = function(index) {
         remotedimensions.width = self.options.maxWidth;
         remotedimensions.height = self.options.maxWidth;
       }
-
-
     });
   }
 

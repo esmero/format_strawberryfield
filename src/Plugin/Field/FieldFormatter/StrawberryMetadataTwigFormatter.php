@@ -9,6 +9,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
@@ -219,17 +220,17 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
 
       // Probably good idea to strip our own keys here.
       // @TODO remove private access to keys
-
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        $message = $this->t('We could had an issue decoding as JSON your metadata for node @id, field @field',
+        $message = $this->t('We had an issue decoding as JSON your metadata for node @id, field @field',
           [
             '@id' => $nodeid,
             '@field' => $items->getName(),
           ]);
-        return $elements[$delta] = ['#markup' => $message];
+        return  ['#markup' => $message, '#cache' => ['max-age' => 0]];
       }
+
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
@@ -244,7 +245,8 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        // even if not embargoed for a particular user, set to IP if not cacheable
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -305,6 +307,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       }
     }
 
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
+
     return $elements;
   }
 
@@ -313,7 +323,6 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    */
   public function setSetting($key, $value) {
     $this->twig->invalidate();
-
     return parent::setSetting($key, $value);
   }
 

@@ -50,6 +50,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
 
 
   /**
+   * A Per HTTP Request static cache of resolved Embargoes
+   *
+   * @var array
+   */
+  protected array $resolvedEmbargos = [];
+
+
+  /**
    * DisplayResolver constructor.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
@@ -66,13 +74,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
 
   /**
    * Checks if we can bypass embargo.
-   *    If not possible we return an array with more info
+   *    If not possible we return an array with more info.
+   *    If the user is anonymous, and IP data is present in the ADO, we kill the cache too.
    *
    * @param array $jsondata
    *
    * @return array
    *    Returns array
-   *    with [(bool) embargoed, $date|FALSE, (bool) IP is enforced]
+   *    with [(bool) embargoed, $date|FALSE, (bool) IP is enforced], (bool) if cacheable at all or not
    *
    */
   public function embargoInfo(string $uuid, array $jsondata) {
@@ -82,11 +91,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
     // This cache will only work per extending class
     // If we want the cache to survive longer
     // We need to make the function itself static
+    // but also add the varying IP to it.
     // @TODO evaluate if making it static is worth the effort.
     // Since all act on the same data/entity
     // And will share during the life
     // of the static cache
     // Same user/roles/etc
+    // but IP can vary, even for the same user.
+    // But never on a single HTTP call.
     if (isset($cache[$cache_id])) {
       return $cache[$cache_id];
     }
@@ -96,20 +108,21 @@ class EmbargoResolver implements EmbargoResolverInterface {
     $ip_embargo = FALSE;
     // If embargo by date is enforced
     $date_embargo = FALSE;
+    $cacheable = TRUE;
 
     if (!$this->embargoConfig->get('enabled')) {
-      $embargo_info = [!$noembargo, FALSE, FALSE];
+      $embargo_info = [!$noembargo, FALSE, FALSE, $cacheable];
     }
     $user_roles = $this->currentUser->getRoles();
     if (in_array('administrator', $user_roles)) {
-      $embargo_info = [!$noembargo, FALSE, FALSE];
+      $embargo_info = [!$noembargo, FALSE, FALSE, $cacheable];
     }
     elseif ($this->currentUser->hasPermission('see strawberryfield embargoed ados')) {
-      $embargo_info = [!$noembargo, FALSE , FALSE];
+      $embargo_info = [!$noembargo, FALSE , FALSE, $cacheable];
     }
     else {
       // Check the actual embargo options
-      $date_embargo_key = $this->embargoConfig->get('date_until_json_key');
+      $date_embargo_key = $this->embargoConfig->get('date_until_json_key') ?? '';
       if (strlen($date_embargo_key) > 0 && !empty($jsondata[$date_embargo_key]) && is_string($jsondata[$date_embargo_key])) {
         $date = $this->parseStringToDate(trim($jsondata[$date_embargo_key]));
         if ($date) {
@@ -122,9 +135,19 @@ class EmbargoResolver implements EmbargoResolverInterface {
           }
         }
       }
-      $ip_embargo_key = $this->embargoConfig->get('ip_json_key');
+      $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
       if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
         $current_ip =  $this->requestStack->getCurrentRequest()->getClientIp();
+        if ($this->currentUser->isAnonymous()) {
+          if (\Drupal::moduleHandler()->moduleExists('page_cache')) {
+            // we won't be able to cache varying contexts for anonymous, so
+            // simply kill the page cache
+            \Drupal::service('page_cache_kill_switch')->trigger();
+            $cacheable = FALSE;
+          }
+        }
+        // Why would the current IP not be present? Should we deny all if that
+        // exception happens?
         if ($current_ip) {
           if (is_array($jsondata[$ip_embargo_key])) {
             foreach($jsondata[$ip_embargo_key] as $ip_embargo_value) {
@@ -142,11 +165,25 @@ class EmbargoResolver implements EmbargoResolverInterface {
           }
         }
       }
-      $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo];
+      $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
     }
     $cache[$cache_id] = $embargo_info;
+    $this->resolvedEmbargos[$uuid] = $embargo_info;
     return $embargo_info;
   }
+
+  /**
+   * Getter for the resolved Static embargoe Cache
+   *
+   * @param string $uuid
+   *    The UUID of a node for which an embargo might/not have been resolved
+   * @return array
+   *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+   */
+  public function getResolvedEmbargoesByUUid(string $uuid): array {
+    return $this->resolvedEmbargos[$uuid] ?? [];
+  }
+
 
   /**
    * Get a list of ADO types based on the SBF.

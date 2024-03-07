@@ -13,7 +13,7 @@
         }
     ],
     "require": {
-        "strawberryfield/strawberryfield":"1.3.0.x-dev",
+        "strawberryfield/strawberryfield":"1.4.0.x-dev",
         "league/html-to-markdown":"^5.0.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^6.1.5",
@@ -22,6 +22,9 @@
         "cebe/php-openapi":"^1",
         "league/openapi-psr7-validator": "^0.2",
         "ext-json": "*",
-        "seboettg/citeproc-php": "dev-master"
+	      "seboettg/citeproc-php": "dev-master"
+    },
+    "conflict": {
+        "drupal/core":"<10.1"
     }
 }

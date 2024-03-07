@@ -268,7 +268,10 @@ function format_strawberryfield_contextual_links_alter(array &$links, $group, ar
  * Implements hook_ENTITY_TYPE_view_alter().
  */
 function format_strawberryfield_node_view_alter(&$build, EntityInterface $entity, EntityDisplayInterface $display) {
-  // Empty. Issue is if this hook does not exist, the broader one will fail.
+    $resolved_embargo = \Drupal::service('format_strawberryfield.embargo_resolver')->getResolvedEmbargoesByUUid($entity->uuid());
+    if (($resolved_embargo[3] ?? TRUE) == FALSE) {
+      $build['#cache']['max-age'] = 0;
+    }
 }
 
 /**

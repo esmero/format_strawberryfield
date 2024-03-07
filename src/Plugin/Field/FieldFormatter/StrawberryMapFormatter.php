@@ -150,6 +150,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         'max_zoom' => 10,
         'min_zoom' => 2,
         'initial_zoom' => 5,
+        'disable_mouse_zoom' => FALSE,
       ];
   }
 
@@ -476,10 +477,11 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#type' => 'number',
           '#title' => $this->t('Maximum height'),
           '#default_value' => $this->getSetting('max_height'),
+          '#description' => $this->t('The minimum permitted value is 62 pixels to ensure that the zoom controls are visible on the map.'),
           '#size' => 5,
           '#maxlength' => 5,
           '#field_suffix' => $this->t('pixels'),
-          '#min' => 0,
+          '#min' => 62,
           '#required' => TRUE
         ],
         'initial_zoom' => [
@@ -509,6 +511,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#maxlength' => 2,
           '#min' => 0,
           '#max' => 22,
+        ],
+        'disable_mouse_zoom' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Disable mouse wheel zoom'),
+          '#description' => $this->t('If checked, scrolling the page will not suddenly zoom in or out of the map. This is useful for maps that are not the main focus of the page. The user can still zoom in and out using the +/- buttons, and double-clicking/shift-double-clicking the mouse.'),
+          '#default_value' => $this->getSetting('disable_mouse_zoom'),
         ],
       ] + parent::settingsForm($form, $form_state);
     return $settings_form;
@@ -745,11 +753,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     }
 
     $summary[] = $this->t(
-      'Zoom Levels: Min(%min_zoom)|Max(%max_zoom)|Initial(%initial_zoom)',
+      'Zoom Levels: Min(%min_zoom)|Max(%max_zoom)|Initial(%initial_zoom)|Mouse Wheel Zoom: %disable_mouse_zoom',
       [
         '%min_zoom' => (int) $this->getSetting('min_zoom'),
         '%max_zoom' => $this->getSetting('max_zoom'),
         '%initial_zoom' => $this->getSetting('initial_zoom'),
+        '%disable_mouse_zoom' => $this->getSetting('disable_mouse_zoom') ? 'Disabled' : 'Enabled',
       ]
     );
 
@@ -920,11 +929,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['width'] = $max_width_css;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['height'] = max(
             $max_height,
-            480
+            62 // 62 pixels is the minimum height to display the +/- buttons in the map interface.
           );
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['maxzoom'] = $this->getSetting('max_zoom');
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['minzoom'] = $this->getSetting('min_zoom');
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['initialzoom'] = $this->getSetting('initial_zoom');
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['disable_mouse_zoom'] = $this->getSetting('disable_mouse_zoom');
 
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_url'] = $this->getSetting('tilemap_url');
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['leaflet'][$htmlid]['tilemap_attribution'] = $this->getSetting('tilemap_attribution');

@@ -483,6 +483,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     // if hide_on_embargo is not enabled
     // bc all embargo decision will anyways be delegated to the
     // Exposed Metadata endpoints.
+    $embargo_info = [];
     $embargo_context = [];
     $embargo_tags = [];
     $embargoed = FALSE;
@@ -517,7 +518,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       // @TODO use future flatversion precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
-        return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+        return ['#markup' => $this->t('ERROR')];
       }
 
       if (isset($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
@@ -656,9 +657,12 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     }
 
     $elements['#cache'] = [
-      'context' => Cache::mergeContexts($item->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
-      'tags' => Cache::mergeTags($item->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
+    }
 
     return $elements;
   }
