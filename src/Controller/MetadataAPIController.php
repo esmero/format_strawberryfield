@@ -337,12 +337,20 @@ A resumptionToken may be similar to (wrapped for clarity):
       // Now time to run the VIEWS. Should double-check here or trust our stored entity?
       $used_views = $metadataapiconfig_entity->getViewsSourceId() ?? [];
       $views_with_values = [];
+      $views_pager = [];
       foreach ($matched_parameters_views_pairing as $views_with_argument_and_values) {
         [$view_id, $display_id, $argument, $value] = explode(
-          ':', $views_with_argument_and_values
+          ':', $views_with_argument_and_values, 4
         );
+        // Pager is a weird one. The argument itself has an extra "@" so we don't confuse it with a user exposed argument named pager.
+        // Exposed arguments/filters in Drupal don't allow that value.
         if (in_array($view_id.':'.$display_id, $used_views)){
-          $views_with_values[$view_id][$display_id][$argument] = $value;
+          if ($argument !== "@page") {
+            $views_with_values[$view_id][$display_id][$argument] = $value;
+          }
+          else {
+            $views_pager[$view_id][$display_id] = $value;
+          }
         }
       }
       // Dec. 2023. We should to make this really different.
@@ -380,6 +388,11 @@ A resumptionToken may be similar to (wrapped for clarity):
             $offset = 0; // We will parse/process offset based on the actual pager. Pager can do that for us?.
             if ($items_per_page > 0) {
               $limit = $items_per_page;
+            }
+            if ($page = $views_pager[$view_id][$display_id] ?? 1) {
+              // Drupal users page = 0, we use page = 1;
+              $page = (int)$page >= 1 ? (int) $page : 1;
+              $offset = $items_per_page * ($page - 1);
             }
 
             // \Drupal\views\ViewExecutable::addCacheContext
@@ -468,7 +481,7 @@ A resumptionToken may be similar to (wrapped for clarity):
                     // WE will build the view first so we can alter the query!
                     $executable->build();
                     $executable->getQuery()->setLimit($limit);
-                    $executable->getQuery()->setLimit($offset);
+                    $executable->getQuery()->setOffset($offset);
                     $executable->execute();
                   }
                 );
