@@ -482,6 +482,7 @@ A resumptionToken may be similar to (wrapped for clarity):
                     $executable->build();
                     $executable->getQuery()->setLimit($limit);
                     $executable->getQuery()->setOffset($offset);
+                    //$executable->getQuery()->setOption('skip result count', FALSE);
                     $executable->execute();
                   }
                 );
@@ -501,11 +502,11 @@ A resumptionToken may be similar to (wrapped for clarity):
 
               // ONLY NOW HERE WE DO CACHING AND STUFF ʕっ•ᴥ•ʔっ
               // @TODO these need to be passed to the wrapper.
-              $total = $executable->pager->getTotalItems() != 0
+              $result_total = $executable->pager->getTotalItems() != 0
                 ? $executable->pager->getTotalItems() : count($executable->result);
               $current_page = $executable->pager->getCurrentPage();
-              $num_per_page = $executable->pager->getItemsPerPage();
-              $offset = $executable->pager->getOffset();
+              $num_per_page = $items_per_page; // won't work.$executable->pager->getItemsPerPage();
+              $offset = $offset;
 
               /** @var \Drupal\views\Plugin\views\cache\CachePluginBase $cache_plugin */
               $cache_plugin = $executable->display_handler->getPlugin('cache');
