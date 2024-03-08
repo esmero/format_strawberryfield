@@ -407,7 +407,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     if ($name) {
       $parameter_clean = $form_state->getValue(['api-argument-config','params']);
       unset($parameter_clean['metadata_api_configure_button']);
-      $parameters[$name] = $parameter_clean;
+      $parameters[$name] = [
+        'name' => $name,
+        'param' => $parameter_clean
+      ];
       $form_state->set('parameters', $parameters);
     }
     // Re set since they might have get lost during the Ajax/Limited validation
@@ -1162,34 +1165,34 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
 
   private function formatOpenApiArgument(array $parameter):string {
     // Only calling this function (PRIVATE) so
-    // i know for sure that if this is missing its because $parameter
-    // Comes from a saved entity and its ready
+    // i know for sure that if this is missing it is because $parameter
+    // Comes from a saved entity and it is ready
     if (isset($parameter["weight"]) && isset($parameter["param"]) && is_array($parameter["param"])) {
       return json_encode($parameter["param"], JSON_PRETTY_PRINT);
     }
 
-    if (empty($parameter["in"]) || empty($parameter["name"])) {
+    if (empty($parameter["param"]["in"]) || empty($parameter["name"])) {
       // Prety sure something went wrong here, so return an error
       return $this->t("Something went wrong. This Parameter is wrongly setup. Please edit/delete.");
     }
 
     $api_argument = [
-      "in" => $parameter["in"],
-      "name" => $parameter["name"],
+      "in" => $parameter["param"]["in"],
+      "name" => $parameter["param"]["name"],
     ];
     // Schema will vary depending on the type, so let's do that.
-    $schema = ['type' => $parameter['schema']['type']];
+    $schema = ['type' => $parameter["param"]['schema']['type']];
     switch ($schema['type']) {
       case 'number' :
-        $schema['format'] = $parameter['schema']['number_format'];
+        $schema['format'] = $parameter["param"]['schema']['number_format'];
         break;
       case 'integer' :
-        $schema['format'] = $parameter['schema']['number_format'];
+        $schema['format'] = $parameter["param"]['schema']['number_format'];
         break;
       case 'string' :
-        $schema['format'] = $parameter['schema']['string_format'];
-        $schema['pattern'] = $parameter['schema']['string_pattern'];
-        if (strlen(trim($parameter['schema']['enum'])) > 0) {
+        $schema['format'] = $parameter["param"]['schema']['string_format'];
+        $schema['pattern'] = $parameter["param"]['schema']['string_pattern'];
+        if (strlen(trim($parameter["param"]['schema']['enum'])) > 0) {
           $schema['enum'] = explode(",", trim($parameter['schema']['enum']));
           foreach ($schema['enum'] as &$entry) {
             trim($entry);
@@ -1197,7 +1200,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         }
         break;
       case 'array' :
-        $schema['items']['type'] = $parameter['schema']['array_type'];
+        $schema['items']['type'] = $parameter["param"]['schema']['array_type'];
         break;
       case 'object' :
         // Not implemented yet, the form will get super complex when
@@ -1217,11 +1220,11 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         break;
       case 'query':
         if (in_array(
-          $parameter['style'],
+          $parameter["param"]['style'],
           ['form', 'spaceDelimited', 'pipeDelimited', 'deepObject']
         )
         ) {
-          $api_argument['style'] = $parameter['style'];
+          $api_argument['style'] = $parameter["param"]['style'];
         }
         else {
           $api_argument['style'] = 'form';
@@ -1237,9 +1240,9 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         $api_argument['explode'] = TRUE;
         break;
     }
-    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter['required'];
-    $api_argument['deprecated'] = (bool) $parameter['deprecated'];
-    $api_argument['description'] = $parameter['description'];
+    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter["param"]['required'];
+    $api_argument['deprecated'] = (bool) $parameter["param"]['deprecated'];
+    $api_argument['description'] = $parameter["param"]['description'];
     // 'explode', mins and max not implemented via form, using the defaults for Open API 3.x
     return json_encode($api_argument, JSON_PRETTY_PRINT);
   }
