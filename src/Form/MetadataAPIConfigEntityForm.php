@@ -769,8 +769,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#required'      => FALSE,
       ];
       $enum = ($form_state->getValue(['api-argument-config','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','params','param','schema','enum']) : NULL;
-      if ($enum) {
-        $enum = explode(" ", $enum);
+      if (is_array($enum)) {
         $enum = implode(",", $enum);
       }
       $form['api-argument-config']['params']['schema']['enum'] = [
