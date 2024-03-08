@@ -145,7 +145,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           '#submit' => ['::submitAjaxAPIConfigFormAdd'],
           '#ajax' => [
             //'trigger_as' => ['name' => 'metadata_api_configure'],
-            'callback' => '::buildAjaxAPIParameterConfigForm',
+            'callback' => '::buildAjaxAPIViewsConfigForm',
             'wrapper' => 'api-argument-config',
           ],
         ],
@@ -249,7 +249,19 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
     );
-    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'toggleClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'addClass', ['js-hide']));
+    return $response;
+  }
+
+  /**
+   * Handles Views Selection config display
+   */
+  public function buildAjaxAPIViewsConfigForm(array $form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(
+      new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
+    );
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-views-config-button"]', 'addClass', ['js-hide']));
     return $response;
   }
 
@@ -261,7 +273,19 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
     );
-    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'toggleClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'removeClass', ['js-hide']));
+    return $response;
+  }
+
+  /**
+   * Handles Parameter config Closing/Cancel
+   */
+  public function buildAjaxAPIViewsConfigCancelForm(array $form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(
+      new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
+    );
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-views-config-button"]', 'removeClass', ['js-hide']));
     return $response;
   }
 
@@ -278,7 +302,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         "#api-argument-config-params-internal"
       )
     );
-    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button-wrapper"]', 'removeClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'removeClass', ['js-hide']));
     return $response;
   }
 
@@ -296,7 +320,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         "#api-argument-config-views-internal"
       )
     );
-    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button-wrapper"]', 'removeClass', ['js-hide']));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-views-config-button"]', 'removeClass', ['js-hide']));
     return $response;
   }
 
@@ -334,12 +358,11 @@ class MetadataAPIConfigEntityForm extends EntityForm {
   public function editParameter($form, FormStateInterface $form_state) {
     $triggering = $form_state->getTriggeringElement();
     if (isset($triggering['#rowtoedit'])) {
-
       $parameters = $form_state->get('parameters') ? $form_state->get(
         'parameters'
       ) : [];
       $form_state->setValue(['api-argument-config','params'],  $parameters[$triggering['#rowtoedit']]);
-      $this->messenger()->addWarning('You are editing @param_name', ['@param_name' => $parameters[$triggering['#rowtoedit']]]);
+      $this->messenger()->addWarning(t('You are editing @param_name', ['@param_name' => $triggering['#rowtoedit']]), FALSE);
     }
     $form_state->setRebuild();
   }
@@ -566,12 +589,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ];
       $form['api-argument-config']['views']['metadata_api_cancel_button'] = [
         '#type'                    => 'button',
-        '#name'                    => 'metadata_api_parameter_cancel',
+        '#name'                    => 'metadata_api_views_cancel',
         '#limit_validation_errors' => [],
         '#value'                   => $this->t('Cancel'),
         '#submit'                  => ['::submitAjaxAddParameter'],
         '#ajax'                    => [
-          'callback' => '::buildAjaxAPIParameterConfigCancelForm',
+          'callback' => '::buildAjaxAPIViewsConfigCancelForm',
           'wrapper'  => 'api-parameters-list-form',
         ],
         '#attributes'              => [
