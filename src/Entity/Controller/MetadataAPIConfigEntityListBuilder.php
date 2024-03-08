@@ -91,6 +91,10 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
 
     //@TODO this can be an entity level method.
     $parameters = $entity->getConfiguration()['openAPI'];
+    $schema_parameters = [];
+    if (!is_array($parameters)) {
+      $parameters = [];
+    }
     $openAPI = new OpenApi(
       [
         'openapi' => '3.0.2',

@@ -420,7 +420,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->cleanValues();
     $new_form_state = clone $form_state;
     // no need to unset original values, they won't match Entities properties
-    $config['openAPI'] =  $new_form_state->getValue(['api_parameters_list','table-row']) ?? [];
+    $config['openAPI'] =  !empty($new_form_state->getValue(['api_parameters_list','table-row'])) &&
+      is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
     foreach ($config['openAPI'] as &$openAPIparameter) {
