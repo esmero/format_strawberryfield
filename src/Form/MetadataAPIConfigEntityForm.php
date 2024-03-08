@@ -768,13 +768,18 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#default_value' => ($form_state->getValue(['api-argument-config','params','param','schema','type']) ?? 'string' == 'integer') ? $form_state->getValue(['api-argument-config','params','param','schema','format']) : NULL,
         '#required'      => FALSE,
       ];
+      $enum = ($form_state->getValue(['api-argument-config','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','params','param','schema','enum']) : NULL;
+      if ($enum) {
+        $enum = explode(" ", $enum);
+        $enum = implode(",", $enum);
+      }
       $form['api-argument-config']['params']['schema']['enum'] = [
         '#type'          => 'textfield',
         '#title'         => $this->t('Enumeration'),
         '#description'   => $this->t(
           'A controlled list of elegible options for this paramater. Use comma separated list of strings or leave empty'
         ),
-        '#default_value' =>  ($form_state->getValue(['api-argument-config','params','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','params','param','schema','enum']) : NULL,
+        '#default_value' =>  $enum,
         '#required'      => FALSE,
       ];
     }
