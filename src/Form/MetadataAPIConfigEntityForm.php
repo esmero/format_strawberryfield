@@ -195,6 +195,13 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#return_value' => TRUE,
         '#default_value' => ($metadataconfig->isNew()) ? TRUE : $metadataconfig->isActive()
       ],
+      'cache' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Is this Metadata API cached?'),
+        '#description' => $this->t('Cache works at twig template/complete response level. if your API requires real time data on the request side, like "time accessed" being printed out you can disable the cache.'),
+        '#return_value' => TRUE,
+        '#default_value' => ($metadataconfig->isNew()) ? TRUE : $metadataconfig->isCache()
+      ],
       'api_type' => [
         '#type' => 'select',
         '#title' => $this->t('API type'),

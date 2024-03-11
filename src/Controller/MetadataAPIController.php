@@ -518,7 +518,7 @@ A resumptionToken may be similar to (wrapped for clarity):
               $cache_id = $cache_id . $cache_id_suffix;
               $cached = $this->cacheGet($cache_id);
               // Here we go .. cache or not cache?
-              $cached = FALSE;
+              $cached = $cached && $metadataapiconfig_entity->isCache();
               if ($cached) {
                 $processed_nodes_via_templates = $cached->data ?? [];
               } else {
@@ -683,7 +683,7 @@ A resumptionToken may be similar to (wrapped for clarity):
               // @TODO add option that allows the Admin to ask for a rendered VIEW too
               //$rendered = $executable->preview();
               $executable->destroy();
-              if ($metadataapiconfig_entity->getConfiguration()['cache']['enabled']
+              if ($metadataapiconfig_entity->isCache()
                 ?? FALSE == TRUE
               ) {
                 switch ($responsetype) {
