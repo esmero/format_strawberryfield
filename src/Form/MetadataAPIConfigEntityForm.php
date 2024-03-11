@@ -457,9 +457,11 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
-    foreach ($config['openAPI'] as &$openAPIparameter) {
+    foreach ($config['openAPI'] as $argumentkey => &$openAPIparameter) {
       $openAPIparameter['param'] = json_decode($openAPIparameter['param'], TRUE);
       unset($openAPIparameter['actions']);
+      $openAPIparameter['name'] = $argumentkey;
+      $openAPIparameter['param']['name'] = $argumentkey;
     }
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
@@ -467,6 +469,22 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $new_form_state->setValue('views_source_ids', $form_state->get('views_source_ids_tmp') ??  $form_state->getValue('views_source_ids'));
     $new_form_state->setValue('configuration', $config);
     $this->entity = $this->buildEntity($form, $new_form_state);
+  }
+
+  public function validateForm(array &$form, FormStateInterface $form_state) {
+    $form_state = $form_state;
+    $name = [];
+    if (!empty($form_state->getValue(['api_parameters_list','table-row'])) &&
+    is_array($form_state->getValue(['api_parameters_list','table-row']))) {
+      foreach($form_state->getValue(['api_parameters_list','table-row']) as $argument_settings) {
+        if (isset($argument_settings['name'])) {
+          $name[$argument_settings['name']] = $argument_settings['name'];
+        }
+      }
+      if (count($name) != count($form_state->getValue(['api_parameters_list','table-row']))) {
+        $form_state->setErrorByName('api_parameters_list', 'You have duplicated API argument names');
+      }
+    }
   }
 
   /**
@@ -1097,7 +1115,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
 
   // The value of the 'view_and_display' select below will need to be split
   // into 'view_name' and 'view_display' in the final submitted values, so
-  // we massage the data at validate time on the wrapping element (not
+  // we massage the data at validatvalidate time on the wrapping element (not
   // ideal).
   $form['view']['#element_validate'] = [
     [
