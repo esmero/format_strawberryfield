@@ -6,6 +6,7 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Ajax\ScrollTopCommand;
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -256,6 +257,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
     );
+    $response->addCommand(new ScrollTopCommand('[data-drupal-selector="edit-api-argument-config"]'));
     $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'addClass', ['js-hide']));
     return $response;
   }
@@ -268,6 +270,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $response->addCommand(
       new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
     );
+    $response->addCommand(new ScrollTopCommand('[data-drupal-selector="edit-api-argument-config"]'));
     $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-views-config-button"]', 'addClass', ['js-hide']));
     return $response;
   }
