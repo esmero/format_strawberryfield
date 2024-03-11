@@ -658,8 +658,8 @@ A resumptionToken may be similar to (wrapped for clarity):
                   ]
               ];
               $context_wrapper['data_api'] = $context_parameters;
-              unset($context_wrapper['data_api']['cookies']);
-              unset($context_wrapper['data_api']['headers']);
+              unset($context_wrapper['data_api']['cookie']);
+              unset($context_wrapper['data_api']['header']);
               $context_wrapper['data_api_context'] = 'wrapper';
               $context_wrapper['data'] = $processed_nodes_via_templates;
               $original_context = $context_wrapper;
