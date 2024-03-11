@@ -457,12 +457,16 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
+    $configOpenAPIClean = [];
     foreach ($config['openAPI'] as $argumentkey => &$openAPIparameter) {
       $openAPIparameter['param'] = json_decode($openAPIparameter['param'], TRUE);
       unset($openAPIparameter['actions']);
-      $openAPIparameter['name'] = $argumentkey;
-      $openAPIparameter['param']['name'] = $argumentkey;
+      if (isset($openAPIparameter['name'])) {
+        $configOpenAPIClean[$openAPIparameter['name']] = $openAPIparameter;
+        $configOpenAPIClean[$openAPIparameter['name']]['param']['name'] = $openAPIparameter['name'];
+      }
     }
+    $config['openAPI'] = $configOpenAPIClean;
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
     $config['api_type'][] = $form_state->getValue('api_type', 'REST');
