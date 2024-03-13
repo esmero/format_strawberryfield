@@ -38,3 +38,11 @@ entity.metadataexpose_entity.collection:
   description: 'Configure what Metadata will be exposed as direct access URIs on each Digital Object via Metadata Display Entities (Twig).'
   parent: strawberryfield.group.admin
   weight: 100
+
+#Adds to Archipelago API Metadata Config
+entity.metadataapi_entity.collection:
+  title: 'Configure Metadata APIs'
+  route_name: entity.metadataapi_entity.collection
+  description: 'Configure Metadata APIs based on Drupal Views, Metadata Display Entities (Twig) and custom options.'
+  parent: strawberryfield.group.admin
+  weight: 100

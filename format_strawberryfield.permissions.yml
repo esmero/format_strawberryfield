@@ -31,3 +31,7 @@ see strawberryfield embargoed ados:
   description: 'If an Object is embargoed this permission will allow any role with this assigned to bypass it.'
   warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled.'
   restrict access: TRUE
+view strawberryfield api:
+  title: 'View/access Metadata APIs'
+  description: 'If Metadata APIs are accessible.'
+  restrict access: TRUE

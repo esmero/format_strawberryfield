@@ -111,6 +111,10 @@ class EntityAutocompleteUUID extends Textfield {
       }
       // Allow an empty array in case of multiple as default value.
       if ($element['#default_value']) {
+        if (is_string(reset($element['#default_value'])) && Uuid::isValid(reset($element['#default_value']))) {
+          $element['#default_value'] = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadByProperties(['uuid' => $element['#default_value']]);
+        }
+
         if (!(reset($element['#default_value']) instanceof EntityInterface)) {
           // try loading a UUID or an ID if not an entity already
           $entity_uuids = [];
