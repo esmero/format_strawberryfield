@@ -492,8 +492,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_height = $this->getSetting('max_height');
     $ia_reader_images_base_url = self::defaultSettings()['ia_reader_images_base_url'];
     if ($this->getSetting('ia_reader_images_base_url') &&
-      is_string($this->getSetting('ia_reader_images_base_url')
-      && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1)) {
+      is_string($this->getSetting('ia_reader_images_base_url'))
+      && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1) {
       $ia_reader_images_base_url = trim($this->getSetting('ia_reader_images_base_url'));
     }
 
@@ -670,8 +670,8 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $max_height = $this->getSetting('max_height');
     $ia_reader_images_base_url = self::defaultSettings()['ia_reader_images_base_url'];
     if ($this->getSetting('ia_reader_images_base_url') &&
-      is_string($this->getSetting('ia_reader_images_base_url')
-        && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1)) {
+      is_string($this->getSetting('ia_reader_images_base_url'))
+        && strlen(trim($this->getSetting('ia_reader_images_base_url'))) > 1) {
       $ia_reader_images_base_url = trim($this->getSetting('ia_reader_images_base_url'));
     }
 
