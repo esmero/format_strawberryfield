@@ -8,6 +8,7 @@ leaflet_strawberry_views:
     - core/drupal
     - core/drupalSettings
     - core/views
+    - views/views.ajax
     - format_strawberryfield/leaflet_ajax
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
@@ -20,7 +21,7 @@ modal-exposed-form-views-ajax:
     - core/once
     - core/drupalSettings
     - core/views
-    - core/views.ajax
+    - views/views.ajax
 modal-exposed-form-facet-views-ajax:
   js:
     js/facets-views-ajax.js: {minified: false}
@@ -28,7 +29,7 @@ modal-exposed-form-facet-views-ajax:
     - facets/widget
     - core/drupalSettings
     - core/drupal.ajax
-    - core/views.ajax
+    - views/views.ajax
     - core/once
 
 view-ajax-interactions:
@@ -40,7 +41,7 @@ view-ajax-interactions:
     - core/once
     - core/drupalSettings
     - core/views
-    - core/views.ajax
+    - views/views.ajax
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 advanced-search-default-submit:
@@ -53,3 +54,16 @@ advanced-search-default-submit:
     - core/drupal
     - core/jquery
     - core/once
+
+views-ajax-dynamic:
+  version: 1.x
+  js:
+    js/sbf-views-ajax-dynamic.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupal.ajax
+    - core/drupalSettings
+    - core/views
+    - views/views.ajax
