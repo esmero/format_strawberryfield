@@ -98,7 +98,7 @@
         ) {
 
           let event = value?.dataset?.sbfViewEvent
-          if (typeof(event == "undefined")) {
+          if (typeof(event) == "undefined") {
             event = "click";
           }
           if (['click','load'].includes(event)) {
