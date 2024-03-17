@@ -1,6 +1,9 @@
 (function ($, Drupal, drupalSettings) {
 
-  function loadViewOnEvent(e) {
+  function loadViewOnClickEvent(e) {
+    // If using the load even we can't relay on the target anymore because
+    // it is bound to the document/window.
+
     let base = e.target.id;
     // Retrieve the path to use for views' ajax.
     let ajaxPath = drupalSettings?.views?.ajax_path ?? '/views/ajax' ;
@@ -97,12 +100,17 @@
           value?.id
         ) {
 
-          let event = value?.dataset?.sbfViewEvent
-          if (typeof(event) == "undefined") {
-            event = "click";
+          let eventtype = value?.dataset?.sbfViewEvent
+          if (typeof(eventtype) == "undefined") {
+            eventtype = "click";
           }
-          if (['click','load'].includes(event)) {
-            value.addEventListener(event, loadViewOnEvent, {passive: true, once: true});
+          if (eventtype == "click") {
+            value.addEventListener(eventtype, loadViewOnClickEvent, {passive: true, once: true});
+          }
+          else if (eventtype == "load") {
+              value.addEventListener('afterload', loadViewOnClickEvent, {passive: true, once: true});
+              const event = new Event('afterload');
+              value.dispatchEvent(event);
           }
         }
       });
