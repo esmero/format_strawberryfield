@@ -3,7 +3,7 @@
   function loadViewOnEvent(e) {
     let base = e.target.id;
     // Retrieve the path to use for views' ajax.
-    let ajaxPath = drupalSettings.views.ajax_path ?? '/views/ajax' ;
+    let ajaxPath = drupalSettings?.views?.ajax_path ?? '/views/ajax' ;
 
     // If there are multiple views this might've ended up showing up multiple
     // times.
