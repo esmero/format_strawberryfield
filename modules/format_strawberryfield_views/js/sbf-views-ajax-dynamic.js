@@ -1,5 +1,45 @@
 (function ($, Drupal, drupalSettings) {
 
+  Drupal.views.ajaxView.prototype.filterNestedViews = function () {
+    // The parent function basically blocks any nesting. We need nesting.
+    // To avoid overwriting ajax_views.js, we check if our main dynamic behavior
+    // did already run. If so we will say there is no testing and deal with what Drupal should
+    // have done since the begining. Only attach to the closest View!... mmmm
+    const oncedElements = once.find('data-sbf-views');
+    if (oncedElements.length > 0) {
+      return true;
+    }
+  };
+
+  Drupal.views.ajaxView.prototype.attachPagerLinkAjax = function (id, link) {
+    const $link = $(link);
+    // Don't attach to pagers inside nested views.
+    if ($link.closest('.view')[0] !== this.$view[0]) {
+      return;
+    }
+    const viewData = {};
+    const href = $link.attr('href');
+    // Construct an object using the settings defaults and then overriding
+    // with data specific to the link.
+    $.extend(
+      viewData,
+      this.settings,
+      Drupal.Views.parseQueryString(href),
+      // Extract argument data from the URL.
+      Drupal.Views.parseViewArgs(href, this.settings.view_base_path),
+    );
+
+    const selfSettings = $.extend({}, this.element_settings, {
+      submit: viewData,
+      base: false,
+      element: link,
+      httpMethod: 'GET',
+    });
+    this.pagerAjax = Drupal.ajax(selfSettings);
+  };
+
+
+
   function loadViewOnClickEvent(e) {
     // If using the load even we can't relay on the target anymore because
     // it is bound to the document/window.
@@ -34,7 +74,7 @@
       //@TODO use the argument separator settings here.
       view_args: e.currentTarget.dataset.sbfViewArguments,
       view_dom_id: e.currentTarget.dataset.sbfViewRenderTarget,
-      views_path: window.location.pathname,
+      view_path: window.location.pathname,
     };
     let submit_settings =
       $.extend(
@@ -52,34 +92,7 @@
         type: 'throbber'
       },
       submit: submit_settings
-      /* {
-       view_name: "solr_search_content",
-       view_display_id: "grid",
-       view_args: "",
-       view_path: "/search_grid",
-       view_base_path: "search_grid"
-     }*/
-
     };
-    /*
-        event: "RefreshView"
-
-        httpMethod: "GET"
-
-        progress: {type: "fullscreen"}
-
-        selector: ".js-view-dom-id-528e1cb3d57bc28e7da980750fff6a29c3da664d1370e9aca859ac188823b32d"
-
-        setClick: true
-
-        submit: {view_name: "solr_search_content", view_display_id: "grid", view_args: "", view_path: "/search_grid", view_base_path: "search_grid", …}
-
-        url: "/views/ajax?search_api_fulltext=&op=Search"
-        */
-
-
-
-    //Drupal.ajax[base] =
     let ajaxObject = new Drupal.ajax(element_settings);
     ajaxObject.execute();
   };
@@ -92,14 +105,12 @@
       // [data-sbf-view-arguments="one,two,tree"]
       const elementsToAttach = once('data-sbf-views', '[data-sbf-view-id]', context);
       elementsToAttach.forEach(function (value, index) {
-        console.log("initializing 'Ajax Dynamic Views'");
         // Requires an ID.
         if (value?.dataset?.sbfViewId &&
           value?.dataset?.sbfViewDisplayId &&
           value?.dataset?.sbfViewRenderTarget &&
           value?.id
         ) {
-
           let eventtype = value?.dataset?.sbfViewEvent
           if (typeof(eventtype) == "undefined") {
             eventtype = "click";
