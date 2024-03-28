@@ -125,7 +125,7 @@
     }
   };
 
-  // Helper function, return modal view blocks blocks with a given submit URL
+  // Helper function, return modal view blocks with a given submit URL
   var modalViewsFormBlocks = function (url) {
     // Get all ajax modal view blocks from the current page.
     var modalviews_blocks = {};
