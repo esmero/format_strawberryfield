@@ -38,7 +38,8 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
    *   A renderable array representing the content of the block with additional
    *   context of current view and display ID.
    */
-  public function build() {
+  public function build()
+  {
 
     $is_sort_exposed = FALSE;
 
@@ -46,7 +47,14 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $sort_ids = [];
     foreach ($this->view->display_handler->getHandlers('sort') as $key => $sort) {
       if ($sort->isExposed()) {
+        // We really don't know if sorting is exposed. So we will have to ask the view
         $sort_ids[$sort->options['expose']['field_identifier']] = $sort->options['expose']['field_identifier'];
+        // Never the case that a SORT as a select is going to keep its own value
+        // But if a hanlder decides to make it a checkbox? Or some theme does that?
+        $is_sort_exposed = true;
+        // New in Drupal 10.2? But these are fixed. When combined by Better exposed Filters they will appear inside #info (still)
+        $sort_ids['sort_by'] = 'sort_by';
+        $sort_ids['sort_order'] = 'sort_order';
       }
     }
 
@@ -68,7 +76,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     // \Drupal\views\ViewExecutable::buildRenderable() using
     // \Drupal\views\Plugin\views\display\DisplayPluginBase::buildRenderable().
     $output['#attributes']['data-drupal-target-view'] = $this->view->storage->id() . '-' . $this->view->current_display;
-
+    // This changes after an Ajax call, but out settings have not ...
     $output['#id'] = Html::getUniqueId('views_exposed_form_modal-' .  $this->view->storage->id() . '-' . $this->view->current_display);
     $exposed_elements = $output['#info'] ?? [];
     foreach ($exposed_elements as $key => $exposed_values) {
@@ -77,12 +85,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
           $filter_ids[$exposed_values['value']] = $exposed_values['value'];
         }
       }
+      // Leaving this for posterity. No longer true that #info will contain sort elements
+      // Sorts are now named simply sort_by and sort_order in the main key ...
       if (strpos($key,'sort-') === 0) {
         if (isset($exposed_values['value'])) {
           $sort_ids[$exposed_values['value']] = $exposed_values['value'];
         }
       }
     }
+
 
     // Hide Filters if needed
     foreach ($filter_ids as $field_id) {
@@ -97,6 +108,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         $hide = $this->checkIfNeedsToHideFilter($output[$real_id] ?? []);
         if ($hide) {
           $output[$real_id]['#attributes']['class'][] = 'visually-hidden';
+          $output[$real_id]['#attributes']['aria-hidden'] = 'true';
           $output[$real_id]['#title_display'] = 'invisible';
           $output[$real_id]['#description_display'] = 'invisible';
           if (isset($output['#info']["filter-$field_id"]['label'])) {
@@ -111,6 +123,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
             $hide = $this->checkIfNeedsToHideFilter($value ?? []);
             if ($hide) {
               $value['#type'] = 'hidden';
+              $value['#attributes']['aria-hidden'] = 'true';
               $value['#attributes']['class'][] = 'visually-hidden';
               $output['#info']["filter-$field_id"]['label'] = '';
             }
@@ -132,6 +145,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         $hide = $this->checkIfNeedsToHideSort($output[$real_id] ?? []);
         if ($hide) {
           $output[$real_id]['#attributes']['class'][] = 'visually-hidden';
+          $output[$real_id]['#attributes']['aria-hidden'] = 'true';
           $output[$real_id]['#title_display'] = 'invisible';
           $output[$real_id]['#description_display'] = 'invisible';
           if (isset($output['#info']["sort-$field_id"]['label'])) {
@@ -147,6 +161,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
             if ($hide) {
               $value['#type'] = 'hidden';
               $value['#attributes']['class'][] = 'visually-hidden';
+              $value['#attributes']['aria-hidden'] = 'true';
               $output['#info']["sort-$field_id"]['label'] = '';
             }
           }
@@ -164,10 +179,12 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     }
     elseif (isset($output['actions']['submit'])) {
       $output['actions']['submit']['#attributes']['class'][] = 'visually-hidden';
+      $output['actions']['submit']['#attributes']['aria-hidden'] = 'true';
     }
 
     if (!$this->configuration['views_exposed_sbf_show_reset'] && isset($output['actions']['reset'])) {
       $output['actions']['reset']['#attributes']['class'][] = 'visually-hidden';
+      $output['actions']['reset']['#attributes']['aria-hidden'] = 'true';
     }
 
     if ($this->view->display_handler->ajaxEnabled()) {
@@ -184,6 +201,16 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
       $output['#attached']['library'][] = 'format_strawberryfield_views/modal-exposed-form-views-ajax';
     }
 
+    if ($this->configuration['views_exposed_sbf_copy_values_to_other_js']) {
+      $output['#attributes']['data-sbf-modalblock-copytothers'] = "true";
+    }
+    if ($this->configuration['views_exposed_sbf_autosubmit_js']) {
+      $output['#attributes']['data-sbf-modalblock-autosubmit'] = "true";
+    }
+    if ($this->configuration['views_exposed_sbf_autosubmit_js'] || $this->configuration['views_exposed_sbf_copy_values_to_other_js']) {
+      $output['#attached']['library'][] = 'format_strawberryfield_views/modal-exposed-form-views-interactions';
+    }
+
     if (is_array($output) && !empty($output)) {
       $output += [
         '#view' => $this->view,
@@ -193,7 +220,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
 
     // Before returning the block output, convert it to a renderable array with
     // contextual links.
-    $this->addContextualLinks($output, 'views_exposed_filter_block_sbf');
+    $this->addContextualLinks($output, 'exposed_filter');
 
     // Set the blocks title.
     if (!empty($this->configuration['label_display']) && ($this->view->getTitle() || !empty($this->configuration['views_label']))) {
@@ -254,7 +281,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     if (!$this->configuration['views_exposed_sbf_show_sort_filter']
       && isset($element['#type'])
       && in_array(
-        $element['#type'], ['select']
+        $element['#type'], ['select', 'radio']
       )
     ) {
       $hide = TRUE;
@@ -273,6 +300,8 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $default_config['views_exposed_sbf_show_submit'] = 1;
     $default_config['views_exposed_sbf_show_reset'] = 1;
     $default_config['views_exposed_sbf_rename_submit_label'] = '';
+    $default_config['views_exposed_sbf_copy_values_to_other_js'] = 0;
+    $default_config['views_exposed_sbf_autosubmit_js'] = 0;
     return $default_config;
   }
 
@@ -302,13 +331,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $this->configuration['views_exposed_sbf_show_pager'] = $form_state->getValue('views_exposed_sbf_show_pager',0);
     $this->configuration['views_exposed_sbf_show_submit'] = $form_state->getValue('views_exposed_sbf_show_submit',0);
     $this->configuration['views_exposed_sbf_show_reset'] = $form_state->getValue('views_exposed_sbf_show_reset',0);
+    $this->configuration['views_exposed_sbf_copy_values_to_other_js'] = $form_state->getValue('views_exposed_sbf_copy_values_to_other_js',0);
+    $this->configuration['views_exposed_sbf_autosubmit_js'] = $form_state->getValue('views_exposed_sbf_autosubmit_js',0);
 
     $form_state->unsetValue('views_label_checkbox');
     $form_state->unsetValue('views_exposed_sbf_rename_submit');
   }
 
   public function buildConfigurationForm(array $form,
-    FormStateInterface $form_state
+                                         FormStateInterface $form_state
   ) {
     $form = parent::buildConfigurationForm(
       $form, $form_state
@@ -381,7 +412,44 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         ],
       ],
     ];
-
+    $form['views_exposed_sbf_copy_values_to_other_js'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Copy visible Input Values (on user interaction/change) to other View Exposed Form Modal Blocks belonging to the same View'),
+      '#default_value' => !empty($this->configuration['views_exposed_sbf_copy_values_to_other_js']),
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+      '#states' => [
+        'enabled' => [
+          [
+            [':input[name="settings[views_exposed_sbf_show_sort_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_checksandoptions_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_text_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_select_filter]"]' => ['checked' => TRUE]],
+          ],
+        ],
+      ],
+    ];
+    $form['views_exposed_sbf_autosubmit_js'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Auto submits the form, on user interaction/change of select, checkboxes and option elements. '),
+      '#default_value' => !empty($this->configuration['views_exposed_sbf_autosubmit_js']),
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+      '#states' => [
+        'enabled' => [
+          [
+            [':input[name="settings[views_exposed_sbf_show_sort_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_checksandoptions_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_text_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_select_filter]"]' => ['checked' => TRUE]],
+          ],
+        ],
+      ],
+    ];
 
     $form['views_exposed_sbf_rename_submit_label'] = [
       '#title' => $this->t('Submit button label'),
@@ -390,7 +458,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
       '#states' => [
         'visible' => [
           [
-            ':input[name="settings[views_exposed_sbf_rename_submit]"]' => ['checked' => TRUE],
+            ':input[name="settings[views_exposed_sbf_show_submit]"]' => ['checked' => TRUE],
           ],
         ],
       ],
@@ -398,6 +466,14 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     ];
 
     return $form;
+  }
+
+  public function getCacheTags() {
+    $tags = parent::getCacheTags();
+    if ($this->view) {
+      $tags = Cache::mergeTags($tags, $this->view->display_handler->getCacheMetadata()->getCacheTags() ?? []);
+    }
+    return $tags;
   }
 
 
