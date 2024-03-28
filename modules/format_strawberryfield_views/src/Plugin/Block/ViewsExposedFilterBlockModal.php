@@ -431,6 +431,25 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         ],
       ],
     ];
+    $form['views_exposed_sbf_autosubmit_js'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Auto submits the form, on user interaction/change of select, checkboxes and option elements. '),
+      '#default_value' => !empty($this->configuration['views_exposed_sbf_autosubmit_js']),
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+      '#states' => [
+        'enabled' => [
+          [
+            [':input[name="settings[views_exposed_sbf_show_sort_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_checksandoptions_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_text_filter]"]' => ['checked' => TRUE]],
+            'OR',
+            [':input[name="settings[views_exposed_sbf_show_select_filter]"]' => ['checked' => TRUE]],
+          ],
+        ],
+      ],
+    ];
 
     $form['views_exposed_sbf_rename_submit_label'] = [
       '#title' => $this->t('Submit button label'),
