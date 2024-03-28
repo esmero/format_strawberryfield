@@ -135,9 +135,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         return ($arg == '' ? NULL : $arg);
       }, $args);
 
-      $path = $request->get('view_path');
+      $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
       // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
-      $target_url = $this->pathValidator->getUrlIfValid($path);
+      $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
       $dom_id = $request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
       $pager_element = $request->get('pager_element');
@@ -291,6 +291,13 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
     else {
       throw new NotFoundHttpException();
     }
+  }
+  public function ajaxViewAdd(Request $request)
+  {
+    //$dom_id = "blabla";
+    //$request->request->set('view_dom_id', $dom_id);
+    $response = $this->ajaxView($request);
+    return $response;
   }
 
 }
