@@ -65,7 +65,15 @@
                 };
 
                 var br = new BookReader(options);
-                br.init();
+                br.loadManifest().then(() =>  {
+                  br.init();
+                  if (data.count == 0) {
+                    $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
+                  }
+                }).catch((error) => {
+                  console.error(`Could not generate imagelist from manifest`);
+                });
+
                 if (data.count == 0) {
                   $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
                 }
