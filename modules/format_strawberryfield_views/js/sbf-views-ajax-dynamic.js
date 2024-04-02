@@ -9,6 +9,10 @@
     if (oncedElements.length > 0) {
       return true;
     }
+    else {
+      // Normal Drupal behavior. Or normal Views with ajax might break
+      return !this.$view.parents('.view').length;
+    }
   };
 
   Drupal.views.ajaxView.prototype.attachPagerLinkAjax = function (id, link) {
@@ -48,7 +52,7 @@
     // Retrieve the path to use for views' ajax.
     let ajaxPath = drupalSettings?.views?.ajax_path ?? '/views/ajax' ;
 
-    // If there are multiple views this might've ended up showing up multiple
+    // If there are multiple views this might've ended up showing multiple
     // times.
     if (ajaxPath.constructor.toString().indexOf('Array') !== -1) {
       ajaxPath = ajaxPath[0];

@@ -689,7 +689,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     $embargo_context = [];
     if ($this->getSetting('manifesturl_source') && $pagestrategy == 'manifesturl') {
       $manifest_url_key = $this->getSetting('manifesturl_source');
-      if ($jsondata[$manifest_url_key]) {
+      if ($manifest_url_key && isset($jsondata[$manifest_url_key])) {
         $manifest_url = $jsondata[$manifest_url_key];
       }
     }
