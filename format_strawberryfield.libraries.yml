@@ -318,13 +318,13 @@ leaflet_strawberry:
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
 replayweb:
-  version: 1.5.5
+  version: 2.0.0
   license:
     name: AGPLv3
     url: https://github.com/webrecorder/replayweb.page/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/replaywebpage@1.5.5/ui.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/replaywebpage@2.0.0-beta.0/ui.js: { external: true, minified: true, preprocess: false}
 
 universalviewer:
   version: 4.0.1
