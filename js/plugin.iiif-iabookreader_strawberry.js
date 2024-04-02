@@ -280,6 +280,9 @@ BookReader.prototype.getApiVersion = function() {
 }
 
 BookReader.prototype.loadManifest = async function () {
+    // NOT to be called anymore inside br.init(). TextSelection plugin
+    // does not allow leafs/images to be initiated async and fails if this one does not
+    // return in order. So we call it outside, async on
     var self = this;
     if (!this.options.iiifmanifesturl && !this.options.iiifmanifest) return false;
     // Simplest approach, we got a full manifest passed as an Object
@@ -296,13 +299,12 @@ BookReader.prototype.loadManifest = async function () {
         self.metadata = self.jsonLd.metadata;
         // Assuming we have no default sequence so first one is the good one.
         self.parseSequence(null);
-        return self;
+        return true;
     }
-    else {
+    else if (this.options.iiifmanifesturl && typeof(this.options.iiifmanifesturl) == "string") {
         try {
             // Ok, no full manifest, now try with the remote URL
-            console.log(this.options.iiifmanifesturl.replace(/^\s+|\s+$/g, ''));
-            const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest(this.options.iiifmanifesturl.replace(/^\s+|\s+$/g, ''));
+             const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest(this.options.iiifmanifesturl.replace(/^\s+|\s+$/g, ''));
              await $iiifmanifest.then(iiifmanifest_promise_resolved => {
                 self.jsonLd = iiifmanifest_promise_resolved;
                 self.bookTitle =
@@ -314,14 +316,15 @@ BookReader.prototype.loadManifest = async function () {
                 self.bookUrl = '#';
                 self.metadata = self.jsonLd.metadata;
                 self.parseSequence(self.options.iiifdefaultsequence);
-                return self;
+                return true;
             });
         }
         catch (error) {
             console.log('Failed loading ' + self.options.iiifmanifesturl);
-            return self;
+            return false;
         }
     }
+    return false;
 }
 
 /* Bugs in the parent implementation */

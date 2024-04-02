@@ -65,15 +65,19 @@
                 };
 
                 var br = new BookReader(options);
+                var $div = $("<div>", {"class": "sbf-preloader"});
+                $(value).append($div);
                 br.loadManifest().then(() =>  {
+                  $( '#' + element_id+' .sbf-preloader').fadeOut('fast');
                   br.init();
                   if (data.count == 0) {
                     $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
                   }
                 }).catch((error) => {
-                  console.error(`Could not generate imagelist from manifest`);
+                  $( '#' + element_id+' .sbf-preloader').fadeOut('fast');
+                  console.log('Error. Could not process iiifmanifest for IABookreader');
                 });
-
+                // Because of async call/possible failure we allow also this to kick in sooner if needed.
                 if (data.count == 0) {
                   $('#' + element_id + ' .BRtoolbarSectionSearch').hide();
                 }
