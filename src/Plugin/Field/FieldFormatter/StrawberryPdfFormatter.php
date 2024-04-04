@@ -70,7 +70,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
           '#default_value' => $this->getSetting('pdfjs_type'),
           '#options' => [
             'simple' => $this->t('Only next/prev'),
-            'normal' => $this->t('With Search '),
+            'normal' => $this->t('With Native PDF.js Search'),
           ]
         ],
         'number_documents' => [
