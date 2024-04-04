@@ -1,5 +1,7 @@
-<div class="format-strawberryfield-pdfs-controller">
-    <div class="pages">Pages: <span id="{{ item.id }}-pagenum">1</span>&nbsp;of <span id="{{ item.id }}-pagecount"></span></div>
-    <button id="{{ item.id }}-prev" type="button" title="{{ 'Previous'|t }}" class="button btn btn-secondary">Previous</button>
-    <button id="{{ item.id }}-next" type="button" title="{{ 'Next'|t }}" class="button btn btn-secondary">Next</button>
-</div>
+<nav class="format-strawberryfield-pdfs-controller" aria-label="{{ 'Pagination Navigation of PDF'|t }}" tabindex="-1">
+  <div class="pages" role="contentinfo">Pages: <span id="{{ item.id }}-pagenum">1</span>&nbsp;of <span id="{{ item.id }}-pagecount"></span></div>
+  <ul class="navbar-nav mr-auto list-group list-group-horizontal mb-2">
+    <li class="nav-item "><button id="{{ item.id }}-prev" type="button" title="{{ 'Previous'|t }}" class="button btn btn-secondary" aria-label="Goto Previous Page" tabindex="0">Previous</button></li>
+    <li  class="nav-item ms-2"><button id="{{ item.id }}-next" type="button" title="{{ 'Next'|t }}" class="button btn btn-secondary" aria-label="Goto Next Page" tabindex="0">Next</button></li>
+  </ul>
+</nav>
