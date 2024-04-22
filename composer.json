@@ -19,6 +19,8 @@
         "drupal/webform": "^6.1.5",
         "drupal/jquery_ui_slider":"^2.0",
         "drupal/jquery_ui_effects":"^2.0",
+        "cebe/php-openapi":"^1",
+        "league/openapi-psr7-validator": "^0.2",
         "ext-json": "*",
 	"seboettg/citeproc-php": "dev-master"
     },
