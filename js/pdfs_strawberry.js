@@ -4,7 +4,7 @@
     attach: function (context, settings) {
 
       // The workerSrc property is a must!
-      // @TODO: Would love to simply push ther 'worker' property since we already have it loaded
+      // @TODO: Would love to simply push the 'worker' property since we already have it loaded
       // but i lack enough understanding of the API.
       // See here https://github.com/mozilla/pdf.js/blob/master/src/display/api.js#L218
       // Probably (have to check) passing an Object with that key instead of a string to pdfjsLib.getDocument($doc)

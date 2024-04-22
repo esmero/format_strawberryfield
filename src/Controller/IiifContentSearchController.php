@@ -295,21 +295,27 @@ class IiifContentSearchController extends ControllerBase {
                   // Calculate Canvas and its offset
                   // PDFs Sequence is correctly detected, but on images it should always be "1"
                   // For that we will change the response from the main Solr search using our expected ID (splitting)
-
-                  $canvas = $image_hash[$hits_per_file_and_sequence['sbf_metadata']['uri']][$hits_per_file_and_sequence['sbf_metadata']['sequence_id']] ?? [];
-                  foreach ($canvas as $canvas_id => $canvas_data) {
+                  $uris = [];
+                  foreach ($this->iiifConfig->get('iiif_content_search_api_file_uri_fields') ?? [] as $uri_field) {
+                    $uris[] = $hits_per_file_and_sequence['sbf_metadata'][$uri_field] ?? NULL;
+                  }
+                  $sequence_id = $hits_per_file_and_sequence['sbf_metadata']['sequence_id'] ?? 1;
+                  $uris = array_filter($uris);
+                  $uri = reset($uris);
+                  if ($uri) {
+                    $canvas = $image_hash[$uri][$sequence_id] ?? [];
+                    foreach ($canvas as $canvas_id => $canvas_data) {
                     if ($canvas_id) {
                       $canvas_parts = explode("#xywh=", $canvas_id);
                       if (count($canvas_parts) == 2) {
-                        $canvas_offset = explode(',' , $canvas_parts[1]);
+                        $canvas_offset = explode(',', $canvas_parts[1]);
                         $canvas_position = [
                           round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
                           round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
                           round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
                           round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
                         ];
-                      }
-                      else {
+                      } else {
                         $canvas_position = [
                           round($annotation['l'] * $canvas_data[0]),
                           round($annotation['t'] * $canvas_data[1]),
@@ -333,37 +339,39 @@ class IiifContentSearchController extends ControllerBase {
                       // Generate the entry
                       if ($version == "v1") {
                         $entries[] = [
-                          "@id"        => $current_url_clean
+                          "@id" => $current_url_clean
                             . "/annotation/anno-result/$i",
-                          "@type"      => "oa:Annotation",
+                          "@type" => "oa:Annotation",
                           "motivation" => "painting",
-                          "resource"   => [
+                          "resource" => [
                             "@type" => "cnt:ContentAsText",
                             "chars" => $annotation['snippet'],
                           ],
-                          "on"         => ($canvas_parts[0] ?? $canvas_id) . $canvas_position
+                          "on" => ($canvas_parts[0] ?? $canvas_id) . $canvas_position
                         ];
-                      }
-                      elseif ($version == "v2") {
+                      } elseif ($version == "v2") {
                         $entries[] = [
-                          "id"        => $current_url_clean
+                          "id" => $current_url_clean
                             . "/annotation/anno-result/$i",
-                          "type"      => "Annotation",
+                          "type" => "Annotation",
                           "motivation" => "painting",
-                          "body"   => [
+                          "body" => [
                             "type" => "TextualBody",
                             "value" => $annotation['snippet'],
                             "format" => "text/plain",
                           ],
-                          "target"         => $canvas_id . $canvas_position
+                          "target" => $canvas_id . $canvas_position
                         ];
                       }
                     }
                   }
+                  }
                 }
               }
             }
-
+            if (count($entries) == 0) {
+              $results['total'] = 0;
+            }
             if ($results['total'] > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
               $max_page = ceil($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
               if ($version == "v1") {
@@ -549,6 +557,9 @@ class IiifContentSearchController extends ControllerBase {
       }
 
       if (count($image_uris)) {
+        //Note here. If we don't have any fields configured the response will contain basically ANYTHING
+        // in the repo. So option 1 is make `iiif_content_search_api_file_uri_fields` required
+        // bail out if empty?
         foreach ($this->iiifConfig->get('iiif_content_search_api_file_uri_fields') ?? [] as $uri_field) {
           if (isset($allfields_translated_to_solr[$uri_field])) {
             $uri_conditions->addCondition($uri_field, $image_uris, 'IN');
