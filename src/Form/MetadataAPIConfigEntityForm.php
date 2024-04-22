@@ -1224,8 +1224,8 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
       case 'string' :
         $schema['format'] = $parameter["param"]['schema']['string_format'];
         $schema['pattern'] = $parameter["param"]['schema']['string_pattern'];
-        if (strlen(trim($parameter["param"]['schema']['enum'])) > 0) {
-          $schema['enum'] = explode(",", trim($parameter['schema']['enum']));
+        if (strlen(trim($parameter["param"]['schema']['enum'] ?? '')) > 0) {
+          $schema['enum'] = explode(",", trim($parameter["param"]['schema']['enum']));
           foreach ($schema['enum'] as &$entry) {
             trim($entry);
           }
