@@ -88,6 +88,24 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->set('views_source_ids_tmp', $views_source_ids);
     $form_state->setValue('views_source_ids', $views_source_ids);
 
+    $wrapper_template = (!$metadataconfig->isNew()) ? $form_state->getValue('processor_wrapper_level_entity_id') : NULL;
+    $item_template = (!$metadataconfig->isNew()) ? $form_state->getValue('processor_item_level_entity_id'): NULL;
+    if ($wrapper_template) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $wrapper_template]);
+      if (!count($entities)) {
+        $wrapper_template = NULL;
+        $this->messenger()->addWarning(
+          $this->t('The Configured Wrapper Level Template for this API does not longer exist. Please provide a new one'));
+      }
+    }
+    if ($item_template) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $item_template]);
+      if (!count($entities)) {
+        $item_template = NULL;
+        $this->messenger()->addWarning(
+          $this->t('The Configured Item level Template for this API does not longer exist. Please provide a new one'));
+      }
+    }
     $form = [
       'label' => [
         '#id' => 'label',
@@ -157,7 +175,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           'id' => 'api-source-config-form',
         ],
         '#title' => $this->t('Exposed filters and arguments for the selected source View'),
-        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter'),
+        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter. NOTE: A View will only be invoked/executed if an API argument is mapped to one of these. Please make sure you map at least one.'),
         '#tree' => TRUE
       ],
       'api_parameters_list' => [
@@ -179,7 +197,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         ],
         '#validate_reference' => TRUE,
         '#required' => TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('processor_wrapper_level_entity_id') : NULL,
+        '#default_value' =>  $wrapper_template,
       ],
       'processor_item_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
@@ -188,7 +206,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => TRUE,
         '#required' => TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('processor_item_level_entity_id') : NULL,
+        '#default_value' => $item_template,
       ],
       'active' => [
         '#type' => 'checkbox',
@@ -226,7 +244,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#attributes' => ['class' => ['js-hide']],
       ]
     ];
-    // We need the views arguments here so we run this first.
+    // We need the views arguments here, so we run this first.
     $this->buildAPIConfigForm($form, $form_state);
     $this->buildCurrentParametersConfigForm($form, $form_state);
     $this->buildParameterConfigForm($form, $form_state);
