@@ -88,6 +88,24 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->set('views_source_ids_tmp', $views_source_ids);
     $form_state->setValue('views_source_ids', $views_source_ids);
 
+    $wrapper_template = (!$metadataconfig->isNew()) ? $form_state->getValue('processor_wrapper_level_entity_id') : NULL;
+    $item_template = (!$metadataconfig->isNew()) ? $form_state->getValue('processor_item_level_entity_id'): NULL;
+    if ($wrapper_template) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $wrapper_template]);
+      if (!count($entities)) {
+        $wrapper_template = NULL;
+        $this->messenger()->addWarning(
+          $this->t('The Configured Wrapper Level Template for this API does not longer exist. Please provide a new one'));
+      }
+    }
+    if ($item_template) {
+      $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $item_template]);
+      if (!count($entities)) {
+        $item_template = NULL;
+        $this->messenger()->addWarning(
+          $this->t('The Configured Item level Template for this API does not longer exist. Please provide a new one'));
+      }
+    }
     $form = [
       'label' => [
         '#id' => 'label',
@@ -157,7 +175,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           'id' => 'api-source-config-form',
         ],
         '#title' => $this->t('Exposed filters and arguments for the selected source View'),
-        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter'),
+        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter. NOTE: A View will only be invoked/executed if an API argument is mapped to one of these. Please make sure you map at least one.'),
         '#tree' => TRUE
       ],
       'api_parameters_list' => [
@@ -179,7 +197,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         ],
         '#validate_reference' => TRUE,
         '#required' => TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('processor_wrapper_level_entity_id') : NULL,
+        '#default_value' =>  $wrapper_template,
       ],
       'processor_item_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
@@ -188,7 +206,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => TRUE,
         '#required' => TRUE,
-        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('processor_item_level_entity_id') : NULL,
+        '#default_value' => $item_template,
       ],
       'active' => [
         '#type' => 'checkbox',
@@ -226,7 +244,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#attributes' => ['class' => ['js-hide']],
       ]
     ];
-    // We need the views arguments here so we run this first.
+    // We need the views arguments here, so we run this first.
     $this->buildAPIConfigForm($form, $form_state);
     $this->buildCurrentParametersConfigForm($form, $form_state);
     $this->buildParameterConfigForm($form, $form_state);
@@ -1199,40 +1217,40 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
     // Only calling this function (PRIVATE) so
     // i know for sure that if this is missing it is because $parameter
     // Comes from a saved entity and it is ready
-    if (isset($parameter["weight"]) && isset($parameter["param"]) && is_array($parameter["param"])) {
-      return json_encode($parameter["param"], JSON_PRETTY_PRINT);
+    if (isset($parameter['weight']) && isset($parameter['param']) && is_array($parameter['param'])) {
+      return json_encode($parameter['param'], JSON_PRETTY_PRINT);
     }
 
-    if (empty($parameter["param"]["in"]) || empty($parameter["name"])) {
+    if (empty($parameter['param']['in']) || empty($parameter['name'])) {
       // Prety sure something went wrong here, so return an error
       return $this->t("Something went wrong. This Parameter is wrongly setup. Please edit/delete.");
     }
 
     $api_argument = [
-      "in" => $parameter["param"]["in"],
-      "name" => $parameter["param"]["name"],
+      "in" => $parameter['param']['in'],
+      "name" => $parameter['param']['name'],
     ];
     // Schema will vary depending on the type, so let's do that.
-    $schema = ['type' => $parameter["param"]['schema']['type']];
+    $schema = ['type' => $parameter['param']['schema']['type']];
     switch ($schema['type']) {
       case 'number' :
-        $schema['format'] = $parameter["param"]['schema']['number_format'];
+        $schema['format'] = $parameter['param']['schema']['number_format'];
         break;
       case 'integer' :
-        $schema['format'] = $parameter["param"]['schema']['number_format'];
+        $schema['format'] = $parameter['param']['schema']['number_format'];
         break;
       case 'string' :
-        $schema['format'] = $parameter["param"]['schema']['string_format'];
-        $schema['pattern'] = $parameter["param"]['schema']['string_pattern'];
-        if (strlen(trim($parameter["param"]['schema']['enum'])) > 0) {
-          $schema['enum'] = explode(",", trim($parameter['schema']['enum']));
+        $schema['format'] = $parameter['param']['schema']['string_format'];
+        $schema['pattern'] = $parameter['param']['schema']['string_pattern'];
+        if (strlen(trim($parameter['param']['schema']['enum'] ?? '')) > 0) {
+          $schema['enum'] = explode(",", trim($parameter['param']['schema']['enum']));
           foreach ($schema['enum'] as &$entry) {
             trim($entry);
           }
         }
         break;
       case 'array' :
-        $schema['items']['type'] = $parameter["param"]['schema']['array_type'];
+        $schema['items']['type'] = $parameter['param']['schema']['array_type'];
         break;
       case 'object' :
         // Not implemented yet, the form will get super complex when
@@ -1241,8 +1259,8 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
     $api_argument['schema'] = array_filter($schema);
     switch ($api_argument['in']) {
       case 'path':
-        if (in_array($parameter['style'], ['simple', 'label', 'matrix'])) {
-          $api_argument['style'] = $parameter['style'];
+        if (in_array($parameter['param']['style'], ['simple', 'label', 'matrix'])) {
+          $api_argument['style'] = $parameter['param']['style'];
         }
         else {
           $api_argument['style'] = 'simple';
@@ -1252,11 +1270,11 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         break;
       case 'query':
         if (in_array(
-          $parameter["param"]['style'],
+          $parameter['param']['style'],
           ['form', 'spaceDelimited', 'pipeDelimited', 'deepObject']
         )
         ) {
-          $api_argument['style'] = $parameter["param"]['style'];
+          $api_argument['style'] = $parameter['param']['style'];
         }
         else {
           $api_argument['style'] = 'form';
@@ -1272,9 +1290,9 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         $api_argument['explode'] = TRUE;
         break;
     }
-    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter["param"]['required'];
-    $api_argument['deprecated'] = (bool) $parameter["param"]['deprecated'];
-    $api_argument['description'] = $parameter["param"]['description'];
+    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter['param']['required'];
+    $api_argument['deprecated'] = (bool) $parameter['param']['deprecated'];
+    $api_argument['description'] = $parameter['param']['description'];
     // 'explode', mins and max not implemented via form, using the defaults for Open API 3.x
     return json_encode($api_argument, JSON_PRETTY_PRINT);
   }
