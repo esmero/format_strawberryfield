@@ -1199,40 +1199,40 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
     // Only calling this function (PRIVATE) so
     // i know for sure that if this is missing it is because $parameter
     // Comes from a saved entity and it is ready
-    if (isset($parameter["weight"]) && isset($parameter["param"]) && is_array($parameter["param"])) {
-      return json_encode($parameter["param"], JSON_PRETTY_PRINT);
+    if (isset($parameter['weight']) && isset($parameter['param']) && is_array($parameter['param'])) {
+      return json_encode($parameter['param'], JSON_PRETTY_PRINT);
     }
 
-    if (empty($parameter["param"]["in"]) || empty($parameter["name"])) {
+    if (empty($parameter['param']['in']) || empty($parameter['name'])) {
       // Prety sure something went wrong here, so return an error
       return $this->t("Something went wrong. This Parameter is wrongly setup. Please edit/delete.");
     }
 
     $api_argument = [
-      "in" => $parameter["param"]["in"],
-      "name" => $parameter["param"]["name"],
+      "in" => $parameter['param']['in'],
+      "name" => $parameter['param']['name'],
     ];
     // Schema will vary depending on the type, so let's do that.
-    $schema = ['type' => $parameter["param"]['schema']['type']];
+    $schema = ['type' => $parameter['param']['schema']['type']];
     switch ($schema['type']) {
       case 'number' :
-        $schema['format'] = $parameter["param"]['schema']['number_format'];
+        $schema['format'] = $parameter['param']['schema']['number_format'];
         break;
       case 'integer' :
-        $schema['format'] = $parameter["param"]['schema']['number_format'];
+        $schema['format'] = $parameter['param']['schema']['number_format'];
         break;
       case 'string' :
-        $schema['format'] = $parameter["param"]['schema']['string_format'];
-        $schema['pattern'] = $parameter["param"]['schema']['string_pattern'];
-        if (strlen(trim($parameter["param"]['schema']['enum'] ?? '')) > 0) {
-          $schema['enum'] = explode(",", trim($parameter["param"]['schema']['enum']));
+        $schema['format'] = $parameter['param']['schema']['string_format'];
+        $schema['pattern'] = $parameter['param']['schema']['string_pattern'];
+        if (strlen(trim($parameter['param']['schema']['enum'] ?? '')) > 0) {
+          $schema['enum'] = explode(",", trim($parameter['param']['schema']['enum']));
           foreach ($schema['enum'] as &$entry) {
             trim($entry);
           }
         }
         break;
       case 'array' :
-        $schema['items']['type'] = $parameter["param"]['schema']['array_type'];
+        $schema['items']['type'] = $parameter['param']['schema']['array_type'];
         break;
       case 'object' :
         // Not implemented yet, the form will get super complex when
@@ -1241,8 +1241,8 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
     $api_argument['schema'] = array_filter($schema);
     switch ($api_argument['in']) {
       case 'path':
-        if (in_array($parameter['style'], ['simple', 'label', 'matrix'])) {
-          $api_argument['style'] = $parameter['style'];
+        if (in_array($parameter['param']['style'], ['simple', 'label', 'matrix'])) {
+          $api_argument['style'] = $parameter['param']['style'];
         }
         else {
           $api_argument['style'] = 'simple';
@@ -1252,11 +1252,11 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         break;
       case 'query':
         if (in_array(
-          $parameter["param"]['style'],
+          $parameter['param']['style'],
           ['form', 'spaceDelimited', 'pipeDelimited', 'deepObject']
         )
         ) {
-          $api_argument['style'] = $parameter["param"]['style'];
+          $api_argument['style'] = $parameter['param']['style'];
         }
         else {
           $api_argument['style'] = 'form';
@@ -1272,9 +1272,9 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         $api_argument['explode'] = TRUE;
         break;
     }
-    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter["param"]['required'];
-    $api_argument['deprecated'] = (bool) $parameter["param"]['deprecated'];
-    $api_argument['description'] = $parameter["param"]['description'];
+    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter['param']['required'];
+    $api_argument['deprecated'] = (bool) $parameter['param']['deprecated'];
+    $api_argument['description'] = $parameter['param']['description'];
     // 'explode', mins and max not implemented via form, using the defaults for Open API 3.x
     return json_encode($api_argument, JSON_PRETTY_PRINT);
   }
