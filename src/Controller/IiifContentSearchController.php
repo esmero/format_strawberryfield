@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Controller;
 
+use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Render\RenderContext;
@@ -11,6 +12,7 @@ use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -475,20 +477,22 @@ class IiifContentSearchController extends ControllerBase {
 
 
   /**
-   * OCR Search Controller specific to IIIF Content Seaach Needs
+   * OCR Search Controller specific to IIIF Content Search Needs
    *
    * @param string $term
-   * @param array  $processors
-   * @param array  $image_uris
-   * @param array  $node_ids
-   * @param int    $offset
-   * @param int    $limit
-   *
+   * @param array $processors
+   *  The list of processors. Matching processor to $ocr|true|false is done by the caller.
+   * @param array $file_uris
+   * @param array $node_ids
+   * @param int $offset
+   * @param int $limit
+   * @param bool $ocr
+   *  If we should use the OCRHighlight extension and the ocr_text field. If not, we will go for normal highlight and sbf_plaintext plaint text.
    * @return array
-   * @throws \Drupal\Component\Plugin\Exception\PluginException
-   * @throws \Drupal\search_api\SearchApiException
+   * @throws PluginException
+   * @throws SearchApiException
    */
-  protected function flavorfromSolrIndex(string $term, array $processors, array $image_uris, array $node_ids = [], $offset = 0, $limit = 100) {
+  protected function flavorfromSolrIndex(string $term, array $processors, array $file_uris, array $node_ids = [], $offset = 0, $limit = 100, $ocr = true) {
 
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
@@ -508,8 +512,29 @@ class IiifContentSearchController extends ControllerBase {
       $parse_mode = $this->parseModeManager->createInstance('terms');
       $query->setParseMode($parse_mode);
       $query->keys($term);
-
-      $query->setFulltextFields(['ocr_text']);
+      // @TODO research if we can do a single Query instead of multiple ones?
+      if ($ocr) {
+        if (isset($allfields_translated_to_solr['ocr_text'])) {
+          $query->setFulltextFields(['ocr_text']);
+        }
+        else {
+          $this->loggerFactory->get('format_strawberryfield')->error('We can not execute a Content Search API query against XML OCR without a field named <em>ocr_text</em> of type Full Text Ocr Highlight');
+          $search_result['annotations'] = [];
+          $search_result['total'] = 0;
+          return $search_result;
+        }
+      }
+      else {
+        if (isset($allfields_translated_to_solr['sbf_plaintext'])) {
+          $query->setFulltextFields(['sbf_plaintext']);
+        }
+        else {
+          $this->loggerFactory->get('format_strawberryfield')->error('We can not execute a Content Search API query against Plain Extracted Text without a field named <em>sbf_plaintext</em> of type Full Text');
+          $search_result['annotations'] = [];
+          $search_result['total'] = 0;
+          return $search_result;
+        }
+      }
 
       $allfields_translated_to_solr = $search_api_index->getServerInstance()
         ->getBackend()
@@ -535,12 +560,21 @@ class IiifContentSearchController extends ControllerBase {
       $query->addCondition('search_api_datasource', 'strawberryfield_flavor_datasource')
         ->addCondition('processor_id', $processors, 'IN');
 
-      if (isset($allfields_translated_to_solr['ocr_text'])) {
-        // Will be used by \strawberryfield_search_api_solr_query_alter
+      if (isset($allfields_translated_to_solr['ocr_text']) && $ocr) {
+        // Will be used by \Drupal\strawberryfield\EventSubscriber\SearchApiSolrEventSubscriber::preQuery
         $query->setOption('ocr_highlight', 'on');
         // We are already checking if the Node can be viewed. Custom Datasources can not depend on Solr node access policies.
         $query->setOption('search_api_bypass_access', TRUE);
       }
+      if (isset($allfields_translated_to_solr['sbf_plaintext']) && !$ocr) {
+        // Will be used by  \Drupal\strawberryfield\EventSubscriber\SearchApiSolrEventSubscriber::preQuery
+
+        $query->setOption('sbf_highlight_fields', 'on');
+        // We are already checking if the Node can be viewed. Custom Datasources can not depend on Solr node access policies.
+        $query->setOption('search_api_bypass_access', TRUE);
+      }
+
+
       $fields_to_retrieve['id'] = 'id';
       if (isset($allfields_translated_to_solr['parent_sequence_id'])) {
         $fields_to_retrieve['parent_sequence_id'] = $allfields_translated_to_solr['parent_sequence_id'];
@@ -555,14 +589,18 @@ class IiifContentSearchController extends ControllerBase {
       if (isset($allfields_translated_to_solr['file_uuid'])) {
         $fields_to_retrieve['file_uuid'] = $allfields_translated_to_solr['file_uuid'];
       }
+      else {
+        $this->loggerFactory->get('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to sarch');
+      }
 
-      if (count($image_uris)) {
+      if (count($file_uris)) {
         //Note here. If we don't have any fields configured the response will contain basically ANYTHING
         // in the repo. So option 1 is make `iiif_content_search_api_file_uri_fields` required
-        // bail out if empty?
+        // bail out if empty? Or, we can add a short limit... that works too for now
+        // April 2024, to enable in the future postprocessor that generate SBF but not from files (e.g WARC)
         foreach ($this->iiifConfig->get('iiif_content_search_api_file_uri_fields') ?? [] as $uri_field) {
           if (isset($allfields_translated_to_solr[$uri_field])) {
-            $uri_conditions->addCondition($uri_field, $image_uris, 'IN');
+            $uri_conditions->addCondition($uri_field, $file_uris, 'IN');
             $fields_to_retrieve[$uri_field]
               = $allfields_translated_to_solr[$uri_field];
           }
@@ -571,9 +609,11 @@ class IiifContentSearchController extends ControllerBase {
           }
         }
       }
-      // This is documented at the API level but maybe our processing level
-      // Does not trigger it?
-      // Still keeping it because maybe/someday it will work out!
+      else {
+        // in case no files are passed to filter, simply limit all to less?
+        $query->setOption('limit', 10);
+      }
+      // This might/not/be/respected. (API v/s reality)
       $query->setOption('search_api_retrieved_field_values', array_values($fields_to_retrieve));
       // If we allow Extra processing here Drupal adds Content Access Check
       // That does not match our Data Source \Drupal\search_api\Plugin\search_api\processor\ContentAccess
@@ -617,7 +657,6 @@ class IiifContentSearchController extends ControllerBase {
               $filedata_by_id[$extradata_from_item['search_api_solr_document']['id']]['sequence_id'] = $real_sequence;
             }
           }
-
           foreach ($extradata['search_api_solr_response']['ocrHighlighting'] as $sol_doc_id => $field) {
             $result_snippets_base = [];
             if (isset($field[$allfields_translated_to_solr['ocr_text']]['snippets']) &&
@@ -678,13 +717,16 @@ class IiifContentSearchController extends ControllerBase {
                   }
                 }
               }
-
               foreach($fields_to_retrieve as $machine_name => $machine_name_field) {
                 $result_snippets_base['sbf_metadata'][$machine_name] = $filedata_by_id[$sol_doc_id][$machine_name];
               }
             }
             $result_snippets[] = $result_snippets_base;
           }
+        }
+        elseif (isset($extradata['search_api_solr_response'])) {
+          // if no ocr hl was passed we won't have  $extradata['search_api_solr_response']['ocrHighlighting'], so we process
+          // the other. These results won't have coordinates.
         }
       }
     }
