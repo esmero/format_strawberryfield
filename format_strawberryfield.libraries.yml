@@ -182,14 +182,27 @@ pdfs_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_projectmirador:
-  version: 3.1.1
+  version: 3.3.0
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/mirador@3.1.1/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/mirador@3.3.0/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
+
+mirador_projectmirador_4:
+  version: 4.0.0-alpha
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://unpkg.com/mirador@4.0.0-alpha.2/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_font:
   css:
@@ -235,6 +248,22 @@ mirador_custom_strawberry:
     - core/once
     - core/drupalSettings
     - format_strawberryfield/mirador_archipelago_custom
+    - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+mirador_strawberry_four:
+  version: 1.4
+  js:
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupalSettings
+    - format_strawberryfield/mirador_projectmirador_4
     - format_strawberryfield/mirador_font
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 

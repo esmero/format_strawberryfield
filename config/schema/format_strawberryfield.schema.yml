@@ -505,6 +505,9 @@ field.formatter.settings.strawberry_mirador_formatter:
     custom_js:
       type: boolean
       label: 'If custom Mirador with plugin is going to be used instead of Vanilla CDN'
+    mirador_version:
+      type: integer
+      label: 'Version 3 or 4 from CDN. Does not apply if custom is selectoed'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'
