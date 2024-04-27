@@ -36,8 +36,7 @@ class IiifContentSearchController extends ControllerBase {
    */
   CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting' && body.type == 'Image'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
 
-  CONST IIIF_V3_JMESPATH_VTT ="items[?not_null(type, \"@type\") == 'Canvas'].[{duration:duration,width:width,height:height,vtt_canvas_annotation_triad:items[?type == 'AnnotationPage' && items[?motivation == 'painting' && (body.type == 'Video' || body.type == 'Audio')] && annotations[?type == 'AnnotationPage' && items[?motivation == 'supplementing' && body.format == 'text/vtt']]][].annotations[].items[?motivation=='supplementing' && body.format == 'text/vtt'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
-
+  CONST IIIF_V3_JMESPATH_VTT ="items[?not_null(type, \"@type\") == 'Canvas'].[{duration:duration, width:width, height:height, vtt_canvas_annotation_triad:annotations[].items[?motivation=='supplementing' && body.format == 'text/vtt'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
   /**
    * Mime type guesser service.
    *
