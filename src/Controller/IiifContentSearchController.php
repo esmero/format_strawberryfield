@@ -15,6 +15,7 @@ use Drupal\search_api\Query\QueryInterface;
 use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
+use Ramsey\Uuid\Uuid;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -33,7 +34,9 @@ class IiifContentSearchController extends ControllerBase {
   /**
    * A JMESPATH to fetch Canvas Size, Images and their targets IIIF Presentation 3.x
    */
-  CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
+  CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting' && body.type == 'Image'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
+
+  CONST IIIF_V3_JMESPATH_VTT ="items[?not_null(type, \"@type\") == 'Canvas'].[{duration:duration,width:width,height:height,vtt_canvas_annotation_triad:items[?type == 'AnnotationPage' && items[?motivation == 'painting' && body.type == 'Video'] && annotations[?type == 'AnnotationPage' && items[?motivation == 'supplementing' && body.format == 'text/vtt']]][].annotations[].items[?motivation=='supplementing' && body.format == 'text/vtt'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
 
   /**
    * Mime type guesser service.
@@ -266,14 +269,47 @@ class IiifContentSearchController extends ControllerBase {
               }
             }
 
-            $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
-              static::IIIF_V3_JMESPATH, $jsonArray
-            );
+            $image_hash = [];
+            $vtt_hash = [];
+            $text_hash = [];
+            // Get the Visual X/Y Processors, split, clean;
+            $visual_processors =  $this->iiifConfig->get('iiif_content_search_api_visual_enabled_processors') ?? 'ocr';
+            //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
+            $visual_processors = explode(",", $visual_processors);
+            $visual_processors = array_map('trim', $visual_processors);
+            $visual_processors = array_filter($visual_processors);
 
-            $image_hash = $this->cleanJmesPathResult($jmespath_searchresult);
-            unset($jmespath_searchresult);
+            $time_processors =  $this->iiifConfig->get('iiif_content_search_api_time_enabled_processors') ?? 'subtitle';
+            //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
+            $time_processors = explode(",", $time_processors);
+            $time_processors = array_map('trim', $time_processors);
+            $time_processors = array_filter($time_processors);
 
-            $results = $this->flavorfromSolrIndex($the_query_string, ['ocr'], array_keys($image_hash), [], ($page * $per_page), $per_page);
+
+            if (count($visual_processors)) {
+              $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
+                static::IIIF_V3_JMESPATH, $jsonArray
+              );
+              $image_hash = $this->cleanImageJmesPathResult($jmespath_searchresult);
+              unset($jmespath_searchresult);
+              if (count($image_hash)) {
+                $results = $this->flavorfromSolrIndex($the_query_string, $visual_processors, array_keys($image_hash), [], [], ($page * $per_page), $per_page, TRUE);
+              }
+            }
+            if (count($time_processors)) {
+              $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
+                static::IIIF_V3_JMESPATH_VTT, $jsonArray
+              );
+              $vtt_hash = $this->cleanVttJmesPathResult($jmespath_searchresult);
+              unset($jmespath_searchresult);
+              // Here we use UUIDs instead
+              if (count($vtt_hash)) {
+                $results_time = $this->flavorfromSolrIndex($the_query_string, $time_processors, [], array_keys($vtt_hash), [], ($page * $per_page), $per_page, TRUE);
+              }
+            }
+
+
+
 
             /* Expected structure independent if V2 or V3.
             result = {array[345]}
@@ -287,7 +323,8 @@ class IiifContentSearchController extends ControllerBase {
             */
             $entries = [];
             $paging_structure = [];
-            if (count($results['annotations'])) {
+            // Image/Visual based Annotations
+            if (count($results['annotations'] ?? [])) {
               $i = 0;
               foreach ($results['annotations'] as $hit => $hits_per_file_and_sequence) {
                 foreach (
@@ -307,66 +344,57 @@ class IiifContentSearchController extends ControllerBase {
                   if ($uri) {
                     $canvas = $image_hash[$uri][$sequence_id] ?? [];
                     foreach ($canvas as $canvas_id => $canvas_data) {
-                    if ($canvas_id) {
-                      $canvas_parts = explode("#xywh=", $canvas_id);
-                      if (count($canvas_parts) == 2) {
-                        $canvas_offset = explode(',', $canvas_parts[1]);
-                        $canvas_position = [
-                          round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
-                          round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
-                          round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
-                          round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
-                        ];
-                      } else {
-                        $canvas_position = [
-                          round($annotation['l'] * $canvas_data[0]),
-                          round($annotation['t'] * $canvas_data[1]),
-                          round(($annotation['r'] - $annotation['l']) * $canvas_data[0]),
-                          round(($annotation['b'] - $annotation['t']) * $canvas_data[1]),
-                        ];
-                      }
-
-                      /*$canvas_position = [
-                        $annotation['l'] * 100,
-                        $annotation['t'] * 100,
-                        $annotation['r'] * 100,
-                        $annotation['b'] * 100,
-                      ];*/
-
-                      $canvas_position = "#xywh=" . implode(
-                          ",", $canvas_position
-                        );
-
-                      // V1
-                      // Generate the entry
-                      if ($version == "v1") {
-                        $entries[] = [
-                          "@id" => $current_url_clean
-                            . "/annotation/anno-result/$i",
-                          "@type" => "oa:Annotation",
-                          "motivation" => "painting",
-                          "resource" => [
-                            "@type" => "cnt:ContentAsText",
-                            "chars" => $annotation['snippet'],
-                          ],
-                          "on" => ($canvas_parts[0] ?? $canvas_id) . $canvas_position
-                        ];
-                      } elseif ($version == "v2") {
-                        $entries[] = [
-                          "id" => $current_url_clean
-                            . "/annotation/anno-result/$i",
-                          "type" => "Annotation",
-                          "motivation" => "painting",
-                          "body" => [
-                            "type" => "TextualBody",
-                            "value" => $annotation['snippet'],
-                            "format" => "text/plain",
-                          ],
-                          "target" => $canvas_id . $canvas_position
-                        ];
+                      if ($canvas_id) {
+                        $canvas_parts = explode("#xywh=", $canvas_id);
+                        if (count($canvas_parts) == 2) {
+                          $canvas_offset = explode(',', $canvas_parts[1]);
+                          $canvas_position = [
+                            round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
+                            round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
+                            round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
+                            round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
+                          ];
+                        } else {
+                          $canvas_position = [
+                            round($annotation['l'] * $canvas_data[0]),
+                            round($annotation['t'] * $canvas_data[1]),
+                            round(($annotation['r'] - $annotation['l']) * $canvas_data[0]),
+                            round(($annotation['b'] - $annotation['t']) * $canvas_data[1]),
+                          ];
+                        }
+                        $canvas_position = "#xywh=" . implode(
+                            ",", $canvas_position
+                          );
+                        // V1
+                        // Generate the entry
+                        if ($version == "v1") {
+                          $entries[] = [
+                            "@id" => $current_url_clean
+                              . "/annotation/anno-result/$i",
+                            "@type" => "oa:Annotation",
+                            "motivation" => "painting",
+                            "resource" => [
+                              "@type" => "cnt:ContentAsText",
+                              "chars" => $annotation['snippet'],
+                            ],
+                            "on" => ($canvas_parts[0] ?? $canvas_id) . $canvas_position
+                          ];
+                        } elseif ($version == "v2") {
+                          $entries[] = [
+                            "id" => $current_url_clean
+                              . "/annotation/anno-result/$i",
+                            "type" => "Annotation",
+                            "motivation" => "painting",
+                            "body" => [
+                              "type" => "TextualBody",
+                              "value" => $annotation['snippet'],
+                              "format" => "text/plain",
+                            ],
+                            "target" => $canvas_id . $canvas_position
+                          ];
+                        }
                       }
                     }
-                  }
                   }
                 }
               }
@@ -430,10 +458,10 @@ class IiifContentSearchController extends ControllerBase {
             }
             elseif ($version == "v1") {
               $iiif_response = [
-                "@context" => "http://iiif.io/api/presentation/2/context.json",
-                "@id" => $current_url_clean,
-                "@type" => "sc:AnnotationList",
-              ] + $paging_structure;
+                  "@context" => "http://iiif.io/api/presentation/2/context.json",
+                  "@id" => $current_url_clean,
+                  "@type" => "sc:AnnotationList",
+                ] + $paging_structure;
               $iiif_response = $iiif_response + $paging_structure;
               $iiif_response['resources'] = $entries;
             }
@@ -454,13 +482,13 @@ class IiifContentSearchController extends ControllerBase {
   }
 
   /**
-   * Cleans the over complex original JMESPATH result to a reversed array.
+   * Cleans the over complex original JMESPATH result for Images to a reversed array.
    *
    * @param array $jmespath_searchresult
    *
    * @return array
    */
-  protected function cleanJmesPathResult(array $jmespath_searchresult): array {
+  protected function cleanImageJmesPathResult(array $jmespath_searchresult): array {
     $image_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
       foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
@@ -475,6 +503,51 @@ class IiifContentSearchController extends ControllerBase {
     return $image_hash;
   }
 
+  /**
+   * Cleans the over complex original JMESPATH result for a VTT to a reversed array.
+   *
+   * @param array $jmespath_searchresult
+   * @param bool $targetAnnotation
+   *    If TRUE, we will return the VTT and the annotation itself as the target (allowing multiple VTTs per Canvas)
+   *    If FALSE, we will return the VTT and the Canvas itself as the target (not caring which VTT matched)
+   * @return array
+   */
+  protected function cleanVttJmesPathResult(array $jmespath_searchresult, $targetAnnotation = TRUE): array {
+    $vtt_hash = [];
+    foreach($jmespath_searchresult as $entries_percanvas) {
+      foreach (($entries_percanvas['vtt_canvas_annotation_triad'] ?? []) as $vtt_canvas_annon_triad) {
+        $vtt_uuid = NULL;
+        // VTTs are not IIIF Image API URls... We could use the UUID to load the File entity, Load also the File, compare if it is there, etc
+        // BUT, we also have the file_uuid in Solr already.
+        // For http://localhost:8001/do/99161a75-43d8-42ee-8f18-e8d1855640b6/file/5ed0caca-49e8-48d2-9125-dedadaef5b31/download/Train_Departure.vtt
+
+        $path = pathinfo($vtt_canvas_annon_triad[0] ?? '/');
+        $parts = explode("/", $path['dirname']);
+        $parts = array_reverse($parts);
+        // Might be longer (normally 8), if a subdomain with paths, that is why we reverse that paths
+        if (count($parts) >= 5 && $parts[0] == "download" && Uuid::isValid($parts[1]) && $parts[2] == "file" && Uuid::isValid($parts[3]) && $parts[4] == "do") {
+          $vtt_uuid = $parts[1];
+        }
+        if (!$vtt_uuid) {
+          // just skip if we have no File uuid.
+          continue;
+        }
+        // The $vtt_canvas_annon_triad[1] is the Canvas targeted by the VTT.
+        // The $vtt_canvas_annon_triad[2] is the AnnotationID containing the VTT.
+        $sequence = 1 ;
+        $target = $targetAnnotation ? ($vtt_canvas_annon_triad[2] ?? NULL) : ($vtt_canvas_annon_triad[3] ?? NULL);
+        if (!$target) {
+          // just skip if we have no Target.
+          continue;
+        }
+        // We don't use the duration so if not present just give it a second to have a value in this array.
+        $vtt_hash[$vtt_uuid][$sequence][$target] = [($entries_percanvas["duration"] ?? 1)];
+      }
+    }
+    unset($jmespath_searchresult);
+    return $vtt_hash;
+  }
+
 
   /**
    * OCR Search Controller specific to IIIF Content Search Needs
@@ -483,6 +556,7 @@ class IiifContentSearchController extends ControllerBase {
    * @param array $processors
    *  The list of processors. Matching processor to $ocr|true|false is done by the caller.
    * @param array $file_uris
+   * @param array $file_uuids
    * @param array $node_ids
    * @param int $offset
    * @param int $limit
@@ -492,7 +566,8 @@ class IiifContentSearchController extends ControllerBase {
    * @throws PluginException
    * @throws SearchApiException
    */
-  protected function flavorfromSolrIndex(string $term, array $processors, array $file_uris, array $node_ids = [], $offset = 0, $limit = 100, $ocr = true) {
+  protected function flavorfromSolrIndex(string $term, array $processors, array $file_uris, array $file_uuids, array $node_ids = [], $offset = 0, $limit = 100, $ocr = TRUE): array
+  {
 
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
@@ -512,13 +587,17 @@ class IiifContentSearchController extends ControllerBase {
       $parse_mode = $this->parseModeManager->createInstance('terms');
       $query->setParseMode($parse_mode);
       $query->keys($term);
+
+      $allfields_translated_to_solr = $search_api_index->getServerInstance()
+        ->getBackend()
+        ->getSolrFieldNames($query->getIndex());
       // @TODO research if we can do a single Query instead of multiple ones?
       if ($ocr) {
         if (isset($allfields_translated_to_solr['ocr_text'])) {
           $query->setFulltextFields(['ocr_text']);
         }
         else {
-          $this->loggerFactory->get('format_strawberryfield')->error('We can not execute a Content Search API query against XML OCR without a field named <em>ocr_text</em> of type Full Text Ocr Highlight');
+          $this->getLogger('format_strawberryfield')->error('We can not execute a Content Search API query against XML OCR without a field named <em>ocr_text</em> of type Full Text Ocr Highlight');
           $search_result['annotations'] = [];
           $search_result['total'] = 0;
           return $search_result;
@@ -529,19 +608,19 @@ class IiifContentSearchController extends ControllerBase {
           $query->setFulltextFields(['sbf_plaintext']);
         }
         else {
-          $this->loggerFactory->get('format_strawberryfield')->error('We can not execute a Content Search API query against Plain Extracted Text without a field named <em>sbf_plaintext</em> of type Full Text');
+          $this->getLogger('format_strawberryfield')->error('We can not execute a Content Search API query against Plain Extracted Text without a field named <em>sbf_plaintext</em> of type Full Text');
           $search_result['annotations'] = [];
           $search_result['total'] = 0;
           return $search_result;
         }
       }
+      //@TODO: Should this also be a config as `iiif_content_search_api_parent_node_fields` is for example?
+      $uuid_uri_field = 'file_uuid';
 
-      $allfields_translated_to_solr = $search_api_index->getServerInstance()
-        ->getBackend()
-        ->getSolrFieldNames($query->getIndex());
 
       $parent_conditions = $query->createConditionGroup('OR');
       $uri_conditions = $query->createConditionGroup('OR');
+      $uuid_conditions = $query->createConditionGroup('OR');
 
       // If Nodes are passed use them as conditionals
       if (count($node_ids)) {
@@ -586,13 +665,19 @@ class IiifContentSearchController extends ControllerBase {
         $fields_to_retrieve['sequence_id'] = $allfields_translated_to_solr['sequence_id'];
         $query->sort('sequence_id', QueryInterface::SORT_ASC);
       }
-      if (isset($allfields_translated_to_solr['file_uuid'])) {
-        $fields_to_retrieve['file_uuid'] = $allfields_translated_to_solr['file_uuid'];
+      if (isset($allfields_translated_to_solr[$uuid_uri_field])) {
+        $fields_to_retrieve[$uuid_uri_field] = $allfields_translated_to_solr[$uuid_uri_field];
+        // Sadly we have to add the condition here, what if file_uuid is not defined?
+
+
+
+
+
       }
       else {
-        $this->loggerFactory->get('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to sarch');
+        $this->getLogger('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to sarch');
       }
-
+      $have_file_condition = FALSE;
       if (count($file_uris)) {
         //Note here. If we don't have any fields configured the response will contain basically ANYTHING
         // in the repo. So option 1 is make `iiif_content_search_api_file_uri_fields` required
@@ -605,11 +690,21 @@ class IiifContentSearchController extends ControllerBase {
               = $allfields_translated_to_solr[$uri_field];
           }
           if (count($uri_conditions->getConditions())) {
+            $have_file_condition = TRUE;
             $query->addConditionGroup($uri_conditions);
           }
         }
       }
-      else {
+      if (count($file_uuids)) {
+        if (isset($allfields_translated_to_solr[$uuid_uri_field])) {
+          $uuid_conditions->addCondition($uuid_uri_field, $file_uuids, 'IN');
+        }
+        if (count($uuid_conditions->getConditions())) {
+          $have_file_condition = TRUE;
+          $query->addConditionGroup($uuid_conditions);
+        }
+      }
+      if (!$have_file_condition) {
         // in case no files are passed to filter, simply limit all to less?
         $query->setOption('limit', 10);
       }
@@ -678,14 +773,14 @@ class IiifContentSearchController extends ControllerBase {
                   $hit = $highlight[0]['text'] ?? $term;
 
                   $before_and_after =  explode("<em>{$hit}</em>", $region_text ?? $term);
-                  // Check if (int) coordinates >=1 (ALTO)
+                  // Check if (int) coordinates lrx >1 (ALTO) ... assuming nothing is at 1px to the right?
                   // else between 0 and < 1 (MINIOCR)
                   $before_index = $shared_parent_region[$parent_region] -1;
                   $before_index = $before_index > 0 ? $before_index : 0;
                   $after_index = $shared_parent_region[$parent_region];
                   $after_index = ($after_index < count($before_and_after)) ? $after_index : 1;
 
-                  if ( ((int) $highlight[0]['lrx']) > 0  ){
+                  if ( ((int) $highlight[0]['lrx']) > 1  ){
                     //ALTO so coords need to be relative
                     $left = sprintf('%.3f',((float) $highlight[0]['ulx'] / $page_width));
                     $top = sprintf('%.3f',((float) $highlight[0]['uly'] / $page_height));
