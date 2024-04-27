@@ -121,7 +121,7 @@
       const effects = ReduxSaga.effects;
 
       /* function* is a generator function thus the yield */
-      function* formatStrawverryFieldReact(action) {
+      function* formatStrawberryFieldReact(action) {
 
         const state = yield effects.select(Mirador.actions.getState);
         const newParams = Object.fromEntries(new URLSearchParams(location.search))
@@ -131,7 +131,12 @@
         ) {
           const { windowId } = action
           let { visibleCanvases, view, canvasId } = action
-          const el = document.getElementById(windowId);
+          var el = document.getElementById(windowId);
+          if (el == null) {
+            // Means the window has not yet loaded... it is the first set canvas.
+            // use the first initialized parent container as `el` so we can dispatch an event if needed
+            el = document.querySelector(".strawberry-mirador-item[data-iiif-infojson][data-once='attache_mirador']");
+          }
           if (
             !visibleCanvases &&
             (action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
@@ -189,13 +194,15 @@
             currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
             currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
             // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
-            if (currentDrupalNodeId.length > 0) {
+            if (currentDrupalNodeId.length > 0 && el) {
               Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(el, currentDrupalNodeId, state.config.id);
             }
-            if (currentDrupalNodeForViews.length > 0) {
+            if (currentDrupalNodeForViews.length > 0 && el) {
               Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(el, currentDrupalNodeForViews);
             }
-            Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl, state.config.id);
+            if (el) {
+              Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(el, canvasId, manifestUrl, state.config.id);
+            }
           }
           else {
             console.log('IIIF Presentation Manifest V2');
@@ -241,11 +248,11 @@
             ActionTypes.REMOVE_SEARCH,
             ActionTypes.SET_WINDOW_VIEW_TYPE,
           ],
-          formatStrawverryFieldReact
+          formatStrawberryFieldReact
         )
       }
 
-      const formatStrawverryFieldReactPlugin = {
+      const formatStrawberryFieldReactPlugin = {
         component: () => null,
         saga: rootSaga,
       };
@@ -338,8 +345,8 @@
               console.log('initializing Custom Mirador 3.3.0')
             }
             else {
-              const miradorInstance = Mirador.viewer($options, [formatStrawverryFieldReactPlugin]);
-              console.log('initializing Mirador 3.1.1')
+              const miradorInstance = Mirador.viewer($options, [formatStrawberryFieldReactPlugin]);
+              console.log('initializing Mirador')
               if (miradorInstance) {
                 // To allow bubling up we need to add this one to the document
                 // Multiple Miradors will replace each other?
@@ -348,7 +355,6 @@
                 document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
               }
             }
-
             // Work around https://github.com/ProjectMirador/mirador/issues/3486
             const mirador_window = document.getElementById(element_id);
             var observer = new MutationObserver(function(mutations) {
