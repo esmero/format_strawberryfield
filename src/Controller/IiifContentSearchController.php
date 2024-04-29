@@ -294,11 +294,14 @@ class IiifContentSearchController extends ControllerBase {
                 $results = $this->flavorfromSolrIndex($the_query_string, $visual_processors, array_keys($image_hash), [], [], ($page * $per_page), $per_page, TRUE);
               }
             }
+
+            $target_annotation = FALSE;
             if (count($time_processors)) {
               $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
                 static::IIIF_V3_JMESPATH_VTT, $jsonArray
               );
-              $vtt_hash = $this->cleanVttJmesPathResult($jmespath_searchresult);
+              $target_annotation = $this->iiifConfig->get('iiif_content_search_time_targetannotations') ?? FALSE;
+              $vtt_hash = $this->cleanVttJmesPathResult($jmespath_searchresult, $target_annotation);
               unset($jmespath_searchresult);
               // Here we use UUIDs instead
               if (count($vtt_hash)) {
@@ -399,7 +402,7 @@ class IiifContentSearchController extends ControllerBase {
               $i = 0;
               foreach ($results_time['annotations'] as $hit => $hits_per_file_and_sequence) {
                 foreach (
-                ($hits_per_file_and_sequence['boxes'] ?? []) as $annotation
+                ($hits_per_file_and_sequence['timespans'] ?? []) as $annotation
                 ) {
                   $i++;
                   // Calculate Canvas and its offset
@@ -414,21 +417,10 @@ class IiifContentSearchController extends ControllerBase {
                     $target = $vtt_hash[$uuid][$sequence_id] ?? [];
                     foreach ($target as $target_id => $target_data) {
                       if ($target_id) {
-                        $target_parts = explode("#xywh=", $target_id);
-                        if (count($target_parts) == 2) {
-                          $target_parts = explode(',', $target_parts[1]);
-                          $target_time = [
-                            round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
-                            round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
-                            round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
-                            round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
-                          ];
-                        } else {
-                          $target_time = [
-                            round($annotation['t'] * $canvas_data[1]),
-                            round(($annotation['b'] - $annotation['t']) * $canvas_data[1]),
-                          ];
-                        }
+                        $target_time = [
+                            round($annotation['s']),
+                            round($annotation['e'])
+                        ];
                         $target_fragment = "#t=" . implode(
                             ",", $target_time
                           );
@@ -439,7 +431,7 @@ class IiifContentSearchController extends ControllerBase {
                             "@id" => $current_url_clean
                               . "/annotation/anno-result/$i",
                             "@type" => "oa:Annotation",
-                            "motivation" => "painting",
+                            "motivation" => $target_annotation ? "supplementing" : "painting",
                             "resource" => [
                               "@type" => "cnt:ContentAsText",
                               "chars" => $annotation['snippet'],
@@ -451,7 +443,7 @@ class IiifContentSearchController extends ControllerBase {
                             "id" => $current_url_clean
                               . "/annotation/anno-result/$i",
                             "type" => "Annotation",
-                            "motivation" => "painting",
+                            "motivation" => $target_annotation ? "supplementing" : "painting",
                             "body" => [
                               "type" => "TextualBody",
                               "value" => $annotation['snippet'],
@@ -476,7 +468,9 @@ class IiifContentSearchController extends ControllerBase {
             if (count($entries) == 0) {
               $results['total'] = 0;
             }
-            if ($results['total'] > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
+            $total = ($results['total'] ?? 0) + ($results_time['total'] ?? 0);
+
+            if ($total > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
               $max_page = ceil($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
               if ($version == "v1") {
                 $paging_structure = [
@@ -487,7 +481,7 @@ class IiifContentSearchController extends ControllerBase {
                     "last" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
                   ]
                 ];
-                if ($results['total'] > (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                if ($total > (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
                   $paging_structure["next"] = $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string);
                   $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
                 }
@@ -511,7 +505,7 @@ class IiifContentSearchController extends ControllerBase {
                       ]
                   ]
                 ];
-                if ($results['total'] >  (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
+                if ($total >  (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
                   $paging_structure["next"] = [
                     "id" => $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string),
                     "type" => "AnnotationPage",
@@ -609,7 +603,7 @@ class IiifContentSearchController extends ControllerBase {
         // The $vtt_canvas_annon_triad[1] is the Canvas targeted by the VTT.
         // The $vtt_canvas_annon_triad[2] is the AnnotationID containing the VTT.
         $sequence = 1 ;
-        $target = $targetAnnotation ? ($vtt_canvas_annon_triad[2] ?? NULL) : ($vtt_canvas_annon_triad[3] ?? NULL);
+        $target = $targetAnnotation ? ($vtt_canvas_annon_triad[2] ?? NULL) : ($vtt_canvas_annon_triad[1] ?? NULL);
         if (!$target) {
           // just skip if we have no Target.
           continue;
@@ -829,9 +823,16 @@ class IiifContentSearchController extends ControllerBase {
                 $page_width = (float) $snippet['pages'][0]['width'];
                 $page_height = (float) $snippet['pages'][0]['height'];
                 $is_time = str_starts_with($snippet['pages'][0]['id'], 'timesequence_');
-                $result_snippets_base = [
-                  'boxes' => $result_snippets_base['boxes'] ?? [],
-                ];
+                if ($is_time) {
+                  $result_snippets_base = [
+                    'timespans' => $result_snippets_base['timespans'] ?? [],
+                  ];
+                }
+                else {
+                  $result_snippets_base = [
+                    'boxes' => $result_snippets_base['boxes'] ?? [],
+                  ];
+                }
                 $shared_parent_region = array_fill_keys(array_keys($snippet['regions']), 0);
 
                 foreach ($snippet['highlights'] as $key => $highlight) {
@@ -869,17 +870,32 @@ class IiifContentSearchController extends ControllerBase {
                   }
                   else {
                     //MINIOCR coords already relative
-                    $result_snippets_base['boxes'][] = [
-                      'l' => $highlight[0]['ulx'],
-                      't' => $highlight[0]['uly'],
-                      'r' => $highlight[0]['lrx'],
-                      'b' => $highlight[0]['lry'],
-                      'snippet' => $region_text,
-                      'before' =>  $before_and_after[$before_index] ?? '',
-                      'after' =>  $before_and_after[$after_index] ?? '',
-                      'hit' => $hit,
-                      'time' => $is_time
-                    ];
+                    // Deal with time here
+                    if (!$is_time) {
+                      $result_snippets_base['boxes'][] = [
+                        'l' => $highlight[0]['ulx'],
+                        't' => $highlight[0]['uly'],
+                        'r' => $highlight[0]['lrx'],
+                        'b' => $highlight[0]['lry'],
+                        'snippet' => $region_text,
+                        'before' => $before_and_after[$before_index] ?? '',
+                        'after' => $before_and_after[$after_index] ?? '',
+                        'hit' => $hit,
+                        'time' => $is_time
+                      ];
+                    }
+                    else {
+                      // It is about time!
+                      $result_snippets_base['timespans'][] = [
+                        's' => ($highlight[0]['uly'] * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND,
+                        'e' => (($highlight[0]['uly'] + $highlight[0]['lry']) * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND,
+                        'snippet' => $region_text,
+                        'before' => $before_and_after[$before_index] ?? '',
+                        'after' => $before_and_after[$after_index] ?? '',
+                        'hit' => $hit,
+                        'time' => $is_time
+                      ];
+                    }
                   }
                 }
               }
