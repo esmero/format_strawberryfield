@@ -11,12 +11,21 @@ format_strawberryfield.iiif_settings:
     iiif_content_search_api_page_count:
       type: int
       label: 'The max results to show per page on a iiif_content_search_api_page_count'
-    iiif_content_search_api_enabled_processors:
+    iiif_content_search_api_visual_enabled_processors:
       type: string
-      label: 'Comma separated list of Strawberry Runner Processors that can be fetched by the Content Search API on query.'
+      label: 'Comma separated list of Strawberry Runner Processors for Visual Annotations (OCR) that can be fetched by the Content Search API on query.'
+    iiif_content_search_api_time_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors for time Annotations (OCR from time) can be fetched by the Content Search API on query.'
+    iiif_content_search_api_text_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors for plain text annotations (no OCR) that can be fetched by the Content Search API on query.'
     iiif_content_search_api_active:
       type: bool
       label: 'If IIIF Content Search API V1 and V2 are enabled.'
+    iiif_content_search_validate_exposed:
+      type: bool
+      label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
     iiif_content_search_validate_exposed:
       type: bool
       label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
