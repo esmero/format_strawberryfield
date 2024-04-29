@@ -26,9 +26,9 @@ format_strawberryfield.iiif_settings:
     iiif_content_search_validate_exposed:
       type: bool
       label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
-    iiif_content_search_validate_exposed:
+    iiif_content_search_time_targetannotations:
       type: bool
-      label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
+      label: 'If IIIF Content Search results for Time based media target the VTT annotation itself or the parent Canvas'
     iiif_content_search_api_parent_node_fields:
       type: sequence
       label: 'Strawberry Flavor Data Source Search API Fields that can be used to connect a Strawberry Flavor to a Parent ADO.'
