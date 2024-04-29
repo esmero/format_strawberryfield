@@ -284,7 +284,6 @@ class IiifContentSearchController extends ControllerBase {
             $time_processors = array_map('trim', $time_processors);
             $time_processors = array_filter($time_processors);
 
-
             if (count($visual_processors)) {
               $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
                 static::IIIF_V3_JMESPATH, $jsonArray
@@ -306,9 +305,6 @@ class IiifContentSearchController extends ControllerBase {
                 $results_time = $this->flavorfromSolrIndex($the_query_string, $time_processors, [], array_keys($vtt_hash), [], ($page * $per_page), $per_page, TRUE);
               }
             }
-
-
-
 
             /* Expected structure independent if V2 or V3.
             result = {array[345]}
@@ -398,6 +394,85 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
             }
+            // Time based Annotations
+            if (count($results_time['annotations'] ?? [])) {
+              $i = 0;
+              foreach ($results_time['annotations'] as $hit => $hits_per_file_and_sequence) {
+                foreach (
+                ($hits_per_file_and_sequence['boxes'] ?? []) as $annotation
+                ) {
+                  $i++;
+                  // Calculate Canvas and its offset
+                  // PDFs Sequence is correctly detected, but on images it should always be "1"
+                  // For that we will change the response from the main Solr search using our expected ID (splitting)
+                  $uuid_uri_field = 'file_uuid';
+                  $uuids[] = $hits_per_file_and_sequence['sbf_metadata'][$uuid_uri_field] ?? NULL;
+                  $sequence_id = $hits_per_file_and_sequence['sbf_metadata']['sequence_id'] ?? 1;
+                  $uuids = array_filter($uuids);
+                  $uuid = reset($uuids);
+                  if ($uuid) {
+                    $target = $vtt_hash[$uuid][$sequence_id] ?? [];
+                    foreach ($target as $target_id => $target_data) {
+                      if ($target_id) {
+                        $target_parts = explode("#xywh=", $target_id);
+                        if (count($target_parts) == 2) {
+                          $target_parts = explode(',', $target_parts[1]);
+                          $target_time = [
+                            round($annotation['l'] * ($canvas_offset[2] ?? $canvas_data[0]) + $canvas_offset[0]),
+                            round($annotation['t'] * ($canvas_offset[3] ?? $canvas_data[1]) + $canvas_offset[1]),
+                            round(($annotation['r'] - $annotation['l']) * $canvas_offset[2]),
+                            round(($annotation['b'] - $annotation['t']) * $canvas_offset[3]),
+                          ];
+                        } else {
+                          $target_time = [
+                            round($annotation['t'] * $canvas_data[1]),
+                            round(($annotation['b'] - $annotation['t']) * $canvas_data[1]),
+                          ];
+                        }
+                        $target_fragment = "#t=" . implode(
+                            ",", $target_time
+                          );
+                        // V1
+                        // Generate the entry
+                        if ($version == "v1") {
+                          $entries[] = [
+                            "@id" => $current_url_clean
+                              . "/annotation/anno-result/$i",
+                            "@type" => "oa:Annotation",
+                            "motivation" => "painting",
+                            "resource" => [
+                              "@type" => "cnt:ContentAsText",
+                              "chars" => $annotation['snippet'],
+                            ],
+                            "on" => ($target_parts[0] ?? $target_id) . $target_fragment
+                          ];
+                        } elseif ($version == "v2") {
+                          $entries[] = [
+                            "id" => $current_url_clean
+                              . "/annotation/anno-result/$i",
+                            "type" => "Annotation",
+                            "motivation" => "painting",
+                            "body" => [
+                              "type" => "TextualBody",
+                              "value" => $annotation['snippet'],
+                              "format" => "text/plain",
+                            ],
+                            "target" => $target_id  . $target_fragment
+                          ];
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+
+
+
+
+
+
             if (count($entries) == 0) {
               $results['total'] = 0;
             }
@@ -667,11 +742,6 @@ class IiifContentSearchController extends ControllerBase {
       if (isset($allfields_translated_to_solr[$uuid_uri_field])) {
         $fields_to_retrieve[$uuid_uri_field] = $allfields_translated_to_solr[$uuid_uri_field];
         // Sadly we have to add the condition here, what if file_uuid is not defined?
-
-
-
-
-
       }
       else {
         $this->getLogger('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to sarch');
@@ -758,7 +828,7 @@ class IiifContentSearchController extends ControllerBase {
               foreach ($field[$allfields_translated_to_solr['ocr_text']]['snippets'] as $snippet) {
                 $page_width = (float) $snippet['pages'][0]['width'];
                 $page_height = (float) $snippet['pages'][0]['height'];
-
+                $is_time = str_starts_with($snippet['pages'][0]['id'], 'timesequence_');
                 $result_snippets_base = [
                   'boxes' => $result_snippets_base['boxes'] ?? [],
                 ];
@@ -794,6 +864,7 @@ class IiifContentSearchController extends ControllerBase {
                       'before' =>  $before_and_after[$before_index] ?? '',
                       'after' =>  $before_and_after[$after_index] ?? '',
                       'hit' => $hit,
+                      'time' => $is_time,
                     ];
                   }
                   else {
@@ -807,6 +878,7 @@ class IiifContentSearchController extends ControllerBase {
                       'before' =>  $before_and_after[$before_index] ?? '',
                       'after' =>  $before_and_after[$after_index] ?? '',
                       'hit' => $hit,
+                      'time' => $is_time
                     ];
                   }
                 }
