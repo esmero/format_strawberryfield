@@ -159,6 +159,12 @@ class IiifSettingsForm extends ConfigFormBase {
       ) : [],
       '#required' => FALSE,
     ];
+    $form['iiif_content_search_time_targetannotations'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Target the VTT Supplementing Annotation'),
+      '#default_value' => $config->get('iiif_content_search_time_targetannotations') ?? FALSE,
+      '#description' => $this->t('If enabled (aligned with the specs) the target of a hit result will point to the supplementing Annotation containing in its body the VTT file. If not the Canvas containing in its body a Media Resource (less precise but more compatible with Viewers'),
+    ];
 
     $form['iiif_content_search_api_text_enabled_processors'] = [
       '#type'          => 'textfield',
@@ -281,6 +287,8 @@ class IiifSettingsForm extends ConfigFormBase {
         $form_state->getValue('iiif_content_search_api_time_enabled_processors') ?? '')
       ->set('iiif_content_search_api_text_enabled_processors',
         $form_state->getValue('iiif_content_search_api_text_enabled_processors') ?? '')
+      ->set('iiif_content_search_time_targetannotations',
+        $form_state->getValue('iiif_content_search_time_targetannotations') ?? FALSE)
       ->save();
     parent::submitForm($form, $form_state);
   }
