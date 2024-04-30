@@ -842,7 +842,7 @@ class IiifContentSearchController extends ControllerBase {
                   $region_text = $snippet['regions'][$parent_region]['text'] ?? $term;
                   $hit = $highlight[0]['text'] ?? $term;
 
-                  $before_and_after =  explode("<em>{$hit}</em>", $region_text ?? $term);
+                  $before_and_after =  explode("{$hit}", strip_tags($region_text ?? $term));
                   // Check if (int) coordinates lrx >1 (ALTO) ... assuming nothing is at 1px to the right?
                   // else between 0 and < 1 (MINIOCR)
                   $before_index = $shared_parent_region[$parent_region] -1;
@@ -885,11 +885,17 @@ class IiifContentSearchController extends ControllerBase {
                       ];
                     }
                     else {
+                      // IN this case, because on now text spans into other regions, we use 'text' instead of
+                      // $region_text like in a normal HOCR
                       // It is about time!
+                      // Before and after. We will try to split the original text by the math
+                      // If we end with more than 2 pieces, we can't be sure where it was found ..
+                      // so we set them '' ?
+                      $before_and_after = explode($highlight[0]['text'],strip_tags($region_text));
                       $result_snippets_base['timespans'][] = [
                         's' => ($highlight[0]['uly'] * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND,
-                        'e' => (($highlight[0]['uly'] + $highlight[0]['lry']) * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND,
-                        'snippet' => $region_text,
+                        'e' => ($highlight[0]['lry'] * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND,
+                        'snippet' => $highlight[0]['text'],
                         'before' => $before_and_after[$before_index] ?? '',
                         'after' => $before_and_after[$after_index] ?? '',
                         'hit' => $hit,
