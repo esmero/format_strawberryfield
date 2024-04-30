@@ -409,10 +409,9 @@ class IiifContentSearchController extends ControllerBase {
                   // PDFs Sequence is correctly detected, but on images it should always be "1"
                   // For that we will change the response from the main Solr search using our expected ID (splitting)
                   $uuid_uri_field = 'file_uuid';
-                  $uuids[] = $hits_per_file_and_sequence['sbf_metadata'][$uuid_uri_field] ?? NULL;
+                  // Different than normal OCR. Single UUID per file.
+                  $uuid = $hits_per_file_and_sequence['sbf_metadata'][$uuid_uri_field] ?? NULL;
                   $sequence_id = $hits_per_file_and_sequence['sbf_metadata']['sequence_id'] ?? 1;
-                  $uuids = array_filter($uuids);
-                  $uuid = reset($uuids);
                   if ($uuid) {
                     $target = $vtt_hash[$uuid][$sequence_id] ?? [];
                     foreach ($target as $target_id => $target_data) {
@@ -436,7 +435,7 @@ class IiifContentSearchController extends ControllerBase {
                               "@type" => "cnt:ContentAsText",
                               "chars" => $annotation['snippet'],
                             ],
-                            "on" => ($target_parts[0] ?? $target_id) . $target_fragment
+                            "on" => ($target_id) . $target_fragment
                           ];
                         } elseif ($version == "v2") {
                           $entries[] = [
