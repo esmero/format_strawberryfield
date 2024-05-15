@@ -124,6 +124,67 @@
       function* formatStrawberryFieldReact(action) {
 
         const state = yield effects.select(Mirador.actions.getState);
+
+        if  (action.type === ActionTypes.SELECT_ANNOTATION) {
+          const { windowId } = action
+          const searches = yield effects.select(Mirador.selectors.getSearchForWindow, { windowId });
+          const current_canvas = yield effects.select(Mirador.selectors.getCurrentCanvas, { windowId });
+          let vtt_url = null;
+          let canvas_id_for_vtt = null;
+          let canvas_time_for_media = 0;
+          for (const sideWindow in searches) {
+            for(const url in searches[sideWindow].data) {
+              searches[sideWindow].data[url].json.resources.forEach((annotation) => {
+                  if ((annotation['@id'] == action.annotationId)) {
+                    const on =  annotation.on.split("#t=");
+                    if (on.length == 2) {
+                      for (const canvas in state.annotations) {
+                        for (const annotation_page in state.annotations[canvas]) {
+                          const matches = state.annotations[canvas][annotation_page].json.items.filter(item => {
+                            return (item['id'] === on[0] && item['body'].format == 'text/vtt');
+                          });
+                          if (Array.isArray(matches)) {
+                            vtt_url = matches[0].body.id;
+                            canvas_id_for_vtt = matches[0].target;
+                            canvas_time_for_media = on[1].split(",", 1);
+                            canvas_time_for_media = canvas_time_for_media[0];
+                          }
+                        }
+                      }
+                      // I should check too if this is "supplementing" so we can decide if we just jump to a time (canvas)
+                      // or load the VTT first and then jump to the canvas targeted by the annotation
+                      // Now the hard part. I need to find this annotation
+                    }
+                  }
+                }
+              );
+            }
+          }
+          if (canvas_id_for_vtt != current_canvas?.id && canvas_id_for_vtt != null) {
+            // take will wait/ call will run async
+            let visibleCanvasesForAnnotation = (yield effects.take( Mirador.actions.setCanvas(windowId, canvas_id_for_vtt))).payload.visibleCanvases
+          }
+          if (canvas_id_for_vtt != null) {
+            let MediaWindow = document.getElementById(windowId);
+            let MediaElement = MediaWindow.querySelector("video, audio");
+            if (MediaElement) {
+              MediaElement.currentTime = canvas_time_for_media;
+              console.log(`Jumping to time ${canvas_time_for_media}`);
+              let tracks = MediaElement.querySelectorAll('track');
+              for (const track of tracks) {
+                if (track.src === vtt_url) {
+                  track.selected = true;
+                  track.track.mode = "showing";
+                }
+                else {
+                  track.selected = false;
+                  track.track.mode = "disabled";
+                }
+              }
+            }
+          }
+        }
+
         const newParams = Object.fromEntries(new URLSearchParams(location.search))
         if (
           action.type === ActionTypes.SET_CANVAS ||
@@ -247,6 +308,7 @@
             ActionTypes.RECEIVE_SEARCH,
             ActionTypes.REMOVE_SEARCH,
             ActionTypes.SET_WINDOW_VIEW_TYPE,
+            ActionTypes.SELECT_ANNOTATION,
           ],
           formatStrawberryFieldReact
         )
@@ -259,126 +321,126 @@
 
       const elementsToAttach = once('attache_mirador', '.strawberry-mirador-item[data-iiif-infojson]', context);
       $(elementsToAttach).each(function (index, value) {
-          // Get the node uuid for this element
-          var element_id = $(this).attr("id");
-          // Check if we got some data passed via Drupal settings.
-          if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
-            $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
-            if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
-              $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
-            }
-            // Defines our basic options for Mirador IIIF.
-            var $options = {
-              id: element_id,
-              windows: [{
-                manifestId: drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl'],
-                thumbnailNavigationPosition: 'far-bottom',
-              }]
-            };
+        // Get the node uuid for this element
+        var element_id = $(this).attr("id");
+        // Check if we got some data passed via Drupal settings.
+        if (typeof(drupalSettings.format_strawberryfield.mirador[element_id]) != 'undefined') {
+          $(this).height(drupalSettings.format_strawberryfield.mirador[element_id]['height']);
+          if (drupalSettings.format_strawberryfield.mirador[element_id]['width'] != '100%') {
+            $(this).width(drupalSettings.format_strawberryfield.mirador[element_id]['width']);
+          }
+          // Defines our basic options for Mirador IIIF.
+          var $options = {
+            id: element_id,
+            windows: [{
+              manifestId: drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl'],
+              thumbnailNavigationPosition: 'far-bottom',
+            }]
+          };
 
-            if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-              $options.window = {
-                workspaceControlPanel: {
-                  enabled: false
-                },
-                allowClose: false,
-                imageToolsEnabled: true,
-                imageToolsOpen: true,
-                views: [
-                  { key: 'single', behaviors: [null, 'individuals'] },
-                  { key: 'book', behaviors: [null, 'paged'] },
-                  { key: 'scroll', behaviors: ['continuous'] },
-                  { key: 'gallery' },
-                ],
-              };
-              $options.windows[0].workspaceControlPanel = {
+          if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+            $options.window = {
+              workspaceControlPanel: {
                 enabled: false
-              };
-              $options.windows[0].workspace = {
-                isWorkspaceAddVisible: false,
-                allowNewWindows: true,
-              };
-            }
+              },
+              allowClose: false,
+              imageToolsEnabled: true,
+              imageToolsOpen: true,
+              views: [
+                { key: 'single', behaviors: [null, 'individuals'] },
+                { key: 'book', behaviors: [null, 'paged'] },
+                { key: 'scroll', behaviors: ['continuous'] },
+                { key: 'gallery' },
+              ],
+            };
+            $options.windows[0].workspaceControlPanel = {
+              enabled: false
+            };
+            $options.windows[0].workspace = {
+              isWorkspaceAddVisible: false,
+              allowNewWindows: true,
+            };
+          }
 
 
-            var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
-            var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
-            var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
+          var $firstmanifest = [drupalSettings.format_strawberryfield.mirador[element_id]['manifesturl']];
+          var $allmanifests = $firstmanifest.concat(drupalSettings.format_strawberryfield.mirador[element_id]['manifestother']);
+          var $secondmanifest = drupalSettings.format_strawberryfield.mirador[element_id]['manifestother'].find(x=>x!==undefined);
 
-            if (Array.isArray($allmanifests) && $allmanifests.length && typeof($secondmanifest) != 'undefined') {
-              var $secondwindow = new Object();
-              $secondwindow.manifestId = $secondmanifest;
-              $secondwindow.thumbnailNavigationPosition = 'far-bottom';
-              $options.windows.push($secondwindow);
-              var $manifests = new Object();
-              $allmanifests.forEach(manifestURL => {
-                // TODO Provider should be passed by metadata at
-                // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter::viewElements
-                // Deal with this for Beta3
-                $manifests[manifestURL] = new Object({'provider':'See Metadata'});
-              })
-              $options.manifests = $manifests;
-            }
+          if (Array.isArray($allmanifests) && $allmanifests.length && typeof($secondmanifest) != 'undefined') {
+            var $secondwindow = new Object();
+            $secondwindow.manifestId = $secondmanifest;
+            $secondwindow.thumbnailNavigationPosition = 'far-bottom';
+            $options.windows.push($secondwindow);
+            var $manifests = new Object();
+            $allmanifests.forEach(manifestURL => {
+              // TODO Provider should be passed by metadata at
+              // \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter::viewElements
+              // Deal with this for Beta3
+              $manifests[manifestURL] = new Object({'provider':'See Metadata'});
+            })
+            $options.manifests = $manifests;
+          }
 
-            // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
-            // Allow a last minute override, exclude main element manifest
-            if (typeof drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] == 'object' &&
-              !Array.isArray(drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides']) &&
-              drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] !== null) {
-              let viewer_override = drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'];
-              if (typeof viewer_override?.windows !== 'undefined') {
-                if (Array.isArray(viewer_override.windows) && viewer_override.windows.length > 0) {
-                  if (viewer_override.windows[0].manifestId !== 'undefined') {
-                    delete viewer_override.windows[0].manifestId;
-                  }
+          // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
+          // Allow a last minute override, exclude main element manifest
+          if (typeof drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] == 'object' &&
+            !Array.isArray(drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides']) &&
+            drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] !== null) {
+            let viewer_override = drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'];
+            if (typeof viewer_override?.windows !== 'undefined') {
+              if (Array.isArray(viewer_override.windows) && viewer_override.windows.length > 0) {
+                if (viewer_override.windows[0].manifestId !== 'undefined') {
+                  delete viewer_override.windows[0].manifestId;
                 }
               }
-              $options = {
-                ...$options,
-                ...viewer_override,
-              };
             }
-
-            //@TODO add an extra Manifests key with every other one so people can select the others.
-            if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-              const miradorInstance = renderMirador($options);
-              console.log('initializing Custom Mirador 3.3.0')
-            }
-            else {
-              const miradorInstance = Mirador.viewer($options, [formatStrawberryFieldReactPlugin]);
-              console.log('initializing Mirador')
-              if (miradorInstance) {
-                // To allow bubling up we need to add this one to the document
-                // Multiple Miradors will replace each other?
-                // @TODO check on that diego..
-                document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
-                document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
-              }
-            }
-            // Work around https://github.com/ProjectMirador/mirador/issues/3486
-            const mirador_window = document.getElementById(element_id);
-            var observer = new MutationObserver(function(mutations) {
-              let mirador_videos = document.querySelectorAll(".mirador-viewer video source");
-              if (mirador_videos.length) {
-                mutations.forEach(function (mutation) {
-                  if ((mutation.target.localName == "video") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
-                    mutation.target.src = mutation.target.lastChild.getAttribute('src');
-                  }
-                });
-              }
-              let mirador_audios = document.querySelectorAll(".mirador-viewer audio source");
-              if (mirador_audios.length) {
-                mutations.forEach(function (mutation) {
-                  if ((mutation.target.localName == "audio") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
-                    mutation.target.src = mutation.target.lastChild.getAttribute('src');
-                  }
-                });
-              }
-            });
-            observer.observe(mirador_window, {
-              childList: true,
-              subtree: true,
-            });
+            $options = {
+              ...$options,
+              ...viewer_override,
+            };
           }
-        })}}
+
+          //@TODO add an extra Manifests key with every other one so people can select the others.
+          if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
+            const miradorInstance = renderMirador($options);
+            console.log('initializing Custom Mirador 3.3.0')
+          }
+          else {
+            const miradorInstance = Mirador.viewer($options, [formatStrawberryFieldReactPlugin]);
+            console.log('initializing Mirador')
+            if (miradorInstance) {
+              // To allow bubling up we need to add this one to the document
+              // Multiple Miradors will replace each other?
+              // @TODO check on that diego..
+              document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
+              document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
+            }
+          }
+          // Work around https://github.com/ProjectMirador/mirador/issues/3486
+          const mirador_window = document.getElementById(element_id);
+          var observer = new MutationObserver(function(mutations) {
+            let mirador_videos = document.querySelectorAll(".mirador-viewer video source");
+            if (mirador_videos.length) {
+              mutations.forEach(function (mutation) {
+                if ((mutation.target.localName == "video") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                  mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                }
+              });
+            }
+            let mirador_audios = document.querySelectorAll(".mirador-viewer audio source");
+            if (mirador_audios.length) {
+              mutations.forEach(function (mutation) {
+                if ((mutation.target.localName == "audio") && (mutation.addedNodes.length > 0) && (typeof(mutation.target.lastChild.src) != "undefined" )) {
+                  mutation.target.src = mutation.target.lastChild.getAttribute('src');
+                }
+              });
+            }
+          });
+          observer.observe(mirador_window, {
+            childList: true,
+            subtree: true,
+          });
+        }
+      })}}
 })(jQuery, Drupal, once, drupalSettings, window.Mirador, ReduxSaga);
