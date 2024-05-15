@@ -417,8 +417,8 @@ class IiifContentSearchController extends ControllerBase {
                     foreach ($target as $target_id => $target_data) {
                       if ($target_id) {
                         $target_time = [
-                            round($annotation['s']),
-                            round($annotation['e'])
+                            round($annotation['s'],2),
+                            round($annotation['e'],2)
                         ];
                         $target_fragment = "#t=" . implode(
                             ",", $target_time
