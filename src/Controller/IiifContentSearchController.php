@@ -617,7 +617,7 @@ class IiifContentSearchController extends ControllerBase {
 
 
   /**
-   * OCR Search Controller specific to IIIF Content Search Needs
+   * OCR/Annnotation Search Controller specific to IIIF Content Search Needs
    *
    * @param string $term
    * @param array $processors
@@ -737,7 +737,7 @@ class IiifContentSearchController extends ControllerBase {
         // Sadly we have to add the condition here, what if file_uuid is not defined?
       }
       else {
-        $this->getLogger('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to sarch');
+        $this->getLogger('format_strawberryfield')->warning('For Content Search API queries, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to search');
       }
       $have_file_condition = FALSE;
       if (count($file_uris)) {

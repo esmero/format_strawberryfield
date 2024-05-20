@@ -28,6 +28,9 @@ function format_strawberryfield_page_attachments(array &$page) {
   /* if (\Drupal::service('router.admin_context')->isAdminRoute()) {
       return;
   }*/
+  if (\Drupal::currentUser()->hasPermission('view strawberryfield webannotation')) {
+      $page['#attached']['library'][] = 'format_strawberryfield/iiif_flavor_annotations_strawberry';
+  }
 
   $page['#attached']['library'][] = 'format_strawberryfield/lazyload_strawberry';
   $page['#attached']['library'][] = 'core/jquery';

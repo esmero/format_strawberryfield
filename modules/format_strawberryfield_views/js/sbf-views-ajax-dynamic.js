@@ -42,8 +42,6 @@
     this.pagerAjax = Drupal.ajax(selfSettings);
   };
 
-
-
   function loadViewOnClickEvent(e) {
     // If using the load even we can't relay on the target anymore because
     // it is bound to the document/window.
@@ -101,7 +99,7 @@
     ajaxObject.execute();
   };
 
-  Drupal.behaviors.sbf_views_ajax_interactions = {
+  Drupal.behaviors.sbf_views_ajax_dynamic = {
     attach: function (context, settings) {
       // the data attributes one can use
       // [data-sbf-view-id="machine_name_of_a_view"]

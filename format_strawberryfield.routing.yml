@@ -275,6 +275,23 @@ format_strawberryfield.deletetmp_webannotations:
     _entity_access: 'node.update'
     _permission: 'add strawberryfield webannotation'
 
+# Persist in a SBF any generated Webannotations.
+format_strawberryfield.get_webannotations_fromflavor:
+  path: '/do/{node}/webannon/readsbf'
+  methods: [GET]
+  defaults:
+    _controller: '\Drupal\format_strawberryfield\Controller\WebAnnotationController::readFromFlavors'
+  options:
+    parameters:
+      node:
+        type: 'entity:node'
+      resource_type:
+        type: 'ado'
+  requirements:
+    _format: 'json'
+    _entity_access: 'node.view'
+    _permission: 'view strawberryfield webannotation'
+
 # Display settings for each ADO
 format_strawberryfield.display_settings:
   path: '/node/{node}/display-settings/{bundle}/{view_mode_name}'

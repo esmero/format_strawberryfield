@@ -21,6 +21,14 @@ jmespath_strawberry:
   dependencies:
     - core/drupal
 
+popper:
+  js:
+    https://unpkg.com/@popperjs/core@2 : { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      css/popper.css: { }
+
+
 iiif_openseadragon:
   remote: http://openseadragon.github.io
   version: 2.4.2
@@ -316,7 +324,6 @@ leaflet_core:
     component:
       https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css: { external: true}
 
-
 leaftleft_iiif_bound:
   version: 1.0
   js:
@@ -371,17 +378,30 @@ universalviewer:
     component:
       https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/uv.css: { external: true, preprocess: false }
 
+iiif_flavor_annotations_strawberry:
+  version: 1.0
+  js:
+    js/iiif-annotations_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/once
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/annotorious
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - format_strawberryfield/popper
+
 annotorious:
-  version: 2.5.10
+  version: 2.7.12
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.12/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.12/dist/annotorious.min.css: { external: true }
 
 annotoriousopenseadragon:
   version: 2.5.16
