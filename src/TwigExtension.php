@@ -142,7 +142,7 @@ class TwigExtension extends AbstractExtension {
         $query = \Drupal::entityTypeManager()
           ->getStorage($entity_type)
           ->getQuery()
-          ->accessCheck(FALSE);
+          ->accessCheck(TRUE);
         $query->condition($label_field, $label);
         if ($bundle_identifier && $bundle_field) {
           $query->condition($bundle_field, $bundle_identifier);
