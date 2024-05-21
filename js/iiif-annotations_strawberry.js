@@ -12,6 +12,64 @@
     return uuid;
   }
 
+  var DrupalViewsWidget = function(args) {
+
+    // 1. Find a current color setting in the annotation, if any
+    var currentColorBody = args.annotation ?
+        args.annotation.bodies.find(function(b) {
+          return b.purpose == 'highlighting';
+        }) : null;
+
+    // 2. Keep the value in a variable
+    var currentColorValue = currentColorBody ? currentColorBody.value : null;
+
+    // 3. Triggers callbacks on user action
+    var addTag = function(evt) {
+      if (currentColorBody) {
+        args.onUpdateBody(currentColorBody, {
+          type: 'TextualBody',
+          purpose: 'highlighting',
+          value: evt.target.dataset.tag
+        });
+      } else {
+        args.onAppendBody({
+          type: 'TextualBody',
+          purpose: 'highlighting',
+          value: evt.target.dataset.tag
+        });
+      }
+    }
+
+    var createButton = function(value) {
+      var button = document.createElement('button');
+
+      if (value == currentColorValue)
+        button.className = 'selected';
+
+      button.dataset.tag = value;
+      button.style.backgroundColor = value;
+      button.addEventListener('click', addTag);
+      return button;
+    }
+
+    var container = document.createElement('div');
+    container.className = 'colorselector-widget';
+    var button1 = createButton('RED');
+    var button2 = createButton('GREEN');
+    var button3 = createButton('BLUE');
+
+    container.appendChild(button1);
+    container.appendChild(button2);
+    container.appendChild(button3);
+
+    return container;
+  }
+
+
+
+
+
+
   var ThreeWaySwitchElement = function(id, opencv_enabled) {
     // 3. Triggers callbacks on user action
     var setOpenCV = function(evt) {
@@ -190,6 +248,15 @@
 
   Drupal.behaviors.format_strawberryfield_annotations_initiate = {
     attach: function (context, settings) {
+      var disableUrlClickWhenVisible = function(event) {
+        // this is the bound annotorious instance.
+        // If there is a Link around the image we won't be able to use any of the tools
+        // if we don't prevent the default.
+        // Sadly there is no getVisible() method. But we can check the annotationlayer if any
+        if (event.currentTarget.querySelector("svg.a9s-annotationlayer")?.style?.display !== "none") {
+          event.preventDefault();
+        }
+      }
       var annotorious_annotations = [];
       var groupssettings = {};
       // Only attach to images that have an ID and a not empty data-sbf-annotations-nodeuuid porperty
@@ -238,9 +305,11 @@
           "readOnly":$readonly,
           "widgets": $widgets,
           "image" : document.getElementById(element_id),
+          "editorDisabled": true
         }
 
         annotorious[element_id] = Annotorious.init($anonconfig);
+        document.getElementById(element_id).closest("a").addEventListener("click", disableUrlClickWhenVisible.bind(annotorious[element_id]), false);
         annotorious_annotations[element_id] = [];
         loadFirstAnnotationOfGroup(element_id);
         let toggle = ThreeWaySwitchElement(element_id, false);
@@ -254,9 +323,14 @@
           // Polygon coordinates, in the snippet element's logical coordinate space
         });
         annotorious[element_id].on('clickAnnotation', function(annotation, element) {
-          console.log(element);
-          console.log(annotation);
-          //
+
+          const image_data = {
+            "fileuuid": groupssetting.file_uuid,
+            "nodeuuid": groupssetting.nodeuuid,
+            "fragment": annotation.target.selector.value,
+            "textualbody": annotation.body?.value
+          }
+          Drupal.FormatStrawberryfieldIiifUtils.dispatchImageViewChange(element, btoa(pako.gzip(JSON.stringify(image_data))));
         });
       });
     }

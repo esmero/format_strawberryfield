@@ -2,6 +2,7 @@
 
   function CaptureAdoViewChange(e) {
     let nodeid = null;
+    let image_annotation = null;
     if (Array.isArray(e.detail.nodeid)) {
       nodeid = e.detail.nodeid.join("+");
       console.log(nodeid)
@@ -9,7 +10,13 @@
     else if (typeof e.detail.nodeid !== 'object') {
       nodeid = e.detail.nodeid;
     }
-    if (nodeid) {
+    // Will an already base64 encoded GZIPPed structure
+    if (typeof e.detail.image_annotation == 'string') {
+      image_annotation = e.detail.image_annotation
+    }
+
+
+    if (nodeid || image_annotation) {
       if (typeof drupalSettings['sbf_ajax_interactions'] === 'object') {
         for (const property in drupalSettings['sbf_ajax_interactions']) {
           if (typeof Drupal.views.instances["views_dom_id:" + property] !== "undefined") {
@@ -21,9 +28,14 @@
             // Has the same order as the arguments passed. But if there are many and currently only one is assigned we
             // assume the one currently assigned is the first?
             if (view_instance?.settings?.view_args !== null) {
-              view_instance.settings.view_args = nodeid;
-              view_instance.$view.trigger("RefreshView");
+              if (nodeid) {
+                view_instance.settings.view_args = nodeid;
+              }
+              if (image_annotation) {
+                view_instance.settings.view_args = image_annotation;
+              }
             }
+            view_instance.$view.trigger("RefreshView");
           }
         }
       }
@@ -42,7 +54,6 @@
       // If the document already has this eventlistener then it won't be added again! Nice.
     }
   }
-
   // END jQuery
 })(jQuery, Drupal, drupalSettings);
 
