@@ -410,6 +410,7 @@ class MetadataAPIController extends ControllerBase
             }
             // Deal with Filters. Exclude values set already for the same field on Contextual ones
             // At least for now.
+            $filters = [];
             foreach ($executable->display_handler->getOption('filters') ?? [] as $filter_key => $filter) {
               if ($filter['exposed'] == TRUE) {
                 foreach ($arguments_with_values as $param_name => $value) {
