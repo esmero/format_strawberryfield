@@ -506,10 +506,9 @@ class WebAnnotationController extends ControllerBase {
                         "Wrong request"
                     );
                 }
-
-
-                $existingannotations[$target] = $this->flavorfromSolrIndex([$processors ?? 'ml_yolov8'], [$file->uri],[$target] , [$node->uuid()]);
-
+                $file = reset($file);
+                error_log($file->getFileUri());
+                $existingannotations[$target] = $this->flavorfromSolrIndex([$processors ?? 'ml_yolov8'], [$file->getFileUri()],[$target] , [$node->uuid()]);
                 $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
             }
             catch (\Exception $exception) {
