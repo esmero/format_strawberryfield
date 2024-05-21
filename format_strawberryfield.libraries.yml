@@ -2,6 +2,7 @@ iiif_formatstrawberryfield_utils:
   version: 1.0
   js:
     js/iiif-archipelago-interactions_utils.js: {minified: false}
+    https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - core/jquery
     - core/drupal
