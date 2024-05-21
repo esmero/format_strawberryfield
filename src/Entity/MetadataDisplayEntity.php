@@ -553,7 +553,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
       $lineno = [$node->getTemplateLine()];
       $variable_key = '';
       // Parse seq to check the name for "data" and if it passes, get the values
-      // for for/in loops, e.g. {% for creator in data.creator %}
+      // for/in loops, e.g. {% for creator in data.creator %}
       if ($node->hasAttribute('always_defined')
           && $node->getAttribute('always_defined')
           && $nodes->hasNode('seq')
