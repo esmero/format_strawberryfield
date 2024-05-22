@@ -349,15 +349,15 @@ class MetadataAPIController extends ControllerBase
             // We will bring them first into the right order.
             // We will do this a bit more expensive
             // @TODO make this an entity method
-            foreach ($executable->display_handler->getOption('filters') ?? [] as $filter) {
-              if ($filter['exposed'] == TRUE) {
-                // TODO. What are we doing with exposed ones??
-              }
-            }
+
             $arguments = [];
             //@ TODO maybe allow to cast into ANY entity? well...
             foreach ($executable->display_handler->getOption('arguments') ?? [] as $argument_key => $filter) {
-              // The order here matters
+              // The order here matters. So we pre-set them all as Exception values/or as Empty
+              // Empty/NULL might fail validation of course, and we end with Zero RESULTS.
+              // Up to the API builder to either Enforce a Value OR make the Contextual Filtes flexible.
+              $exception_value = $filter['exception']['value'] ?? NULL;
+              $arguments[$argument_key] = $exception_value;
               foreach ($arguments_with_values as $param_name => $value) {
                 if ($argument_key == $param_name) {
                   // Why we check this?
@@ -408,13 +408,49 @@ class MetadataAPIController extends ControllerBase
                 }
               }
             }
+            // Deal with Filters. Exclude values set already for the same field on Contextual ones
+            // At least for now.
+            $filters = [];
+            foreach ($executable->display_handler->getOption('filters') ?? [] as $filter_key => $filter) {
+              if ($filter['exposed'] == TRUE) {
+                foreach ($arguments_with_values as $param_name => $value) {
+                  if ($filter_key == $param_name && !isset($arguments[$param_name])) {
+                    $exposed_filter_id = $filter['expose']['identifier'] ?? NULL;
+                    // avoid setting Filters for values we already set as $contextual ones.
+                    // The only one we know for sure without crazy code to be a nod is nid
+                    if ($exposed_filter_id) {
+                      $filters[$exposed_filter_id] = $value;
+                      if ($filter_key == "nid") {
+                        if (Uuid::isValid($value)) {
+                          $nodes = $this->entityTypeManager->getStorage('node')
+                            ->loadByProperties(
+                              ['uuid' => $value]
+                            );
+                          if (!empty($nodes)) {
+                            $node = reset($nodes);
+                            $filters[$exposed_filter_id] = $node->id();
+                          }
+                        } elseif (is_scalar($value)) {
+                          // Deals with NODE ids instead.
+                          $node = $this->entityTypeManager->getStorage('node')
+                            ->load($value);
+                          if ($node) {
+                            $filters[$exposed_filter_id] = $node->id();
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
 
-            // We need to destroy the path here ...
+            $executable->exposed_data = $filters;
+            // We need to destroy the path, if any, here too.
             if ($executable->hasUrl()) {
               $executable->display_handler->overrideOption('path', '/node');
             }
             $executable->setArguments(array_values($arguments));
-            //
             $views_validation = $executable->validate();
             if (empty($views_validation)) {
               try {
