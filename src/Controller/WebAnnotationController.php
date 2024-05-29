@@ -481,9 +481,7 @@ class WebAnnotationController extends ControllerBase {
             ],
         ];
 
-        $return = [];
         $existingannotations = [];
-        // GET Argument (
         $target = $this->requestStack->getCurrentRequest()->query->get('target_resource_uuid');
         // Processors need to exist.
         // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
@@ -507,7 +505,7 @@ class WebAnnotationController extends ControllerBase {
                     );
                 }
                 $file = reset($file);
-                error_log($file->getFileUri());
+                // This allows really for multiple targets. Also, we need more caching here.
                 $existingannotations[$target] = $this->flavorfromSolrIndex([$processors ?? 'ml_yolov8'], [$file->getFileUri()],[$target] , [$node->uuid()]);
                 $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
             }
@@ -886,6 +884,8 @@ class WebAnnotationController extends ControllerBase {
     }
 
     protected function miniOCRtoAnnon(string $miniocr, $file_uuid, $sequence_id):array {
+        // To avoid memory crazy ness should we set a limit here?
+        // As today, archipelago generates OCR per page, so should not be too large.
         $internalErrors = libxml_use_internal_errors(TRUE);
         libxml_clear_errors();
         libxml_use_internal_errors($internalErrors);

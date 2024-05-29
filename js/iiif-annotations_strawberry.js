@@ -122,7 +122,10 @@
                     }
 
                     annotorious[element_id] = Annotorious.init($anonconfig);
-                    document.getElementById(element_id).closest("a").addEventListener("click", disableUrlClickWhenVisible.bind(groupssetting), false);
+                    const wrapping_link =  document.getElementById(element_id).closest("a")
+                    if (wrapping_link) {
+                      wrapping_link.addEventListener("click", disableUrlClickWhenVisible.bind(groupssetting), false);
+                    }
                     annotorious_annotations[element_id] = [];
                     loadFirstAnnotationOfGroup(element_id);
                     // let toggle = ThreeWaySwitchElement(element_id, false);
