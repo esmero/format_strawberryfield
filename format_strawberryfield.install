@@ -13,7 +13,7 @@ function format_strawberryfield_update_8001() {
   if (!$schema->tableExists('metadatadisplay_entity')) {
     \Drupal::entityTypeManager()->clearCachedDefinitions();
     \Drupal::entityDefinitionUpdateManager()
-        ->installEntityType(\Drupal::entityTypeManager()->getDefinition('metadatadisplay_entity'));
+      ->installEntityType(\Drupal::entityTypeManager()->getDefinition('metadatadisplay_entity'));
   }
 
   // Add mimetype field definition to \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity
@@ -60,9 +60,9 @@ function format_strawberryfield_update_8701() {
     'config_prefix' => 'metadataexpose_entity',
     'admin_permission' => 'administer site configuration',
     'entity_keys' => ['id' => 'id',
-      'label' => 'label',
-      'uuid' => 'uuid',
-      'active' => 'active',
+                      'label' => 'label',
+                      'uuid' => 'uuid',
+                      'active' => 'active',
     ],
     'config_export' => [
       'id',
@@ -214,3 +214,122 @@ function format_strawberryfield_update_8702() {
   $message = "All Metadata Display Entities in Configurations updated to use UUIDs";
   return $message;
 }
+/**
+ * Implements hook_update_N().
+ *
+ * Updates metadataexpose_entity config adding hide_on_embargo config option.
+ *
+ */
+function format_strawberryfield_update_8703() {
+  $message = "Nothing to update. metadataexpose_entity entity is not installed.";
+  $entity_type = \Drupal::entityDefinitionUpdateManager()->getEntityType('metadataexpose_entity');
+  if ($entity_type) {
+    $entity_config_export = $entity_type->get('config_export');
+    $entity_config_export[] = 'hide_on_embargo';
+    $entity_type->set('config_export', $entity_config_export);
+    \Drupal::entityDefinitionUpdateManager()->updateEntityType($entity_type);
+    $message = "Metadata Exposed Display Entity's (metadataexpose_entity) Schema updated with hide_on_embargo setting";
+  }
+  return $message;
+}
+
+
+/**
+ * Implements hook_update_N().
+ *
+ * Attemps to fix Twig syntax deprecations from Twig 2 to Twig 3.
+ *
+ */
+function format_strawberryfield_update_8704() {
+  $separator = "\r\n";
+  $ifinsidefor_regex = '/{%([\s|\-|~]*for.+?(?=\s{1}if))(.*?)%}/m';
+  $any_for_regex = '/{%([\s|\-|~]*for.+)%}/m';
+  // Not used but will keep here bc so hard to build/write!
+  // $not_ifinsidefor_regex = '/^(?!.*if).*{%[\s|~|\-]*for.*/m';
+  $endfor_regex = '/({%[\s|\-|~]*(endfor)[\s|\-|~]*?%}){1}/m';
+  $spaceless_regex = '/({%[\s|\-|~]*(spaceless|endspaceless)[\s|\-|~]*%})/m';
+  $metadatadisplay_entity_storage = \Drupal::entityTypeManager()->getStorage('metadatadisplay_entity');
+  $entity_query = \Drupal::entityQuery('metadatadisplay_entity');
+  $entity_query->sort('id', 'DESC');
+  $entity_query->accessCheck(FALSE);
+  $ids = $entity_query->execute();
+  $fixed_labels = [];
+  $failed_labels = [];
+  foreach ($ids as $id) {
+    $metadatadisplay_entity_storage->resetCache([$id]);
+    /* @var $metadatadisplay_entity \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity|null */
+    $metadatadisplay_entity = $metadatadisplay_entity_storage->load($id);
+    if (!empty($metadatadisplay_entity)) {
+      // Count for nested fors
+      $for_level = 0;
+      $ifinsideforfound_level = [];
+      $twigtemplate = $metadatadisplay_entity->get('twig')->getValue();
+      $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
+      strtok('', '');
+      $fixed = FALSE;
+      $line = strtok($twigtemplate, $separator);
+      // after finding a for if, keep counting other fors .. because we could end closing the new if at the first encounter of an for which is wrong
+      $newtemplate = '';
+      while ($line !== false) {
+        // Check for any for so we can keep track of the for deepness. More reliable.
+        $matches_any_for = [];
+        preg_match_all($any_for_regex, $line, $matches_any_for, PREG_SET_ORDER, 0);
+        if (!empty($matches_any_for)) {
+          $for_level++;
+        }
+        $matches_any_endfor = [];
+        preg_match_all($endfor_regex, $line, $matches_any_endfor, PREG_SET_ORDER, 0);
+        if (!empty($matches_any_endfor)) {
+          if (isset($ifinsideforfound_level[$for_level])) {
+            $line = preg_replace($endfor_regex, '{#- WIZARDLY UPDATED BY ARCHIPELAGO -#}'.$separator.'{% endif %}'.$separator.'${1}', $line);
+            unset($ifinsideforfound_level[$for_level]);
+            $fixed = TRUE;
+          }
+          $for_level--;
+        }
+
+        // Checks an FOR with an IF
+        $matches = [];
+        preg_match_all($ifinsidefor_regex, $line, $matches, PREG_SET_ORDER, 0);
+        if (!empty($matches)) {
+          $line = preg_replace($ifinsidefor_regex, '{%${1}%}'.$separator.'{#- WIZARDLY UPDATED BY ARCHIPELAGO -#}'.$separator.'{% ${2}%}', $line);
+          $ifinsideforfound_level[$for_level] = TRUE;
+        }
+
+        // Checks Spacesless/Endspaceless
+        $matches3 = [];
+        preg_match_all($spaceless_regex, $line, $matches3, PREG_SET_ORDER, 0);
+        if (!empty($matches3)) {
+          $line = preg_replace($spaceless_regex,'', $line);
+          $fixed = TRUE;
+        }
+        // Appends line
+        if (!empty($line)) {
+          $newtemplate = $newtemplate . rtrim($line) .$separator;
+        }
+        // Tokenize a new line
+        $line = strtok( $separator );
+      }
+      if ($fixed) {
+        $metadatadisplay_entity->invalidateTempMetadataDisplayCaches();
+        $validate = $metadatadisplay_entity->validateSource($newtemplate, TRUE);
+        if ($validate === TRUE) {
+          $metadatadisplay_entity->set('twig',$newtemplate);
+          $metadatadisplay_entity->save();
+          $fixed_labels[] = $metadatadisplay_entity->label();
+        }
+        else {
+          $failed_labels[] = $metadatadisplay_entity->label();
+        }
+      }
+    }
+  }
+  strtok('', '');
+  $message = t('All done, welcome to Twig 3.0! Templates that needed fix/were fixed: @fixed ; Templates we attempted a fix but we failed and left untouched for you to correct: @failed',
+  [
+    '@fixed' => count($fixed_labels) ? implode("; ", $fixed_labels) : 'none',
+    '@failed' => count($failed_labels) ? implode("; ", $failed_labels) : 'none',
+  ]);
+  return $message;
+}
+

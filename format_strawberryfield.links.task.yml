@@ -22,6 +22,12 @@ metadatadisplay.delete_confirm:
   title: Delete
   weight: 10
 
+metadatadisplay.usage_tab:
+  route_name:  entity.metadatadisplay_entity.usage_form
+  base_route:  entity.metadatadisplay_entity.canonical
+  title: Usage
+  weight: 11
+
 metadatadisplay.admin:
   title: Metadata Display
   route_name: entity.metadatadisplay_entity.collection
@@ -31,6 +37,6 @@ metadatadisplay.admin:
 format_strawberry.display_settings:
   route_name: format_strawberryfield.display_settings
   base_route: entity.node.canonical
-  title: 'Display settings'
+  title: 'Active Display settings'
   class: '\Drupal\format_strawberryfield\Plugin\Menu\LocalTask\ViewModeLocalTask'
   weight: 5

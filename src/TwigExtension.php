@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Twig\Extension\AbstractExtension;
 use Twig\Markup;
@@ -95,6 +96,8 @@ class TwigExtension extends AbstractExtension {
       new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
       new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
         ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_iso_date', [$this, 'edtfToIsoDate'],
+        ['is_safe' => ['all']]),
     ];
   }
 
@@ -117,7 +120,7 @@ class TwigExtension extends AbstractExtension {
   public function entityIdsByLabel(
     string $label,
     string $entity_type,
-    string $bundle_identifier = '',
+    string $bundle_identifier = NULL,
     $limit = 1
   ): ?array {
     $fields = [
@@ -128,7 +131,7 @@ class TwigExtension extends AbstractExtension {
     ];
     $limit = (int) $limit;
     $entity_type = trim($entity_type);
-    $bundle_identifier = trim($bundle_identifier);
+    $bundle_identifier = !empty($bundle_identifier) ? trim($bundle_identifier) : NULL;
     $label_field = $fields[$entity_type][0] ?? NULL;
     if ($label_field) {
       $bundle_field = $fields[$entity_type][1] ?? NULL;
@@ -307,10 +310,10 @@ class TwigExtension extends AbstractExtension {
     }
     $render = new Render();
     if ($locale) {
-        $bibliography = $render->bibliography($locale, $styles, $json_data);
+      $bibliography = $render->bibliography($locale, $styles, $json_data);
     }
     else {
-      $bibliography = $render->bibliography(null, $styles, $json_data);
+      $bibliography = $render->bibliography(NULL, $styles, $json_data);
     }
     $uniqueid = Html::getUniqueId('bibliography');
     $render_bibliography = [
@@ -338,7 +341,7 @@ class TwigExtension extends AbstractExtension {
    *
    * @return mixed
    */
-  public function clipboardCopy(string $copyContentCssClass = '', string $copyButtonCssClass = null, string $copyButtonText = 'Copy to Clipboard') {
+  public function clipboardCopy(string $copyContentCssClass = NULL, string $copyButtonCssClass = NULL, string $copyButtonText = NULL) {
 
     if (is_null($copyContentCssClass)) {
       return '';
@@ -352,6 +355,11 @@ class TwigExtension extends AbstractExtension {
     if (is_null($copyButtonCssClass) || empty($copyButtonCssClass)) {
       $copyButtonCssClass = 'clipboard-copy-button';
     }
+
+    if (is_null($copyButtonText) || empty($copyButtonText)) {
+      $copyButtonText = t("Copy to clipboard");
+    }
+
     $uniqueid = Html::getUniqueId('clipboard-copy-data');
     $button_html = [
       '#type' => 'container',
@@ -366,7 +374,7 @@ class TwigExtension extends AbstractExtension {
         'library' => [
           'format_strawberryfield/clipboard_copy',
           'format_strawberryfield/clipboard_copy_strawberry',
-         ],
+        ],
       ],
     ];
     $rendered_button = $this->renderer->render($button_html);
@@ -382,7 +390,7 @@ class TwigExtension extends AbstractExtension {
    *
    * @return string
    */
-  public function edtfToHumanDate($edtfString, string $lang = 'en'): string {
+  public function edtfToHumanDate($edtfString, string $lang = NULL): string {
     if (empty($edtfString)) {
       return '';
     }
@@ -390,6 +398,7 @@ class TwigExtension extends AbstractExtension {
       return '';
     }
 
+    $lang = $lang ?? 'en';
     $parser = EdtfFactory::newParser();
     $parsed = $parser->parse($edtfString);
     if ($parsed->isValid()) {
@@ -397,12 +406,62 @@ class TwigExtension extends AbstractExtension {
       try {
         $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
         return $humanizer->humanize($edtfValue);
-      } catch (\Exception $exception) {
+      }
+      catch (\Exception $exception) {
         return '';
       }
     }
     return '';
   }
+
+  /**
+   * Converts EDTF to ISO date(s).
+   *
+   * @param mixed $edtfString
+   *
+   * @return array
+   *   Will be empty if EDTF is not valid or passed arguments are invalid
+   */
+  public function edtfToIsoDate($edtfString): array {
+    if (empty($edtfString)) {
+      return [];
+    }
+    if (!is_string($edtfString)) {
+      return [];
+    }
+    $values_parsed = [];
+    $parser = EdtfFactory::newParser();
+    try {
+      $parsed = $parser->parse($edtfString);
+      if ($parsed->isValid()) {
+        $edtfValue = $parsed->getEdtfValue();
+        // @todo remove once EDTF fixes their invalid Constructor for EDTF\Model\Interval that should per interface never allow NULL for start nor end date
+        switch (get_class($edtfValue)) {
+          case "EDTF\Model\Interval":
+            if ($edtfValue->hasStartDate()) {
+              $values_parsed[] = date('Y-m-d', $edtfValue->getMin());
+            }
+            if ($edtfValue->hasEndDate()) {
+              $values_parsed[] = date('Y-m-d', $edtfValue->getMax());
+            }
+            break;
+          default:
+
+            $values_parsed[] = date('Y-m-d', $edtfValue->getMin());
+            $values_parsed[] = date('Y-m-d', $edtfValue->getMax());
+            break;
+        }
+        return array_unique($values_parsed);
+      }
+    }
+    catch (\Exception $exception) {
+      return [];
+    }
+
+    return [];
+  }
+
+
 
   /**
    * Executes and Search API query programatically
@@ -431,7 +490,10 @@ class TwigExtension extends AbstractExtension {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\search_api\SearchApiException
    */
-  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => 'ASC'], int $limit = 1, int $offset = 0): array {
+  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], int $limit = NULL, int $offset = NULL): array {
+
+    $limit = $limit ?? 1;
+    $offset = $offset ?? 0;
 
     /** @var \Drupal\search_api\IndexInterface[] $indexes */
     $indexes = \Drupal::entityTypeManager()
@@ -439,7 +501,6 @@ class TwigExtension extends AbstractExtension {
       ->loadMultiple([$index]);
 
     // We can check if $fulltext, $filters and $facets are inside $indexes['theindex']->field_settings["afield"]?
-
     foreach ($indexes as $search_api_index) {
 
       // Create the query.
@@ -459,10 +520,6 @@ class TwigExtension extends AbstractExtension {
         $query->setFulltextFields($fulltext);
       }
 
-      $allfields_translated_to_solr = $search_api_index->getServerInstance()
-        ->getBackend()
-        ->getSolrFieldNames($query->getIndex());
-
       $query->setOption('search_api_retrieved_field_values', ['id']);
       foreach ($filters as $field => $condition) {
         $query->addCondition($field, $condition);
@@ -475,7 +532,7 @@ class TwigExtension extends AbstractExtension {
         foreach ($facets as $facet_field) {
           $facet_options['facet:' . $facet_field] = [
             'field'     => $facet_field,
-            'limit'     => 10,
+            'limit'     => 100,
             'operator'  => 'or',
             'min_count' => 1,
             'missing'   => TRUE,
@@ -487,32 +544,42 @@ class TwigExtension extends AbstractExtension {
         }
       }
       /* Basic is good enough for facets */
-      $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
+      $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
       // see also \Drupal\search_api_autocomplete\Plugin\search_api_autocomplete\suggester\LiveResults::getAutocompleteSuggestions
       $results = $query->execute();
       $extradata = $results->getAllExtraData();
       // We return here
       $return = [];
-      foreach( $results->getResultItems() as $resultItem) {
-        $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['entity'] = $resultItem->getOriginalObject()->getValue();
-       foreach ($resultItem->getFields() as $field) {
-         $return['results'][$resultItem->getOriginalObject()->getValue()->id()]['fields'][$field->getFieldIdentifier()] = $field->getValues();
-       }
+      foreach( $results->getResultItems() as $itemid => $resultItem) {
+        // We can not allow any extraction or entity load happening here
+        // The Search API entity loading will interrupt other sessions/active NODEs
+        // and will disable EDIT/any management on the ADO that is using this
+        // Extension. So we will get what is in the index (solr)
+        // Will have no issues with this.
+        // This is related to "QueryInterface::PROCESSING_FULL" but is needed to respect
+        // Permissions. If not this will get anything from the Server
+        // Including hidden/unpublished things.
+        foreach ($resultItem->getFields(FALSE) as $field) {
+          $return['results'][$itemid]['fields'][$field->getFieldIdentifier()]
+            = $field->getValues();
+        }
       }
+
       $return['total'] = $results->getResultCount();
       if (isset($extradata['search_api_facets'])) {
         foreach($extradata['search_api_facets'] as $facet_id => $facet_values) {
           [$not_used, $field_id] = explode(':', $facet_id);
           $facet = [];
-          foreach ($facet_values as $entry) {
-            $facet[$entry['filter']] = $entry['count'];
+          if (is_array($facet_values)) {
+            foreach ($facet_values as $entry) {
+              $facet[$entry['filter']] = $entry['count'];
+            }
+            $return['facets'][$field_id] = $facet;
           }
-          $return['facets'][$field_id] = $facet;
         }
       }
       return $return;
     }
     return [];
   }
-
 }

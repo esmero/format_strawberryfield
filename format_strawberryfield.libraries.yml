@@ -1,3 +1,26 @@
+iiif_formatstrawberryfield_utils:
+  version: 1.0
+  js:
+    js/iiif-archipelago-interactions_utils.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/jmespath_strawberry
+    - format_strawberryfield/svgpath_polyfull
+
+svgpath_polyfull:
+  version: 1.0
+  js:
+    js/polyfills/pathseg.js: {minified: true}
+
+
+jmespath_strawberry:
+  js:
+    https://cdn.jsdelivr.net/npm/jmespath@0.16.0/jmespath.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - core/drupal
+
 iiif_openseadragon:
   remote: http://openseadragon.github.io
   version: 2.4.2
@@ -10,17 +33,19 @@ iiif_openseadragon:
     https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
 
 iiif_openseadragon_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/iiif-openseadragon_strawberry.js: {minified: false}
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/annotoriousopenseadragon
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - format_strawberryfield/leaflet_ajax
   css:
     component:
       css/osd.css: { }
@@ -37,6 +62,7 @@ iiif_iabookreader:
     component:
       css/iabookreader.css: {}
       https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/BookReader.css: { external: true}
+      https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/jquery.mmenu.all.css: { external: true}
   js:
     js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
     https://cdn.jsdelivr.net/npm/jquery.dragscrollable@1.0.0/dragscrollable.min.js: { external: true, minified: true, preprocess: false}
@@ -51,11 +77,11 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.mobile_nav.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.chapters.js: { external: true, minified: false, preprocess: false, weight: -8}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.search.js: { external: true, minified: false, preprocess: false, weight: -8}
+    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
     - core/jquery
-    - core/jquery.ui
-    - core/jquery.ui.slider
-    - core/jquery.ui.effects.core
+    - jquery_ui_slider/slider
+    - jquery_ui_effects/core
     - core/drupal
     - core/drupalSettings
 
@@ -67,8 +93,7 @@ iiif_iabookreader_strawberry:
     js/iiif-iabookreader_collapse.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupal.form
     - core/drupalSettings
@@ -76,6 +101,8 @@ iiif_iabookreader_strawberry:
     - core/modernizr
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
 pannellum:
   version: 2.5.6
   css:
@@ -86,12 +113,12 @@ pannellum:
 
 
 iiif_pannellum_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/iiif-pannellum_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/pannellum
@@ -100,6 +127,7 @@ iiif_pannellum_strawberry:
     - format_strawberryfield/jsm_modeler
     - format_strawberryfield/pdfs_strawberry
     - format_strawberryfield/av_strawberry
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 av_strawberry:
   version: 1.0
@@ -115,7 +143,7 @@ jsm_modeler:
     https://cdn.jsdelivr.net/gh/kovacsv/JSModeler@0.45/build/jsmodeler.ext.three.js: { external: true, minified: true, preprocess: false, weight: -8}
 
 jsm_model_strawberry:
-  version: 1.0
+  version: 1.2
   css:
     component:
       css/sbfutils.css: {}
@@ -123,10 +151,10 @@ jsm_model_strawberry:
     js/jsm-model_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupalSettings
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 pdfs_mozilla:
   version: 2.2.228
@@ -138,15 +166,16 @@ pdfs_mozilla:
     https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.min.js: { external: true, minified: true, preprocess: false}
 
 pdfs_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/pdfs_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/pdfs_mozilla
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_projectmirador:
   version: 3.1.1
@@ -156,14 +185,25 @@ mirador_projectmirador:
     gpl-compatible: true
   js:
     https://cdn.jsdelivr.net/npm/mirador@3.1.1/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_font:
   css:
     base:
       'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
 
+mirador_archipelago_custom:
+  version: 3.3.0
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    js/mirador-archipelago.js: {minified: false, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
+
 mirador_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/mirador_strawberry.js: {minified: false}
   css:
@@ -172,35 +212,54 @@ mirador_strawberry:
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/mirador_projectmirador
     - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
-uv_strawberry:
-  version: 1.0
+mirador_custom_strawberry:
+  version: 1.2
   js:
-    js/uv_strawberry.js: {minified: false}
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
+    - core/drupalSettings
+    - format_strawberryfield/mirador_archipelago_custom
+    - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+uv_strawberry:
+  version: 1.2
+  js:
+    js/uv_strawberry.js: {minified: false}
+    js/jquery_dollar.js: {preprocess: false, minified: false, weight: -10}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/universalviewer
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 leaflet_markercluster:
-  version: 1.4.1
+  version: 1.5.3
   remote: https://github.com/Leaflet/Leaflet.markercluster
   license:
     name: MIT
     url: https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENCE.txt
     gpl-compatible: true
   js:
-    https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
+    https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css: { external: true}
-      https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css: { external: true}
+      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css: { external: true}
 
 leaflet_subgroup:
   version: 1.0.2
@@ -212,18 +271,23 @@ leaflet_subgroup:
   js:
     https://cdn.jsdelivr.net/npm/leaflet.featuregroup.subgroup@1.0.2/dist/leaflet.featuregroup.subgroup.js : { external: true, minified: true, preprocess: false}
 
-
 leaflet_core:
-  version: 1.6.0
+  version: 1.9.4
   license:
     name: BSD-2-Clause
-    url: https://cdn.jsdelivr.net/npm/leaflet@1.6.0/LICENSE
+    url: https://cdn.jsdelivr.net/npm/leaflet@1.9.4/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet-src.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet-src.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css: { external: true}
+      https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css: { external: true}
+
+
+leaftleft_iiif_bound:
+  version: 1.0
+  js:
+    js/Leaflet.ImageOverlay.iiifBounded.js: {minified: false}
 
 leaflet_ajax:
   version: 2.1.0
@@ -237,17 +301,19 @@ leaflet_ajax:
     - format_strawberryfield/leaflet_core
     - format_strawberryfield/leaflet_markercluster
     - format_strawberryfield/leaflet_subgroup
+    - format_strawberryfield/leaftleft_iiif_bound
 
 leaflet_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/leaflet_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
-    - core/jquery.once
+    - core/once
     - core/drupal
     - core/drupalSettings
     - format_strawberryfield/leaflet_ajax
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 # Don't forget to update \Drupal\format_strawberryfield\Controller\JsWorkerController::servereplay
 # when moving versions up!
@@ -261,15 +327,16 @@ replayweb:
     https://cdn.jsdelivr.net/npm/replaywebpage@1.5.5/ui.js: { external: true, minified: true, preprocess: false}
 
 universalviewer:
-  version: 4.0.0-pre.49
+  version: 4.0.1
   license:
     name: MIT
-    url: https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/LICENSE.txt
+    url: https://cdn.jsdelivr.net/npm/universalviewer@4.0.0/LICENSE.txt
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/universalviewer@4.0.0-pre.49/dist/uv-dist-umd/UV.min.js: { external: true, minified: true, preprocess: false}
-    https://unpkg.com/@edsilv/utils@1.0.2/dist-umd/utils.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/npm/jsviews@1.0.8/jsviews.min.js: {external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/umd/UV.js: { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/uv.css: { external: true, preprocess: false }
 
 annotorious:
   version: 2.5.10
@@ -307,13 +374,12 @@ opencv:
     https://docs.opencv.org/4.5.0/opencv.js: { external: true, minified: true, preprocess: false}
 
 w3cWebAnnotations_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/w3cWebAnnon_strawberry.js: { minified: false }
   dependencies:
     - core/jquery
-    - core/jquery.once
-    - core/jquery.ui
+    - core/once
     - core/drupal
     - core/drupalSettings
 
@@ -321,6 +387,9 @@ code_mirror_autosave:
   version: 1.0
   js:
     js/code_mirror_autosave.js: { minified: false }
+  css:
+    component:
+      css/metadatapreview.css: { }
   dependencies:
     - core/jquery
     - core/drupal
@@ -346,13 +415,13 @@ lazyload_strawberry:
     - core/drupal
 
 citations_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/citations_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings
 
 clipboard_copy:
@@ -365,11 +434,11 @@ clipboard_copy:
     https://unpkg.com/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
 
 clipboard_copy_strawberry:
-  version: 1.0
+  version: 1.2
   js:
     js/clipboard_copy_strawberry.js: {minified: false}
   dependencies:
     - core/jquery
     - core/drupal
-    - core/jquery.once
+    - core/once
     - core/drupalSettings

@@ -1,0 +1,6 @@
+exposed_views_form_modal.block.ajax:
+  path: '/exposed-views-form-block-ajax'
+  defaults:
+    _controller: '\Drupal\format_strawberryfield_views\Controller\ViewsExposedFormModalBlockAjaxController::ajaxExposedFormBlockView'
+  requirements:
+    _access: 'TRUE'

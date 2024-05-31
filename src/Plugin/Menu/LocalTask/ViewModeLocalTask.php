@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Menu\LocalTask;
 
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Menu\LocalTaskDefault;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
@@ -22,20 +23,28 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
   protected $viewModeResolver;
 
   /**
+   * The Entity Type Manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected EntityTypeManagerInterface $entityTypeManager;
+
+  /**
    * Construct the ViewModeLocalTask object.
    *
-   * @param array $configuration
+   * @param array                                                    $configuration
    *   A configuration array containing information about the plugin instance.
-   * @param string $plugin_id
+   * @param string                                                   $plugin_id
    *   The plugin_id for the plugin instance.
-   * @param array $plugin_definition
+   * @param array                                                    $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\format_strawberryfield\ViewModeResolverInterface
-   *   The SBF View Mode resolver.
+   * @param \Drupal\format_strawberryfield\ViewModeResolverInterface $view_mode_resolver
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface           $entitytype_manager
    */
-  public function __construct(array $configuration, $plugin_id, array $plugin_definition, ViewModeResolverInterface $view_mode_resolver) {
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, ViewModeResolverInterface $view_mode_resolver, EntityTypeManagerInterface $entitytype_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->viewModeResolver = $view_mode_resolver;
+    $this->entityTypeManager = $entitytype_manager;
   }
 
   /**
@@ -46,7 +55,8 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('format_strawberryfield.view_mode_resolver')
+      $container->get('format_strawberryfield.view_mode_resolver'),
+      $container->get('entity_type.manager')
     );
   }
 
@@ -64,8 +74,32 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
       else {
         $viewmode = $this->viewModeResolver->get($node);
       }
-      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(),'view_mode_name' => $viewmode];
+      $params += ['bundle' =>  $node->bundle(), 'node' => $node->id(), 'view_mode_name' => $viewmode];
     }
+    elseif ($route_match->getParameter('view_id') && is_numeric($node)) {
+      /* Upcasting %node route argument to NodeInterface will not happen for
+      Routed Views (Page/Rest), when under access control because of
+      https://www.drupal.org/project/drupal/issues/2528166
+      @TODO Revisit this work-around on Drupal 11.x
+      */
+      $node = $this->entityTypeManager->getStorage('node')->load($node);
+      if ($node) {
+        if ($node->hasField('ds_switch')
+          && !empty($node->ds_switch->value)
+        ) {
+          $viewmode = $node->ds_switch->value;
+        }
+        else {
+          $viewmode = $this->viewModeResolver->get($node);
+        }
+        $params += [
+          'bundle' => $node->bundle(),
+          'node' => $node->id(),
+          'view_mode_name' => $viewmode
+        ];
+      }
+    }
+
     return $params;
   }
 

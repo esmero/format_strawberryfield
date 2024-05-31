@@ -1,4 +1,4 @@
-(function ($, Drupal, drupalSettings, pannellum) {
+(function ($, Drupal, once, drupalSettings, pannellum) {
 
   'use strict';
 
@@ -111,8 +111,9 @@
 
   Drupal.behaviors.format_strawberryfield_pannellum_initiate = {
     attach: function (context, settings) {
-      $('.strawberry-panorama-item[data-iiif-image]').once('attache_pnl')
-        .each(function (index, value) {
+
+      const elementsToAttach = once('attache_pnl', '.strawberry-panorama-item[data-iiif-image]', context);
+      $(elementsToAttach).each(function (index, value) {
           // New 2019.
           // If value is an array then we have a multiscene panorama
           // Mostlikely, if i coded this right, hotspots will also be arrays
@@ -260,4 +261,4 @@
   Drupal.FormatStrawberryfieldPanoramas = FormatStrawberryfieldPanoramas;
   // Make the FormatStrawberryfieldhotspotPopUp function available in the Drupal namespace.
   Drupal.FormatStrawberryfieldhotspotPopUp = FormatStrawberryfieldhotspotPopUp;
-})(jQuery, Drupal, drupalSettings, window.pannellum);
+})(jQuery, Drupal, once, drupalSettings, window.pannellum);

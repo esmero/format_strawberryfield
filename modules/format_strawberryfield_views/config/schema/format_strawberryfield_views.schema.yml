@@ -33,3 +33,27 @@ views.style.format_strawberryfield_views_leaflet:
       type: string
       label: 'Max leaflet Zoom'
       default: 22
+
+views.filter.sbf_ado_filter:
+  type: views_filter
+  label: 'Strawberry ADO filter'
+  mapping:
+    operator:
+      type: string
+      label: 'Operator'
+    value:
+      type: array
+      label: 'Values'
+    expose:
+      type: mapping
+      label: 'Expose'
+      mapping:
+        reduce:
+          type: boolean
+          label: 'Reduce'
+    group_info:
+      mapping:
+        group_items:
+          sequence:
+            type: views.filter.group_item.in_operator
+            label: 'Group item'

@@ -3,10 +3,14 @@
 namespace Drupal\format_strawberryfield\Entity;
 
 use Drupal\Core\Cache\Cache;
-use Twig\Node\ModuleNode;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Cache\UseCacheBackendTrait;
+use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\Entity\RevisionableContentEntityBase;
+use Drupal\Core\Logger\LoggerChannelTrait;
+use Twig\Node\Node;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityChangedTrait;
 use InvalidArgumentException;
@@ -76,30 +80,51 @@ use Twig\Source;
  * @ContentEntityType(
  *   id = "metadatadisplay_entity",
  *   label = @Translation("Metadata Processor Entity"),
+ *   show_revision_ui = TRUE,
  *   handlers = {
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "list_builder" = "Drupal\format_strawberryfield\Entity\Controller\MetadataDisplayListBuilder",
  *     "views_data" = "Drupal\views\EntityViewsData",
+ *     "route_provider" = {
+ *        "revision" = \Drupal\Core\Entity\Routing\RevisionHtmlRouteProvider::class,
+ *     },
  *     "form" = {
  *       "add" = "Drupal\format_strawberryfield\Form\MetadataDisplayForm",
  *       "edit" = "Drupal\format_strawberryfield\Form\MetadataDisplayForm",
  *       "delete" = "Drupal\format_strawberryfield\Form\MetadataDisplayDeleteForm",
+ *       "revision-delete" = \Drupal\Core\Entity\Form\RevisionDeleteForm::class,
+ *       "revision-revert" = \Drupal\Core\Entity\Form\RevisionRevertForm::class,
  *     },
  *     "access" = "Drupal\format_strawberryfield\MetadataDisplayAccessControlHandler",
  *   },
  *   base_table = "strawberryfield_metadatadisplay",
+ *   revision_table = "strawberryfield_metadatadisplay_revision",
+ *   revision_data_table = "strawberryfield_metadatadisplay_field_revision",
  *   admin_permission = "administer metadatadisplay entity",
  *   fieldable = TRUE,
  *   entity_keys = {
  *     "id" = "id",
  *     "label" = "name",
- *     "uuid" = "uuid"
+ *     "uuid" = "uuid",
+ *     "revision" = "vid",
+ *     "revision_translation_affected" = "revision_translation_affected",
+ *   },
+ *   revision_metadata_keys = {
+ *      "revision_user" = "revision_user",
+ *      "revision_default" = "revision_default",
+ *      "revision_created" = "revision_created",
+ *      "revision_log_message" = "revision_log_message",
  *   },
  *   links = {
  *     "canonical" = "/metadatadisplay/{metadatadisplay_entity}",
  *     "edit-form" = "/metadatadisplay/{metadatadisplay_entity}/edit",
  *     "delete-form" = "/metadatadisplay/{metadatadisplay_entity}/delete",
- *     "collection" = "/metadatadisplay/list"
+ *     "collection" = "/metadatadisplay/list",
+ *     "revision" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/view",
+ *     "revision-delete-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/delete",
+ *     "revision-revert-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/revert",
+ *     "version-history" = "/metadatadisplay/{metadatadisplay_entity}/revisions",
+ *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
  * )
@@ -128,10 +153,16 @@ use Twig\Source;
  * the rights privileges can influence the presentation (view, edit) of each
  * field.
  */
-class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplayInterface {
+class MetadataDisplayEntity extends RevisionableContentEntityBase implements MetadataDisplayInterface {
 
   // Implements methods defined by EntityChangedInterface.
   use EntityChangedTrait;
+  use UseCacheBackendTrait;
+  use LoggerChannelTrait;
+
+  CONST CACHE_TAG_ID = 'format_strawberry:metadata_display_related_tags:';
+
+  CONST ERRORED_CACHE_TAG_ID = 'format_strawberry:metadata_display_errored:';
 
   /**
    * Calculated Twig vars used by this template.
@@ -139,6 +170,21 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @var array|null
    */
   protected $usedTwigVars = NULL;
+
+  /**
+   * Cache backend instance.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  protected $cacheBackend;
+
+  public function __construct(array $values, $entity_type, $bundle = FALSE,
+    $translations = []
+  ) {
+    parent::__construct($values, $entity_type, $bundle, $translations);
+    $this->cacheBackend = \Drupal::service('cache.data');
+  }
+
 
   /**
    * {@inheritdoc}
@@ -151,6 +197,25 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $values += [
       'user_id' => \Drupal::currentUser()->id(),
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function postSave(EntityStorageInterface $storage, $update = TRUE) {
+    parent::postSave($storage, $update); // TODO: Change the autogenerated stub
+    // Calculate RelatedCacheTags.
+    $this->invalidateTempMetadataDisplayCaches();
+    $this->getRelatedCacheTagsToInvalidate(TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function postCreate(EntityStorageInterface $storage) {
+    parent::postCreate($storage); // TODO: Change the autogenerated stub
+    // Calculate RelatedCacheTags.
+    $this->getRelatedCacheTagsToInvalidate(TRUE);
   }
 
   /**
@@ -211,6 +276,8 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * in the GUI. The behaviour of the widgets used can be determined here.
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
+    // We need to inherit the parent revision log fields
+    $fields = parent::baseFieldDefinitions($entity_type);
 
     // Standard field, used as unique if primary index.
     $fields['id'] = BaseFieldDefinition::create('integer')
@@ -230,7 +297,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
       ->setDescription(t('The name of the Metadata Display entity.'))
-      ->setRevisionable(FALSE)
+      ->setRevisionable(TRUE)
       ->setSettings([
         'default_value' => '',
         'max_length' => 255,
@@ -253,6 +320,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // @TODO see https://twig.symfony.com/doc/2.x/api.html#sandbox-extension
     $fields['twig'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Twig template'))
+      ->setRevisionable(TRUE)
       ->setTranslatable(TRUE)
       ->setDisplayOptions('view', [
         'label' => 'hidden',
@@ -309,6 +377,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
 
     $fields['changed'] = BaseFieldDefinition::create('changed')
       ->setLabel(t('Changed'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('The time that the Metadata Display was last edited.'));
 
     $fields['link'] = BaseFieldDefinition::create('uri')
@@ -322,6 +391,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     // What type of output is expected from the twig template processing.
     $fields['mimetype'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Primary mime type this Twig Template entity will generate as output.'))
+      ->setRevisionable(TRUE)
       ->setDescription(t('When downloading the output, this will define the extension, validation and format. Every Mime type supports also being rendered as HTML'))
       ->setSettings([
         'default_value' => 'text/html',
@@ -345,6 +415,25 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       ->setDisplayConfigurable('form', TRUE)
       ->addConstraint('NotBlank');
 
+    $fields['revision_default'] = BaseFieldDefinition::create('boolean')
+      ->setName('revision_default')
+      ->setTargetEntityTypeId('metadatadisplay_entity')
+      ->setTargetBundle(NULL)
+      ->setLabel(t('Default revision'))
+      ->setDescription(t('A flag indicating whether this was a default revision when it was saved.'))
+      ->setStorageRequired(TRUE)
+      ->setInternal(TRUE)
+      ->setTranslatable(FALSE)
+      ->setRevisionable(TRUE);
+
+    $fields['revision_translation_affected'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Revision translation affected'))
+      ->setDescription(t('Indicates if the last edit of a translation belongs to current revision.'))
+      ->setReadOnly(TRUE)
+      ->setRevisionable(TRUE)
+      ->setTranslatable(TRUE);
+
+
     return $fields;
   }
 
@@ -360,7 +449,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
     // @TODO should we have a custom theme hint here?
     $node = $context['node'] ?? NULL;
-    $nodeid = $node instanceof  \Drupal\Core\Entity\FieldableEntityInterface ? $node->id() : NULL;
+    $nodeid = $node instanceof FieldableEntityInterface ? $node->id() : NULL;
     if ($nodeid) {
       $cache_tags = Cache::mergeTags(
         $this->getCacheTags(),
@@ -370,6 +459,20 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     else {
       $cache_tags = $this->getCacheTags();
     }
+
+    $visible_errored = FALSE;
+
+    $validated = $this->validateSource($twigtemplate);
+    if ($validated !== TRUE) {
+      if (\Drupal::currentUser()->isAuthenticated()) {
+        $twigtemplate = "{{ '" .$validated. "' }}";
+        $visible_errored = TRUE;
+      }
+      else {
+        $twigtemplate = "{{ '' }}";
+      }
+    }
+
     $templaterenderelement = [
       '#type' => 'inline_template',
       '#template' => $twigtemplate,
@@ -378,6 +481,9 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
         'tags' => $cache_tags
       ],
     ];
+    if ($visible_errored) {
+      $templaterenderelement['#cache']['max-age'] = 0;
+    }
 
     return $templaterenderelement;
   }
@@ -402,6 +508,7 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $twigtemplate,
       $context
     );
+
     return $rendered;
   }
 
@@ -413,14 +520,14 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
       $twigtemplate = $this->get('twig')->getValue();
       $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
       // Create a \Twig Source first.
-      $source = new Source($twigtemplate, $this->label(), '');
+      $source = new Source($twigtemplate, $this->label() ?? '', '');
       $tokens = $this->twigEnvironment()->tokenize($source);
       $nodes = $this->twigEnvironment()->parse($tokens);
-      $used_vars = $this->getTwigVariableNames($nodes);
+      $used_vars = $this->getTwigVariableNames($nodes, []);
+      ksort($used_vars);
       $this->usedTwigVars = $used_vars;
     }
     return $this->usedTwigVars;
-
   }
 
   /**
@@ -429,30 +536,52 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
    * @param \Twig\Node\ModuleNode $nodes
    *   A Twig Module Nodes object.
    *
+   * @param \Twig\Node\BodyNode $nodes
+   *   A Twig Module Nodes object.
+   *
+   * @param \Twig\Node\Node $nodes
+   *   A Twig Module Nodes object.
+   *
+   * @param array $variables
+   *   The variables passed through recursions.
+   *
    * @return array
    *   A list of used $variables by this template.
    */
-  private function getTwigVariableNames(ModuleNode $nodes): array {
-    $variables = [];
+  private function getTwigVariableNames(Node $nodes, array $variables = []): array {
     foreach ($nodes as $node) {
-      if ($node instanceof \Twig_Node_Expression_Name) {
-        $name = $node->getAttribute('name');
-        $variables[$name] = $name;
-      }
-      elseif ($node instanceof \Twig_Node_Expression_Constant && $nodes instanceof \Twig_Node_Expression_GetAttr) {
-        $value = $node->getAttribute('value');
-        if (!empty($value) && is_string($value)) {
-          $variables[$value] = $value;
+      $lineno = [$node->getTemplateLine()];
+      $variable_key = '';
+      // Parse seq to check the name for "data" and if it passes, get the values
+      // for for/in loops, e.g. {% for creator in data.creator %}
+      if ($node->hasAttribute('always_defined')
+          && $node->getAttribute('always_defined')
+          && $nodes->hasNode('seq')
+      ) {
+        $seq = $nodes->getNode('seq');
+        if ($seq->hasNode('node')
+            && $seq->getNode('node')->hasAttribute('name')
+            && $seq->getNode('node')->getAttribute('name') == 'data'
+            && $seq->hasNode('attribute')
+            && $seq->getNode('attribute')->hasAttribute('value')
+        ) {
+          $variable_key = $seq->getNode('attribute')->getAttribute('value');
         }
       }
-      elseif ($node instanceof \Twig_Node_Expression_GetAttr) {
-        $path = implode('.', $this->getTwigVariableNames($node));
-        if (!empty($path)) {
-          $variables[$path] = $path;
-        }
+      elseif ($node->hasAttribute('value')
+              && $nodes->hasNode('node')
+              && $nodes->getNode('node')->hasAttribute('name')
+              && $nodes->getNode('node')->getAttribute('name') == 'data'
+      ) {
+        $variable_key = $node->getAttribute('value');
       }
-      elseif ($node instanceof \Twig_Node) {
-        $variables += $this->getTwigVariableNames($node);
+      if (!empty($variable_key)) {
+        $variables[$variable_key] = isset($variables[$variable_key])
+          ? array_unique(array_merge($variables[$variable_key], $lineno))
+          : $lineno;
+      }
+      if ($node instanceof Node) {
+        $variables = $this->getTwigVariableNames($node, $variables);
       }
     }
     return $variables;
@@ -487,4 +616,211 @@ class MetadataDisplayEntity extends ContentEntityBase implements MetadataDisplay
     return $context;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheTagsToInvalidate() {
+    if ($this->isNew()) {
+      return [];
+    }
+    $related_tags = $this->getRelatedCacheTagsToInvalidate() ?? [];
+    return Cache::mergeTags([$this->entityTypeId . ':' . $this->id()], $related_tags);
+  }
+
+  /**
+   * Will invalidate related cache tags and also the errored one.
+   */
+  public function invalidateTempMetadataDisplayCaches() {
+    if ($this->cacheBackend && $this->useCaches) {
+      $this->cacheBackend->invalidate( static::CACHE_TAG_ID . $this->id());
+      $this->cacheBackend->invalidate( static::ERRORED_CACHE_TAG_ID . $this->id());
+    }
+  }
+
+
+  /**
+   * Calculates or Returns cached related Cache tags.
+   *
+   * @param bool $force
+   *
+   * @return array
+   * @throws \Twig\Error\SyntaxError
+   */
+  public function getRelatedCacheTagsToInvalidate(bool $force = FALSE) {
+    $cache_id = static::CACHE_TAG_ID . $this->id();
+    if (!$force) {
+      $cached = $this->cacheGet($cache_id);
+      if ($cached) {
+        return $cached->data;
+      }
+    }
+    $cache_tags = [];
+    $twigtemplate = $this->get('twig')->getValue();
+    $twigtemplate = !empty($twigtemplate) ? $twigtemplate[0]['value'] : "{{ 'empty' }}";
+    // Create a \Twig Source first.
+    try {
+      $source = new Source($twigtemplate, $this->label() ?? $this->uuid(), '');
+      $tokens = $this->twigEnvironment()->tokenize($source);
+      // I have two options here: i can use the tokens, iterate over each and fetch test them against type 5 and drupal_view name
+      // then, if correct of course/ fetch the (, skip it, fetch the next one, fetch the , skip it, fetch the next one (2 arguments)
+      // OR, i can let the nodes to be generated and then go recursive... which is slower but safer
+      // Only issue i see with first approach is the edge case where a views name/view display or both are variables/not fixed values
+      // Pretty sure the tokens won't resolve values at this stage.
+      // But i could do a first pass to see if even used at all. And only do expensive Nodes traversal IF
+      // And only IF i found `drupal_views` used somewhere? Wonder if the extra code is worth it
+      $nodes = $this->twigEnvironment()->parse($tokens);
+      foreach ($nodes as $node) {
+        $cache_tags = array_merge(
+          $this->generateCacheTagsFromRelated($node), $cache_tags
+        );
+      }
+      // Bit convoluted but the cache tags are cached using almost the same cache tags calculated. Means if a View used here changes, we need to recalculate the cache tags
+      $this->cacheSet(
+        $cache_id, $cache_tags, CacheBackendInterface::CACHE_PERMANENT,
+        Cache::mergeTags(
+          Cache::mergeTags(
+            [$this->entityTypeId . ':' . $this->id()], $cache_tags
+          ), [$cache_id]
+        )
+      );
+    }
+    catch (\Exception $exception) {
+        $this->getLogger('format_strawberryfield')
+          ->error('Could not calculate related Cache tags. Check your Twig template syntax/use of external views for Metadata Display with ID @id. Error was @msg',
+            [
+              '@id' => $this->id(),
+              '@msg' => $exception->getMessage(),
+            ]);
+    }
+    return $cache_tags;
+  }
+
+  /**
+   * calculates related Cache tags.
+   *
+   * @param \Twig\Node\Node $node
+   *
+   * @return array
+   */
+  private function generateCacheTagsFromRelated(Node $node) {
+    // Process nodes that are function expressions
+    $tags = [];
+    if ($node instanceof \Twig\Node\Expression\FunctionExpression) {
+      // Check the function name
+      if ($node->getAttribute('name') == 'drupal_view') {
+        // Grab the argument
+        $arguments_parsed = [];
+        // Only get the first 2 ones. If there is a syntax error/missing arguments etc/skip
+        $i = 0;
+        foreach ($node->getNode('arguments') as $argument) {
+          if ($i < 2) {
+            // This piece here can not be run outside the $sandbox extension
+            // Running the code would be crazy complex
+            // So we only accept static strings as arguments
+            // Which means using variables for Views/Displays
+            // Will excluse those from being accounted as cache-able dependencies
+            /* $resolved = eval(
+              'return ' . $this->twigEnvironment()->compile($argument) . ';'
+            ); */
+            if ($argument->hasAttribute('value')) {
+              $arguments_parsed[] = $argument->getAttribute('value');
+            }
+          }
+          $i++;
+        }
+        $arguments_parsed = array_filter($arguments_parsed);
+        // Probably better to solve the cache tags right here.
+        if (count($arguments_parsed) == 2) {
+          /* @var \Drupal\views\ViewEntityInterface|null $view */
+          try {
+            $view = $this->entityTypeManager()->getStorage('view')->load(
+              $arguments_parsed[0]
+            );
+            if ($view) {
+              $tags = array_merge($view->getCacheTagsToInvalidate(), $tags);
+              $display = $view->getDisplay($arguments_parsed[1]);
+              // We could/should inject views.executable container
+              // But it would also imply an overkill of an unused service
+              // during any other operation.
+              $executable = \Drupal::getContainer()->get('views.executable')->get($view);
+              $display_object = $executable->getDisplay($display);
+              if ($display_object) {
+                // We won't fetch context here. The Twig template itself escapes the
+                // Original Caching context of a View because its rendered out of scope.
+                $tags = array_merge($display_object->getCacheMetadata()->getCacheTags(), $tags);
+              }
+              if (is_array($display)) {
+                $tags = Cache::mergeTags(
+                  $this->calculateViewsMetadataDisplayUsage($display),
+                  $tags
+                );
+              }
+            }
+          } catch (\Exception $e) {
+            // Log? Ignore?
+          }
+        }
+      }
+    }
+
+    // Recursively loop through the sub nodes.
+    foreach ($node as $child) {
+      if ($child instanceof \Twig\Node\Node) {
+        $tags = array_merge($this->generateCacheTagsFromRelated($child), $tags);
+      }
+    }
+    return array_unique($tags);
+  }
+
+  private function calculateViewsMetadataDisplayUsage(array $display) {
+    $tags = [];
+    if (isset($display['display_options']['fields'])) {
+      foreach ($display['display_options']['fields'] as &$field) {
+        $metadatadisplayentity_uuid = $field['settings']['metadatadisplayentity_uuid'] ?? NULL;
+        $metadatadisplayentity_uuid = is_string($metadatadisplayentity_uuid) ? $metadatadisplayentity_uuid : NULL;
+        if ($metadatadisplayentity_uuid) {
+          $metadata_display_entities = $this->entityTypeManager()
+            ->getStorage('metadatadisplay_entity')
+            ->loadByProperties(['uuid' => $metadatadisplayentity_uuid]);
+          $metadata_display_entitiy = is_array($metadata_display_entities) ? reset($metadata_display_entities) : NULL;
+          if ($metadata_display_entitiy) {
+            // We are not going to get here calculated Tags foreach related Template yet
+            // @TODO review in the future how much more this will really help v/s remove cache-ability all
+            $tags = array_merge($metadata_display_entitiy->getCacheTagsToInvalidate(), $tags);
+          }
+        }
+      }
+    }
+    return $tags;
+  }
+
+  /**
+   * Validates a Twig Source and caches the validation.
+   *
+   * @param string $twigtemplate
+   * @param bool   $bypass
+   *
+   * @return string|boolean
+   *    The last error of TRUE if all went well.
+   */
+  public function validateSource(string $twigtemplate, bool $bypass = FALSE) {
+
+    $cache_id = static::ERRORED_CACHE_TAG_ID . $this->id();
+    $cached = $this->cacheGet($cache_id);
+    if ($cached && !$bypass) {
+      /* @var $cached \Drupal\Core\Cache\CacheBackendInterface */
+      return $cached->data;
+    }
+    $source = new Source($twigtemplate, $this->label() ?? $this->uuid(), '');
+    try {
+      // @NOTE: never compile. It will get stuck in the internal cache
+      $this->twigEnvironment()->parse($this->twigEnvironment()->tokenize($source));
+    }
+    catch (\Twig\Error\SyntaxError $e) {
+      unset($source);
+      $this->cacheSet($cache_id, $e->getMessage(), Cache::PERMANENT, $this->getCacheTags());
+      return $e->getMessage();
+    }
+    return TRUE;
+  }
 }
