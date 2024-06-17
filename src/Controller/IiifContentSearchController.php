@@ -37,6 +37,10 @@ class IiifContentSearchController extends ControllerBase {
   CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting' && body.type == 'Image'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
 
   CONST IIIF_V3_JMESPATH_VTT ="items[?not_null(type, \"@type\") == 'Canvas'].[{duration:duration, width:width, height:height, vtt_canvas_annotation_triad:annotations[].items[?motivation=='supplementing' && body.format == 'text/vtt'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
+
+  CONST IIIF_V3_JMESPATH_TEXT ="items[?not_null(type, \"@type\") == 'Canvas'].[{width:width, height:height, text_canvas_annotation_triad:annotations[].items[?motivation=='supplementing' && body.format == 'text/plain'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
+
+
   /**
    * Mime type guesser service.
    *
@@ -270,7 +274,10 @@ class IiifContentSearchController extends ControllerBase {
 
             $image_hash = [];
             $vtt_hash = [];
-            $text_hash = [];
+            $results = [];
+            $results_time = [];
+            $results_text = [];
+
             // Get the Visual X/Y Processors, split, clean;
             $visual_processors =  $this->iiifConfig->get('iiif_content_search_api_visual_enabled_processors') ?? 'ocr';
             //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
@@ -283,6 +290,12 @@ class IiifContentSearchController extends ControllerBase {
             $time_processors = explode(",", $time_processors);
             $time_processors = array_map('trim', $time_processors);
             $time_processors = array_filter($time_processors);
+
+            $text_processors = $this->iiifConfig->get('iiif_content_search_api_text_enabled_processors') ?? '';
+            $text_processors = explode(",", $text_processors);
+            $text_processors = array_map('trim', $text_processors);
+            $text_processors = array_filter($text_processors);
+
 
             if (count($visual_processors)) {
               $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
@@ -306,6 +319,17 @@ class IiifContentSearchController extends ControllerBase {
               // Here we use UUIDs instead
               if (count($vtt_hash)) {
                 $results_time = $this->flavorfromSolrIndex($the_query_string, $time_processors, [], array_keys($vtt_hash), [], ($page * $per_page), $per_page, TRUE);
+              }
+            }
+
+            if (count($text_processors)) {
+                $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
+                  static::IIIF_V3_JMESPATH_TEXT, $jsonArray
+                );
+                $image_hash = $this->cleanTextJmesPathResult($jmespath_searchresult);
+                unset($jmespath_searchresult);
+              if (count($image_hash)) {
+                $results_text = $this->flavorfromSolrIndex($the_query_string, $text_processors, array_keys($image_hash), [], [], ($page * $per_page), $per_page, FALSE);
               }
             }
 
@@ -457,25 +481,19 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
             }
-
-
-
-
-
-
-
+            
             if (count($entries) == 0) {
               $results['total'] = 0;
             }
             $total = ($results['total'] ?? 0) + ($results_time['total'] ?? 0);
 
             if ($total > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
-              $max_page = ceil($results['total']/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
+              $max_page = ceil($total/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
               if ($version == "v1") {
                 $paging_structure = [
                   "within" => [
                     "@type" => "sc:Layer",
-                    "total" => $results['total'],
+                    "total" => $total,
                     "first" => $current_url_clean_no_page.'/0?='.urlencode($the_query_string),
                     "last" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
                   ]
@@ -613,6 +631,47 @@ class IiifContentSearchController extends ControllerBase {
     }
     unset($jmespath_searchresult);
     return $vtt_hash;
+  }
+
+  /**
+   * Cleans the over complex original JMESPATH result for a VTT to a reversed array.
+   *
+   * @param array $jmespath_searchresult
+   * @param bool $targetAnnotation
+   *    If TRUE, we will return the VTT and the annotation itself as the target (allowing multiple VTTs per Canvas)
+   *    If FALSE, we will return the VTT and the Canvas itself as the target (not caring which VTT matched)
+   * @return array
+   */
+  protected function cleanTextJmesPathResult(array $jmespath_searchresult, $targetAnnotation = TRUE): array {
+    $text_hash = [];
+    foreach($jmespath_searchresult as $entries_percanvas) {
+      foreach (($entries_percanvas['text_canvas_annotation_triad'] ?? []) as $text_canvas_annon_triad) {
+        $vtt_uuid = NULL;
+        $path = pathinfo($text_canvas_annon_triad[0] ?? '/');
+        $parts = explode("/", $path['dirname']);
+        $parts = array_reverse($parts);
+        // Might be longer (normally 8), if a subdomain with paths, that is why we reverse that paths
+        if (count($parts) >= 5 && $parts[0] == "download" && Uuid::isValid($parts[1]) && $parts[2] == "file" && Uuid::isValid($parts[3]) && $parts[4] == "do") {
+          $text_uuid = $parts[1];
+        }
+        if (!$text_uuid) {
+          // just skip if we have no File uuid.
+          continue;
+        }
+        // The $text_canvas_annon_triad[1] is the Canvas targeted by the Text.
+        // The $text_canvas_annon_triad[2] is the AnnotationID containing the Text.
+        $sequence = 1 ;
+        $target = $targetAnnotation ? ($text_canvas_annon_triad[2] ?? NULL) : ($text_canvas_annon_triad[1] ?? NULL);
+        if (!$target) {
+          // just skip if we have no Target.
+          continue;
+        }
+        // We don't use the duration so if not present just give it a second to have a value in this array.
+        $text_hash[$text_uuid][$sequence][$target] = [1];
+      }
+    }
+    unset($jmespath_searchresult);
+    return $text_hash;
   }
 
 
