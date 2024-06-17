@@ -143,7 +143,7 @@
                           const matches = state.annotations[canvas][annotation_page].json.items.filter(item => {
                             return (item['id'] === on[0] && item['body'].format == 'text/vtt');
                           });
-                          if (Array.isArray(matches)) {
+                          if (Array.isArray(matches) && matches.length == 1 && typeof matches[0] == "object" && matches[0].hasOwnProperty('body')) {
                             vtt_url = matches[0].body.id;
                             canvas_id_for_vtt = matches[0].target;
                             canvas_time_for_media = on[1].split(",", 1);
@@ -161,8 +161,9 @@
             }
           }
           if (canvas_id_for_vtt != current_canvas?.id && canvas_id_for_vtt != null) {
-            // take will wait/ call will run async
-            let visibleCanvasesForAnnotation = (yield effects.take( Mirador.actions.setCanvas(windowId, canvas_id_for_vtt))).payload.visibleCanvases
+            // take will wait/ call will run in sync/Block.
+            const visibleCanvasesForAnnotationAction = Mirador.actions.setCanvas(windowId, canvas_id_for_vtt);
+            let visibleCanvasesForAnnotation = (yield effects.putResolve(visibleCanvasesForAnnotationAction));
           }
           if (canvas_id_for_vtt != null) {
             let MediaWindow = document.getElementById(windowId);
