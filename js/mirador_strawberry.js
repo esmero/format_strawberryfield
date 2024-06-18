@@ -126,7 +126,7 @@
         const state = yield effects.select(Mirador.actions.getState);
 
         if  (action.type === ActionTypes.SELECT_ANNOTATION) {
-          const { windowId } = action
+          const { windowId, annotationId } = action
           const searches = yield effects.select(Mirador.selectors.getSearchForWindow, { windowId });
           const current_canvas = yield effects.select(Mirador.selectors.getCurrentCanvas, { windowId });
           let vtt_url = null;
@@ -163,7 +163,15 @@
           if (canvas_id_for_vtt != current_canvas?.id && canvas_id_for_vtt != null) {
             // take will wait/ call will run in sync/Block.
             const visibleCanvasesForAnnotationAction = Mirador.actions.setCanvas(windowId, canvas_id_for_vtt);
-            let visibleCanvasesForAnnotation = (yield effects.putResolve(visibleCanvasesForAnnotationAction));
+            // Tiny trick. Because the canvas is not active i can't actually put/trigger a setCanvas and THEN
+            // a SelectAnnotation (or i don't know how, tried, parallel, in sync, nothing.
+            // But I can update the config so on the next setCanvas reaction I can read that value and trigger it
+            // Still, i am getting race conditions of HTML not being there in the DOM yet.
+            const temp_update = Mirador.actions.updateConfig({'timeAnnotation':[windowId, annotationId]});
+            yield effects.put(temp_update);
+            yield effects.all([
+              effects.put(visibleCanvasesForAnnotationAction)
+              ]);
           }
           if (canvas_id_for_vtt != null) {
             let MediaWindow = document.getElementById(windowId);
@@ -208,10 +216,10 @@
               .visibleCanvases
           }
           const manifest = yield effects.select(Mirador.selectors.getManifest, { windowId });
-          const manifestUrl = manifest.id;
           if (!manifest.json) {
             return
           }
+          const manifestUrl = manifest.id;
           if (!view) {
             view = (yield effects.select(Mirador.selectors.getWindowConfig, {
               windowId,
@@ -279,6 +287,18 @@
             newParams.page = canvasIndices[0]
           } else if (view === 'book') {
             newParams.page = canvasIndices.find(e => !!e).join(',')
+          }
+          // Now at the end. If a VTT annotation requested a Canvas to be set. we need to check if we have in the config
+          // A temporary stored valued of the last clicked annotation.
+          // Use if here.
+          if (typeof state.config.timeAnnotation !== "undefined") {
+            if (Array.isArray(state.config.timeAnnotation) && state.config.timeAnnotation.length == 2) {
+              const selectAnnotationAction = Mirador.actions.selectAnnotation(state.config.timeAnnotation[0], state.config.timeAnnotation[1]);
+              const temp_update = Mirador.actions.updateConfig({'timeAnnotation': null });
+              yield effects.put(temp_update);
+              yield effects.delay(1500);
+              yield effects.put(selectAnnotationAction);
+            }
           }
         }
         else if (action.type === ActionTypes.RECEIVE_SEARCH) {
