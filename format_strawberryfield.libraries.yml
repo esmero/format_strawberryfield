@@ -2,6 +2,7 @@ iiif_formatstrawberryfield_utils:
   version: 1.0
   js:
     js/iiif-archipelago-interactions_utils.js: {minified: false}
+    https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - core/jquery
     - core/drupal
@@ -20,6 +21,14 @@ jmespath_strawberry:
     https://cdn.jsdelivr.net/npm/jmespath@0.16.0/jmespath.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - core/drupal
+
+popper:
+  js:
+    https://unpkg.com/@popperjs/core@2 : { external: true, minified: true, preprocess: false}
+  css:
+    component:
+      css/popper.css: { }
+
 
 iiif_openseadragon:
   remote: http://openseadragon.github.io
@@ -158,16 +167,19 @@ jsm_model_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 pdfs_mozilla:
-  version: 2.2.228
+  version: 4.0.379
   license:
     name: Apache
     url: //raw.githubusercontent.com/mozilla/pdf.js/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/pdfjs-dist@2.2.228/build/pdf.min.js: { external: true, minified: true, preprocess: false}
+    # js/pdfs_strawberry_webpack.js: {minified: false, attributes: { type: module } } Unused but kept around for posterity
+    # The only reason we use this one directly is to ensure faster (browser cache) and to use as path/settings in the actual
+    # js/pdfs_strawberry.js where we load the node module directly async. New to PDFJS 4.0.379+
+    https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs: { external: true, minified: true, attributes: { type: module }}
 
 pdfs_strawberry:
-  version: 1.2
+  version: 1.3
   js:
     js/pdfs_strawberry.js: {minified: false}
   dependencies:
@@ -179,14 +191,27 @@ pdfs_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_projectmirador:
-  version: 3.1.1
+  version: 3.3.0
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/mirador@3.1.1/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/mirador@3.3.0/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
+
+mirador_projectmirador_4:
+  version: 4.0.0-alpha
+  license:
+    name: Apache
+    url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
+    gpl-compatible: true
+  js:
+    https://unpkg.com/mirador@4.0.0-alpha.2/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
+  dependencies:
+    - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_font:
   css:
@@ -232,6 +257,22 @@ mirador_custom_strawberry:
     - core/once
     - core/drupalSettings
     - format_strawberryfield/mirador_archipelago_custom
+    - format_strawberryfield/mirador_font
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+mirador_strawberry_four:
+  version: 1.4
+  js:
+    js/mirador_strawberry.js: {minified: false}
+  css:
+    component:
+      css/miradorviewer.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupalSettings
+    - format_strawberryfield/mirador_projectmirador_4
     - format_strawberryfield/mirador_font
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
@@ -283,7 +324,6 @@ leaflet_core:
   css:
     component:
       https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css: { external: true}
-
 
 leaftleft_iiif_bound:
   version: 1.0
@@ -339,17 +379,30 @@ universalviewer:
     component:
       https://cdn.jsdelivr.net/npm/universalviewer@4.0.1/dist/uv.css: { external: true, preprocess: false }
 
+iiif_flavor_annotations_strawberry:
+  version: 1.0
+  js:
+    js/iiif-annotations_strawberry.js: {minified: false}
+  dependencies:
+    - core/jquery
+    - core/once
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/annotorious
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - format_strawberryfield/popper
+
 annotorious:
-  version: 2.5.10
+  version: 2.7.12
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.12/dist/annotorious.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.5.10/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.12/dist/annotorious.min.css: { external: true }
 
 annotoriousopenseadragon:
   version: 2.5.16

@@ -42,8 +42,6 @@
     this.pagerAjax = Drupal.ajax(selfSettings);
   };
 
-
-
   function loadViewOnClickEvent(e) {
     // If using the load even we can't relay on the target anymore because
     // it is bound to the document/window.
@@ -101,7 +99,7 @@
     ajaxObject.execute();
   };
 
-  Drupal.behaviors.sbf_views_ajax_interactions = {
+  Drupal.behaviors.sbf_views_ajax_dynamic = {
     attach: function (context, settings) {
       // the data attributes one can use
       // [data-sbf-view-id="machine_name_of_a_view"]
@@ -131,5 +129,27 @@
       });
     }
   }
+
+  /* Overrides core/modules/views/js/ajax_view.js detach method bc it is buggy/unleads before needed
+ * see patch for Drupal 11. https://www.drupal.org/files/issues/2023-10-20/3132456-17.patch
+ * */
+  Drupal.behaviors.ViewsAjaxView.detach = (context, settings, trigger) => {
+    if (trigger === 'unload') {
+      if (settings && settings.views && settings.views.ajaxViews) {
+        const {
+          views: { ajaxViews },
+        } = settings;
+        Object.keys(ajaxViews || {}).forEach((i) => {
+          const selector = `.js-view-dom-id-${ajaxViews[i].view_dom_id}`;
+          $(selector, context).ajaxComplete(() => {
+            if ($(selector, context).length) {
+              delete Drupal.views.instances[i];
+              delete settings.views.ajaxViews[i];
+            }
+          });
+        });
+      }
+    }
+  };
 })(jQuery, Drupal, drupalSettings);
 

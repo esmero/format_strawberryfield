@@ -34,8 +34,7 @@ class IiifUrlValidator {
    * IiifUrlValidator constructor.
    */
   public function __construct() {
-    $this->httpClient = $this->httpClient = \Drupal::httpClient();
-
+    $this->httpClient = \Drupal::httpClient();
   }
 
   /**

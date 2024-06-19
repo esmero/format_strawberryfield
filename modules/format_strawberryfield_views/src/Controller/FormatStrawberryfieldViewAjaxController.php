@@ -233,6 +233,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $origin_destination .= '?' . $query;
           unset($used_query_parameters['op']);
           if ($target_url) {
+            //Remove views%2Fajax from the URL set to the browser. makes no sense to allow that to be bookmarked.
+            unset($used_query_parameters['/views/ajax']);
             $target_url->setOption('query', $used_query_parameters);
           }
         }
@@ -247,6 +249,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $view->dom_id = $dom_id;
 
         $context = new RenderContext();
+
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
           return $view->preview($display_id, $args);
         });

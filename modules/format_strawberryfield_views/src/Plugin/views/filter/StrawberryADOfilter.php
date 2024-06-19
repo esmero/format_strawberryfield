@@ -658,7 +658,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     }
     $node_uuids_or_ids = array_filter($node_uuids_or_ids);
     if ($node_uuids_or_ids) {
-      $this->validated_exposed_input = $uids;
+      $this->validated_exposed_input = $node_uuids_or_ids;
     }
   }
 
@@ -765,7 +765,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
       }
     }
     $cacheability = new CacheableMetadata();
-    $cacheability->addCacheableDependency($index);
+    $cacheability->addCacheableDependency($this->getIndex());
     $field_data = [];
     foreach ($fields as $field_id) {
       $field_data[$field_id] = $this->calculateEntityRelationsForField(

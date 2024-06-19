@@ -266,7 +266,7 @@ class IiifBinaryController extends ControllerBase {
   }
 
   /**
-   * Serves the a temp File to its owner.
+   * Serves a temp File to its owner.
    *
    * @param string $uuid
    * @param string $format
