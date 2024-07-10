@@ -411,9 +411,21 @@
             let viewer_override = drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'];
             if (typeof viewer_override?.windows !== 'undefined') {
               if (Array.isArray(viewer_override.windows) && viewer_override.windows.length > 0) {
-                if (viewer_override.windows[0].manifestId !== 'undefined') {
-                  delete viewer_override.windows[0].manifestId;
-                }
+                viewer_override.windows.forEach((item_window, index) => {
+                    if (typeof $options.windows[index] == 'object') {
+                      if (item_window.manifestId !== 'undefined') {
+                        delete item_window.manifestId;
+                      }
+                      const $window_settings = {
+                        ...$options.windows[index],
+                        ...item_window,
+                      };
+                      // This is silly but because these are arrays inside objects
+                      // The safest bet is to make them equal (original and override)
+                      viewer_override.windows[index] = $window_settings;
+                      $options.windows[index] = $window_settings;
+                    }
+                });
               }
             }
             $options = {
