@@ -921,9 +921,9 @@ class IiifContentSearchController extends ControllerBase {
             $filedata_by_id[$extradata_from_item['search_api_solr_document']['id']]['sequence_id'] = $real_sequence;
           }
         }
-        if (isset($extradata['search_api_solr_response']['ocrHighlighting']) && count(
+        if ((isset($extradata['search_api_solr_response']['ocrHighlighting']) && count(
             $extradata['search_api_solr_response']['ocrHighlighting']
-          ) > 0) {
+          ) > 0) && $ocr) {
           foreach ($extradata['search_api_solr_response']['ocrHighlighting'] as $sol_doc_id => $field) {
             $result_snippets_base = [];
             if (isset($field[$allfields_translated_to_solr['ocr_text']]['snippets']) &&
@@ -1019,15 +1019,16 @@ class IiifContentSearchController extends ControllerBase {
           }
         }
         elseif (isset($extradata['search_api_solr_response'])) {
-          if (isset($extradata['search_api_solr_response']['highlighting']) && count(
+          if ((isset($extradata['search_api_solr_response']['highlighting']) && count(
               $extradata['search_api_solr_response']['highlighting']
-            ) > 0) {
+            ) > 0) && !$ocr) {
             $result_snippets_base = [];
             foreach ($extradata['search_api_solr_response']['highlighting'] as $sol_doc_id => $field) {
               $result_snippets_base = [
                 'boxes' => $result_snippets_base['boxes'] ?? [],
               ];
-              foreach ($field[$allfields_translated_to_solr['sbf_plaintext']] as $snippet) {
+              // We check before if sbf_plaintext exist.
+              foreach (($field[$allfields_translated_to_solr['sbf_plaintext']] ?? []) as $snippet) {
                 $result_snippets_base['boxes'][] = [
                   'snippet' =>  UtilityAlias::formatHighlighting($snippet, '<b>', '</b>'),
                   'hit' => implode(' ', UtilityAlias::getHighlightedKeys($snippet)),
