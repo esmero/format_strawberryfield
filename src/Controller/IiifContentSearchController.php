@@ -231,9 +231,6 @@ class IiifContentSearchController extends ControllerBase {
         /** @var \Symfony\Component\HttpKernel\HttpKernelInterface $kernel */
         $kernel = \Drupal::getContainer()->get('http_kernel');
         $response = $kernel->handle($subrequest);
-        //$this->requestStack->push($subrequest);
-
-
 
         /* This call is right but will never ever be cached. But i can cache at least the result of the processing */
         /* @var $controller \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController */

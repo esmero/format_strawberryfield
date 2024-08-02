@@ -327,6 +327,7 @@ class MetadataExposeDisplayController extends ControllerBase {
           $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
           $response->getCacheableMetadata()->addCacheContexts($embargo_context);
           if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+            error_log('uncache-able');
             $response->getCacheableMetadata()->setCacheMaxAge(0);
           }
         }
