@@ -224,11 +224,20 @@ class IiifContentSearchController extends ControllerBase {
         $raw_inputbag = $subrequest->attributes->all()['_raw_variables'];
         $raw_inputbag->add(['format' => $format]);
         $subrequest->attributes->set('_raw_variables', $raw_inputbag);
-        $this->requestStack->push($subrequest);
+
+        // This is quite a truck. basically we get the current HTTP KERNEL
+        // And invoque a call directly. This has the benefit of using the whole caching mechanic
+        // The controller trick was nice. But not as nice as this.
+        /** @var \Symfony\Component\HttpKernel\HttpKernelInterface $kernel */
+        $kernel = \Drupal::getContainer()->get('http_kernel');
+        $response = $kernel->handle($subrequest);
+        //$this->requestStack->push($subrequest);
+
 
 
         /* This call is right but will never ever be cached. But i can cache at least the result of the processing */
         /* @var $controller \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController */
+        /*
         $controller = $this->classResolver->getInstanceFromDefinition(
           '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController'
         );
@@ -236,8 +245,9 @@ class IiifContentSearchController extends ControllerBase {
         $response = $controller->castViaTwig(
           $node, $metadataexposeconfig_entity, $format
         );
+        */
         // Restore the original request. We need it to return the right response for this search.
-        $this->requestStack->pop();
+        //$this->requestStack->pop();
         $this->requestStack->push($original_request);
 
         if ($response->isSuccessful()) {
