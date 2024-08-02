@@ -901,7 +901,8 @@ class IiifContentSearchController extends ControllerBase {
       ),
        */
       $query->sort('search_api_relevance', 'DESC');
-      $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
+      $query->setProcessingLevel(QueryInterface::PROCESSING_BASIC);
+     // $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
       $results = $query->execute();
       $extradata = $results->getAllExtraData() ?? [];
       // remove the ID and the parent, not needed for file matching
