@@ -695,7 +695,7 @@ class IiifContentSearchController extends ControllerBase {
   }
 
   /**
-   * Cleans the over complex original JMESPATH result for a VTT to a reversed array.
+   * Cleans the over complex original JMESPATH result for a Text to a reversed array.
    *
    * @param array $jmespath_searchresult
    * @param bool $targetAnnotation
