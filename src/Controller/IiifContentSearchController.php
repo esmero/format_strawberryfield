@@ -225,9 +225,10 @@ class IiifContentSearchController extends ControllerBase {
         $raw_inputbag->add(['format' => $format]);
         $subrequest->attributes->set('_raw_variables', $raw_inputbag);
 
-        // This is quite a truck. basically we get the current HTTP KERNEL
+        // This is quite a trick. basically we get the current HTTP KERNEL
         // And invoque a call directly. This has the benefit of using the whole caching mechanic
         // The controller trick was nice. But not as nice as this.
+        /* @TODO Inject the http kernel service */
         /** @var \Symfony\Component\HttpKernel\HttpKernelInterface $kernel */
         $kernel = \Drupal::getContainer()->get('http_kernel');
         $response = $kernel->handle($subrequest);
@@ -474,7 +475,7 @@ class IiifContentSearchController extends ControllerBase {
                         if ($version == "v1") {
                           $entries[] = [
                             "@id" => $current_url_clean
-                              . "/annotation/anno-result/$i",
+                              . "/annotation/anno-result-time/$i",
                             "@type" => "oa:Annotation",
                             "motivation" => $target_annotation ? "supplementing" : "painting",
                             "resource" => [
@@ -486,7 +487,7 @@ class IiifContentSearchController extends ControllerBase {
                         } elseif ($version == "v2") {
                           $entries[] = [
                             "id" => $current_url_clean
-                              . "/annotation/anno-result/$i",
+                              . "/annotation/anno-result-time/$i",
                             "type" => "Annotation",
                             "motivation" => $target_annotation ? "supplementing" : "painting",
                             "body" => [
@@ -538,7 +539,7 @@ class IiifContentSearchController extends ControllerBase {
                       if ($version == "v1") {
                         $entries[] = [
                           "@id" => $current_url_clean
-                            . "/annotation/anno-result/$i",
+                            . "/annotation/anno-result-text/$i",
                           "@type" => "oa:Annotation",
                           "motivation" => $target_annotation ? "supplementing" : "painting",
                           "resource" => [
@@ -550,7 +551,7 @@ class IiifContentSearchController extends ControllerBase {
                       } elseif ($version == "v2") {
                         $entries[] = [
                           "id" => $current_url_clean
-                            . "/annotation/anno-result/$i",
+                            . "/annotation/anno-result-text/$i",
                           "type" => "Annotation",
                           "motivation" => $target_annotation ? "supplementing" : "painting",
                           "body" => [
