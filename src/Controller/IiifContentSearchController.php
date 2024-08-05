@@ -21,6 +21,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 
 /**
@@ -190,7 +191,6 @@ class IiifContentSearchController extends ControllerBase {
       );
 
       /* Coool beans, in a good way */
-
       $canonical_url = $cacheabledata;
       if ($canonical_url) {
         $format = pathinfo($canonical_url, PATHINFO_BASENAME);
@@ -199,7 +199,7 @@ class IiifContentSearchController extends ControllerBase {
 
         $original_request = $this->requestStack->pop();
         $subrequest = $original_request->duplicate(
-          NULL, NULL, NULL, NULL, NULL,
+          [], [], NULL, NULL, [],
           $server_arguments
         );
         $exposed_metadata_route = $this->routeProvider->getRouteByName(
@@ -223,7 +223,12 @@ class IiifContentSearchController extends ControllerBase {
         /** @var $raw_inputbag \Symfony\Component\HttpFoundation\InputBag */
         $raw_inputbag = $subrequest->attributes->all()['_raw_variables'];
         $raw_inputbag->add(['format' => $format]);
+        $raw_inputbag->remove('page');
+        $raw_inputbag->remove('version');
+        $raw_inputbag->remove('mode');
         $subrequest->attributes->set('_raw_variables', $raw_inputbag);
+        $subrequest->attributes->set('_controller', '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController::castViaTwig');
+
 
         // This is quite a trick. basically we get the current HTTP KERNEL
         // And invoque a call directly. This has the benefit of using the whole caching mechanic
@@ -231,28 +236,25 @@ class IiifContentSearchController extends ControllerBase {
         /* @TODO Inject the http kernel service */
         /** @var \Symfony\Component\HttpKernel\HttpKernelInterface $kernel */
         $kernel = \Drupal::getContainer()->get('http_kernel');
-        $response = $kernel->handle($subrequest);
-
-        /* This call is right but will never ever be cached. But i can cache at least the result of the processing */
+        $response = $kernel->handle($subrequest, HttpKernelInterface::SUB_REQUEST);
+        /* This call is right was  never ever being cached. So keeping as a comment.*/
         /* @var $controller \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController */
         /*
         $controller = $this->classResolver->getInstanceFromDefinition(
           '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController'
         );
-
         $response = $controller->castViaTwig(
           $node, $metadataexposeconfig_entity, $format
         );
+         Restore the original request. We need it to return the right response for this search.
+        $this->requestStack->pop();
         */
-        // Restore the original request. We need it to return the right response for this search.
-        //$this->requestStack->pop();
+
         $this->requestStack->push($original_request);
 
         if ($response->isSuccessful()) {
           $json_string = $response->getContent() ?? '{}';
-
           $jsonArray = json_decode($json_string, TRUE);
-
           if (json_last_error() == JSON_ERROR_NONE) {
             if ($this->iiifConfig->get('iiif_content_search_validate_exposed')) {
               $valid = FALSE;
@@ -356,16 +358,6 @@ class IiifContentSearchController extends ControllerBase {
               }
             }
 
-            /* Expected structure independent if V2 or V3.
-            result = {array[345]}
-              0 = {array[3]}
-                width = {int} 464
-                height = {int} 782
-                img_canvas_pairs = {array[1]}
-                  0 = {array[2]}
-                    0 = "http://localhost:8183/iiif/2/bf0%2Fapplication-87758-0ad78298-d921-4f87-b0d8-104c1caf6cb1.pdf;1/full/full/0/default.jpg"
-                    1 = "http://localhost:8001/do/975c85ef-4eb2-4e37-a044-078207a8e0dd/iiif/0ad78298-d921-4f87-b0d8-104c1caf6cb1/canvas/p1"
-            */
             $entries = [];
             $paging_structure = [];
             $uuid_uri_field = 'file_uuid';
@@ -416,7 +408,7 @@ class IiifContentSearchController extends ControllerBase {
                         if ($version == "v1") {
                           $entries[] = [
                             "@id" => $current_url_clean
-                              . "/annotation/anno-result/$i",
+                              . "/{$page}/annotation/anno-result/$i",
                             "@type" => "oa:Annotation",
                             "motivation" => "painting",
                             "resource" => [
@@ -428,7 +420,7 @@ class IiifContentSearchController extends ControllerBase {
                         } elseif ($version == "v2") {
                           $entries[] = [
                             "id" => $current_url_clean
-                              . "/annotation/anno-result/$i",
+                              . "/{$page}/annotation/anno-result/$i",
                             "type" => "Annotation",
                             "motivation" => "painting",
                             "body" => [
@@ -475,7 +467,7 @@ class IiifContentSearchController extends ControllerBase {
                         if ($version == "v1") {
                           $entries[] = [
                             "@id" => $current_url_clean
-                              . "/annotation/anno-result-time/$i",
+                              . "/{$page}/annotation/anno-result-time/$i",
                             "@type" => "oa:Annotation",
                             "motivation" => $target_annotation ? "supplementing" : "painting",
                             "resource" => [
@@ -487,7 +479,7 @@ class IiifContentSearchController extends ControllerBase {
                         } elseif ($version == "v2") {
                           $entries[] = [
                             "id" => $current_url_clean
-                              . "/annotation/anno-result-time/$i",
+                              . "/{$page}/annotation/anno-result-time/$i",
                             "type" => "Annotation",
                             "motivation" => $target_annotation ? "supplementing" : "painting",
                             "body" => [
@@ -539,7 +531,7 @@ class IiifContentSearchController extends ControllerBase {
                       if ($version == "v1") {
                         $entries[] = [
                           "@id" => $current_url_clean
-                            . "/annotation/anno-result-text/$i",
+                            . "/{$page}/annotation/anno-result-text/$i",
                           "@type" => "oa:Annotation",
                           "motivation" => $target_annotation ? "supplementing" : "painting",
                           "resource" => [
@@ -551,7 +543,7 @@ class IiifContentSearchController extends ControllerBase {
                       } elseif ($version == "v2") {
                         $entries[] = [
                           "id" => $current_url_clean
-                            . "/annotation/anno-result-text/$i",
+                            . "/{$page}/annotation/anno-result-text/$i",
                           "type" => "Annotation",
                           "motivation" => $target_annotation ? "supplementing" : "painting",
                           "body" => [
@@ -565,14 +557,15 @@ class IiifContentSearchController extends ControllerBase {
                     }
                   }
                 }
-
               }
             }
 
             if (count($entries) == 0) {
-              $results['total'] = 0;
+              $total = 0;
             }
-            $total = ($results['total'] ?? 0) + ($results_time['total'] ?? 0) +  ($results_text['total'] ?? 0);
+            else {
+              $total = ($results['total'] ?? 0) + ($results_time['total'] ?? 0) + ($results_text['total'] ?? 0);
+            }
 
             if ($total > $this->iiifConfig->get('iiif_content_search_api_results_per_page')) {
               $max_page = ceil($total/$this->iiifConfig->get('iiif_content_search_api_results_per_page')) - 1;
@@ -581,12 +574,12 @@ class IiifContentSearchController extends ControllerBase {
                   "within" => [
                     "@type" => "sc:Layer",
                     "total" => $total,
-                    "first" => $current_url_clean_no_page.'/0?='.urlencode($the_query_string),
-                    "last" => $current_url_clean_no_page.'/'.$max_page .'?='.urlencode($the_query_string),
+                    "first" => $current_url_clean_no_page.'/0?q='.urlencode($the_query_string),
+                    "last" => $current_url_clean_no_page.'/'.$max_page .'?q='.urlencode($the_query_string),
                   ]
                 ];
                 if ($total > (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
-                  $paging_structure["next"] = $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string);
+                  $paging_structure["next"] = $current_url_clean_no_page.'/'.($page + 1).'?q='.urlencode($the_query_string);
                   $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
                 }
               }
@@ -598,7 +591,7 @@ class IiifContentSearchController extends ControllerBase {
                     "total" => $results['total'],
                     "first" =>
                       [
-                        "id" => $current_url_clean_no_page.'/0?='.urlencode($the_query_string),
+                        "id" => $current_url_clean_no_page.'/0?q='.urlencode($the_query_string),
                         "type" => "AnnotationPage",
                       ],
 
@@ -611,7 +604,7 @@ class IiifContentSearchController extends ControllerBase {
                 ];
                 if ($total >  (($page+1) * $this->iiifConfig->get('iiif_content_search_api_results_per_page'))) {
                   $paging_structure["next"] = [
-                    "id" => $current_url_clean_no_page.'/'.($page + 1).'?='.urlencode($the_query_string),
+                    "id" => $current_url_clean_no_page.'/'.($page + 1).'?q='.urlencode($the_query_string),
                     "type" => "AnnotationPage",
                   ];
                   $paging_structure["startIndex"] = $page * $this->iiifConfig->get('iiif_content_search_api_results_per_page');
@@ -936,9 +929,6 @@ class IiifContentSearchController extends ControllerBase {
       // remove the ID and the parent, not needed for file matching
       unset($fields_to_retrieve['id']);
       unset($fields_to_retrieve['parent_sequence_id']);
-      // Just in case something goes wrong with the returning region text
-      $region_text = $term;
-      $page_number_by_id = [];
       if ($results->getResultCount() >= 1) {
         // This applies to all searches with hits.
         foreach ($results as $result) {
@@ -1031,7 +1021,7 @@ class IiifContentSearchController extends ControllerBase {
                       // $region_text like in a normal HOCR
                       // It is about time!
                       // Before and after. We will try to split the original text by the math
-                      // If we end with more than 2 pieces, we can't be sure where it was found ..
+                      // If we end with more than 2 pieces, we can't be sure where it was found
                       // so we set them '' ?
                       $before_and_after = explode($highlight[0]['text'], strip_tags($region_text));
                       $result_snippets_base['timespans'][] = [
