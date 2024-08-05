@@ -746,7 +746,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
               $display_object = $executable->getDisplay($display);
               if ($display_object) {
                 // We won't fetch context here. The Twig template itself escapes the
-                // Original Caching context of a View because its rendered out of scope.
+                // Original Caching context of a View because it is rendered out of scope.
                 $tags = array_merge($display_object->getCacheMetadata()->getCacheTags(), $tags);
               }
               if (is_array($display)) {

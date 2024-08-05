@@ -204,8 +204,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'mediasource' => [
           '#type' => 'checkboxes',
           '#title' => $this->t('Source for your IIIF Manifest URLs.'),
-          '#options' => $all_options_form_source,
-          '#default_value' => $this->getSetting('mediasource'),
+          '#options' => $all_options_form_source ?? [],
+          '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => TRUE,
           '#attributes' => [
             'data-formatter-selector' => 'mediasource',

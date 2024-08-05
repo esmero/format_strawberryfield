@@ -150,7 +150,6 @@ class MetadataExposeDisplayController extends ControllerBase {
     )) {
       if ($metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity(
       )) {
-
         try {
           $responsetypefield = $metadatadisplay_entity->get('mimetype');
           $responsetype = $responsetypefield->first()->getValue();
