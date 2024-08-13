@@ -44,8 +44,8 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
           '#title'         => $this->t(
             'Which Contextual filters (if any) should allow input from other ADOs'
           ),
-          '#options'       => $all_exposed_arguments,
-          '#default_value' => $this->options['sbf_ajax_interactions_arguments'] ?? NULL,
+          '#options'       => $all_exposed_arguments ?? [],
+          '#default_value' => $this->options['sbf_ajax_interactions_arguments'] ?? [],
           '#states'        => [
             'enabled' => [
               ':input[name="sbf_ajax_interactions"]' => ['checked' => TRUE],
