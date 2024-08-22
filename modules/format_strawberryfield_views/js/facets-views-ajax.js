@@ -89,8 +89,20 @@
       views_ajax_settings.url = view_path;
 
       var viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
-      viewRefreshAjaxObject.execute();
+      var success = viewRefreshAjaxObject.success();
 
+      viewRefreshAjaxObject.success = function (response, status) {
+        return Promise.resolve(
+          Drupal.Ajax.prototype.success.call(viewRefreshAjaxObject, response, status),
+        ).then(() => {
+          Drupal.AjaxFacetsView.updateFacetsBlocks(href, views_settings.view_name, views_settings.view_display_id);
+          if (typeof(drupalSettings.format_strawberryfield_views) !== 'undefined') {
+            // Refresh facets blocks.
+            Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
+          }
+        });
+      };
+      viewRefreshAjaxObject.execute();
       // Update url.
       window.historyInitiated = true;
       window.history.pushState(null, document.title, href);
@@ -102,11 +114,6 @@
           window.location.reload();
         }
       });
-      this.updateFacetsBlocks(href, views_settings.view_name, views_settings.view_display_id);
-      if (typeof(drupalSettings.format_strawberryfield_views) !== 'undefined') {
-        // Refresh facets blocks.
-        Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
-      }
     }
   }
   Drupal.AjaxFacetsView.updateFacetsBlocks = function (href, view_id, current_display_id) {
@@ -133,7 +140,6 @@
 
     // Update facets summary block.
     if (this.updateFacetsSummaryBlock()) {
-
       var $facet_summary_wrapper = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']');
       if ($facet_summary_wrapper.length > 0) {
         var facet_summary_wrapper_id = $facet_summary_wrapper.attr('id');
@@ -148,7 +154,9 @@
         facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
       }
     }
-    Drupal.ajax(facet_settings).execute();
+    if (Object.keys(facet_settings.submit.facets_blocks).length > 0) {
+      Drupal.ajax(facet_settings).execute();
+    }
   };
 
   // Helper function to determine if we should update the summary block.

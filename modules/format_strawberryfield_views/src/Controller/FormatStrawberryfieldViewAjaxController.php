@@ -32,6 +32,25 @@ use Drupal\format_strawberryfield_views\Ajax\SbfSetBrowserUrl;
 class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
   /**
+   * Parameters that should be filtered and ignored inside ajax requests.
+   */
+  public const FILTERED_QUERY_PARAMETERS = [
+    'view_name',
+    'view_display_id',
+    'view_args',
+    'view_path',
+    'view_dom_id',
+    'pager_element',
+    'view_base_path',
+    'ajax_page_state',
+    'exposed_form_display',
+    AjaxResponseSubscriber::AJAX_REQUEST_PARAMETER,
+    FormBuilderInterface::AJAX_FORM_REQUEST,
+    MainContentViewSubscriber::WRAPPER_FORMAT,
+  ];
+
+
+  /**
    * The entity storage for views.
    *
    * @var \Drupal\Core\Entity\EntityStorageInterface
@@ -147,25 +166,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
       $response = new ViewAjaxResponse();
 
-
-
-      // Remove all of this stuff from the query of the request so it doesn't
-      // end up in pagers and tablesort URLs.
-      // @todo Remove this parsing once these are removed from the request in
-      //   https://www.drupal.org/node/2504709.
-      foreach ([
-        'view_name',
-        'view_display_id',
-        'view_args',
-        'view_path',
-        'view_dom_id',
-        'pager_element',
-        'view_base_path',
-        'exposed_form_display',
-        AjaxResponseSubscriber::AJAX_REQUEST_PARAMETER,
-        FormBuilderInterface::AJAX_FORM_REQUEST,
-        MainContentViewSubscriber::WRAPPER_FORMAT,
-      ] as $key) {
+      $existing_page_state = $request->get('ajax_page_state');
+      foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
       }
@@ -176,15 +178,12 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }
       $view = $this->executableFactory->get($entity);
       if ($view && $view->access($display_id) && $view->setDisplay($display_id) && $view->display_handler->ajaxEnabled()) {
-
         // Fix the current path for paging.
         if (!empty($path)) {
           $this->currentPath->setPath('/' . ltrim($path, '/'), $request);
         }
-
         // Let's check if our view has our advanced search filter
-
-        $filters = $view->getDisplay($display_id)->display['display_options']['filters'] ?? [];
+        $filters = $view->getDisplay()->display['display_options']['filters'] ?? [];
         foreach ($filters as $filter) {
           /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
           if ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
@@ -248,6 +247,16 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         // Reuse the same DOM id so it matches that in drupalSettings.
         $view->dom_id = $dom_id;
 
+        // Populate request attributes temporarily with ajax_page_state theme
+        // and theme_token for theme negotiation.
+        $theme_keys = [
+          'theme' => TRUE,
+          'theme_token' => TRUE,
+        ];
+        if (is_array($existing_page_state) &&
+          ($temp_attributes = array_intersect_key($existing_page_state, $theme_keys))) {
+          $request->attributes->set('ajax_page_state', $temp_attributes);
+        }
         $context = new RenderContext();
 
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
@@ -259,6 +268,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             ->merge($bubbleable_metadata)
             ->applyTo($preview);
         }
+        $request->attributes->remove('ajax_page_state');
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
         $response->addCommand(new PrependCommand(".js-view-dom-id-$dom_id", ['#type' => 'status_messages']));
         //@TODO revisit in Drupal 10
@@ -284,7 +294,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           }
           $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
         }
-
+        $request->query->set('ajax_page_state', $existing_page_state);
         return $response;
       }
       else {
@@ -297,8 +307,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
   }
   public function ajaxViewAdd(Request $request)
   {
-    //$dom_id = "blabla";
-    //$request->request->set('view_dom_id', $dom_id);
     $response = $this->ajaxView($request);
     return $response;
   }
