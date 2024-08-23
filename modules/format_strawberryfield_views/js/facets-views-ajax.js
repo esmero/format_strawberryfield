@@ -22,7 +22,7 @@
       // Loop through all facets.
       $.each(settings.facets_views_ajax, function (facetId, facetSettings) {
         // Get the View for the current facet.
-        var view, current_dom_id, view_path;
+        var view, current_dom_id, view_path, all_dom_ids_need_refresh = [];
         if (settings.views && settings.views.ajaxViews) {
           $.each(settings.views.ajaxViews, function (domId, viewSettings) {
             // Check if we have facet for this view.
@@ -31,20 +31,37 @@
               current_dom_id = viewSettings.view_dom_id;
               view_path = facetSettings.ajax_path;
             }
+            else {
+              // Means we don't have facets for this view, but we still might have a pager that needs to be reloaded, so it catches up with the Facet Query arguments.
+              const pagers = $('.js-view-dom-id-' + viewSettings.view_dom_id).find(
+                '.js-pager__items a, th.views-field a, .attachment .views-summary a',
+              );
+              if (typeof pagers !== "undefined" &&  pagers.length > 0) {
+                // means we have a pager
+                all_dom_ids_need_refresh.push(viewSettings.view_dom_id);
+              }
+            }
           });
         }
 
         if (!view || view.length != 1) {
           return;
         }
-
+        all_dom_ids_need_refresh = Array.from(new Set(all_dom_ids_need_refresh));
         // Update view on summary block click.
         if (Drupal.AjaxFacetsView.updateFacetsSummaryBlock() && (facetId === 'facets_summary_ajax')) {
             const elementsToAttach = once('summaryblock_attache', '[data-drupal-facets-summary-id=' + facetSettings.facets_summary_id + ']', context);
             $(elementsToAttach).children('ul').children('li').click(function (e) {
             e.preventDefault();
             var facetLink = $(this).find('a');
+            // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
+            // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
+            // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
+            // And also is absolutely unaware of pagers with different names!
             Drupal.AjaxFacetsView.UpdateView(facetLink.attr('href'), current_dom_id, view_path);
+              all_dom_ids_need_refresh.forEach((other_dom_id) => {
+              });
+
           });
         }
         // Update view on facet item click.
@@ -54,7 +71,13 @@
               $(facet_item).unbind('facets_filter.facets');
               $(facet_item).on('facets_filter.facets', function (event, url) {
                 $('.js-facets-widget').trigger('facets_filtering');
+                // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
+                // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
+                // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
+                // And also is absolutely unaware of pagers with different names!
                 Drupal.AjaxFacetsView.UpdateView(url, current_dom_id, view_path);
+                all_dom_ids_need_refresh.forEach((other_dom_id) => {
+                });
               });
             }
           });
@@ -68,14 +91,16 @@
 
   Drupal.AjaxFacetsView.UpdateView = function (href, current_dom_id, view_path) {
     // Refresh view.
-    if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
+    var atLeastone = false;
+      if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
+        atLeastone = true;
       var views_parameters = Drupal.Views.parseQueryString(href);
       let views_path = 'search';
       if (Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path !== 'undefined') {
         views_path = Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path;
       }
-      var views_arguments = Drupal.Views.parseViewArgs(href, views_path);
-      var views_settings = $.extend(
+      const views_arguments = Drupal.Views.parseViewArgs(href, views_path);
+      const views_settings = $.extend(
         {},
         Drupal.views.instances['views_dom_id:' + current_dom_id].settings,
         views_arguments,
@@ -83,13 +108,13 @@
       );
       // Not even needed here if we are using the original element settings ....mmmm
       // Update View.
-      var views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
+      const views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
       views_ajax_settings.submit = views_settings;
       // Used to be the way in Drupal 9.x to 10.0 ... views_ajax_settings.url = view_path + '?q=' + href;
       views_ajax_settings.url = view_path;
 
-      var viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
-      var success = viewRefreshAjaxObject.success();
+      const viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
+      const success = viewRefreshAjaxObject.success();
 
       viewRefreshAjaxObject.success = function (response, status) {
         return Promise.resolve(
@@ -103,6 +128,8 @@
         });
       };
       viewRefreshAjaxObject.execute();
+    }
+    if (atLeastone) {
       // Update url.
       window.historyInitiated = true;
       window.history.pushState(null, document.title, href);
