@@ -155,7 +155,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }, $args);
 
       $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
-      // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
+      // If a view has an invalid Path (e.g. you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
       $dom_id = $request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
@@ -224,13 +224,18 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $response->setView($view);
         // Overwrite the destination.
         // @see the redirect.destination service.
-        $origin_destination =  $path;
+        $origin_destination = $path;
 
         $used_query_parameters = $param_union;
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
-          $origin_destination .= '?' . $query;
-          unset($used_query_parameters['op']);
+          if (!isset($used_query_parameters['reset'])) {
+            unset($used_query_parameters['op']);
+            $origin_destination .= '?' . $query;
+          }
+          else {
+            $used_query_parameters = [];
+          }
           if ($target_url) {
             //Remove views%2Fajax from the URL set to the browser. makes no sense to allow that to be bookmarked.
             unset($used_query_parameters['/views/ajax']);
@@ -244,7 +249,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
           $view->displayHandlers->get($display_id)->setOption('pager_element', $pager_element);
         }
-        // Reuse the same DOM id so it matches that in drupalSettings.
+        // Reuse the same DOM id, so it matches that in drupalSettings.
         $view->dom_id = $dom_id;
 
         // Populate request attributes temporarily with ajax_page_state theme
