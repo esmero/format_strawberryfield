@@ -147,7 +147,7 @@ class MetadataDisplayForm extends ContentEntityForm {
           '#template' => $form_state->getValue('twig')[0]['value'],
           '#context'  => ['data' => []],
         ];
-        $this->renderer->renderPlain($build);
+        $this->renderer->renderInIsolation($build);
       }
     }
     catch (\Exception $exception) {
