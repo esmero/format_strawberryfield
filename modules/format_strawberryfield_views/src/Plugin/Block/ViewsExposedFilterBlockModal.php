@@ -190,6 +190,13 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     if ($this->view->display_handler->ajaxEnabled()) {
       $output['#attributes']['class'][] = 'block-modalformviews-ajax';
       $output['#attributes']['class'][] = 'js-modal-form-views-block';
+      // We know (thanks Core) that Resetting via Ajax breaks things
+      // So we will mark the reset button to have [data-drupal-selector=edit-reset]
+      // so we can ensure no Ajax binding will happen to that button.
+      if (isset($output['actions']['reset'])) {
+        $output['actions']['reset']['#attributes']['data-drupal-selector'] = 'edit-reset';
+      }
+
 
       $js_settings = [
         'view_id' => $this->view->id(),
