@@ -281,13 +281,6 @@
             );
           }
 
-          // Build page parameter
-          const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
-          if (view === 'single' || canvasIndices.length == 1) {
-            newParams.page = canvasIndices[0]
-          } else if (view === 'book') {
-            newParams.page = canvasIndices.find(e => !!e).join(',')
-          }
           // Now at the end. If a VTT annotation requested a Canvas to be set. we need to check if we have in the config
           // A temporary stored valued of the last clicked annotation.
           // Use if here.
@@ -305,22 +298,33 @@
           const { windowId, companionWindowId } = action
           const query = yield effects.select(Mirador.selectors.getSearchQuery, { companionWindowId, windowId })
           newParams.search = query
+          let $fragment = '';
+          for (const [p, val] of new URLSearchParams(newParams).entries()) {
+            $fragment += `${p}/${val}/`;
+          };
+          $fragment = $fragment.slice(0, -1);
+          history.replaceState(
+            { searchParams: newParams },
+            '',
+            `${window.location.pathname}#${$fragment}`
+          );
         }
         else if (action.type === ActionTypes.REMOVE_SEARCH) {
           delete newParams.search
+          let $fragment = '';
+          for (const [p, val] of new URLSearchParams(newParams).entries()) {
+            $fragment += `${p}/${val}/`;
+          };
+          $fragment = $fragment.slice(0, -1);
+          history.replaceState(
+            { searchParams: newParams },
+            '',
+            `${window.location.pathname}#${$fragment}`
+          );
         }
 
-        let $fragment = '';
-        for (const [p, val] of new URLSearchParams(newParams).entries()) {
-          $fragment += `${p}/${val}/`;
-        };
-        $fragment = $fragment.slice(0, -1);
 
-        history.replaceState(
-          { searchParams: newParams },
-          '',
-          `${window.location.pathname}#${$fragment}`
-        );
+
       }
       function* rootSaga() {
         yield effects.takeEvery(
