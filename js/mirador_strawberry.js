@@ -403,6 +403,25 @@
             $options.manifests = $manifests;
           }
 
+          const readFragmentSearch = function() {
+            const urlArray = window.location.hash.replace('#','').split('/');
+            const urlHash = {};
+            for (let i = 0; i < urlArray.length; i += 2) {
+              urlHash[urlArray[i]] = urlArray[i + 1];
+            }
+            if (urlHash['search'] != undefined) {
+              return decodeURIComponent(urlHash['search'].replace(/\+/g, " "));
+            }
+            else {
+              return '';
+            }
+          };
+
+          const search_string = readFragmentSearch();
+          if (search_string.length > 0 ) {
+            $options.windows[0].defaultSearchQuery = search_string;
+          }
+
           // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
           // Allow a last minute override, exclude main element manifest
           if (typeof drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] == 'object' &&
@@ -433,6 +452,8 @@
               ...viewer_override,
             };
           }
+
+
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
           if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
