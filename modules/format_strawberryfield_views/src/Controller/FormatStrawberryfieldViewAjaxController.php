@@ -279,7 +279,16 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
         if ($target_url) {
-          $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          $seturl = TRUE;
+          $extenders = $view->display_handler->getExtenders();
+          foreach ($extenders as $extender) {
+            if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
+              $seturl = FALSE;
+            }
+          }
+          if ($seturl) {
+            $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          }
         }
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
