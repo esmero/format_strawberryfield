@@ -52,8 +52,8 @@ class StrawberryADOJoin extends FilterPluginBase {
     $options['join_fields'] = ['default' => []];
     $options['ado_fields'] = ['default' => []];
     $options['negation_default'] = ['default' => ['omit']];
-    $options['ado_type'] = ['default' => []];
-    $options['ado_type_fields'] = ['default' => []];
+    $options['ado_type'] = ['default' => ''];
+    $options['ado_type_fields'] = ['default' => NULL];
     return $options;
   }
 
@@ -62,7 +62,7 @@ class StrawberryADOJoin extends FilterPluginBase {
    */
   public function defaultExposeOptions() {
     parent::defaultExposeOptions();
-    $this->options['expose']['ado_type'] = ['default' => []];
+    $this->options['expose']['ado_type'] = ['default' => ''];
   }
 
   /**
@@ -156,6 +156,10 @@ class StrawberryADOJoin extends FilterPluginBase {
     // We only know how to join on Solr. All rest is terribly bad poetry
     if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
       $index_fields = $query->getIndex()->getFields(TRUE);
+      $solr_field_names = $backend
+        ->getSolrFieldNames($query->getIndex());
+
+
       /* @var \Drupal\views\Plugin\views\display\DisplayPluginBase[] $filters */
       $filters = $this->view->getHandlers('filter', NULL);
       $value = "";
@@ -184,7 +188,7 @@ class StrawberryADOJoin extends FilterPluginBase {
       }
       // If value == "" do nothing, no need to JOIN SBF for that.
       if ($type == 'fulltext' && $full_text && ((is_scalar($full_text) && strlen($full_text) > 0) || (is_array($full_text) && count($full_text) > 0 ))) {
-
+        $join_structure = [];
         // Never ever make it easy Solr!
         // This is the Join Subquery, sadly not useful "directly" for Flavor Highlights IF the conjunction is AND
         // Because the AND implies matches across the union/intersection of main query and the Join
@@ -217,18 +221,21 @@ class StrawberryADOJoin extends FilterPluginBase {
             return;
           }
           $subquery_hl = $this->buildADOJoinSubQuery($query, $parse_mode, $this->options['ado_fields'], $full_text);
-
           foreach ($this->options['join_fields'] as $join_field) {
-            $join_structure[] = [
-              'from' => $join_field,
-              'to' => 'its_nid',
-              'v' => $subquery,
-              'hl' => $subquery_hl,
-            ];
+            if (isset($solr_field_names[$join_field])) {
+              $join_structure[] = [
+                'from' => $solr_field_names[$join_field],
+                'to' => 'its_nid',
+                'v' => $subquery,
+                'hl' => $subquery_hl,
+              ];
+            }
           }
           // 'hl' might be used in the future at @TODO. Right HL is limited to Strawberry Flavors.
           // \Drupal\strawberryfield\Plugin\search_api\processor\StrawberryFieldHighlight::highlightFlavorsFromIndex
-          $this->getQuery()->setOption('sbf_join_ado', $join_structure);
+          if (!empty($join_structure)) {
+            $this->getQuery()->setOption('sbf_join_ado', $join_structure);
+          }
         }
       }
       elseif ($type == 'advanced_fulltext') {
@@ -314,12 +321,45 @@ class StrawberryADOJoin extends FilterPluginBase {
         }
       }
     }
-
+    $type_query = NULL;
     if (count($names)) {
+
+      // If we have $names, now calculate the AND query for ADO type if any
+      if ($this->options['ado_type_fields']) {
+        $ado_type_names_solr = [];
+        $types = explode(",", trim($this->options['ado_type'] ?? ''));
+        if (count($types)) {
+          foreach($types as &$type) {
+            $type = trim($type ?? '');
+          }
+          $types = array_filter($types);
+          if (count($types)) {
+            $ado_type_keys =  ['#conjunction' => "AND" ] + $types;
+
+              if (isset($solr_field_names[$this->options['ado_type_fields']])) {
+                $ado_type_names_solr[] = $solr_field_names[$this->options['ado_type_fields']];
+              }
+            }
+            if (count($ado_type_names_solr)) {
+              // Here we force terms. WE are trying to mimic a filter query even if we can't do one via a JOIN
+              // (or I can't!)
+              $flat_keys_type[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+                $ado_type_keys, $ado_type_names_solr,
+                'terms'
+              );
+              $type_query = implode(" ", $flat_keys_type);
+              $type_query = 'AND (' . $type_query  . ')';
+            }
+          }
+        }
+
       $flat_keys[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
         $keys, $names,
         $parse_mode->getPluginId()
       );
+      if ($type_query) {
+        $flat_keys[] = $type_query;
+      }
     }
     return implode(" ", $flat_keys);
   }
@@ -359,12 +399,6 @@ class StrawberryADOJoin extends FilterPluginBase {
     $index = Index::load(substr($this->table, 17));
 
     $fields_info = $index->getFields();
-    $language_ids = array_keys(\Drupal::languageManager()->getLanguages());
-    $language_ids[] = LanguageInterface::LANGCODE_NOT_SPECIFIED;
-    $solr_field_names = $index
-      ->getServerInstance()
-      ->getBackend()
-      ->getSolrFieldNames($index);
 
     // We will store the actual Solr Field name here. Has the benefit of being faster
     // Has the downside that if someone changes the field name type (same field) this will break?
@@ -375,10 +409,8 @@ class StrawberryADOJoin extends FilterPluginBase {
         $property_path_parts = explode(":", $property_path ?? '');
         // Very hardcoded too.
         if (end($property_path_parts) == "nid" || str_contains(end($property_path_parts), 'sbf_entity_reference_')) {
-          if (isset($solr_field_names[$field_id])) {
-            $fields[$solr_field_names[$field_id]] = $field->getPrefixedLabel() . '('
-              . $field->getFieldIdentifier() . ')';
-          }
+          $fields[$field_id] = $field->getPrefixedLabel() . '('
+            . $field->getFieldIdentifier() . ')';
         }
       }
     }
