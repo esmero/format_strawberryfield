@@ -334,7 +334,7 @@ class StrawberryADOJoin extends FilterPluginBase {
           }
           $types = array_filter($types);
           if (count($types)) {
-            $ado_type_keys =  ['#conjunction' => "AND" ] + $types;
+            $ado_type_keys =  ['#conjunction' => "OR" ] + $types;
 
               if (isset($solr_field_names[$this->options['ado_type_fields']])) {
                 $ado_type_names_solr[] = $solr_field_names[$this->options['ado_type_fields']];
