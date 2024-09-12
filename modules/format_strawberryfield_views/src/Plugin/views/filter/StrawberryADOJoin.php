@@ -50,6 +50,7 @@ class StrawberryADOJoin extends FilterPluginBase {
 
     $options['operator']['default'] = 'or';
     $options['join_fields'] = ['default' => []];
+    $options['join_field_to'] = ['default' => NULL];
     $options['ado_fields'] = ['default' => []];
     $options['negation_default'] = ['default' => ['omit']];
     $options['ado_type'] = ['default' => ''];
@@ -106,10 +107,19 @@ class StrawberryADOJoin extends FilterPluginBase {
       '#default_value' => $this->options['ado_fields'],
       '#required' => TRUE,
     ];
+    $form['join_field_to'] = [
+      '#type' => 'select',
+      '#title' => $this->t('ADO field Holding the main Node ID to join against.'),
+      '#description' => $this->t('Select the fields that holds the ADOs Drupal NODE ID to be used to Join the results against. This fields need to be integers'),
+      '#options' => $join_fields,
+      '#multiple' => false,
+      '#default_value' => $this->options['join_field_to'],
+      '#required' => TRUE,
+    ];
     $form['join_fields'] = [
       '#type' => 'select',
       '#title' => $this->t('ADO fields referencing a parent Node ID to be used for Joining (Join Fields).'),
-      '#description' => $this->t('Select the fields that reference Parent Nodes or ADOs to be used to Join the results. This fields need to be integers'),
+      '#description' => $this->t('Select the fields that reference Parent Nodes or ADOs to be used to Join the results against the main Node ID. This fields need to be integers'),
       '#options' => $join_fields,
       '#size' => min(4, count($join_fields)),
       '#multiple' => TRUE,
@@ -225,7 +235,7 @@ class StrawberryADOJoin extends FilterPluginBase {
             if (isset($solr_field_names[$join_field])) {
               $join_structure[] = [
                 'from' => $solr_field_names[$join_field],
-                'to' => 'its_nid',
+                'to' =>  $solr_field_names[$this->options['join_field_to'] ?? 'its_nid'],
                 'v' => $subquery,
                 'hl' => $subquery_hl,
               ];
