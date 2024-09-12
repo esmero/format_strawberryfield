@@ -294,7 +294,7 @@ class StrawberryADOJoin extends FilterPluginBase {
     $field_names = $query->getIndex()
       ->getServerInstance()
       ->getBackend()->getSolrFieldNamesKeyedByLanguage($language_ids, $query->getIndex());
-
+    $all_names = [];
     foreach (($queryable_fields ?? []) as $field) {
       if (isset($solr_field_names[$field])
         && 'twm_suggest' !== $solr_field_names[$field] & strpos(
@@ -319,8 +319,11 @@ class StrawberryADOJoin extends FilterPluginBase {
         foreach ($names as &$name) {
           $name = $name . $boost;
         }
+        $all_names = array_merge($all_names, $names);
       }
     }
+    $all_names = array_unique($all_names);
+    $names = $all_names;
     $type_query = NULL;
     if (count($names)) {
 
