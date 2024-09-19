@@ -693,6 +693,10 @@ BookReader.prototype.getIIIFInfoJsonFromURL = function(string){
       url.pathname = path;
       return url.toString();
     }
+    else {
+      // Might be non IIIF, so we return the Image itself.
+      return string;
+    }
   }
   else {
     return string;
