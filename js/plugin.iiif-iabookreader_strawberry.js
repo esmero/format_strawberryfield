@@ -668,8 +668,36 @@ BookReader.prototype.parseSequence = function (sequenceId) {
 
         return url.search
     }
-
 };
+
+
+
+BookReader.prototype.getIIIFInfoJsonFromURL = function(string){
+  let url;
+
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return '';
+  }
+  let path = url.pathname;
+  // IIIF will have  id/crop/size/rotation/filename So we will split and reverse
+  if (path !== '/') {
+    let path_parts = path.split("/");
+    if (path_parts.length >= 5) {
+      path_parts = path_parts.reverse();
+      path_parts = path_parts.slice(4);
+      //reverse again
+      path_parts = path_parts.reverse();
+      path =  path_parts.join('/') + '/info.json';
+      url.pathname = path;
+      return url.toString();
+    }
+  }
+  else {
+    return string;
+  }
+}
 
 /**
  * @param  {number} index
