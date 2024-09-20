@@ -184,9 +184,18 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         }
         // Let's check if our view has our advanced search filter
         $filters = $view->getDisplay()->display['display_options']['filters'] ?? [];
+        // Gather the Views POST and GET upfront.
+        $views_post = $view->getRequest()->request->all();
+        $views_get = $view->getRequest()->query->all();
+
         foreach ($filters as $filter) {
-          /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
-          if ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
+          // Deeal with the RESET here
+          if (isset($views_get['reset']) || ($views_get['op'] ?? '') === "Reset" || ($views_post['op'] ?? '') === "Reset" || $views_get['reset']) {
+            unset($views_post[$filter['expose']['identifier']]);
+            unset($views_get[$filter['expose']['identifier']]);
+          }
+            /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+          elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
             && $filter['exposed'] == TRUE
           ) {
             if ($filter['expose']['identifier'] ?? NULL ) {
@@ -194,9 +203,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               // the whole GET bag as its own input based on the active request
               // We need to alter that. Let's check if we have the id in both GET and POST
               // If in POST, POST wins and replaces/needs to replace GET in the view
-              $views_post = $view->getRequest()->request->all();
               unset($views_post['ajax_page_state']);
-              $views_get = $view->getRequest()->query->all();
               unset($views_get['ajax_page_state']);
               if (isset($views_post[$filter['expose']['identifier']])) {
                 foreach ($views_get as $get_args_keys => $value) {
@@ -206,30 +213,28 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
                 }
               }
             }
-            $view->getRequest()->query->replace($views_post + $views_get);
           }
         }
-
+        $view->getRequest()->query->replace($views_post + $views_get);
         // Create a clone of the request object to avoid mutating the request
         // object stored in the request stack.
         $request_clone = clone $request;
 
-
         // Add all POST data, because AJAX is sometimes a POST and many things,
         // such as tablesorts, exposed filters and paging assume GET.
         $param_union = $request_clone->request->all() + $request_clone->query->all();
+        $used_query_parameters = $param_union;
         unset($param_union['ajax_page_state']);
-        $request_clone->query->replace($param_union);
-
+        $request_clone->query->replace($used_query_parameters);
         $response->setView($view);
         // Overwrite the destination.
         // @see the redirect.destination service.
         $origin_destination = $path;
 
-        $used_query_parameters = $param_union;
+
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
-          if (!isset($used_query_parameters['reset'])) {
+          if (!isset($used_query_parameters['reset']) && ($used_query_parameters['op'] ?? '') !== "Reset") {
             unset($used_query_parameters['op']);
             $origin_destination .= '?' . $query;
           }
@@ -319,10 +324,4 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       throw new NotFoundHttpException();
     }
   }
-  public function ajaxViewAdd(Request $request)
-  {
-    $response = $this->ajaxView($request);
-    return $response;
-  }
-
 }
