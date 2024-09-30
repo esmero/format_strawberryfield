@@ -190,7 +190,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
         foreach ($filters as $filter) {
           // Deeal with the RESET here
-          if (($views_get['op'] ?? '') === "Reset" || ($views_post['op'] ?? '') === "Reset" || $views_get['reset'] ?? FALSE) {
+          if (($views_get['op'] ?? '') === "Reset" || ($views_post['op'] ?? '') === "Reset" || ($views_get['reset'] ?? FALSE)) {
             unset($views_post[$filter['expose']['identifier']]);
             unset($views_get[$filter['expose']['identifier']]);
           }
