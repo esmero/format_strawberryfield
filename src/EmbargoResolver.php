@@ -50,6 +50,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
 
 
   /**
+   * A Per HTTP Request static cache of resolved Embargoes
+   *
+   * @var array
+   */
+  protected array $resolvedEmbargos = [];
+
+
+  /**
    * DisplayResolver constructor.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
@@ -114,7 +122,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
     }
     else {
       // Check the actual embargo options
-      $date_embargo_key = $this->embargoConfig->get('date_until_json_key');
+      $date_embargo_key = $this->embargoConfig->get('date_until_json_key') ?? '';
       if (strlen($date_embargo_key) > 0 && !empty($jsondata[$date_embargo_key]) && is_string($jsondata[$date_embargo_key])) {
         $date = $this->parseStringToDate(trim($jsondata[$date_embargo_key]));
         if ($date) {
@@ -127,7 +135,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
           }
         }
       }
-      $ip_embargo_key = $this->embargoConfig->get('ip_json_key');
+      $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
       if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
         $current_ip =  $this->requestStack->getCurrentRequest()->getClientIp();
         if ($this->currentUser->isAnonymous()) {
@@ -160,8 +168,22 @@ class EmbargoResolver implements EmbargoResolverInterface {
       $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
     }
     $cache[$cache_id] = $embargo_info;
+    $this->resolvedEmbargos[$uuid] = $embargo_info;
     return $embargo_info;
   }
+
+  /**
+   * Getter for the resolved Static embargoe Cache
+   *
+   * @param string $uuid
+   *    The UUID of a node for which an embargo might/not have been resolved
+   * @return array
+   *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+   */
+  public function getResolvedEmbargoesByUUid(string $uuid): array {
+    return $this->resolvedEmbargos[$uuid] ?? [];
+  }
+
 
   /**
    * Get a list of ADO types based on the SBF.

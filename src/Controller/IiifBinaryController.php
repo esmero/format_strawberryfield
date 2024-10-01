@@ -171,9 +171,6 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set('Content-Type', $mime);
         $response->headers->set('Last-Modified', gmdate("D, d M Y H:i:s", $createdtime)." GMT");
         $response->headers->set('Content-Length', $size);
-        if ($request->headers->has('Range')) {
-          $response->setStatusCode(206);
-        }
         $response->setETag($etag, TRUE);
         return $response;
       }
@@ -269,7 +266,7 @@ class IiifBinaryController extends ControllerBase {
   }
 
   /**
-   * Serves the a temp File to its owner.
+   * Serves a temp File to its owner.
    *
    * @param string $uuid
    * @param string $format

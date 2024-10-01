@@ -135,9 +135,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         return ($arg == '' ? NULL : $arg);
       }, $args);
 
-      $path = $request->get('view_path');
+      $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
       // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
-      $target_url = $this->pathValidator->getUrlIfValid($path);
+      $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
       $dom_id = $request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
       $pager_element = $request->get('pager_element');
@@ -233,6 +233,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $origin_destination .= '?' . $query;
           unset($used_query_parameters['op']);
           if ($target_url) {
+            //Remove views%2Fajax from the URL set to the browser. makes no sense to allow that to be bookmarked.
+            unset($used_query_parameters['/views/ajax']);
             $target_url->setOption('query', $used_query_parameters);
           }
         }
@@ -247,6 +249,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $view->dom_id = $dom_id;
 
         $context = new RenderContext();
+
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
           return $view->preview($display_id, $args);
         });
@@ -291,6 +294,13 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
     else {
       throw new NotFoundHttpException();
     }
+  }
+  public function ajaxViewAdd(Request $request)
+  {
+    //$dom_id = "blabla";
+    //$request->request->set('view_dom_id', $dom_id);
+    $response = $this->ajaxView($request);
+    return $response;
   }
 
 }

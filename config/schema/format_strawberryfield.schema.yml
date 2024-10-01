@@ -11,15 +11,24 @@ format_strawberryfield.iiif_settings:
     iiif_content_search_api_page_count:
       type: int
       label: 'The max results to show per page on a iiif_content_search_api_page_count'
-    iiif_content_search_api_enabled_processors:
+    iiif_content_search_api_visual_enabled_processors:
       type: string
-      label: 'Comma separated list of Strawberry Runner Processors that can be fetched by the Content Search API on query.'
+      label: 'Comma separated list of Strawberry Runner Processors for Visual Annotations (OCR) that can be fetched by the Content Search API on query.'
+    iiif_content_search_api_time_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors for time Annotations (OCR from time) can be fetched by the Content Search API on query.'
+    iiif_content_search_api_text_enabled_processors:
+      type: string
+      label: 'Comma separated list of Strawberry Runner Processors for plain text annotations (no OCR) that can be fetched by the Content Search API on query.'
     iiif_content_search_api_active:
       type: bool
       label: 'If IIIF Content Search API V1 and V2 are enabled.'
     iiif_content_search_validate_exposed:
       type: bool
       label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
+    iiif_content_search_time_targetannotations:
+      type: bool
+      label: 'If IIIF Content Search results for Time based media target the VTT annotation itself or the parent Canvas'
     iiif_content_search_api_parent_node_fields:
       type: sequence
       label: 'Strawberry Flavor Data Source Search API Fields that can be used to connect a Strawberry Flavor to a Parent ADO.'
@@ -308,6 +317,11 @@ field.formatter.settings.strawberry_paged_formatter:
       type: string
     manifesturl_source:
       type: string
+    metadataexposeentity_source:
+      type: string
+    hascover_json_key_source:
+      type: string
+      default: hascover
     jmespath:
       type: format_strawberryfield.jmespath_config.mapping
       label: 'JMESPath filter expression settings'
@@ -320,9 +334,14 @@ field.formatter.settings.strawberry_paged_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    iareaderimagesbaseurl:
+      type: string
+      label: 'Base URL for IA Reader Images'
+      default: 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/'
     textselection:
       type: boolean
       label: 'If textselection from DjaVUXML should be enabled or not'
+
 
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
@@ -495,6 +514,9 @@ field.formatter.settings.strawberry_mirador_formatter:
     custom_js:
       type: boolean
       label: 'If custom Mirador with plugin is going to be used instead of Vanilla CDN'
+    mirador_version:
+      type: integer
+      label: 'Version 3 or 4 from CDN. Does not apply if custom is selectoed'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'

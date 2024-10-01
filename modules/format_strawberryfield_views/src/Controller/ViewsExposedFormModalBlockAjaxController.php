@@ -155,5 +155,4 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     }
     return $response;
   }
-
 }

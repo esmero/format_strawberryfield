@@ -15,7 +15,7 @@ use Drupal\Core\Form\FormStateInterface;
  *
  * @EntityReferenceSelection(
  *   id = "default:metadatadisplay",
- *   label = @Translation("Node with StrawberryField selection"),
+ *   label = @Translation("Metadata Display Entity selection"),
  *   entity_types = {"metadatadisplay_entity"},
  *   group = "default",
  *   weight = 1
@@ -47,7 +47,21 @@ class MetadataDisplaySelection extends DefaultSelection {
   ) {
     $query = parent::buildEntityQuery($match, $match_operator);
     // Only if it has Twig inside
+    // This selection plugin allows a passed
+    /*'#selection_settings' => [
+      'filter' => [
+        'mimetype' => 'application/xml'
+      ]
+    ],
+    as part of the element that implements it. I can also be an array
+     'mimetype' => ['application/xml','application/json']
+    */
+    $configuration = $this->getConfiguration();
     $query->condition('twig', 'NULL','IS NOT NULL');
+    if ($configuration['filter']['mimetype'] ?? FALSE) {
+      $configuration['filter']['mimetype'] = (array) $configuration['filter']['mimetype'];
+      $query->condition('mimetype', $configuration['filter']['mimetype'],'IN');
+    }
     return $query;
   }
 }

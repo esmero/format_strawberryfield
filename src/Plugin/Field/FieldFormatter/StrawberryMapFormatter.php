@@ -303,7 +303,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#type' => 'checkboxes',
           '#title' => $this->t('Source(s) for your GeoJSON URLs.'),
           '#options' => $all_options_form_source,
-          '#default_value' => $this->getSetting('mediasource'),
+          '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => TRUE,
           '#attributes' => [
             'data-formatter-selector' => 'mediasource',
@@ -314,7 +314,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           '#type' => 'checkboxes',
           '#title' => $this->t('Optional: Source(s) for IIIF Manifest that will provide Georeferenced W3C Annotations for Overlays.'),
           '#options' => $all_options_form_overlaysource,
-          '#default_value' => $this->getSetting('overlaysource'),
+          '#default_value' => $this->getSetting('overlaysource') ?? [],
           '#required' => FALSE,
           '#attributes' => [
             'data-formatter-selector' => 'overlaysource',

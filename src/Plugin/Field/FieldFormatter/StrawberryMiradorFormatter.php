@@ -98,8 +98,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
   public static function create(
     ContainerInterface $container,
     array $configuration,
-    $plugin_id,
-    $plugin_definition
+                       $plugin_id,
+                       $plugin_definition
   ) {
     return new static(
       $plugin_id,
@@ -129,6 +129,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'metadataexposeentity_source' => NULL,
         'manifestnodelist_json_key_source' => 'isrelatedto',
         'manifesturl_json_key_source' => 'iiifmanifest',
+        'mirador_version' => 3,
         'custom_js' => FALSE,
         'viewer_overrides' => '',
         'max_width' => 720,
@@ -203,8 +204,8 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'mediasource' => [
           '#type' => 'checkboxes',
           '#title' => $this->t('Source for your IIIF Manifest URLs.'),
-          '#options' => $all_options_form_source,
-          '#default_value' => $this->getSetting('mediasource'),
+          '#options' => $all_options_form_source ?? [],
+          '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => TRUE,
           '#attributes' => [
             'data-formatter-selector' => 'mediasource',
@@ -215,6 +216,22 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#type' => 'checkbox',
           '#title' => t('Use Custom Archipelago Mirador with Plugins'),
           '#default_value' => $this->getSetting('custom_js') ?? FALSE,
+          '#attributes' => [
+            'data-formatter-selector' => 'custom-js',
+          ],
+        ],
+        'mirador_version' => [
+          '#type' => 'radios',
+          '#options' => [3 => 'Mirador 3', 4 => 'Mirador 4'],
+          '#title' => t('Which Version from CDN'),
+          '#default_value' => $this->getSetting('mirador_version') ?? 3,
+          '#states' => [
+            [
+              'visible' => [
+                ':input[data-formatter-selector="custom-js"]' => ['checked' => FALSE],
+              ]
+            ],
+          ]
         ],
         'viewer_overrides' => [
           '#type' => 'textarea',
@@ -527,7 +544,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         // if we could decode it, it is already JSON..
         $viewer_overrides = $jsondata["ap:viewerhints"][$this->getPluginId()];
       }
-        // A rendered Manifest
+      // A rendered Manifest
       if ($hide_on_embargo) {
         $embargo_info = $this->embargoResolver->embargoInfo(
           $item->getEntity()->uuid(), $jsondata
@@ -629,8 +646,14 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
               = 'format_strawberryfield/mirador_custom_strawberry';
           }
           else {
-            $elements[$delta]['#attached']['library'][]
-              = 'format_strawberryfield/mirador_strawberry';
+            if (($this->getSetting('mirador_version') ?? 3) == 3) {
+              $elements[$delta]['#attached']['library'][]
+                = 'format_strawberryfield/mirador_strawberry';
+            }
+            else {
+              $elements[$delta]['#attached']['library'][]
+                = 'format_strawberryfield/mirador_strawberry_four';
+            }
           }
         }
       }
@@ -660,7 +683,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
-    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
       $elements['#cache']['max-age'] = 0;
     }
 

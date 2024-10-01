@@ -49,6 +49,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         'initial_page' => 1,
         'number_pages' => 1,
         'quality' => 'default',
+        'pdfjs_type' => 'simple',
         'rotation' => '0',
       ];
   }
@@ -62,6 +63,15 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
           '#type' => 'textfield',
           '#title' => t('JSON Key from where to fetch Document URLs'),
           '#default_value' => $this->getSetting('json_key_source'),
+        ],
+        'pdfjs_type' => [
+          '#type' => 'select',
+          '#title' => t('Pick the type of PDFJS driven viewer'),
+          '#default_value' => $this->getSetting('pdfjs_type'),
+          '#options' => [
+            'simple' => $this->t('Only next/prev'),
+            'normal' => $this->t('With Native PDF.js Search'),
+          ]
         ],
         'number_documents' => [
           '#type' => 'number',
@@ -269,7 +279,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
-    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
       $elements['#cache']['max-age'] = 0;
     }
     return $elements;
@@ -282,6 +292,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
 
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
+    $pdfjs_type = $this->getSetting('pdfjs_type');
     $max_height = $this->getSetting('max_height');
     $number_pages =  $this->getSetting('number_pages');
     $initial_page =  $this->getSetting('initial_page');
@@ -316,6 +327,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         '#theme' => 'format_strawberryfield_pdfs',
         '#item' => [
           'id' => 'document_' . $uniqueid,
+          'type' => $pdfjs_type,
         ]
       ];
 
@@ -336,6 +348,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
           'data-iiif-document' => $publicurl->toString(),
           'data-iiif-initialpage' => $initial_page,
           'data-iiif-pages' => $number_pages,
+          'data-iiif-pdfjs-type' => $pdfjs_type,
         ],
         '#alt' => $this->t(
           'PDF @name for @label',

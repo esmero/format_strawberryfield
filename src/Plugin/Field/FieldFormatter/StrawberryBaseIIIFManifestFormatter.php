@@ -150,8 +150,8 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
             '@optional' => $iiifrequired ? '(required)' : '(optional)',
           ]),
           '#description' => t('When using IIIF manifests as source, alternate JSON Key(s) embargo settings and JSON Key(s) where media needs to exists are not going to be respected automatically. Those need to be logically programmed via Twig at the Metadata Display Entity (template) that generates the manifest. Means no embargo settings (upload keys) for this formatter will be carried/passed to the template.'),
-          '#options' => $all_options_form_source,
-          '#default_value' => $this->getSetting('mediasource'),
+          '#options' => $all_options_form_source ?? [],
+          '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => $iiifrequired,
           '#attributes' => [
             'data-formatter-selector' => 'mediasource',

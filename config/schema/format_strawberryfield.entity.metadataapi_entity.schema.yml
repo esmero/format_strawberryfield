@@ -1,0 +1,31 @@
+'metadataexpose_entity.metadataapi_entity.*':
+  type: config_entity
+  label: 'Metadata API entity using Twig and Views Configuration'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+       type: label
+       label: 'Label'
+    uuid:
+      type: string
+    metadataWrapperDisplayentity:
+      label: 'Metadata Display entity that will output the API wrapper and process the json of the items & api arguments'
+      type: string
+    metadataItemDisplayentity:
+      label: 'Metadata Display entity that will output the each Item process the json coming from each Views result row & api arguments'
+      type: string
+    views_source_ids:
+      type: sequence
+      label: 'The views used to generate results. These might also get arguments mapped from the API to any exposed relationship, filter, etc.'
+      sequence:
+        - type: string
+    api_type:
+      label: 'If rest or Sword. Rest APIs can use HTTP codes and header to communicate, but Sword ones always return bodies.'
+      type: string
+    cache:
+      type: boolean
+    active:
+      type: boolean
+      label: 'Whether this endpoint is active'

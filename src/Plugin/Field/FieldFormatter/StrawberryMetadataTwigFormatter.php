@@ -245,7 +245,8 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        // even if not embargoed for a particular user, set to IP if not cacheable
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -305,11 +306,12 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         ];
       }
     }
+
     $elements['#cache'] = [
       'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
       'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
     ];
-    if (isset($embargo_info[4]) && $embargo_info[4] === FALSE) {
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
       $elements['#cache']['max-age'] = 0;
     }
 

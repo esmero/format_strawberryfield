@@ -48,6 +48,23 @@
       return this;
     },
 
+    dispatchImageViewChange: function(el, encodedImageAnnotation){
+      // We don't need the caller here.
+      // we will use the element itself to fetch who called.
+      /* el being a dom document via const el = document.getElementById(element_id);*/
+      /* nodeid being the ADO Node ID */
+      let encodedImageAnnotationOne = '';
+      if (Array.isArray(encodedImageAnnotation)) {
+        encodedImageAnnotationOne = encodedImageAnnotation[0];
+      }
+      else {
+        encodedImageAnnotationOne = encodedImageAnnotation
+      }
+      const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {image_annotation: encodedImageAnnotationOne} });
+      el.dispatchEvent(event);
+      return this;
+    },
+
 
     dispatchCanvasChange: function(el, canvasid, manifestid, caller_id){
       /* el being a dom document via const el = document.getElementById(element_id);*/

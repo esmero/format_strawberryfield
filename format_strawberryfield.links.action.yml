@@ -10,3 +10,8 @@ entity.metadataexpose_entity.add_form:
   title: 'Add Exposed Metadata Endpoint'
   appears_on:
     - entity.metadataexpose_entity.collection
+entity.metadataapi_entity.add_form:
+  route_name: 'entity.metadataapi_entity.add_form'
+  title: 'Add Metadata API'
+  appears_on:
+    - entity.metadataapi_entity.collection
