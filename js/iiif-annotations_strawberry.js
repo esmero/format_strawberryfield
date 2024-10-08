@@ -68,7 +68,13 @@
                       context.closest('div').appendChild(popup);
                   }
                   else {
-                      document.getElementById('main').appendChild(popup);
+                      let main_element = document.getElementById('main');
+                      if (!main_element) {
+                        main_element = document.getElementById('main-content');
+                      }
+                      if (main_element) {
+                        main_element.appendChild(popup);
+                      }
                   }
               }
               // Why again? because it might have been created by a previous Ajax call. So we query it.

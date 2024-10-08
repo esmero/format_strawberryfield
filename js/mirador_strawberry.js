@@ -281,13 +281,6 @@
             );
           }
 
-          // Build page parameter
-          const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
-          if (view === 'single' || canvasIndices.length == 1) {
-            newParams.page = canvasIndices[0]
-          } else if (view === 'book') {
-            newParams.page = canvasIndices.find(e => !!e).join(',')
-          }
           // Now at the end. If a VTT annotation requested a Canvas to be set. we need to check if we have in the config
           // A temporary stored valued of the last clicked annotation.
           // Use if here.
@@ -305,22 +298,33 @@
           const { windowId, companionWindowId } = action
           const query = yield effects.select(Mirador.selectors.getSearchQuery, { companionWindowId, windowId })
           newParams.search = query
+          let $fragment = '';
+          for (const [p, val] of new URLSearchParams(newParams).entries()) {
+            $fragment += `${p}/${val}/`;
+          };
+          $fragment = $fragment.slice(0, -1);
+          history.replaceState(
+            { searchParams: newParams },
+            '',
+            `${window.location.pathname}#${$fragment}`
+          );
         }
         else if (action.type === ActionTypes.REMOVE_SEARCH) {
           delete newParams.search
+          let $fragment = '';
+          for (const [p, val] of new URLSearchParams(newParams).entries()) {
+            $fragment += `${p}/${val}/`;
+          };
+          $fragment = $fragment.slice(0, -1);
+          history.replaceState(
+            { searchParams: newParams },
+            '',
+            `${window.location.pathname}#${$fragment}`
+          );
         }
 
-        let $fragment = '';
-        for (const [p, val] of new URLSearchParams(newParams).entries()) {
-          $fragment += `${p}/${val}/`;
-        };
-        $fragment = $fragment.slice(0, -1);
 
-        history.replaceState(
-          { searchParams: newParams },
-          '',
-          `${window.location.pathname}#${$fragment}`
-        );
+
       }
       function* rootSaga() {
         yield effects.takeEvery(
@@ -403,6 +407,25 @@
             $options.manifests = $manifests;
           }
 
+          const readFragmentSearch = function() {
+            const urlArray = window.location.hash.replace('#','').split('/');
+            const urlHash = {};
+            for (let i = 0; i < urlArray.length; i += 2) {
+              urlHash[urlArray[i]] = urlArray[i + 1];
+            }
+            if (urlHash['search'] != undefined) {
+              return decodeURIComponent(urlHash['search'].replace(/\+/g, " "));
+            }
+            else {
+              return '';
+            }
+          };
+
+          const search_string = readFragmentSearch();
+          if (search_string.length > 0 ) {
+            $options.windows[0].defaultSearchQuery = search_string;
+          }
+
           // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
           // Allow a last minute override, exclude main element manifest
           if (typeof drupalSettings.format_strawberryfield.mirador[element_id]['viewer_overrides'] == 'object' &&
@@ -433,6 +456,8 @@
               ...viewer_override,
             };
           }
+
+
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
           if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {

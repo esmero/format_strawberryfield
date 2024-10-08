@@ -35,7 +35,16 @@
                 view_instance.settings.view_args = image_annotation;
               }
             }
-            view_instance.$view.trigger("RefreshView");
+            //view_instance.$view.trigger("RefreshView");
+
+            let href = window.location.href;
+            if (typeof Drupal.AjaxFacetsView != "undefined") {
+              Drupal.AjaxFacetsView.UpdateView(href, view_instance.settings.view_dom_id, "/views/ajax"/*view_instance.settings.view_path*/);
+            }
+            else {
+              view_instance.$view.trigger("RefreshView");
+            }
+            //Drupal.AjaxFacetsView.updateFacetsBlocks(href, view_instance.settings.view_name ,  view_instance.settings.view_display_id);
           }
         }
       }

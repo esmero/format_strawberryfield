@@ -4,9 +4,3 @@ exposed_views_form_modal.block.ajax:
     _controller: '\Drupal\format_strawberryfield_views\Controller\ViewsExposedFormModalBlockAjaxController::ajaxExposedFormBlockView'
   requirements:
     _access: 'TRUE'
-format_strawberryfield_views.views.sajax:
-  path: '/sbf/views-ajax'
-  defaults:
-    _controller: '\Drupal\format_strawberryfield_views\Controller\FormatStrawberryfieldViewAjaxController::ajaxViewAdd'
-  requirements:
-    _access: 'TRUE'

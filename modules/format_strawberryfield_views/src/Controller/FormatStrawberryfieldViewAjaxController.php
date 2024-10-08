@@ -32,6 +32,25 @@ use Drupal\format_strawberryfield_views\Ajax\SbfSetBrowserUrl;
 class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
   /**
+   * Parameters that should be filtered and ignored inside ajax requests.
+   */
+  public const FILTERED_QUERY_PARAMETERS = [
+    'view_name',
+    'view_display_id',
+    'view_args',
+    'view_path',
+    'view_dom_id',
+    'pager_element',
+    'view_base_path',
+    'ajax_page_state',
+    'exposed_form_display',
+    AjaxResponseSubscriber::AJAX_REQUEST_PARAMETER,
+    FormBuilderInterface::AJAX_FORM_REQUEST,
+    MainContentViewSubscriber::WRAPPER_FORMAT,
+  ];
+
+
+  /**
    * The entity storage for views.
    *
    * @var \Drupal\Core\Entity\EntityStorageInterface
@@ -136,7 +155,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }, $args);
 
       $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
-      // If a view has an invalid Path (e.g you added some % somewhere) this will be null.
+      // If a view has an invalid Path (e.g. you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
       $dom_id = $request->get('view_dom_id');
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
@@ -147,25 +166,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
       $response = new ViewAjaxResponse();
 
-
-
-      // Remove all of this stuff from the query of the request so it doesn't
-      // end up in pagers and tablesort URLs.
-      // @todo Remove this parsing once these are removed from the request in
-      //   https://www.drupal.org/node/2504709.
-      foreach ([
-        'view_name',
-        'view_display_id',
-        'view_args',
-        'view_path',
-        'view_dom_id',
-        'pager_element',
-        'view_base_path',
-        'exposed_form_display',
-        AjaxResponseSubscriber::AJAX_REQUEST_PARAMETER,
-        FormBuilderInterface::AJAX_FORM_REQUEST,
-        MainContentViewSubscriber::WRAPPER_FORMAT,
-      ] as $key) {
+      $existing_page_state = $request->get('ajax_page_state');
+      foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
       }
@@ -176,18 +178,24 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       }
       $view = $this->executableFactory->get($entity);
       if ($view && $view->access($display_id) && $view->setDisplay($display_id) && $view->display_handler->ajaxEnabled()) {
-
         // Fix the current path for paging.
         if (!empty($path)) {
           $this->currentPath->setPath('/' . ltrim($path, '/'), $request);
         }
-
         // Let's check if our view has our advanced search filter
+        $filters = $view->getDisplay()->display['display_options']['filters'] ?? [];
+        // Gather the Views POST and GET upfront.
+        $views_post = $view->getRequest()->request->all();
+        $views_get = $view->getRequest()->query->all();
 
-        $filters = $view->getDisplay($display_id)->display['display_options']['filters'] ?? [];
         foreach ($filters as $filter) {
-          /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
-          if ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
+          // Deeal with the RESET here
+          if (($views_get['op'] ?? '') === "Reset" || ($views_post['op'] ?? '') === "Reset" || ($views_get['reset'] ?? FALSE)) {
+            unset($views_post[$filter['expose']['identifier']]);
+            unset($views_get[$filter['expose']['identifier']]);
+          }
+            /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+          elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
             && $filter['exposed'] == TRUE
           ) {
             if ($filter['expose']['identifier'] ?? NULL ) {
@@ -195,9 +203,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               // the whole GET bag as its own input based on the active request
               // We need to alter that. Let's check if we have the id in both GET and POST
               // If in POST, POST wins and replaces/needs to replace GET in the view
-              $views_post = $view->getRequest()->request->all();
               unset($views_post['ajax_page_state']);
-              $views_get = $view->getRequest()->query->all();
               unset($views_get['ajax_page_state']);
               if (isset($views_post[$filter['expose']['identifier']])) {
                 foreach ($views_get as $get_args_keys => $value) {
@@ -207,31 +213,34 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
                 }
               }
             }
-            $view->getRequest()->query->replace($views_post + $views_get);
           }
         }
-
+        $view->getRequest()->query->replace($views_post + $views_get);
         // Create a clone of the request object to avoid mutating the request
         // object stored in the request stack.
         $request_clone = clone $request;
 
-
         // Add all POST data, because AJAX is sometimes a POST and many things,
         // such as tablesorts, exposed filters and paging assume GET.
         $param_union = $request_clone->request->all() + $request_clone->query->all();
+        $used_query_parameters = $param_union;
         unset($param_union['ajax_page_state']);
-        $request_clone->query->replace($param_union);
-
+        $request_clone->query->replace($used_query_parameters);
         $response->setView($view);
         // Overwrite the destination.
         // @see the redirect.destination service.
-        $origin_destination =  $path;
+        $origin_destination = $path;
 
-        $used_query_parameters = $param_union;
+
         $query = UrlHelper::buildQuery($used_query_parameters);
         if ($query != '') {
-          $origin_destination .= '?' . $query;
-          unset($used_query_parameters['op']);
+          if (!isset($used_query_parameters['reset']) && ($used_query_parameters['op'] ?? '') !== "Reset") {
+            unset($used_query_parameters['op']);
+            $origin_destination .= '?' . $query;
+          }
+          else {
+            $used_query_parameters = [];
+          }
           if ($target_url) {
             //Remove views%2Fajax from the URL set to the browser. makes no sense to allow that to be bookmarked.
             unset($used_query_parameters['/views/ajax']);
@@ -245,9 +254,19 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
           $view->displayHandlers->get($display_id)->setOption('pager_element', $pager_element);
         }
-        // Reuse the same DOM id so it matches that in drupalSettings.
+        // Reuse the same DOM id, so it matches that in drupalSettings.
         $view->dom_id = $dom_id;
 
+        // Populate request attributes temporarily with ajax_page_state theme
+        // and theme_token for theme negotiation.
+        $theme_keys = [
+          'theme' => TRUE,
+          'theme_token' => TRUE,
+        ];
+        if (is_array($existing_page_state) &&
+          ($temp_attributes = array_intersect_key($existing_page_state, $theme_keys))) {
+          $request->attributes->set('ajax_page_state', $temp_attributes);
+        }
         $context = new RenderContext();
 
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
@@ -259,12 +278,22 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             ->merge($bubbleable_metadata)
             ->applyTo($preview);
         }
+        $request->attributes->remove('ajax_page_state');
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
         $response->addCommand(new PrependCommand(".js-view-dom-id-$dom_id", ['#type' => 'status_messages']));
         //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
         if ($target_url) {
-          $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          $seturl = TRUE;
+          $extenders = $view->display_handler->getExtenders();
+          foreach ($extenders as $extender) {
+            if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
+              $seturl = FALSE;
+            }
+          }
+          if ($seturl) {
+            $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          }
         }
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
@@ -284,7 +313,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           }
           $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
         }
-
+        $request->query->set('ajax_page_state', $existing_page_state);
         return $response;
       }
       else {
@@ -295,12 +324,4 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       throw new NotFoundHttpException();
     }
   }
-  public function ajaxViewAdd(Request $request)
-  {
-    //$dom_id = "blabla";
-    //$request->request->set('view_dom_id', $dom_id);
-    $response = $this->ajaxView($request);
-    return $response;
-  }
-
 }

@@ -127,6 +127,14 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     $modalviews_blocks = array_unique($modalviews_blocks);
 
     $new_request = Request::create($path);
+    $new_request->setSession($request->getSession());
+    // Add ajax_page_state to the new request if set.
+    if ($request->request->has('ajax_page_state')) {
+      $new_request->request->set('ajax_page_state', $request->request->all('ajax_page_state'));
+    }
+    elseif ($request->query->has('ajax_page_state')) {
+      $new_request->query->set('ajax_page_state', $request->query->all('ajax_page_state'));
+    }
     $request_stack = new \Symfony\Component\HttpFoundation\RequestStack;
 
     $processed = $this->pathProcessor->processInbound($path, $new_request);
@@ -149,10 +157,13 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
         $block_view = $this->entityTypeManager
           ->getViewBuilder('block')
           ->view($block_entity);
-        $block_view = (string) $this->renderer->renderPlain($block_view);
+        $block_view = (string) $this->renderer->renderInIsolation($block_view);
         $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block_view));
       }
     }
+
+
+
     return $response;
   }
 }

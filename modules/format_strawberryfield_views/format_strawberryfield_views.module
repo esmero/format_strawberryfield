@@ -190,6 +190,10 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
           'id'    => 'sbf_flavors_join',
         ],
       ];
+      if ($sbf_join_field != 'sbf_flavors_join') {
+        $table[$sbf_join_field]['real field'] = 'sbf_flavors_join';
+      }
+
       // @TODO add also an argument ID if relationships are enabled to
       // $table[$advanced_fulltext_field]['argument']['id'] = 'sbf_advanced_search_api_fulltext';
       // Requires a special Argument Plugin. Not needed right now.
@@ -208,6 +212,24 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
       if ($ado_filter != 'sbf_ado_filter') {
         $table[$ado_filter]['real field'] = 'sbf_ado_filter';
       }
+
+      $sbf_ado_join_field = _search_api_views_find_field_alias('sbf_ado_join', $table);
+      $table[$sbf_ado_join_field] = [
+        'title'  => t('ADO(node) to ADO(node) Join'),
+        'group' => t('Search'),
+        'help' => t('Joins ADOs to ADOs when doing a Full Text Search.'),
+        'filter' => [
+          'title' => t('ADO(node) to ADO(node) Join'),
+          'field' => 'id',
+          'id'    => 'sbf_ado_join',
+        ],
+      ];
+      if ($sbf_ado_join_field != 'sbf_ado_join') {
+        $table[$sbf_ado_join_field]['real field'] = 'sbf_ado_join';
+      }
+
+
+
     }
     catch (\Exception $e) {
       $args = [
@@ -258,7 +280,7 @@ function format_strawberryfield_views_library_info_alter(&$libraries, $extension
 function format_strawberryfield_views_views_pre_render(ViewExecutable $view) {
   $current_display = $view->current_display;
   $view_config = $view->storage->getDisplay($current_display);
-  if (!empty($view_config['display_options']['display_extenders']['sbf_ajax_interactions'] ?? NULL)) {
+  if (!empty($view_config['display_options']['display_extenders']['sbf_ajax_interactions'] ?? NULL) &&  !empty($view_config['display_options']['display_extenders']['sbf_ajax_interactions']['sbf_ajax_interactions_arguments'] ?? NULL)) {
     if ($view_config['display_options']['display_extenders']['sbf_ajax_interactions']) {
       $view->element['#attached']['library'][] = 'format_strawberryfield_views/view-ajax-interactions';
       $view->element['#attached']['drupalSettings']['sbf_ajax_interactions'][$view->dom_id] = $view_config['display_options']['display_extenders']['sbf_ajax_interactions']['sbf_ajax_interactions_arguments'];

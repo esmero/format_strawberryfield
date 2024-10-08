@@ -46,57 +46,95 @@
     // If using the load even we can't relay on the target anymore because
     // it is bound to the document/window.
 
-    let base = e.target.id;
-    // Retrieve the path to use for views' ajax.
-    let ajaxPath = drupalSettings?.views?.ajax_path ?? '/views/ajax' ;
-
-    // If there are multiple views this might've ended up showing multiple
-    // times.
-    if (ajaxPath.constructor.toString().indexOf('Array') !== -1) {
-      ajaxPath = ajaxPath[0];
+    function delay (miliseconds) {
+      return new Promise((resolve) => {
+        window.setTimeout(() => {
+          resolve();
+        }, miliseconds);
+      });
     }
 
-    // Check if there are any GET parameters to send to views.
-    let queryString = window.location.search || '';
-    if (queryString !== '') {
-      // Remove the question mark and Drupal path component if any.
-      queryString = queryString
-        .slice(1)
-        .replace(/q=[^&]+&?|&?render=[^&]+/, '');
-      if (queryString !== '') {
-        // If there is a '?' in ajaxPath, clean URL are on and & should be
-        // used to add parameters.
-        queryString = (/\?/.test(ajaxPath) ? '&' : '?') + queryString;
+    (async function () {
+      let currenttarget = e.currentTarget;
+      let base = e.target.id;
+
+      // Check if target and base exist:
+      if ((currenttarget?.dataset?.sbfViewRenderTarget ?? FALSE) && (base ?? FALSE)) {
+        try {
+          // NOTE for the Future. We have to store upfront e.currentTarget; bc a delay (sync or async) ends
+          // making it NULL. According to Mozilla, e.currentTarget is not NULL only briefly while the event is being handled.
+          await delay(100);
+          // Retrieve the path to use for views' ajax.
+          let ajaxPath = drupalSettings?.views?.ajax_path ?? '/views/ajax';
+
+          // If there are multiple views this might've ended up showing multiple
+          // times.
+          if (ajaxPath.constructor.toString().indexOf('Array') !== -1) {
+            ajaxPath = ajaxPath[0];
+          }
+
+          // Check if there are any GET parameters to send to views.
+
+          let queryString = window.location.search || '';
+          if (queryString == '') {
+            // Thanking the Red Wizards for providing this even before we have an actually bookmarkable URL
+            let query_object = drupalSettings?.path?.currentQuery ?? {};
+            console.log(JSON.stringify(query_object));
+            //TODO. So far we had no need for this but the right approach if this is needed would be
+            // queryString = JSON.stringify(query_object);
+            // And then make it part of the submit_settings object.
+          }
+
+          if (queryString !== '') {
+            // Remove the question mark and Drupal path component if any.
+            queryString = queryString
+              .slice(1)
+              .replace(/q=[^&]+&?|&?render=[^&]+/, '');
+            if (queryString !== '') {
+              // If there is a '?' in ajaxPath, clean URL are on and & should be
+              // used to add parameters.
+              queryString = (/\?/.test(ajaxPath) ? '&' : '?') + queryString;
+            }
+          }
+
+
+          const base_views_settings = {
+            view_name: currenttarget.dataset.sbfViewId,
+            view_display_id: currenttarget.dataset.sbfViewDisplayId,
+            //@TODO use the argument separator settings here.
+            view_args: currenttarget.dataset.sbfViewArguments,
+            view_dom_id: currenttarget.dataset.sbfViewRenderTarget,
+            view_path: window.location.pathname,
+          };
+          let submit_settings =
+            $.extend(
+              {},
+              base_views_settings,
+              Drupal.Views.parseQueryString(queryString),
+            );
+
+          const element_settings = {
+            url: drupalSettings.path.baseUrl + drupalSettings.path.pathPrefix + 'views/ajax',
+            event: 'loadView',
+            base: base,
+            element: currenttarget,
+            httpMethod: "GET",
+            progress: {
+              type: 'throbber'
+            },
+            submit: submit_settings
+          };
+          let ajaxObject = new Drupal.ajax(element_settings);
+          ajaxObject.execute();
+        }
+        catch(e) {
+          console.log(e);
+        }
       }
-    }
-
-    const base_views_settings =  {
-      view_name: e.currentTarget.dataset.sbfViewId,
-      view_display_id: e.currentTarget.dataset.sbfViewDisplayId,
-      //@TODO use the argument separator settings here.
-      view_args: e.currentTarget.dataset.sbfViewArguments,
-      view_dom_id: e.currentTarget.dataset.sbfViewRenderTarget,
-      view_path: window.location.pathname,
-    };
-    let submit_settings =
-      $.extend(
-        {},
-        base_views_settings,
-      );
-
-    const element_settings = {
-      url: drupalSettings.path.baseUrl + drupalSettings.path.pathPrefix + 'sbf/views-ajax' + queryString,
-      event: 'loadView',
-      base: base,
-      element: e.currentTarget,
-      httpMethod: "GET",
-      progress: {
-        type: 'throbber'
-      },
-      submit: submit_settings
-    };
-    let ajaxObject = new Drupal.ajax(element_settings);
-    ajaxObject.execute();
+      else {
+        // Do nothing. The Target is not defined in the data attributes.
+      }
+    })();
   };
 
   Drupal.behaviors.sbf_views_ajax_dynamic = {
