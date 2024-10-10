@@ -141,6 +141,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => TRUE,
         '#required' => TRUE,
+        '#maxlength' => 300,
         '#default_value' => $entity,
       ],
       'specs' => [

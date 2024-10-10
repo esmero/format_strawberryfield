@@ -310,6 +310,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
         '#default_value' => $nodes,
         '#selection_handler' => 'default:nodewithstrawberry',
         '#validate_reference'=> TRUE,
+        '#maxlength' => 300,
       ];
     }
     elseif ($this->isExposed()) {
