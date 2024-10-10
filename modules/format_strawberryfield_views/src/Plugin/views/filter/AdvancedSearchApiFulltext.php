@@ -381,7 +381,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // used to query the Aggregated field.
       $sbf_highligh_solr_fields = [];
       $flat_key_sbf_highlight = [];
-
+      // Keeps track of the source fields configured at the aggregated field level for the HL processor.
+      $sbf_highligh_join_fields_from_config = [];
       foreach ($query_able_data as &$query_able_datum_fields) {
         foreach ($query_able_datum_fields['fields'] ?? [] as $field) {
           if (isset($solr_field_names[$field])
@@ -420,6 +421,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
                     && $index_field_item->getPropertyPath() == 'plaintext'
                   ) {
                     $sbf_names = [];
+                    $sbf_highligh_join_fields_from_config = array_merge($sbf_highligh_join_fields_from_config, $index_field->getConfiguration()['join_fields'] ?? ['parent_id']);
                     $sbf_first_name = reset($field_names[$sbf_field]);
                     if (strpos($sbf_first_name, 't') === 0) {
                       // Add all language-specific field names. This should work for
@@ -521,6 +523,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $this->getQuery()->setFulltextFields([]);
       if (count($flat_key_sbf_highlight)) {
         $this->getQuery()->setOption('sbf_advanced_search_filter_flavor_hl', implode(" ", $flat_key_sbf_highlight));
+        // also adds as an option the fields the aggregated one is using so he HL processor can dig deeper when Querying.
+        $this->getQuery()->setOption('sbf_advanced_search_filter_flavor_join_search_api_fields_hl', array_unique(array_values($sbf_highligh_join_fields_from_config)));
       }
     }
     else {
