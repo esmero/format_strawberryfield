@@ -172,6 +172,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $entity,
+        '#maxlength' => 300,
       ],
       'citationstyle' => [
         '#type' => 'select',

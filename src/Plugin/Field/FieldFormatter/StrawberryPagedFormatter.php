@@ -214,6 +214,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
           '#selection_handler' => 'default:metadatadisplay',
           '#validate_reference' => FALSE,
           '#default_value' => $entity,
+          '#maxlength' => 300,
           '#states' => [
             'visible' => [
               ':input[data-formatter-selector="mediasource"]' => ['value' => 'metadatadisplayentity'],

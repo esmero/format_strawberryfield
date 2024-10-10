@@ -198,6 +198,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' =>  $wrapper_template,
+        '#maxlength' => 300,
       ],
       'processor_item_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
@@ -207,6 +208,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $item_template,
+        '#maxlength' => 300,
       ],
       'active' => [
         '#type' => 'checkbox',
