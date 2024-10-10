@@ -249,15 +249,24 @@ class StrawberryADOJoin extends FilterPluginBase {
         }
       }
       elseif ($type == 'advanced_fulltext') {
+        $join_structure = [];
         if ($subtitutions = $this->getQuery()->getOption('sbf_advanced_search_filter_join', NULL)) {
           foreach ($subtitutions as $placeholder => $subquery) {
-            $join_structure[$placeholder] = [
-              'from' => 'its_parent_id',
-              'to'   => 'its_nid',
-              'v'    => $subquery
-            ];
+            foreach ($this->options['join_fields'] as $key => $join_field) {
+              if (isset($solr_field_names[$join_field])) {
+                $join_structure[$placeholder . $key] = [
+                  'from' => $solr_field_names[$join_field],
+                  'to' => $solr_field_names[$this->options['join_field_to'] ?? 'its_nid'],
+                  'v' => $subquery,
+                ];
+              }
+            }
           }
-          $this->getQuery()->setOption('sbf_join_ado_advanced', $join_structure);
+          // 'hl' might be used in the future at @TODO. Right HL is limited to Strawberry Flavors.
+          // \Drupal\strawberryfield\Plugin\search_api\processor\StrawberryFieldHighlight::highlightFlavorsFromIndex
+          if (!empty($join_structure)) {
+            $this->getQuery()->setOption('sbf_join_ado_advanced', $join_structure);
+          }
         }
       }
     }
