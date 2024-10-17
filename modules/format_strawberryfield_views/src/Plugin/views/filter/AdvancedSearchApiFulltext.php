@@ -910,6 +910,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
        }
        if ($i >= $this->options['expose']['advanced_search_fields_count_min'] && $multiple_delone) {
          // Only add a minus for counts larger than the minimum.
+         $single_delete_one['#group'] = $this->options['id'] . '_wrapper_' . $i;
          $form[$this->options['id'] . '_wrapper_' . $i][$this->options['id'] . '_delone_' . $i] = $single_delete_one;
        }
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
