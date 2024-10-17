@@ -40,9 +40,13 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
    */
   public function build()
   {
+    $add_classes = function (array &$option,  $classes_to_add) {
+      $classes = preg_split('/\s+/', $classes_to_add);
+      $classes = array_filter($classes);
+      $option = array_unique(array_merge($option, $classes));
+    };
 
     $is_sort_exposed = FALSE;
-
     /** @var \Drupal\views\Plugin\views\HandlerBase $sort */
     $sort_ids = [];
     foreach ($this->view->display_handler->getHandlers('sort') as $key => $sort) {
@@ -219,6 +223,14 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     }
 
     if (is_array($output) && !empty($output)) {
+      $classes = $output['#attributes']['class'] ?? [];
+      if ($this->view->display_handler->options['defaults']['css_class']) {
+        $add_classes( $classes, $this->view->displayHandlers->get('default')->options['css_class']);
+      }
+      else {
+        $add_classes($classes, $this->view->display_handler->options['css_class'] );
+      }
+      $output['#attributes']['class'] = $classes;
       $output += [
         '#view' => $this->view,
         '#display_id' => $this->displayID,
