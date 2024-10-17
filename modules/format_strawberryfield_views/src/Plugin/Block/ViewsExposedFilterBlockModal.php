@@ -98,17 +98,32 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
       }
     }
 
-
+    $advanced_search_real_id = NULL;
     // Hide Filters if needed
     foreach ($filter_ids as $field_id) {
-      $real_id = NULL;
+      $real_ids = [];
       if (isset($output[$field_id]) && is_array($output[$field_id])) {
-        $real_id = $field_id;
+        $real_ids[] = $field_id;
       }
       elseif (isset($output[$field_id.'_wrapper']) && is_array($output[$field_id.'_wrapper'])) {
-        $real_id = $field_id.'_wrapper';
+        $real_ids[] = $field_id.'_wrapper';
+        if (!empty($output[$field_id.'_wrapper']['#attributes']['data-advanced-wrapper'] ?? NULL)) {
+          // we are in the presence of a magical being. The advanced search filter. Things just got complicated.
+          $advanced_search_real_id = $field_id;
+          $count =  $output[$field_id.'_advanced_search_fields_count']['#value'] ?? 1;
+          for ($i = 1; $i <= $count; $i++) {
+            if (!empty($output[$field_id.'_wrapper_'.$i]['#attributes']['data-advanced-wrapper'] ?? NULL)) {
+              $real_ids[] = $field_id.'_wrapper_'.$i;
+            }
+          }
+        }
       }
-      if ($real_id) {
+      //Now this gets tricky with the advanced Search.
+      // we might have multiple $field_id.'_wrapper_1 to N';
+      // But i can do a trick here.
+      // Check if i have a specific data attribute. If so
+
+      foreach ($real_ids as $real_id) {
         $hide = $this->checkIfNeedsToHideFilter($output[$real_id] ?? []);
         if ($hide) {
           $output[$real_id]['#attributes']['class'][] = 'visually-hidden';
@@ -186,6 +201,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
       $output['actions']['submit']['#attributes']['aria-hidden'] = 'true';
     }
 
+    // Hide also the add more / remove if hiding advanced search
+    if (!$this->configuration['views_exposed_sbf_show_advanced_search_filter'] && $advanced_search_real_id) {
+      if (isset($output['actions'][$advanced_search_real_id . '_addone'])) {
+        $output['actions'][$advanced_search_real_id . '_addone']['#attributes']['class'][] = 'visually-hidden';
+        $output['actions'][$advanced_search_real_id . '_addone']['#attributes']['aria-hidden'] = 'true';
+      }
+    }
+
+
     if (!$this->configuration['views_exposed_sbf_show_reset'] && isset($output['actions']['reset'])) {
       $output['actions']['reset']['#attributes']['class'][] = 'visually-hidden';
       $output['actions']['reset']['#attributes']['aria-hidden'] = 'true';
@@ -224,11 +248,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
 
     if (is_array($output) && !empty($output)) {
       $classes = $output['#attributes']['class'] ?? [];
-      if ($this->view->display_handler->options['defaults']['css_class']) {
-        $add_classes( $classes, $this->view->displayHandlers->get('default')->options['css_class']);
+      if (!$this->configuration['views_exposed_sbf_override_css']) {
+        if ($this->view->display_handler->options['defaults']['css_class']) {
+          $add_classes($classes, $this->view->displayHandlers->get('default')->options['css_class']);
+        } else {
+          $add_classes($classes, $this->view->display_handler->options['css_class']);
+        }
       }
       else {
-        $add_classes($classes, $this->view->display_handler->options['css_class'] );
+        $add_classes($classes, trim($this->configuration['views_exposed_sbf_overriden_css'] ?? ''));
       }
       $output['#attributes']['class'] = $classes;
       $output += [
@@ -261,6 +289,21 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
    */
   protected function checkIfNeedsToHideFilter(array $element) {
     $hide = FALSE;
+    if (isset($element['#attributes']) && is_array($element['#attributes'])
+      && count(
+        array_intersect(array_keys($element['#attributes']), ['data-advanced-search-type', 'data-advanced-wrapper']
+      )
+    )) {
+      // We return sooner just in this case, so we don't end hiding a select or any other text in case we know it is
+      // an Advanced Search Element, but we are not/or are hiding.
+      if (!$this->configuration['views_exposed_sbf_show_advanced_search_filter']) {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+
     if (!$this->configuration['views_exposed_sbf_show_text_filter']
       && isset($element['#type'])
       && in_array(
@@ -321,6 +364,9 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $default_config['views_exposed_sbf_rename_submit_label'] = '';
     $default_config['views_exposed_sbf_copy_values_to_other_js'] = 0;
     $default_config['views_exposed_sbf_autosubmit_js'] = 0;
+    $default_config['views_exposed_sbf_show_advanced_search_filter'] = 0;
+    $default_config['views_exposed_sbf_override_css'] = 0;
+    $default_config['views_exposed_sbf_overriden_css'] = '';
     return $default_config;
   }
 
@@ -346,13 +392,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $this->configuration['views_exposed_sbf_show_text_filter'] = $form_state->getValue('views_exposed_sbf_show_text_filter', 0) ;
     $this->configuration['views_exposed_sbf_show_select_filter'] = $form_state->getValue('views_exposed_sbf_show_select_filter', 0) ;
     $this->configuration['views_exposed_sbf_show_checksandoptions_filter'] = $form_state->getValue('views_exposed_sbf_show_checksandoptions_filter',0);
+    $this->configuration['views_exposed_sbf_show_advanced_search_filter'] = $form_state->getValue('views_exposed_sbf_show_advanced_search_filter',0);
     $this->configuration['views_exposed_sbf_show_sort_filter'] = $form_state->getValue('views_exposed_sbf_show_sort_filter',0);
     $this->configuration['views_exposed_sbf_show_pager'] = $form_state->getValue('views_exposed_sbf_show_pager',0);
     $this->configuration['views_exposed_sbf_show_submit'] = $form_state->getValue('views_exposed_sbf_show_submit',0);
     $this->configuration['views_exposed_sbf_show_reset'] = $form_state->getValue('views_exposed_sbf_show_reset',0);
     $this->configuration['views_exposed_sbf_copy_values_to_other_js'] = $form_state->getValue('views_exposed_sbf_copy_values_to_other_js',0);
     $this->configuration['views_exposed_sbf_autosubmit_js'] = $form_state->getValue('views_exposed_sbf_autosubmit_js',0);
-
+    $this->configuration['views_exposed_sbf_override_css'] = $form_state->getValue('views_exposed_sbf_override_css',0);
+    $this->configuration['views_exposed_sbf_overriden_css'] = $form_state->getValue('views_exposed_sbf_override_css',0) ? $form_state->getValue('views_exposed_sbf_override_css','') : '';
     $form_state->unsetValue('views_label_checkbox');
     $form_state->unsetValue('views_exposed_sbf_rename_submit');
   }
@@ -368,6 +416,13 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
       '#title' => 'Exposed Form element and component Visibility'
     ];
 
+    $form['views_exposed_sbf_show_advanced_search_filter'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show Advanced Search Filter if exposed'),
+      '#description' => $this->t('Disabling Select and Text individually will have no effect on the Complex Advanced Search Filter and its internal components of those types'),
+      '#default_value' => !empty($this->configuration['views_exposed_sbf_show_advanced_search_filter']),
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+    ];
     $form['views_exposed_sbf_show_text_filter'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Show filter components of type textfield if exposed'),
@@ -452,7 +507,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     ];
     $form['views_exposed_sbf_autosubmit_js'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Auto submits the form, on user interaction/change of select, checkboxes and option elements. '),
+      '#title' => $this->t('Auto submits the form, on user interaction/change of select, checkboxes and option elements. This excludes Advanced Search and its internal components. '),
       '#default_value' => !empty($this->configuration['views_exposed_sbf_autosubmit_js']),
       '#fieldset' => 'views_exposed_sbf_fieldset',
       '#states' => [
@@ -478,6 +533,25 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         'visible' => [
           [
             ':input[name="settings[views_exposed_sbf_show_submit]"]' => ['checked' => TRUE],
+          ],
+        ],
+      ],
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+    ];
+    $form['views_exposed_sbf_override_css'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Override CSS inherited from the View '),
+      '#default_value' => !empty($this->configuration['views_exposed_sbf_override_css']),
+      '#fieldset' => 'views_exposed_sbf_fieldset',
+    ];
+    $form['views_exposed_sbf_overriden_css'] = [
+      '#title' => $this->t('CSS classes separated by spaces'),
+      '#type' => 'textfield',
+      '#default_value' => $this->configuration['views_exposed_sbf_overriden_css'] ?: '',
+      '#states' => [
+        'visible' => [
+          [
+            ':input[name="settings[views_exposed_sbf_override_css]"]' => ['checked' => TRUE],
           ],
         ],
       ],
