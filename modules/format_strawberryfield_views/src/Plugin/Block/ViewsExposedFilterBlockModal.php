@@ -400,7 +400,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $this->configuration['views_exposed_sbf_copy_values_to_other_js'] = $form_state->getValue('views_exposed_sbf_copy_values_to_other_js',0);
     $this->configuration['views_exposed_sbf_autosubmit_js'] = $form_state->getValue('views_exposed_sbf_autosubmit_js',0);
     $this->configuration['views_exposed_sbf_override_css'] = $form_state->getValue('views_exposed_sbf_override_css',0);
-    $this->configuration['views_exposed_sbf_overriden_css'] = $form_state->getValue('views_exposed_sbf_override_css',0) ? $form_state->getValue('views_exposed_sbf_override_css','') : '';
+    $this->configuration['views_exposed_sbf_overriden_css'] = $form_state->getValue('views_exposed_sbf_override_css', 0) ? $form_state->getValue('views_exposed_sbf_overriden_css','') : '';
     $form_state->unsetValue('views_label_checkbox');
     $form_state->unsetValue('views_exposed_sbf_rename_submit');
   }
