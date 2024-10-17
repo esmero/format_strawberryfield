@@ -646,6 +646,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#title' => !$form_state->get('exposed') ? $this->t('Value') : '',
       '#size' => 30,
       '#default_value' => $this->value[$this->options['expose']['identifier']] ?? '',
+      '#context' => [
+        '#filter_type' => 'sbf_advanced_search'
+      ],
     ];
     if (!empty($this->options['expose']['placeholder'])) {
       $form['value']['#attributes']['placeholder'] = $this->options['expose']['placeholder'];
@@ -722,6 +725,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $searched_fields_identifier
           = $this->options['expose']['searched_fields_id'];
       }
+      $inter_field_op_fields_identifier = $this->options['id'] . '_op';
+      if (!empty($this->options['expose']['operator_id'])) {
+        $inter_field_op_fields_identifier
+          = $this->options['expose']['operator_id'];
+      }
 
       // Remove the group operator if found
       unset($form[$searched_fields_identifier]);
@@ -733,6 +741,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#multiple' => $this->options['expose']['multiple'] ?? FALSE,
         '#size'     => $multiple_exposed_fields,
         '#default_value' => $form_state->getValue($searched_fields_identifier),
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
+        ],
         '#attributes' => [
           'data-advanced-search-type' => 'fields'
         ]
@@ -745,6 +756,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       }
 
       $form[$this->options['id'] . '_wrapper'][$searched_fields_identifier] = $newelements[$searched_fields_identifier];
+      if (isset($form[$this->options['id'] . '_wrapper'][$inter_field_op_fields_identifier])) {
+        $form[$this->options['id'] . '_wrapper'][$inter_field_op_fields_identifier]['#attributes']['data-advanced-search-type'] = 'boolean';
+      }
     }
 
     $advanced_search_operator_id = $this->options['id'] . '_group_operator';
@@ -769,6 +783,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#default_value' => $form_state->getValue($advanced_search_operator_id,'or'),
         '#attributes' => [
           'data-advanced-search-type' => 'op'
+        ],
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
         ]
       ];
       $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
@@ -813,6 +830,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#access' => $enable_more,
         '#weight' => '-100',
         '#group' => 'actions',
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
+        ],
       ];
       // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
       // trick the JS, won't be able to process more or less than we have defined in the settings.
@@ -847,6 +867,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           '#access' => $enable_less,
           '#weight' => '-101',
           '#group' => 'actions',
+          '#context' => [
+            '#filter_type' => 'sbf_advanced_search'
+          ],
         ];
       }
     // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
@@ -940,8 +963,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
      }
    }
+   // Adds also the data attribute but with a different value to the main/initial wrapper.
+   if (isset($form[$this->options['id'].'_wrapper'])) {
+     $form[$this->options['id'].'_wrapper']['#attributes']['data-advanced-wrapper'] = "main";
+   }
 
-    $form = $form;
   }
 
 
