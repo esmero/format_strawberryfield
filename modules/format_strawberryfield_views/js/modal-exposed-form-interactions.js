@@ -27,8 +27,10 @@
         }
         // Note that hidden is allowed bc there might be cases where we override Selects to use Bootstrap components. So the
         // original value/and trigger is the hidden element after being set by the component.
-        const allowed_autosubmit_types = ['select', 'checkbox', 'radio', 'hidden'];
-        if (allowed_autosubmit_types.includes(event.target.type)) {
+        const allowed_autosubmit_types = ['select', 'select-one', 'checkbox', 'radio', 'hidden'];
+        // Don't allow Advanced Search to trigger anything.
+
+        if (allowed_autosubmit_types.includes(event.target.type) && typeof event.target.dataset?.advancedSearchType == "undefined") {
           const autosubmit_form = event.target.closest('div[data-sbf-modalblock-autosubmit=true] form');
           if (autosubmit_form) {
             autosubmit_form.submit();
@@ -40,7 +42,7 @@
         input.addEventListener("change", this.onChangeHandler);
         //const $combined_view = $input.data('drupal-target-view');
       }
-      if ($context.is('div[ata-sbf-modalblock-copytothers=true], div[data-sbf-modalblock-autosubmit=true] form')) {
+      if ($context.is('div[data-sbf-modalblock-copytothers=true], div[data-sbf-modalblock-autosubmit=true] form')) {
         var $that = this;
         once('modal-block-form', 'form', context).forEach(function (value, index) {
             $that.attachModalFormInteractions(value);
