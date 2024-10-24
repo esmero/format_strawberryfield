@@ -1,0 +1,9 @@
+services:
+  format_strawberryfield_facets.search_api_solr_subscriber:
+    class: Drupal\format_strawberryfield_facets\EventSubscriber\SearchApiSolrFacetEventSubscriber
+    tags:
+      - { name: event_subscriber }
+  format_strawberryfield_facets.route_subscriber:
+    class: Drupal\format_strawberryfield_facets\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }

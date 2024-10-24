@@ -63,8 +63,6 @@ class DateRangeWidget extends WidgetPluginBase {
       $max = gmdate('Y-m-d', (int) $max);
     }
 
-
-
     $build['#items'] = [
       'min' => [
         '#type' => 'date',

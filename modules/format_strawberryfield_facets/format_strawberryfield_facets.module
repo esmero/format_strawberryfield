@@ -1,0 +1,30 @@
+<?php
+function format_strawberryfield_facets_facets_search_api_query_type_mapping_alter($backend_plugin_id, array &$query_types) {
+  if ($backend_plugin_id == 'search_api_solr') {
+    $query_types['date_range'] = 'search_api_sbf_date_range';
+  }
+}
+/**
+ * Implements hook_theme().
+ */
+function format_strawberryfield_facets_theme($existing, $type, $theme, $path) {
+  return [
+    'facets_item_list__sbf_range_date_slider' => [
+      'variables' => [
+        'facet' => NULL,
+        'items' => [],
+        'title' => '',
+        'list_type' => 'ul',
+        'wrapper_attributes' => [],
+        'attributes' => [],
+        'empty' => NULL,
+        'context' => [],
+      ],
+    ],
+  ];
+}
+
+
+function format_strawberryfield_facets_preprocess_facets_item_list__sbf_range_date_slider(array &$variables) {
+  template_preprocess_item_list($variables);
+}
