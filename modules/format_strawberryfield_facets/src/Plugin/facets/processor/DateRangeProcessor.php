@@ -113,7 +113,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
       }
 
-      $query[$filter_key][] = $facet->getUrlAlias() . $url_processor->getSeparator() . '(min:__date_range_min__,max:__date_range_max__)';
+      $query[$filter_key][] = $facet->getUrlAlias() . $url_processor->getSeparator() . '(min:__range_slider_min__,max:__range_slider_max__)';
       $url->setOption('query', $query);
       $result->setUrl($url);
     }
