@@ -30,6 +30,7 @@ class DateSliderWidget extends WidgetPluginBase {
         'min_type' => 'search_result',
         'min_value' => 1977,
         'max_type' => 'search_result',
+        'restrict_to_fixed' => TRUE,
         'allow_full_entry' => TRUE,
         'allow_year_entry' => TRUE,
         'show_ad_bc' => TRUE,
@@ -283,12 +284,18 @@ class DateSliderWidget extends WidgetPluginBase {
       '#type' => 'number',
       '#title' => $this->t('Maximum value'),
       '#default_value' => $config['max_value'],
+      '#description' => t('Any valued larger than the current YEAR will be capped to NOW().No metadata futurism for the sake of performance.'),
       '#size' => 5,
       '#states' => [
         'visible' => [
           'input[name="widget_config[max_type]"]' => ['value' => 'fixed'],
         ],
       ],
+    ];
+    $form['restrict_to_fixed'] =  [
+      '#type'          => 'checkbox',
+      '#title'         => $this->t('Even if Results are used as max/min, cap max and min to the Fixed values. This allows Outliers and wrong metadata to be not taking in account.'),
+      '#default_value' => $config['restrict_to_fixed'] ?? $this->defaultConfiguration()['restrict_to_fixed'],
     ];
 
     $form['reset_text'] = [

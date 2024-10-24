@@ -48,6 +48,9 @@ facet.widget.config.sbf_range_date_slider:
     max_value:
       type: integer
       label: 'Maximum value'
+    restrict_to_fixed:
+      type: Boolean
+      label: 'Always cap values to Fixed max and min'
     step:
       type: integer
       label: 'Step'
