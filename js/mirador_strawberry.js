@@ -226,6 +226,8 @@
               manifestId: manifest.id,
             })).view
           }
+          let allCanvases = yield effects.select(Mirador.selectors.getCanvases, { windowId});
+
           let canvasIds = [];
           let currentDrupalNodeId = [];
           let currentDrupalNodeForViews = [];
@@ -451,12 +453,14 @@
                 });
               }
             }
+
             $options = {
               ...$options,
               ...viewer_override,
             };
           }
-
+          $options.state = {};
+          $options.state.start_canvas = 0;
 
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
@@ -473,6 +477,7 @@
               // @TODO check on that diego..
               document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
               document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
+              const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
             }
           }
           // Work around https://github.com/ProjectMirador/mirador/issues/3486

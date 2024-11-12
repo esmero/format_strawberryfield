@@ -86,6 +86,11 @@ class SearchApiDateRange extends QueryTypePluginBase {
    *   An array of default options for the facet.
    */
   protected function getFacetOptions() {
+
+    $this->facet->getActiveItems();
+    $url_processor_handler = $this->facet->getProcessors()['url_processor_handler'];
+    $url_processor = $url_processor_handler->getProcessor();
+    $filter_key = $url_processor->getActiveFilters();
     return [
       'field' => $this->facet->getFieldIdentifier(),
       'limit' => $this->facet->getHardLimit(),
