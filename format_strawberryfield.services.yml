@@ -3,7 +3,7 @@ services:
     class: Drupal\format_strawberryfield\TwigExtension
     tags:
       - {name: twig.extension}
-    arguments: ['@renderer', '@plugin.manager.search_api.parse_mode']
+    arguments: ['@renderer', '@plugin.manager.search_api.parse_mode', '@request_stack', '@kernel']
   format_strawberryfield.deletetmpstorage_subscriber:
     class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldDeleteTmpStorage
     tags:

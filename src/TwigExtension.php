@@ -4,9 +4,15 @@ namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Twig\Extension\AbstractExtension;
+use Drupal\Core\Url;
 use Twig\Markup;
 use Twig\TwigTest;
 use Twig\TwigFilter;
@@ -39,16 +45,32 @@ class TwigExtension extends AbstractExtension {
   protected $renderer;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
+   * @var HttpKernelInterface
+   */
+  protected HttpKernelInterface $httpKernel;
+
+  /**
    * Constructs \Drupal\format_strawberryfield\TwigExtension
    *
-   * @param \Drupal\Core\Render\RendererInterface $renderer
+   * @param RendererInterface $renderer
    *   The renderer.
-   * @param \Drupal\search_api\ParseMode\ParseModePluginManager $parse_mode_manager
+   * @param ParseModePluginManager $parse_mode_manager
    *   The search API parse mode manager.
+   * @param RequestStack $request_stack
+   * @param HttpKernelInterface $http_kernel
    */
-  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager) {
+  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager, RequestStack $request_stack, HttpKernelInterface $http_kernel) {
     $this->renderer = $renderer;
     $this->parseModeManager = $parse_mode_manager;
+    $this->requestStack = $request_stack;
+    $this->httpKernel = $http_kernel;
   }
 
   public function getTests(): array {
@@ -80,6 +102,7 @@ class TwigExtension extends AbstractExtension {
         [$this, 'clipboardCopy']),
       new TwigFunction('sbf_search_api',
         [$this, 'searchApiQuery']),
+      new TwigFunction('sbf_file_content', [$this, 'sbfFileContent'], ['is_safe' => ['all']]),
     ];
   }
 
@@ -121,7 +144,7 @@ class TwigExtension extends AbstractExtension {
     string $label,
     string $entity_type,
     string $bundle_identifier = NULL,
-    $limit = 1
+           $limit = 1
   ): ?array {
     $fields = [
       'node' => ['title', 'type'],
@@ -583,4 +606,41 @@ class TwigExtension extends AbstractExtension {
     }
     return [];
   }
+
+  public function sbfFileContent(string $node_uuid, string $file_uuid, string $format) {
+    $current_request = $this->requestStack->getCurrentRequest();
+    $file_binary_url = Url::fromRoute('format_strawberryfield.binary', ['node' => $node_uuid, 'uuid' => $file_uuid, 'format' => $format ], [])
+      ->toString(TRUE)
+      ->getGeneratedUrl();
+
+    $request = Request::create($file_binary_url, 'GET', [], $current_request->cookies->all(), [], $current_request->server->all()
+    );
+    if ($current_request->getSession()) {
+      $request->setSession($current_request->getSession());
+    }
+    try {
+      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
+    }
+    catch (\Exception $e) {
+      return $e->getMessage();
+    }
+
+    if ($this->requestStack->getCurrentRequest() !== $current_request->getPathInfo()) {
+      $this->requestStack->pop();
+    }
+    if ($response->isSuccessful() && $response instanceof BinaryFileResponse) {
+      /** @var \Symfony\Component\HttpFoundation\File\File $file */
+      $file = $response->getFile();
+      if ($file) {
+        // Only return Text values we allow also as output of a Twig Template
+        // This will at least stop users from trying to fetch images and is faster
+        // That preloading the File and validating it upfront for valid mimetypes?
+        if (isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
+          return $file->getContent();
+        }
+      }
+    }
+    return '';
+  }
+
 }
