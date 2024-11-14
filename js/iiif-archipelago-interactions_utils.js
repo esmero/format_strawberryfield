@@ -1,4 +1,4 @@
-(function ($, Drupal, drupalSettings, jmespath) {
+(function ($, Drupal, drupalSettings, jmespath, once) {
 
   'use strict';
   var FormatStrawberryfieldIiifUtils = {
@@ -44,7 +44,23 @@
         nodeidsArray = nodeids
       }
       const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {nodeid: nodeidsArray} });
-      el.dispatchEvent(event);
+      // A view might/might not have yet attach itself to listen.
+      // We have no control on Behavior attachment order in Drupal
+      // And can also not make this library depend at all on sbf-views-ajax-interactions.
+      // But we can check if it is already attached but just using once()
+      // and if not, delay with a future timeout the dispatching in the hope it finds its way.
+      // Literally give it a second after sync code has run.
+      // See  Drupal.behaviors.sbf_views_ajax_interactions
+      const viewEventListenerInit = once.filter('listen-ado-view-change', 'body')
+      if (!viewEventListenerInit?.length) {
+        setTimeout(() => {
+           el.dispatchEvent(event);
+         }
+         , 1000);
+     }
+     else {
+       el.dispatchEvent(event);
+     }
       return this;
     },
 
@@ -61,7 +77,16 @@
         encodedImageAnnotationOne = encodedImageAnnotation
       }
       const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {image_annotation: encodedImageAnnotationOne} });
-      el.dispatchEvent(event);
+      const viewEventListenerInit = once.filter('listen-ado-view-change', 'body')
+      if (!viewEventListenerInit?.length) {
+        setTimeout(() => {
+            el.dispatchEvent(event);
+          }
+          , 1000);
+      }
+      else {
+        el.dispatchEvent(event);
+      }
       return this;
     },
 
@@ -262,4 +287,4 @@
   /* Make it part of the Global Drupal Object */
   Drupal.FormatStrawberryfieldIiifUtils = FormatStrawberryfieldIiifUtils;
 
-})(jQuery, Drupal, drupalSettings, jmespath);
+})(jQuery, Drupal, drupalSettings, jmespath, once);

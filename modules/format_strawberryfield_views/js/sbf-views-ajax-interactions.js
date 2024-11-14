@@ -53,7 +53,7 @@
 
   Drupal.behaviors.sbf_views_ajax_interactions = {
     attach: function (context, settings) {
-      once('listen-ado-view-change', 'div.view', context).forEach(function (value, index) {
+      once('listen-ado-view-change', 'body').forEach(function (value, index) {
         console.log("initializing 'sbf:ado:view:change' event listener on ADO changes");
         // Because this is a single Listener for all views that have this enabled
         // the actual caller id will be passed as part of the event data

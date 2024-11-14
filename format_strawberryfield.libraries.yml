@@ -6,6 +6,7 @@ iiif_formatstrawberryfield_utils:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/jmespath_strawberry
     - format_strawberryfield/svgpath_polyfull
