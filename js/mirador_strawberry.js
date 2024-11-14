@@ -194,7 +194,22 @@
           }
         }
 
-        const newParams = Object.fromEntries(new URLSearchParams(location.search))
+        const newParams = {};
+        const urlArray = location.hash.replace('#','').split('/');
+        const urlHash = {};
+        // Because one action might not have the value for another action
+        // We will parse the params upfront from the hash.
+        for (let i = 0; i < urlArray.length; i += 2) {
+          urlHash[urlArray[i]] = urlArray[i + 1];
+        }
+        if (urlHash['search'] != undefined) {
+          newParams.search = decodeURIComponent(urlHash['search'].replace(/\+/g, " "));
+        }
+        if (urlHash['page'] != undefined) {
+          newParams.page = decodeURIComponent(urlHash['page'].replace(/\+/g, " "));
+        }
+
+
         if (
           action.type === ActionTypes.SET_CANVAS ||
           action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
@@ -282,6 +297,14 @@
               canvas => canvas['@id']
             );
           }
+          // Build page parameter
+          if (visibleCanvases?.length) {
+            const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
+            if (canvasIndices.length == 1) {
+              newParams.page = canvasIndices[0]
+            }
+          }
+          // even if we have no search being triggered by interactions, we should fetch the
 
           // Now at the end. If a VTT annotation requested a Canvas to be set. we need to check if we have in the config
           // A temporary stored valued of the last clicked annotation.
@@ -300,33 +323,21 @@
           const { windowId, companionWindowId } = action
           const query = yield effects.select(Mirador.selectors.getSearchQuery, { companionWindowId, windowId })
           newParams.search = query
-          let $fragment = '';
-          for (const [p, val] of new URLSearchParams(newParams).entries()) {
-            $fragment += `${p}/${val}/`;
-          };
-          $fragment = $fragment.slice(0, -1);
-          history.replaceState(
-            { searchParams: newParams },
-            '',
-            `${window.location.pathname}#${$fragment}`
-          );
         }
         else if (action.type === ActionTypes.REMOVE_SEARCH) {
           delete newParams.search
-          let $fragment = '';
-          for (const [p, val] of new URLSearchParams(newParams).entries()) {
-            $fragment += `${p}/${val}/`;
-          };
-          $fragment = $fragment.slice(0, -1);
-          history.replaceState(
-            { searchParams: newParams },
-            '',
-            `${window.location.pathname}#${$fragment}`
-          );
         }
-
-
-
+        // Set the fragment, no matter what.
+        let $fragment = '';
+        for (const [p, val] of new URLSearchParams(newParams).entries()) {
+          $fragment += `${p}/${val}/`;
+        };
+        $fragment = $fragment.slice(0, -1);
+        history.replaceState(
+          { searchParams: newParams },
+          '',
+          `${window.location.pathname}#${$fragment}`
+        );
       }
       function* rootSaga() {
         yield effects.takeEvery(
@@ -423,9 +434,30 @@
             }
           };
 
+          const readFragmentPage = function() {
+            const urlArray = window.location.hash.replace('#','').split('/');
+            const urlHash = {};
+            for (let i = 0; i < urlArray.length; i += 2) {
+              urlHash[urlArray[i]] = urlArray[i + 1];
+            }
+            if (urlHash['page'] != undefined) {
+              return parseInt(decodeURIComponent(urlHash['page'].replace(/\+/g, " ")));
+            }
+            else {
+              return 0;
+            }
+          };
+
           const search_string = readFragmentSearch();
+          const page_string = readFragmentPage();
           if (search_string.length > 0 ) {
             $options.windows[0].defaultSearchQuery = search_string;
+          }
+          // Note. if the setting "switchCanvasOnSearch": true is selected
+          // And there is a search
+          // And there is a hit, start canvas will have no effect. You are warned.
+          if (parseInt(page_string) > 0 ) {
+            $options.windows[0].canvasIndex = parseInt(page_string) - 1 ;
           }
 
           // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
@@ -460,8 +492,6 @@
             };
           }
           $options.state = {};
-          $options.state.start_canvas = 0;
-
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
           if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
