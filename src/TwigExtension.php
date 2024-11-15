@@ -3,6 +3,8 @@
 namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\file\FileInterface;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\search_api\SearchApiException;
@@ -608,39 +610,37 @@ class TwigExtension extends AbstractExtension {
   }
 
   public function sbfFileContent(string $node_uuid, string $file_uuid, string $format) {
-    $current_request = $this->requestStack->getCurrentRequest();
-    $file_binary_url = Url::fromRoute('format_strawberryfield.binary', ['node' => $node_uuid, 'uuid' => $file_uuid, 'format' => $format ], [])
-      ->toString(TRUE)
-      ->getGeneratedUrl();
-
-    $request = Request::create($file_binary_url, 'GET', [], $current_request->cookies->all(), [], $current_request->server->all()
-    );
-    if ($current_request->getSession()) {
-      $request->setSession($current_request->getSession());
-    }
     try {
-      $response = $this->httpKernel->handle($request, HttpKernelInterface::SUB_REQUEST);
-    }
-    catch (\Exception $e) {
-      return $e->getMessage();
-    }
+      /** @var ContentEntityInterface[] $nodes */
+      $nodes = \Drupal::entityTypeManager()
+        ->getStorage('node')
+        ->loadByProperties(['uuid' => $node_uuid]);
+      $node = reset($nodes);
 
-    if ($this->requestStack->getCurrentRequest() !== $current_request->getPathInfo()) {
-      $this->requestStack->pop();
-    }
-    if ($response->isSuccessful() && $response instanceof BinaryFileResponse) {
-      /** @var \Symfony\Component\HttpFoundation\File\File $file */
-      $file = $response->getFile();
-      if ($file) {
-        // Only return Text values we allow also as output of a Twig Template
-        // This will at least stop users from trying to fetch images and is faster
-        // That preloading the File and validating it upfront for valid mimetypes?
-        if (isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
-          return $file->getContent();
+      if ($node && $node->access('view') && $node->hasField('field_file_drop')) {
+        /** @var FileInterface[] $files */
+        $files = \Drupal::entityTypeManager()
+          ->getStorage('file')
+          ->loadByProperties(['uuid' => $file_uuid]);
+        $file = reset($files);
+        $found = FALSE;
+        $files_referenced = $node->get('field_file_drop')->getValue();
+        foreach ($files_referenced as $fileinfo) {
+          if ($fileinfo['target_id'] == $file->id()) {
+            /* @var $found \Drupal\file\Entity\File */
+            $found = $file;
+            break;
+          }
+        }
+        if($found) {
+          return file_get_contents($file->getFileUri());
         }
       }
     }
+    catch (\Exception $exception) {
+
+    }
+
     return '';
   }
-
 }
