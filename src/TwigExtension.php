@@ -632,13 +632,13 @@ class TwigExtension extends AbstractExtension {
             break;
           }
         }
-        if($found) {
-          return file_get_contents($file->getFileUri());
+        if($found && isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
+            return file_get_contents($file->getFileUri());
         }
       }
     }
     catch (\Exception $exception) {
-
+      return '';
     }
 
     return '';
