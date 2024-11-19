@@ -221,9 +221,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       ->getStorage('search_api_index')
       ->loadMultiple();
 
+    $field = $this->config('strawberryfield.archipelago_solr_settings.ado_type')->get('field') ?? 'type_1';
     $facets = [
       'type' => [
-        'field' => 'type_1',
+        'field' => $field,
         'limit' => 50,
         'operator' => 'AND',
         'min_count' => 1,
