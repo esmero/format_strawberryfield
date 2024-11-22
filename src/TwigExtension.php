@@ -2,20 +2,24 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Render\AttachmentsInterface;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Render\RenderableInterface;
+use Drupal\format_strawberryfield\Template\TwigNodeVisitor;
 use Drupal\file\FileInterface;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
-use Drupal\search_api\SearchApiException;
-use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Twig\Environment;
 use Twig\Extension\AbstractExtension;
-use Drupal\Core\Url;
 use Twig\Markup;
+use Twig\Markup as TwigMarkup;
+use Twig\Runtime\EscaperRuntime;
 use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -123,6 +127,19 @@ class TwigExtension extends AbstractExtension {
         ['is_safe' => ['all']]),
       new TwigFilter('edtf_2_iso_date', [$this, 'edtfToIsoDate'],
         ['is_safe' => ['all']]),
+      // Replace Drupal core's twig escape filter, that throws exception on invalid render array with our own.
+      new TwigFilter('format_strawberry_safe_escape', [$this, 'escapeFilter'], ['needs_environment' => TRUE, 'is_safe_callback' => 'twig_escape_filter_is_safe']),
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getNodeVisitors() {
+    // The node visitor is needed to wrap all variables with
+    // render_var -> TwigExtension->renderVar() function.
+    return [
+      new TwigNodeVisitor(),
     ];
   }
 
@@ -642,5 +659,130 @@ class TwigExtension extends AbstractExtension {
     }
 
     return '';
+  }
+
+  /**
+   * Overrides drupal_escape().
+   *
+   * Replacement function for Drupal's core Twig's escape filter.
+   *
+   * @param \Twig\Environment $env
+   *   A Twig Environment instance.
+   * @param mixed $arg
+   *   The value to be escaped.
+   * @param string $strategy
+   *   The escaping strategy. Defaults to 'html'.
+   * @param string $charset
+   *   The charset.
+   * @param bool $autoescape
+   *   Whether the function is called by the auto-escaping feature (TRUE) or by
+   *   the developer (FALSE).
+   *
+   * @return string|null
+   *   The escaped, rendered output, or NULL if there is no valid output.
+   *
+   * @throws \Exception
+   *   When $arg is passed as an object which does not implement __toString(),
+   *   RenderableInterface or toString().
+   */
+  public function escapeFilter(Environment $env, $arg, $strategy = 'html', $charset = NULL, $autoescape = FALSE) {
+    // Check for a numeric zero int or float.
+    if ($arg === 0 || $arg === 0.0) {
+      return 0;
+    }
+
+    // Return early for NULL and empty arrays.
+    if ($arg == NULL) {
+      return NULL;
+    }
+
+    $this->bubbleArgMetadata($arg);
+
+    // Keep \Twig\Markup objects intact to support autoescaping.
+    if ($autoescape && ($arg instanceof TwigMarkup || $arg instanceof MarkupInterface)) {
+      return $arg;
+    }
+
+    $return = NULL;
+
+    if (is_scalar($arg)) {
+      $return = (string) $arg;
+    }
+    elseif (is_object($arg)) {
+      if ($arg instanceof RenderableInterface) {
+        $arg = $arg->toRenderable();
+      }
+      elseif (method_exists($arg, '__toString')) {
+        $return = (string) $arg;
+      }
+      // You can't throw exceptions in the magic PHP __toString() methods, see
+      // http://php.net/manual/language.oop5.magic.php#object.tostring so
+      // we also support a toString method.
+      elseif (method_exists($arg, 'toString')) {
+        $return = $arg->toString();
+      }
+      else {
+        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+      }
+    }
+
+    // We have a string or an object converted to a string: Autoescape it!
+    if (isset($return)) {
+      if ($autoescape && $return instanceof MarkupInterface) {
+        return $return;
+      }
+      // Drupal only supports the HTML escaping strategy, so provide a
+      // fallback for other strategies.
+      if ($strategy == 'html') {
+        return Html::escape($return);
+      }
+      return $env->getRuntime(EscaperRuntime::class)->escape($return, $strategy, $charset, $autoescape);
+    }
+
+    // This could be a normal render array, which is no longer safe by definition bc renderer is too strict on render arrays
+    // Early return if this element was pre-rendered (no need to re-render).
+    if (isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0) {
+      return $arg['#markup'];
+    }
+    $arg['#printed'] = FALSE;
+    $rendered_value = NULL;
+    try {
+      $rendered_value = $this->renderer->render($arg);
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
+    }
+    return $rendered_value;
+  }
+
+  /**
+   * Bubbles Twig template argument's cacheability & attachment metadata.
+   *
+   * For example: a generated link or generated URL object is passed as a Twig
+   * template argument, and its bubbleable metadata must be bubbled.
+   *
+   * @see \Drupal\Core\GeneratedLink
+   * @see \Drupal\Core\GeneratedUrl
+   *
+   * @param mixed $arg
+   *   A Twig template argument that is about to be printed.
+   *
+   * @see \Drupal\Core\Theme\ThemeManager::render()
+   * @see \Drupal\Core\Render\RendererInterface::render()
+   */
+  protected function bubbleArgMetadata($arg) {
+    // If it's a renderable, then it'll be up to the generated render array it
+    // returns to contain the necessary cacheability & attachment metadata. If
+    // it doesn't implement CacheableDependencyInterface or AttachmentsInterface
+    // then there is nothing to do here.
+    if ($arg instanceof RenderableInterface || !($arg instanceof CacheableDependencyInterface || $arg instanceof AttachmentsInterface)) {
+      return;
+    }
+
+    $arg_bubbleable = [];
+    BubbleableMetadata::createFromObject($arg)
+      ->applyTo($arg_bubbleable);
+
+    $this->renderer->render($arg_bubbleable);
   }
 }
