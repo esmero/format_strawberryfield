@@ -208,29 +208,27 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => TRUE,
           '#attributes' => [
-            'data-formatter-selector' => 'mediasource',
+            'data-mirador-formatter-selector' => 'mediasource',
           ],
           '#ajax' => $ajax,
         ],
         'custom_js' => [
           '#type' => 'checkbox',
-          '#title' => t('Use Custom Archipelago Mirador with Plugins'),
+          '#title' => t('Use Custom Archipelago Mirador 4.0 with Image Tools Plugin'),
           '#default_value' => $this->getSetting('custom_js') ?? FALSE,
           '#attributes' => [
-            'data-formatter-selector' => 'custom-js',
+            'data-mirador2-formatter-selector' => 'custom_js',
           ],
         ],
         'mirador_version' => [
           '#type' => 'radios',
-          '#options' => [3 => 'Mirador 3', 4 => 'Mirador 4'],
+          '#options' => [3 => 'Mirador 3.3', 4 => 'Mirador 4.0'],
           '#title' => t('Which Version from CDN'),
           '#default_value' => $this->getSetting('mirador_version') ?? 3,
           '#states' => [
-            [
               'visible' => [
-                ':input[data-formatter-selector="custom-js"]' => ['checked' => FALSE],
-              ]
-            ],
+                ':checkbox[data-mirador2-formatter-selector="custom_js"]' => ['checked' => FALSE],
+              ],
           ]
         ],
         'viewer_overrides' => [
@@ -270,12 +268,12 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#states' => [
             [
               'visible' => [
-                ':input[data-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
+                ':input[data-mirador-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
               ]
             ],
             [
               'visible' => [
-                ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
+                ':input[data-mirador-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
               ]
             ]
           ],
@@ -288,7 +286,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('manifesturl_json_key_source'),
           '#states' => [
             'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
+              ':input[data-mirador-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
             ],
           ],
         ],
@@ -303,7 +301,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           ),
           '#states' => [
             'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
+              ':input[data-mirador-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
             ],
           ],
         ],
@@ -335,7 +333,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
           '#required' => FALSE,
           '#attributes' => [
-            'data-formatter-selector' => 'hide_on_embargo',
+            'data-mirador-formatter-selector' => 'hide_on_embargo',
           ],
         ],
       ] + parent::settingsForm($form, $form_state);

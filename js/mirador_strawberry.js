@@ -384,12 +384,6 @@
               allowClose: false,
               imageToolsEnabled: true,
               imageToolsOpen: true,
-              views: [
-                { key: 'single', behaviors: [null, 'individuals'] },
-                { key: 'book', behaviors: [null, 'paged'] },
-                { key: 'scroll', behaviors: ['continuous'] },
-                { key: 'gallery' },
-              ],
             };
             $options.windows[0].workspaceControlPanel = {
               enabled: false
@@ -398,6 +392,18 @@
               isWorkspaceAddVisible: false,
               allowNewWindows: true,
             };
+            // Needed bc of how Image Pluging uses Canvas info/get Image from OSD to apply effects.
+            $options.osdConfig = {
+              crossOriginPolicy: 'Anonymous'
+            }
+            $options.theme = {
+              palette: {
+                primary: {
+                  main: '#1967d2',
+                },
+              },
+            };
+
           }
 
 
@@ -495,8 +501,16 @@
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
           if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-            const miradorInstance = renderMirador($options);
-            console.log('initializing Custom Mirador 3.3.0')
+            const miradorInstance = Mirador.viewerWithImagePlugin($options, [formatStrawberryFieldReactPlugin]);
+            console.log('initializing Custom Mirador 4.0 with Image Tools')
+            if (miradorInstance) {
+              // To allow bubling up we need to add this one to the document
+              // Multiple Miradors will replace each other?
+              // @TODO check on that diego..
+              document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
+              document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
+              const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
+            }
           }
           else {
             const miradorInstance = Mirador.viewer($options, [formatStrawberryFieldReactPlugin]);
@@ -510,6 +524,7 @@
               const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
             }
           }
+
           // Work around https://github.com/ProjectMirador/mirador/issues/3486
           const mirador_window = document.getElementById(element_id);
           var observer = new MutationObserver(function(mutations) {
