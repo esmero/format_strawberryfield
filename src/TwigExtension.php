@@ -744,8 +744,10 @@ class TwigExtension extends AbstractExtension {
     if (isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0) {
       return $arg['#markup'];
     }
+
     $arg['#printed'] = FALSE;
     $rendered_value = NULL;
+
     try {
       $rendered_value = $this->renderer->render($arg);
     }
