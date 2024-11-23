@@ -13,6 +13,7 @@ use Drupal\format_strawberryfield\Template\TwigNodeVisitor;
 use Drupal\file\FileInterface;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
+use Psr\Log\LogLevel;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Twig\Environment;
@@ -696,7 +697,22 @@ class TwigExtension extends AbstractExtension {
       return NULL;
     }
 
+    // Quick and simple. We can only bail out Array keys that are numeric that have also a scalar as value.
+    // Many render arrays can be nested of sub-sub things. One does never know.
+    if (is_array($arg)) {
+      foreach ($arg as $key => $value) {
+        if (is_int($key) && is_scalar($value)) {
+          \Drupal::logger('format_strawberryfield')->log(LogLevel::WARNING, 'Array can not be printed via Template for key <em>@key</em> with value: <em>@value</em>', [
+            '@key' => $key,
+            '@value' => $value,
+          ]);
+          return NULL;
+        }
+      }
+    }
+
     $this->bubbleArgMetadata($arg);
+
 
     // Keep \Twig\Markup objects intact to support autoescaping.
     if ($autoescape && ($arg instanceof TwigMarkup || $arg instanceof MarkupInterface)) {
@@ -747,11 +763,13 @@ class TwigExtension extends AbstractExtension {
 
     $arg['#printed'] = FALSE;
     $rendered_value = NULL;
-
     try {
       $rendered_value = $this->renderer->render($arg);
     }
     catch (\Exception $e) {
+      // This will fail on an AjaxResponse or anything that is using RenderRoot.
+      // I have no solution yet.
+      // But will work on Template previews. etc.
       \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
     }
     return $rendered_value;
