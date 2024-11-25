@@ -706,7 +706,9 @@ class TwigExtension extends AbstractExtension {
             '@key' => $key,
             '@value' => $value,
           ]);
-          return NULL;
+          if (!(isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0)) {
+            return NULL;
+          }
         }
       }
     }
@@ -766,10 +768,12 @@ class TwigExtension extends AbstractExtension {
     try {
       $rendered_value = $this->renderer->render($arg);
     }
-    catch (\Exception $e) {
-      // This will fail on an AjaxResponse or anything that is using RenderRoot.
+    catch (\LogicException $e) {
+      // We can't just catch any exception. The Ajax reponder from the FormBuilder will throw exceptions
+      // Just to close the response! Drupal gosh. So hard!
+      // This Might fail on an AjaxResponse or anything that is using RenderRoot?
       // I have no solution yet.
-      // But will work on Template previews. etc.
+      // But will work on Template previews and full page renders.
       \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
     }
     return $rendered_value;
