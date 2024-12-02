@@ -702,7 +702,7 @@ class MetadataAPIController extends ControllerBase
             break;
 
           case 'application/xml':
-          case 'text/text':
+          case 'text/plain':
           case 'text/turtle':
           case 'text/html':
           case 'text/csv':
@@ -759,7 +759,7 @@ class MetadataAPIController extends ControllerBase
             break;
 
           case 'application/xml':
-          case 'text/text':
+          case 'text/plain':
           case 'text/turtle':
           case 'text/html':
           case 'text/csv':
