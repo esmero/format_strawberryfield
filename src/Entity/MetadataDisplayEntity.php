@@ -169,7 +169,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
     'application/json' => 'JSON',
     'application/ld+json' => 'JSON-LD',
     'application/xml' => 'XML',
-    'text/text' => 'TEXT',
+    'text/plain' => 'TEXT',
     'text/turtle' => 'RDF/TURTLE',
     'text/csv' => 'CSV',
   ];
