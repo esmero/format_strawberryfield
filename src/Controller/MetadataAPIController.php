@@ -721,7 +721,7 @@ class MetadataAPIController extends ControllerBase
 
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
-          $response->headers->set('access-control-allow-origin', '*');
+          $response->headers->set('Access-Control-Allow-Origin', '*');
           $response->addCacheableDependency($metadataapiconfig_entity);
           $response->addCacheableDependency($metadatadisplay_item_entity);
           $response->addCacheableDependency(
