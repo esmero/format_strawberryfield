@@ -200,23 +200,23 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set("Content-Length", $size);
         $response->prepare($request);
         $response->setCallback(function () use ($uri) {
-            // We may want to force Garbage Collection here
-            // Even if globally available...
-            $i = 0;
-            gc_enable();
-            $stream = fopen($uri, 'r');
-            // While the stream is still open
-            while (!feof($stream)) {
-              $i++;
-              if ($i == 10000) {
-                gc_collect_cycles();
-                $i = 0;
-              }
-              // Read 1,024 bytes from the stream
-              echo fread($stream, 8192);
+          // We may want to force Garbage Collection here
+          // Even if globally available...
+          $i = 0;
+          gc_enable();
+          $stream = fopen($uri, 'r');
+          // While the stream is still open
+          while (!feof($stream)) {
+            $i++;
+            if ($i == 10000) {
+              gc_collect_cycles();
+              $i = 0;
             }
-            // Be sure to close the stream resource when you're done with it
-            fclose($stream);
+            // Read 1,024 bytes from the stream
+            echo fread($stream, 8192);
+          }
+          // Be sure to close the stream resource when you're done with it
+          fclose($stream);
         });
 
         return $response;
@@ -242,15 +242,30 @@ class IiifBinaryController extends ControllerBase {
           // S3 or remote storage needs this. Common Archipelago
           // Deployment use case.
           $response = new RangedRemoteFileRespone($uri);
+          $response->setETag($etag, TRUE);
+          $response->headers->set("Content-Type", $mime);
+          $response->prepare($request);
         } else {
           // Should be able to handle ranged?
           // see https://github.com/symfony/symfony/pull/38516/files
           $response = new BinaryFileResponse($uri);
+          $response->setETag($etag, TRUE);
+          $response->headers->set("Content-Type", $mime);
+          $response->prepare($request);
+        }
+        if ($request->headers->has('Range')) {
+          // Again..
+          if (!in_array($response->getStatusCode(), [206,406])) {
+            $range = $request->headers->get('Range') ?? '';
+            // Work around for Safari: the range request for Video/Audio might be 0 - filesize-1 so the whole thing.
+            // But that will bypass a ranged response header from & status from the ::prepare method and return a 200.
+            [$start, $end] = explode('-', substr($range, 6), 2) + [0];
+            if ($start == 0 && $end == $size-1) {
+              $response->headers->set('Content-Range', sprintf('bytes %s-%s/%s', $start, $end, $size));
+            }
+          }
         }
 
-        $response->setETag($etag, TRUE);
-        $response->headers->set("Content-Type", $mime);
-        $response->prepare($request);
         $response->setContentDisposition(
           ResponseHeaderBag::DISPOSITION_INLINE,
           $filename
