@@ -726,6 +726,7 @@ class WebAnnotationController extends ControllerBase {
 
         $result_snippets = [];
         $search_result = [];
+        $annotations = [];
 
         foreach ($indexes as $search_api_index) {
 
@@ -864,7 +865,6 @@ class WebAnnotationController extends ControllerBase {
             $results = $query->execute();
             unset($fields_to_retrieve['id']);
             unset($fields_to_retrieve['parent_sequence_id']);
-            $annotations = [];
             if ($results->getResultCount() >= 1) {
                 foreach ($results as $result) {
                     $real_id = $result->getId();
@@ -872,6 +872,8 @@ class WebAnnotationController extends ControllerBase {
                     $real_id_part = explode(":", $real_id);
                     if (isset($real_id_part[1]) && is_scalar($real_id_part[1])) {
                         $real_sequence = $real_id_part[1];
+                        [$real_sequence] = explode("-", $real_sequence);
+                        $real_sequence = (int) $real_sequence;
                     }
                     $extradata_from_item = $result->getAllExtraData() ?? [];
                     if (isset($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']])) {

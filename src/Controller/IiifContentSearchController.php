@@ -371,7 +371,10 @@ class IiifContentSearchController extends ControllerBase {
                   $i++;
                   // Calculate Canvas and its offset
                   // PDFs Sequence is correctly detected, but on images it should always be "1"
+                  // EXCEPT if we are talking about individual Annotations (e.g from ML) all the same on a single Image
                   // For that we will change the response from the main Solr search using our expected ID (splitting)
+                  // This gets even more complicated when we have to deal with PDF and ML (future)
+                  // What if for ML the ID of SB Flavor is still 1-N Annotations BUT the $sequence_id == 1?
                   $uris = [];
                   foreach ($this->iiifConfig->get('iiif_content_search_api_file_uri_fields') ?? [] as $uri_field) {
                     $uris[] = $hits_per_file_and_sequence['sbf_metadata'][$uri_field] ?? NULL;
@@ -937,6 +940,9 @@ class IiifContentSearchController extends ControllerBase {
           $real_id_part = explode(":", $real_id);
           if (isset($real_id_part[1]) && is_scalar($real_id_part[1])) {
             $real_sequence = $real_id_part[1];
+            // New to 1.5 $real_sequence might have a dash
+            [$real_sequence] = explode("-", $real_sequence);
+            $real_sequence = (int) $real_sequence;
           }
           $extradata_from_item = $result->getAllExtraData() ?? [];
 
