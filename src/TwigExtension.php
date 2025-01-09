@@ -29,6 +29,7 @@ use Drupal\format_strawberryfield\CiteProc\Render;
 use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\Core\Render\RendererInterface;
 use EDTF\EdtfFactory;
+use Drupal\views\Views;
 
 /**
  * Class TwigExtension.
@@ -110,6 +111,7 @@ class TwigExtension extends AbstractExtension {
       new TwigFunction('sbf_search_api',
         [$this, 'searchApiQuery']),
       new TwigFunction('sbf_file_content', [$this, 'sbfFileContent'], ['is_safe' => ['all']]),
+      new TwigFunction('sbf_drupal_view_paged',[$this, 'sbfDrupalView'])
     ];
   }
 
@@ -143,6 +145,20 @@ class TwigExtension extends AbstractExtension {
       new TwigNodeVisitor(),
     ];
   }
+
+  public function sbfDrupalView($name, $display_id = 'default', $page = 0) {
+      $args = func_get_args();
+      // Remove $name, $display_id and $page from the arguments.
+      unset($args[0], $args[1],  $args[2]);
+      $view = Views::getView($name);
+      if (!$view || !$view->access($display_id)) {
+        return NULL;
+      }
+    $view->setCurrentPage($page);
+    $output = $view->executeDisplay($display_id, $args);
+    return is_array($output) && isset($output['#markup']) ? $output['#markup'] : NULL;
+  }
+
 
   /**
    * Returns entity ids of entities with matching title/name/label.
