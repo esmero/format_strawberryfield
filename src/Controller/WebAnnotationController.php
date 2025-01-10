@@ -877,7 +877,7 @@ class WebAnnotationController extends ControllerBase {
                     }
                     $extradata_from_item = $result->getAllExtraData() ?? [];
                     if (isset($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']])) {
-                        $annotations = $this->miniOCRtoAnnon($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']][0], $real_id_part[3] , $real_sequence);
+                        $annotations = array_merge($annotations, $this->miniOCRtoAnnon($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']][0], $real_id_part[3] , $real_sequence));
                     }
                 }
             }
