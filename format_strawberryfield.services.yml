@@ -16,7 +16,7 @@ services:
     arguments: [ '@string_translation', '@messenger', '@logger.factory' ]
   format_strawberryfield.view_mode_resolver:
     class: Drupal\format_strawberryfield\ViewModeResolver
-    arguments: ['@strawberryfield.utility', '@config.factory']
+    arguments: ['@strawberryfield.utility', '@config.factory', '@context.repository']
   format_strawberryfield.embargo_resolver:
     class: Drupal\format_strawberryfield\EmbargoResolver
     arguments: ['@config.factory', '@current_user', '@request_stack']
