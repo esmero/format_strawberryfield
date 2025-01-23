@@ -785,7 +785,7 @@ class TwigExtension extends AbstractExtension {
       $rendered_value = $this->renderer->render($arg);
     }
     catch (\LogicException $e) {
-      // We can't just catch any exception. The Ajax reponder from the FormBuilder will throw exceptions
+      // We can't just catch any exception. The Ajax responder from the FormBuilder will throw exceptions
       // Just to close the response! Drupal gosh. So hard!
       // This Might fail on an AjaxResponse or anything that is using RenderRoot?
       // I have no solution yet.
