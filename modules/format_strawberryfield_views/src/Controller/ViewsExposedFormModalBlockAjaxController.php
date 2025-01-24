@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Controller;
 
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
@@ -122,6 +123,23 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     if (empty($path) || empty($modalviews_blocks)) {
       throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
     }
+
+    // Now Dear Diego. the page argument is permeating on a POST
+    // Making a new query that was on page 100 fail bc it might not a page 100 for that query
+    // Drupal is hard
+    $path_expanded = UrlHelper::parse($path);
+    $filtered = UrlHelper::filterQueryParameters(
+      $path_expanded['query'], ['page']
+    );
+    $path_expanded['query'] = $filtered;
+    UrlHelper::buildQuery($path_expanded['query']);
+    $path_object = \Drupal::pathValidator()->getUrlIfValid($path_expanded['path']);
+    if (!$path_object) {
+      // Stay on the same page if the redirect was invalid.
+      throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
+    }
+    $path_object->setOptions($path_expanded);
+    $path = $path_object->toString();
 
     // Make sure we are not updating blocks multiple times.
     $modalviews_blocks = array_unique($modalviews_blocks);

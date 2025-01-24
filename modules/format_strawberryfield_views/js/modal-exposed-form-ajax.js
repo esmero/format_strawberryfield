@@ -247,11 +247,15 @@
     var params = Drupal.Views.parseQueryString(href);
 
     $.each($exposed_form.serializeArray(), function () {
-      params[this.name] = this.value;
+      if (this.name!== 'page') {
+        params[this.name] = this.value;
+      }
     });
 
     $.each(current_form_params_as_array,  function () {
-      params[this.name] = this.value;
+      if (this.name!== 'page') {
+        params[this.name] = this.value;
+      }
     });
 
     return href.split('?')[0] + '?' + $.param(params);
