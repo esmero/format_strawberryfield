@@ -545,7 +545,9 @@
           if (!groupsinfojsons.hasOwnProperty(group)) {
             groupsinfojsons[group] = [infojson];
             groupsinfomanifests[group] = [drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl];
-            groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+            if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
+              groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+            }
             if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
               icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
             }
