@@ -3,10 +3,18 @@
 namespace Drupal\format_strawberryfield;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\file\FileInterface;
 use Drupal\search_api\Query\QueryInterface;
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Twig\Extension\AbstractExtension;
+use Drupal\Core\Url;
 use Twig\Markup;
 use Twig\TwigTest;
 use Twig\TwigFilter;
@@ -39,16 +47,32 @@ class TwigExtension extends AbstractExtension {
   protected $renderer;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
+   * @var HttpKernelInterface
+   */
+  protected HttpKernelInterface $httpKernel;
+
+  /**
    * Constructs \Drupal\format_strawberryfield\TwigExtension
    *
-   * @param \Drupal\Core\Render\RendererInterface $renderer
+   * @param RendererInterface $renderer
    *   The renderer.
-   * @param \Drupal\search_api\ParseMode\ParseModePluginManager $parse_mode_manager
+   * @param ParseModePluginManager $parse_mode_manager
    *   The search API parse mode manager.
+   * @param RequestStack $request_stack
+   * @param HttpKernelInterface $http_kernel
    */
-  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager) {
+  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager, RequestStack $request_stack, HttpKernelInterface $http_kernel) {
     $this->renderer = $renderer;
     $this->parseModeManager = $parse_mode_manager;
+    $this->requestStack = $request_stack;
+    $this->httpKernel = $http_kernel;
   }
 
   public function getTests(): array {
@@ -80,6 +104,7 @@ class TwigExtension extends AbstractExtension {
         [$this, 'clipboardCopy']),
       new TwigFunction('sbf_search_api',
         [$this, 'searchApiQuery']),
+      new TwigFunction('sbf_file_content', [$this, 'sbfFileContent'], ['is_safe' => ['all']]),
     ];
   }
 
@@ -121,7 +146,7 @@ class TwigExtension extends AbstractExtension {
     string $label,
     string $entity_type,
     string $bundle_identifier = NULL,
-    $limit = 1
+           $limit = 1
   ): ?array {
     $fields = [
       'node' => ['title', 'type'],
@@ -582,5 +607,40 @@ class TwigExtension extends AbstractExtension {
       return $return;
     }
     return [];
+  }
+
+  public function sbfFileContent(string $node_uuid, string $file_uuid, string $format) {
+    try {
+      /** @var ContentEntityInterface[] $nodes */
+      $nodes = \Drupal::entityTypeManager()
+        ->getStorage('node')
+        ->loadByProperties(['uuid' => $node_uuid]);
+      $node = reset($nodes);
+
+      if ($node && $node->access('view') && $node->hasField('field_file_drop')) {
+        /** @var FileInterface[] $files */
+        $files = \Drupal::entityTypeManager()
+          ->getStorage('file')
+          ->loadByProperties(['uuid' => $file_uuid]);
+        $file = reset($files);
+        $found = FALSE;
+        $files_referenced = $node->get('field_file_drop')->getValue();
+        foreach ($files_referenced as $fileinfo) {
+          if ($fileinfo['target_id'] == $file->id()) {
+            /* @var $found \Drupal\file\Entity\File */
+            $found = $file;
+            break;
+          }
+        }
+        if($found && isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
+            return file_get_contents($file->getFileUri());
+        }
+      }
+    }
+    catch (\Exception $exception) {
+      return '';
+    }
+
+    return '';
   }
 }
