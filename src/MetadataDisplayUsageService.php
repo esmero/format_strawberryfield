@@ -150,7 +150,7 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
           }
           if ($in_use) {
             $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['label'] = $ami_entity->toLink($this->t('Edit @label', ['@label' => $ami_entity->label()]), 'edit-form')->toRenderable();
-            $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['how'] = $this->t('Direct');
+            $form['metadatadisplay_usage']['ami_set_entity']['table'][$ami_entity->id()]['how']['#markup']  = $this->t('Direct');
           }
         }
       } catch (PluginException) {
