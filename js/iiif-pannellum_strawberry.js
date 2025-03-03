@@ -146,9 +146,47 @@
           const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
           const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
           const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
+          
+          // Additional Pannellum settings from documentation
+          const $hfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.hfov;
+          const $minHfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minHfov;
+          const $maxHfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxHfov;
+          const $pitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.pitch;
+          const $yaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.yaw;
+          const $horizonPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.horizonPitch;
+          const $horizonRoll = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.horizonRoll;
+          const $compass = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.compass;
+          const $northOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.northOffset;
+          const $preview = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.preview;
+          const $showZoomCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showZoomCtrl;
+          const $keyboardZoom = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.keyboardZoom;
+          const $mouseZoom = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.mouseZoom;
+          const $draggable = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.draggable;
+          const $disableKeyboardCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.disableKeyboardCtrl;
+          const $showFullscreenCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showFullscreenCtrl;
+          const $showControls = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showControls;
+          const $autoRotate = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotate;
+          const $autoRotateInactivityDelay = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotateInactivityDelay;
+          const $autoRotateStopDelay = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotateStopDelay;
+          const $sceneFadeDuration = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.sceneFadeDuration;
 
+        
           // Check if we got some data passed via Drupal settings.
           if (typeof (drupalSettings.format_strawberryfield.pannellum[element_id]) != 'undefined') {
+            // Check if we have settings in the as:formatter path and merge them with existing settings
+            if (drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('as:formatter')) {
+              // If settings doesn't exist yet, create it
+              if (!drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('settings')) {
+                drupalSettings.format_strawberryfield.pannellum[element_id].settings = {};
+              }
+              // Merge the as:formatter settings with the settings object
+              
+              Object.assign(
+                drupalSettings.format_strawberryfield.pannellum[element_id].settings, 
+                drupalSettings.format_strawberryfield.pannellum[element_id]['as:formatter']
+              );
+            }
+            
             if (drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('hotspots') &&
               !$multiscene
             ) {
@@ -197,7 +235,29 @@
                 "minYaw": $minYaw || -180,
                 "vOffset": $vOffset || 0,
                 "maxPitch": $maxPitch || undefined,
-                "minPitch": $minPitch || undefined
+                "minPitch": $minPitch || undefined,
+                // Additional Pannellum settings
+                "hfov": $hfov || 100,
+                "minHfov": $minHfov || 50,
+                "maxHfov": $maxHfov || 120,
+                "pitch": $pitch || 0,
+                "yaw": $yaw || 0,
+                "horizonPitch": $horizonPitch || 0,
+                "horizonRoll": $horizonRoll || 0,
+                "compass": $compass !== undefined ? Boolean($compass) : false,
+                "northOffset": $northOffset || 0,
+                "preview": $preview || "",
+                "showZoomCtrl": $showZoomCtrl !== undefined ? Boolean($showZoomCtrl) : true,
+                "keyboardZoom": $keyboardZoom !== undefined ? Boolean($keyboardZoom) : true,
+                "mouseZoom": $mouseZoom !== undefined ? Boolean($mouseZoom) : true,
+                "draggable": $draggable !== undefined ? Boolean($draggable) : true,
+                "disableKeyboardCtrl": $disableKeyboardCtrl !== undefined ? Boolean($disableKeyboardCtrl) : false,
+                "showFullscreenCtrl": $showFullscreenCtrl !== undefined ? Boolean($showFullscreenCtrl) : true,
+                "showControls": $showControls !== undefined ? Boolean($showControls) : true,
+                "autoRotate": $autoRotate || 0,
+                "autoRotateInactivityDelay": $autoRotateInactivityDelay || 0,
+                "autoRotateStopDelay": $autoRotateStopDelay || 0,
+                "sceneFadeDuration": $sceneFadeDuration || 1000
               });
             } else {
               console.log('Pannellum Multiscene found.');
@@ -226,6 +286,26 @@
               });
               // Add Autoload property for global Tour Viewer
               drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad);
+              
+              // Add additional Pannellum settings to the tour configuration
+              if ($hfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.hfov = $hfov;
+              if ($minHfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.minHfov = $minHfov;
+              if ($maxHfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.maxHfov = $maxHfov;
+              if ($compass !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.compass = Boolean($compass);
+              if ($northOffset !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.northOffset = $northOffset;
+              if ($preview !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.preview = $preview;
+              if ($showZoomCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showZoomCtrl = Boolean($showZoomCtrl);
+              if ($keyboardZoom !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.keyboardZoom = Boolean($keyboardZoom);
+              if ($mouseZoom !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.mouseZoom = Boolean($mouseZoom);
+              if ($draggable !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.draggable = Boolean($draggable);
+              if ($disableKeyboardCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.disableKeyboardCtrl = Boolean($disableKeyboardCtrl);
+              if ($showFullscreenCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showFullscreenCtrl = Boolean($showFullscreenCtrl);
+              if ($showControls !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showControls = Boolean($showControls);
+              if ($autoRotate !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotate = $autoRotate;
+              if ($autoRotateInactivityDelay !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotateInactivityDelay = $autoRotateInactivityDelay;
+              if ($autoRotateStopDelay !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotateStopDelay = $autoRotateStopDelay;
+              if ($sceneFadeDuration !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.sceneFadeDuration = $sceneFadeDuration;
+              
               var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
               viewer.on('scenechange',
                 function (e) {
