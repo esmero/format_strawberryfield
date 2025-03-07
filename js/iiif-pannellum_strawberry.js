@@ -114,20 +114,21 @@
 
       const elementsToAttach = once('attache_pnl', '.strawberry-panorama-item[data-iiif-image]', context);
       $(elementsToAttach).each(function (index, value) {
-          // New 2019.
-          // If value is an array then we have a multiscene panorama
-          // Mostlikely, if i coded this right, hotspots will also be arrays
+
+        // Get the node uuid for this element
+        var element_id = $(this).attr("id");
+        if (typeof (drupalSettings.format_strawberryfield.pannellum[element_id]) != 'undefined') {
+
           var hotspots = [];
-          // Get the node uuid for this element
-          var element_id = $(this).attr("id");
           var $multiscene = drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('tour');
           var default_width = drupalSettings.format_strawberryfield.pannellum[element_id]['width'];
           var default_height = drupalSettings.format_strawberryfield.pannellum[element_id]['height'];
           var externalConfigURL = drupalSettings.format_strawberryfield.pannellum[element_id]['configjsonurl'];
-          //@TODO make this work?
+          let panellum_default_settings = {}
+
           if (externalConfigURL) {
-            $.getJSON(drupalSettings.format_strawberryfield.pannellum[element_id]['configjsonurl'], function (data) {
-              console.log(data);
+            $.getJSON(externalConfigURL, function (data) {
+              panellum_default_settings = data;
             });
           }
 
@@ -138,187 +139,149 @@
             console.log('Max webGL texture size is' +
               gl.getParameter(gl.MAX_TEXTURE_SIZE));
           }
-
-          const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
-          const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
-          const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
-          const $maxYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxYaw;
-          const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
-          const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
-          const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
-          
-          // Additional Pannellum settings from documentation
-          const $hfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.hfov;
-          const $minHfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minHfov;
-          const $maxHfov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxHfov;
-          const $pitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.pitch;
-          const $yaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.yaw;
-          const $horizonPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.horizonPitch;
-          const $horizonRoll = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.horizonRoll;
-          const $compass = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.compass;
-          const $northOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.northOffset;
-          const $preview = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.preview;
-          const $showZoomCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showZoomCtrl;
-          const $keyboardZoom = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.keyboardZoom;
-          const $mouseZoom = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.mouseZoom;
-          const $draggable = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.draggable;
-          const $disableKeyboardCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.disableKeyboardCtrl;
-          const $showFullscreenCtrl = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showFullscreenCtrl;
-          const $showControls = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.showControls;
-          const $autoRotate = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotate;
-          const $autoRotateInactivityDelay = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotateInactivityDelay;
-          const $autoRotateStopDelay = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.autoRotateStopDelay;
-          const $sceneFadeDuration = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.sceneFadeDuration;
-
-        
-          // Check if we got some data passed via Drupal settings.
-          if (typeof (drupalSettings.format_strawberryfield.pannellum[element_id]) != 'undefined') {
-            // Check if we have settings in the as:formatter path and merge them with existing settings
-            if (drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('as:formatter')) {
-              // If settings doesn't exist yet, create it
-              if (!drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('settings')) {
-                drupalSettings.format_strawberryfield.pannellum[element_id].settings = {};
-              }
-              // Merge the as:formatter settings with the settings object
-              
-              Object.assign(
-                drupalSettings.format_strawberryfield.pannellum[element_id].settings, 
-                drupalSettings.format_strawberryfield.pannellum[element_id]['as:formatter']
-              );
+          // There are the defaults for the used Panellum release.
+          if (Object.keys(panellum_default_settings).length == 0) {
+            panellum_default_settings = {
+              "type": "equirectangular",
+              "hotSpotDebug": false,
+              "autoLoad": true,
+              "haov": 360,
+              "vaov": 180,
+              "friction": 0.5,
+              "maxYaw": 180,
+              "minYaw": -180,
+              "vOffset": 0,
+              "maxPitch": undefined,
+              "minPitch": undefined,
+              // Additional Pannellum settings
+              "hfov": 100,
+              "minHfov": 50,
+              "maxHfov": 120,
+              "pitch": 0,
+              "yaw": 0,
+              "horizonPitch": 0,
+              "horizonRoll": 0,
+              "compass": false,
+              "northOffset": 0,
+              "preview": "",
+              "showZoomCtrl": true,
+              "keyboardZoom": true,
+              "mouseZoom": true,
+              "draggable": true,
+              "disableKeyboardCtrl": false,
+              "showFullscreenCtrl": true,
+              "showControls": true,
+              "autoRotate": false,
+              "autoRotateInactivityDelay": 0,
+              "autoRotateStopDelay": 0,
+              "sceneFadeDuration": 1000
             }
-            
-            if (drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('hotspots') &&
-              !$multiscene
-            ) {
-              $.each(drupalSettings.format_strawberryfield.pannellum[element_id].hotspots, function (id, hotspotdata) {
-                // Also add Popups for Standalone Panoramas if they have an URL.
-                if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
-                  if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
-                    hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
-                  }
-                  else {
-                    hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
-                  }
-                  hotspotdata.clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
-                  hotspotdata.clickHandlerArgs = hotspotdata.URL;
-                }
-                hotspots.push(hotspotdata);
-              });
-            }
-            $(this).height(default_height);
-            $(this).css("width", default_width);
-
-            console.log('Initializing Pannellum.')
-            // When loading a webform with an embeded Viewer
-            // The context of Pannellum is not global
-            // So we can't really use 'pannellum' directly
-            let mobile = false;
-            if (checkMobileDevice()) {
-              mobile = true;
-              console.log('Mobile defaulting to smaller version');
-              var sourceimage = $(value).data('iiifImageMobile');
-            } else {
-              mobile = false;
-              var sourceimage = $(value).data('iiifImage');
-            }
-            if (!$multiscene) {
-              var viewer = window.pannellum.viewer(element_id, {
-                "type": "equirectangular",
-                "panorama": sourceimage,
-                "hotSpotDebug": drupalSettings.format_strawberryfield.pannellum[element_id].settings.hotSpotDebug,
-                "autoLoad": Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad),
-                "hotSpots": hotspots,
-                "haov": $haov || 360,
-                "vaov": $vaov || 180,
-                "friction": 0.5,
-                "maxYaw": $maxYaw || 180,
-                "minYaw": $minYaw || -180,
-                "vOffset": $vOffset || 0,
-                "maxPitch": $maxPitch || undefined,
-                "minPitch": $minPitch || undefined,
-                // Additional Pannellum settings
-                "hfov": $hfov || 100,
-                "minHfov": $minHfov || 50,
-                "maxHfov": $maxHfov || 120,
-                "pitch": $pitch || 0,
-                "yaw": $yaw || 0,
-                "horizonPitch": $horizonPitch || 0,
-                "horizonRoll": $horizonRoll || 0,
-                "compass": $compass !== undefined ? Boolean($compass) : false,
-                "northOffset": $northOffset || 0,
-                "preview": $preview || "",
-                "showZoomCtrl": $showZoomCtrl !== undefined ? Boolean($showZoomCtrl) : true,
-                "keyboardZoom": $keyboardZoom !== undefined ? Boolean($keyboardZoom) : true,
-                "mouseZoom": $mouseZoom !== undefined ? Boolean($mouseZoom) : true,
-                "draggable": $draggable !== undefined ? Boolean($draggable) : true,
-                "disableKeyboardCtrl": $disableKeyboardCtrl !== undefined ? Boolean($disableKeyboardCtrl) : false,
-                "showFullscreenCtrl": $showFullscreenCtrl !== undefined ? Boolean($showFullscreenCtrl) : true,
-                "showControls": $showControls !== undefined ? Boolean($showControls) : true,
-                "autoRotate": $autoRotate || 0,
-                "autoRotateInactivityDelay": $autoRotateInactivityDelay || 0,
-                "autoRotateStopDelay": $autoRotateStopDelay || 0,
-                "sceneFadeDuration": $sceneFadeDuration || 1000
-              });
-            } else {
-              console.log('Pannellum Multiscene found.');
-              $.each(drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes, function (sceneid, data) {
-                // Add Model Window Behaviour to hotSpots with Links
-                if (data.hasOwnProperty('hotSpots')) {
-                  $.each(data.hotSpots, function (hotspotid, hotspotdata) {
-                    if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
-                      if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
-                        hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
-                      }
-                      else {
-                        hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
-                      }
-                      drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
-                      drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].hotSpots[hotspotid].clickHandlerArgs = hotspotdata.URL;
-                    }
-                  });
-                }
-                if (mobile) {
-                  // Since the settings for other scenes is built by the Formatter as an Object
-                  // We need to replace the right Image for a mobile.
-                  drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panorama = drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panoramaMobile;
-                }
-                delete drupalSettings.format_strawberryfield.pannellum[element_id].tour.scenes[sceneid].panoramaMobile;
-              });
-              // Add Autoload property for global Tour Viewer
-              drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoLoad = Boolean(drupalSettings.format_strawberryfield.pannellum[element_id].settings.autoLoad);
-              
-              // Add additional Pannellum settings to the tour configuration
-              if ($hfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.hfov = $hfov;
-              if ($minHfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.minHfov = $minHfov;
-              if ($maxHfov !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.maxHfov = $maxHfov;
-              if ($compass !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.compass = Boolean($compass);
-              if ($northOffset !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.northOffset = $northOffset;
-              if ($preview !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.preview = $preview;
-              if ($showZoomCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showZoomCtrl = Boolean($showZoomCtrl);
-              if ($keyboardZoom !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.keyboardZoom = Boolean($keyboardZoom);
-              if ($mouseZoom !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.mouseZoom = Boolean($mouseZoom);
-              if ($draggable !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.draggable = Boolean($draggable);
-              if ($disableKeyboardCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.disableKeyboardCtrl = Boolean($disableKeyboardCtrl);
-              if ($showFullscreenCtrl !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showFullscreenCtrl = Boolean($showFullscreenCtrl);
-              if ($showControls !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.showControls = Boolean($showControls);
-              if ($autoRotate !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotate = $autoRotate;
-              if ($autoRotateInactivityDelay !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotateInactivityDelay = $autoRotateInactivityDelay;
-              if ($autoRotateStopDelay !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.autoRotateStopDelay = $autoRotateStopDelay;
-              if ($sceneFadeDuration !== undefined) drupalSettings.format_strawberryfield.pannellum[element_id].tour.sceneFadeDuration = $sceneFadeDuration;
-              
-              var viewer = window.pannellum.viewer(element_id, drupalSettings.format_strawberryfield.pannellum[element_id].tour);
-              viewer.on('scenechange',
-                function (e) {
-                  const event = new CustomEvent('sbf:ado:change', { bubbles: true, detail: {nodeid: e} });
-                  const el = document.getElementById(element_id);
-                  el.dispatchEvent(event);
-                }
-              );
-            }
-            FormatStrawberryfieldPanoramas.panoramas.set(element_id, new FormatStrawberryfieldPanoramas(viewer));
+          }
+          let panellum_default_settings_from_element = {}
+          if (typeof drupalSettings.format_strawberryfield.pannellum[element_id].settings == "object") {
+            panellum_default_settings_from_element = drupalSettings.format_strawberryfield.pannellum[element_id].settings;
+          }
+          if ($multiscene) {
+            Object.assign(
+              panellum_default_settings_from_element,
+              drupalSettings.format_strawberryfield.pannellum[element_id].tour || {}
+            );
           }
 
-        })
+
+          // Merge Default with settings passed by the formatter.
+          if (panellum_default_settings_from_element != {}) {
+            Object.assign(
+              panellum_default_settings,
+              panellum_default_settings_from_element|| {}
+            );
+          }
+
+          $(this).height(default_height);
+          $(this).css("width", default_width);
+
+          if (drupalSettings.format_strawberryfield.pannellum[element_id].hasOwnProperty('hotspots') &&
+            !$multiscene
+          ) {
+            $.each(drupalSettings.format_strawberryfield.pannellum[element_id].hotspots, function (id, hotspotdata) {
+              // Also add Popups for Standalone Panoramas if they have an URL.
+              if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
+                if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
+                  hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
+                }
+                else {
+                  hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
+                }
+                hotspotdata.clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
+                hotspotdata.clickHandlerArgs = hotspotdata.URL;
+              }
+              hotspots.push(hotspotdata);
+            });
+          }
+
+          // When loading a webform with an embeded Viewer
+          // The context of Pannellum is not global
+          // So we can't really use 'pannellum' directly
+          let mobile = false;
+          if (checkMobileDevice()) {
+            mobile = true;
+            console.log('Mobile defaulting to smaller version');
+            var sourceimage = $(value).data('iiifImageMobile');
+          } else {
+            mobile = false;
+            var sourceimage = $(value).data('iiifImage');
+          }
+          if (!$multiscene) {
+            // Sets the source image and hotspots
+            panellum_default_settings.panorama = sourceimage;
+            panellum_default_settings.hotSpots = hotspots;
+            console.log('Initializing Pannellum.')
+            var viewer = window.pannellum.viewer(element_id, panellum_default_settings);
+          }
+          else {
+            console.log('Initializing Multiscene Pannellum.');
+            $.each(panellum_default_settings?.scenes , function (sceneid, data) {
+              //permeate also per scene defaults from global ones ?
+              Object.assign(
+                panellum_default_settings.scenes[sceneid],
+                panellum_default_settings || {}
+              );
+              // Add Model Window Behaviour to hotSpots with Links
+              if (data.hasOwnProperty('hotSpots')) {
+                $.each(data.hotSpots, function (hotspotid, hotspotdata) {
+                  if (hotspotdata.hasOwnProperty('URL') && hotspotdata.URL !== null) {
+                    if (hotspotdata.URL.indexOf('http://') === 0 || hotspotdata.URL.indexOf('https://') === 0) {
+                      hotspotdata.text = hotspotdata.text + Drupal.t(' (External URL)');
+                    }
+                    else {
+                      hotspotdata.text = hotspotdata.text + Drupal.t(' (Digital Object)');
+                    }
+                    panellum_default_settings.scenes[sceneid].hotSpots[hotspotid].clickHandlerFunc = Drupal.FormatStrawberryfieldhotspotPopUp;
+                    panellum_default_settings.scenes[sceneid].hotSpots[hotspotid].clickHandlerArgs = hotspotdata.URL;
+                  }
+                });
+              }
+              if (mobile) {
+                // Since the settings for other scenes is built by the Formatter as an Object
+                // We need to replace the right Image for a mobile.
+                panellum_default_settings.scenes[sceneid].panorama = panellum_default_settings.scenes[sceneid].panoramaMobile;
+              }
+              delete panellum_default_settings.scenes[sceneid].panoramaMobile;
+            });
+
+            var viewer = window.pannellum.viewer(element_id, panellum_default_settings);
+            viewer.on('scenechange',
+              function (e) {
+                const event = new CustomEvent('sbf:ado:change', { bubbles: true, detail: {nodeid: e} });
+                const el = document.getElementById(element_id);
+                el.dispatchEvent(event);
+              }
+            );
+          }
+          FormatStrawberryfieldPanoramas.panoramas.set(element_id, new FormatStrawberryfieldPanoramas(viewer));
+        }
+
+      })
     }
   }
   /**
