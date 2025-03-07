@@ -282,6 +282,16 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     return $response;
   }
 
+  public function buildAjaxAPIAdvancedMappingConfigForm(array $form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(
+      new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
+    );
+    $response->addCommand(new ScrollTopCommand('[data-drupal-selector="edit-api-argument-config"]'));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'addClass', ['js-hide']));
+    return $response;
+  }
+
   /**
    * Handles Views Selection config display
    */
@@ -397,6 +407,25 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->setRebuild();
   }
 
+
+  /**
+   * Handles form submissions for the API source subform.
+   */
+  public function editAdvancedMapping($form, FormStateInterface $form_state) {
+    $triggering = $form_state->getTriggeringElement();
+    if (isset($triggering['#rowtoedit'])) {
+      $parameters = $form_state->get('parameters') ? $form_state->get(
+        'parameters'
+      ) : [];
+      $mappings = $form_state->get('parameters') ? $form_state->get(
+        'parameters'
+      ) : [];
+      $form_state->setValue(['api-argument-config','mapping'],  $parameters[$triggering['#rowtoedit']]);
+      $this->messenger()->addWarning(t('You are editing advanced mappings for @param_name', ['@param_name' => $triggering['#rowtoedit']]), FALSE);
+    }
+    $form_state->setRebuild();
+  }
+
   /**
    * Submit handler for the "deleteone" button.
    *
@@ -461,9 +490,9 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 		$parameters = $form_state->get('advanced_mapping') ? $form_state->get(
 			'advanced_mapping'
 		) : [];
-		$name = $form_state->getValue(['api-advanced-mapping-config','mapping','name']);
+		$name = $form_state->getValue(['api-argument-config','mapping','name']);
 		if ($name) {
-			$advanced_mapping_clean = $form_state->getValue(['api-advanced-mapping-config','mapping']);
+			$advanced_mapping_clean = $form_state->getValue(['api-argument-config','mapping']);
 			unset($advanced_mapping_clean['metadata_api_configure_button']);
 			$advanced_mapping[$name] = [
 				'advanced_mapping' => $advanced_mapping_clean
@@ -940,25 +969,25 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 			$hide = FALSE;
 		}
 		if (!$hide) {
-			$form['api-advanced-mapping-config']['mapping'] = [
+			$form['api-argument-config']['mapping'] = [
 				'#type'       => 'fieldset',
 				'#title'      => 'Configure Advanced Mapping for this parameter',
 				'#tree'       => TRUE,
 				'#attributes' => [
-					'id' => 'api-advanced-mapping-config-params-internal'
+					'id' => 'api-argument-config-params-internal'
 				]
 			];
-			$form['api-advanced-mapping-config']['mapping']['name'] = [
+			$form['api-argument-config']['mapping']['name'] = [
 				'#type'          => 'textfield',
 				'#title'         => $this->t('Name'),
 				'#description'   => $this->t(
 					'The name of the parameter. Parameter names are case sensitive.'
 				),
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','name']) ?? NULL,
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','name']) ?? NULL,
 				'#required'      => TRUE,
 				'#disabled' => isset($form_state->getTriggeringElement()['#rowtoedit']),
 			];
-			$form['api-advanced-mapping-config']['mapping']['in'] = [
+			$form['api-argument-config']['mapping']['in'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('In'),
 				'#description'   => $this->t('The location of the parameter'),
@@ -968,39 +997,39 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'path'   => 'path',
 					'cookie' => 'cookie'
 				],
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','in']) ?? 'query',
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','in']) ?? 'query',
 				'#required'      => TRUE,
 			];
 
-			$form['api-advanced-mapping-config']['mapping']['description'] = [
+			$form['api-argument-config']['mapping']['description'] = [
 				'#type'          => 'textfield',
 				'#title'         => $this->t('Description'),
 				'#description'   => $this->t(
 					'A brief description of the parameter. This could contain examples of use.'
 				),
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','description']) ?? NULL,
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','description']) ?? NULL,
 				'#required'      => FALSE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['required'] = [
+			$form['api-argument-config']['mapping']['required'] = [
 				'#type'          => 'checkbox',
 				'#title'         => $this->t('Required'),
 				'#description'   => $this->t(
 					'Determines whether this parameter is mandatory. If "in" is "path" this will be checked automatically.'
 				),
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','required']) ?? FALSE,
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','required']) ?? FALSE,
 				'#required'      => FALSE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['deprecated'] = [
+			$form['api-argument-config']['mapping']['deprecated'] = [
 				'#type'          => 'checkbox',
 				'#title'         => $this->t('Deprecate'),
 				'#description'   => $this->t(
 					'Specifies that a parameter is deprecated and SHOULD be transitioned out of usage.'
 				),
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','deprecated']) ?? FALSE,
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','deprecated']) ?? FALSE,
 				'#required'      => FALSE,
 			];
 			// https://github.com/OAI/OpenAPI-Specification/blob/3.0.2/versions/3.0.2.md#style-values
-			$form['api-advanced-mapping-config']['mapping']['style'] = [
+			$form['api-argument-config']['mapping']['style'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('Style'),
 				'#description'   => $this->t(
@@ -1015,15 +1044,15 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'pipeDelimited'  => 'pipeDelimited',
 					'deepObject'     => 'deepObject',
 				],
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','style']) ?? 'form',
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','style']) ?? 'form',
 				'#required'      => TRUE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['schema'] = [
+			$form['api-argument-config']['mapping']['schema'] = [
 				'#type' => 'fieldset',
 				'#tree' => TRUE,
 			];
 			// All of these will be readOnly: true
-			$form['api-advanced-mapping-config']['mapping']['schema']['type'] = [
+			$form['api-argument-config']['mapping']['schema']['type'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('type'),
 				'#description'   => $this->t('The data type of the parameter value.'),
@@ -1035,11 +1064,11 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'object'  => 'object',
 					'boolean' => 'boolean',
 				],
-				'#default_value' => $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? 'string',
+				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string',
 				'#required'      => TRUE,
 			];
 
-			$form['api-advanced-mapping-config']['mapping']['schema']['array_type'] = [
+			$form['api-argument-config']['mapping']['schema']['array_type'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('array type'),
 				'#description'   => $this->t('The data type of an array item/entry '),
@@ -1050,10 +1079,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'boolean'       => 'boolean',
 					'any/arbitrary' => '{}',
 				],
-				'#default_value' => ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? 'string' == 'array') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) : 'string',
+				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'array') ? $form_state->getValue(['api-argument-config','mapping','param','schema','type']) : 'string',
 				'#required'      => TRUE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['schema']['string_format'] = [
+			$form['api-argument-config']['mapping']['schema']['string_format'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('string format'),
 				'#empty_option'  => $this->t(' - No format -'),
@@ -1069,20 +1098,20 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'byte'      => 'byte (base64  encoded)',
 					'binary'    => 'binary (file)'
 				],
-				'#default_value' => ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','format']) : NULL,
+				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
 				'#required'      => FALSE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['schema']['string_pattern'] = [
+			$form['api-argument-config']['mapping']['schema']['string_pattern'] = [
 				'#type'          => 'textfield',
 				'#title'         => $this->t('Pattern'),
 				'#description'   => $this->t(
 					'Regular expression template for a string value e.g SSN: ^\d{3}-\d{2}-\d{4}$'
 				),
-				'#default_value' =>  ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','pattern']) : NULL,
+				'#default_value' =>  ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','pattern']) : NULL,
 				'#required'      => FALSE,
 			];
 
-			$form['api-advanced-mapping-config']['mapping']['schema']['number_format'] = [
+			$form['api-argument-config']['mapping']['schema']['number_format'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('format'),
 				'#empty_option'  => $this->t(' - No format -'),
@@ -1093,10 +1122,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'float'  => 'float',
 					'double' => 'double',
 				],
-				'#default_value' =>  ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? 'string' == 'number') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','format']) : NULL,
+				'#default_value' =>  ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'number') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
 				'#required'      => FALSE,
 			];
-			$form['api-advanced-mapping-config']['mapping']['schema']['integer_format'] = [
+			$form['api-argument-config']['mapping']['schema']['integer_format'] = [
 				'#type'          => 'select',
 				'#title'         => $this->t('format'),
 				'#empty_option'  => $this->t(' - No format -'),
@@ -1107,14 +1136,14 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 					'int32' => 'int32',
 					'int64' => 'int64',
 				],
-				'#default_value' => ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? 'string' == 'integer') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','format']) : NULL,
+				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'integer') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
 				'#required'      => FALSE,
 			];
-			$enum = ($form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-advanced-mapping-config','mapping','param','schema','enum']) : NULL;
+			$enum = ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','enum']) : NULL;
 			if (is_array($enum)) {
 				$enum = implode(",", $enum);
 			}
-			$form['api-advanced-mapping-config']['mapping']['schema']['enum'] = [
+			$form['api-argument-config']['mapping']['schema']['enum'] = [
 				'#type'          => 'textfield',
 				'#title'         => $this->t('Enumeration'),
 				'#description'   => $this->t(
@@ -1125,11 +1154,11 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 			];
 		}
 
-		$form['api-advanced-mapping-config']['mapping']['metadata_api_configure_button'] = [
+		$form['api-argument-config']['mapping']['metadata_api_configure_button'] = [
 			'#type' => 'submit',
 			'#name' => 'metadata_api_parameter_configure',
 			'#value' => $this->t('Save Advanced Mappings'),
-			'#limit_validation_errors' => [['api-advanced-mapping-config']],
+			'#limit_validation_errors' => [['api-argument-config']],
 			'#submit' => ['::submitAjaxAddAdvancedMapping'],
 			'#ajax' => [
 				'callback' => '::buildAjaxAPIParameterListConfigForm',
@@ -1139,7 +1168,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 				'class' => $hide ? ['js-hide'] : [],
 			]
 		];
-		$form['api-advanced-mapping-config']['mapping']['metadata_api_cancel_button'] = [
+		$form['api-argument-config']['mapping']['metadata_api_cancel_button'] = [
 			'#type' => 'button',
 			'#name' => 'metadata_api_parameter_cancel',
 			'#limit_validation_errors' => [],
@@ -1231,8 +1260,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#default_value' => $parameter_config_for_this_row,
       ];
       if ($form_state->get('views_argument_options')) {
-
         $form['api_parameters_list']['table-row'][$index]['mapping'] = [
+          'basic' => [
           '#type'          => 'checkboxes',
           '#title'         => $this->t('Mapping'),
           '#options'       => $form_state->get('views_argument_options') ?? [],
@@ -1240,7 +1269,22 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           // If not #validated, dynamically populated dropdowns don't work.
           '#validated'     => TRUE,
           '#default_value' => $parameter_config['mapping'] ?? [],
-        ];
+        ],
+        'advanced_mapping' => [
+          '#type' => 'submit',
+          '#rowtoedit' => $index,
+          '#name' => 'edititem_' . $index,
+          '#value' => t('Advanced Mapping'),
+          // No validation.
+          '#limit_validation_errors' => [['table-row']],
+          // #submit required if ajax!.
+          '#submit' => ['::editAdvancedMapping'],
+          '#ajax' => [
+            'callback' => '::buildAjaxAPIAdvancedMappingConfigForm',
+            'wrapper' => 'api-argument-config',
+          ],
+        ]
+          ];
 				/*if (($parameter_config['param']['required'] ?? FALSE) && (is_array($parameter_config['param']['schema']['enum'] ?? NULL))) {
 					$form['api_parameters_list']['table-row'][$index]['mapping_conditional'] = [
 						'#type'          => 'checkboxes',
