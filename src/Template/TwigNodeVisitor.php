@@ -39,8 +39,8 @@ class TwigNodeVisitor implements NodeVisitorInterface {
     // Change the 'drupal_escape' filter to our own 'format_strawberry_safe_escape' filter.
     if ($node instanceof FilterExpression) {
       $name = $node->getNode('filter')->getAttribute('value');
-			$internal_name = $node->getAttribute('twig_callable')->getName();
-			if ('drupal_escape' == $name || $internal_name == 'drupal_escape') {
+      $internal_name = $node->getAttribute('twig_callable')->getName();
+      if ('drupal_escape' == $name || $internal_name == 'drupal_escape') {
         $node->getNode('filter')->setAttribute('value', 'format_strawberry_safe_escape');
       }
     }
