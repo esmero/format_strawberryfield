@@ -33,12 +33,16 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
       if ($block_entity) {
         // Damn Lazy builder!
         $render_array  = \Drupal\block\BlockViewBuilder::preRender(\Drupal\block\BlockViewBuilder::lazyBuilder($block_id, 'full'));
-        if (isset($render_array['content'][0]['#attached']['drupalSettings'])) {
-          $response->addCommand(new SettingsCommand(['facets' => []], TRUE), TRUE);
-          $response->addCommand(new SettingsCommand(['facets' => $render_array['content'][0]['#attached']['drupalSettings']['facets'] ?? []], FALSE), TRUE);
+        if (isset($render_array['content'][0]['#attached']) && is_array($render_array['content'][0]['#attached'])) {
+          $response->addAttachments($render_array['content'][0]['#attached']);
+        }
+        if (isset($render_array['content']['#attached']) && is_array($render_array['content']['#attached'])) {
+          $response->addAttachments($render_array['content']['#attached']);
+        }
+        if (isset($render_array['#attached']) && is_array($render_array['#attached'])) {
+          $response->addAttachments($render_array['#attached']);
         }
       }
-      //$response->addCommand(new SettingsCommand(['facets' => []], TRUE), TRUE);
     }
     return $response;
   }
