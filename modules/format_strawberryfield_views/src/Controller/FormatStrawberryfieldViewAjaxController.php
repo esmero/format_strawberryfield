@@ -281,6 +281,11 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $request->attributes->remove('ajax_page_state');
         $response->addCommand(new ReplaceCommand(".js-view-dom-id-$dom_id", $preview));
         $response->addCommand(new PrependCommand(".js-view-dom-id-$dom_id", ['#type' => 'status_messages']));
+        // 1.5.0. Set attachments, if any, if the View provides them.
+        if (!empty($preview['#attached'])) {
+          $response->setAttachments($preview['#attached']);
+        }
+
         //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
         if ($target_url) {
@@ -311,6 +316,16 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               ->merge($bubbleable_metadata)
               ->applyTo($exposed_form);
           }
+          // 1.5.0. Add any libraries/settings the exposed form might provide. e.g better exposed filters.
+          if (!empty($exposed_form['#attached'])) {
+            $response->addAttachments($exposed_form['#attached']);
+          }
+          // 1.5.0 and Better exposed fields  (7.0.6). attaches itself to the wrapper. So once it runs, it never sets the exclude-submit for text again.
+          // This re-uses the JS attached behavior to set it again via JS (if any)
+          // I have two choices. A) Either regenerate the #ID and use the data-drupal-selector for the replace command?
+          // or B), parse the form, find any texts and add the attribute here.
+          // Also, this is adding the CSS Classes twice. They are already set on the Block wrapper.
+          // We have to replace via #ID bc we might have other blocks that use the same selector?
           $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
         }
         $request->query->set('ajax_page_state', $existing_page_state);
