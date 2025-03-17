@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield_facets\Controller;
 use Drupal\Core\Ajax\SettingsCommand;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\facets\Controller\FacetBlockAjaxController;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Defines a controller to load a facet via AJAX.
@@ -26,7 +27,30 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
    */
   public function ajaxFacetBlockView(Request $request) {
     $response = parent::ajaxFacetBlockView($request);
+
+    /* Changes are Facet has not been patched upstream for missing session */
+    // @TODO: remove in 1.6.0 once https://www.drupal.org/files/issues/2024-08-10/3052574-session-not-set-warning-251.patch
+    // comes in.
+    $path = $request->request->get('facet_link');
+    $new_request = Request::create($path);
+    $new_request->setSession($request->getSession());
+    $request_stack = new RequestStack();
+
+    $processed = $this->pathProcessor->processInbound($path, $new_request);
+    $processed_request = Request::create($processed);
+
+    $this->currentPath->setPath($processed_request->getPathInfo());
+    $request->attributes->add($this->router->matchRequest($new_request));
+    $this->currentRouteMatch->resetRouteMatch();
+    $request_stack->push($new_request);
+
+    $container = \Drupal::getContainer();
+    $container->set('request_stack', $request_stack);
+    /* end patching */
+
     $facets_blocks = $request->request->all()['facets_blocks'] ?? [];
+    // Make sure we are not updating blocks multiple times.
+    $facets_blocks = array_unique($facets_blocks);
     // Build the facets blocks found for the current request and update.
     foreach ($facets_blocks as $block_id => $block_selector) {
       $block_entity = $this->storage->load($block_id);
