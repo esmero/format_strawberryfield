@@ -134,6 +134,15 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
             $output['#info']["filter-$field_id"]['label'] = '';
           }
         }
+        else {
+          if ((isset($output[$real_id]['#theme']) &&  $output[$real_id]['#theme'] == 'input__textfield') || in_array(($output[$real_id]['#type'] ?? NULL), ['textfield', 'search_api_autocomplete'])) {
+           // Check if we have a better_exposed_filter excluding submit for text fields.
+            // Changes in better exposed filters 7.0.6 lead to this. MMM their JS is to be blamed.
+            if ($output['#attached']['drupalSettings']['better_exposed_filters']['autosubmit_exclude_textfield'] ?? FALSE) {
+              $output[$real_id]['#attributes']['data-bef-auto-submit-exclude'] = TRUE;
+            }
+          }
+        }
 
         foreach ($output[$real_id] as $possible_key => &$value) {
           if (strpos($possible_key, '#') === FALSE && is_array($value)
@@ -145,6 +154,16 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
               $value['#attributes']['aria-hidden'] = 'true';
               $value['#attributes']['class'][] = 'visually-hidden';
               $output['#info']["filter-$field_id"]['label'] = '';
+            }
+            else {
+              // Just on case the Theme adds a wrapper. We also add the exclude for text fields better exposed autosubmit here.
+              if ((isset($value['#theme']) &&  $value['#theme'] == 'input__textfield') || in_array(($value['#type'] ?? NULL), ['textfield', 'search_api_autocomplete'])) {
+                // Check if we have a better_exposed_filter excluding submit for text fields.
+                // Changes in better exposed filters 7.0.6 lead to this. MMM their JS is to be blamed.
+                if ($value['#attached']['drupalSettings']['better_exposed_filters']['autosubmit_exclude_textfield'] ?? FALSE) {
+                  $value['#attributes']['data-bef-auto-submit-exclude'] = TRUE;
+                }
+              }
             }
           }
         }
@@ -208,8 +227,6 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         $output['actions'][$advanced_search_real_id . '_addone']['#attributes']['aria-hidden'] = 'true';
       }
     }
-
-
     if (!$this->configuration['views_exposed_sbf_show_reset'] && isset($output['actions']['reset'])) {
       $output['actions']['reset']['#attributes']['class'][] = 'visually-hidden';
       $output['actions']['reset']['#attributes']['aria-hidden'] = 'true';
@@ -276,6 +293,11 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         '#allowed_tags' => Xss::getHtmlTagList(),
       ];
     }
+
+    // Replace the inherited drupal selector in case some contributed code uses
+    // that instead of the #id for JS magic and ends confusing this exposed
+    // form with the core one.
+    $output['#attributes']['data-drupal-selector'] = 'views_exposed_form_modal-' .  $this->view->storage->id() . '-' . $this->view->current_display;
 
     return $output;
   }
