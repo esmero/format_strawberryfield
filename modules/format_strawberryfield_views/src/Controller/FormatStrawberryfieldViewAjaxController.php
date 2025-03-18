@@ -32,6 +32,23 @@ use Drupal\format_strawberryfield_views\Ajax\SbfSetBrowserUrl;
 class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
   /**
+   * Parameters that should be filtered and ignored inside ajax requests.
+   */
+  public const FILTERED_QUERY_PARAMETERS = [
+    'view_name',
+    'view_display_id',
+    'view_args',
+    'view_path',
+    'view_dom_id',
+    'pager_element',
+    'view_base_path',
+    'ajax_page_state',
+    '_drupal_ajax',
+    FormBuilderInterface::AJAX_FORM_REQUEST,
+    MainContentViewSubscriber::WRAPPER_FORMAT,
+  ];
+
+  /**
    * The entity storage for views.
    *
    * @var \Drupal\Core\Entity\EntityStorageInterface
@@ -147,25 +164,12 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
       $response = new ViewAjaxResponse();
 
-
-
-      // Remove all of this stuff from the query of the request so it doesn't
+      // Remove all of this stuff from the query of the request, so it doesn't
       // end up in pagers and tablesort URLs.
       // @todo Remove this parsing once these are removed from the request in
       //   https://www.drupal.org/node/2504709.
-      foreach ([
-        'view_name',
-        'view_display_id',
-        'view_args',
-        'view_path',
-        'view_dom_id',
-        'pager_element',
-        'view_base_path',
-        'exposed_form_display',
-        AjaxResponseSubscriber::AJAX_REQUEST_PARAMETER,
-        FormBuilderInterface::AJAX_FORM_REQUEST,
-        MainContentViewSubscriber::WRAPPER_FORMAT,
-      ] as $key) {
+      $existing_page_state = $request->get('ajax_page_state');
+      foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
       }
@@ -219,7 +223,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         // Add all POST data, because AJAX is sometimes a POST and many things,
         // such as tablesorts, exposed filters and paging assume GET.
         $param_union = $request_clone->request->all() + $request_clone->query->all();
-        unset($param_union['ajax_page_state']);
         $request_clone->query->replace($param_union);
 
         $response->setView($view);
@@ -247,6 +250,17 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         }
         // Reuse the same DOM id so it matches that in drupalSettings.
         $view->dom_id = $dom_id;
+
+        // Populate request attributes temporarily with ajax_page_state theme
+        // and theme_token for theme negotiation.
+        $theme_keys = [
+          'theme' => TRUE,
+          'theme_token' => TRUE,
+        ];
+        if (is_array($existing_page_state) &&
+          ($temp_attributes = array_intersect_key($existing_page_state, $theme_keys))) {
+          $request->attributes->set('ajax_page_state', $temp_attributes);
+        }
 
         $context = new RenderContext();
 
