@@ -26,5 +26,12 @@ function format_strawberryfield_facets_theme($existing, $type, $theme, $path) {
 
 
 function format_strawberryfield_facets_preprocess_facets_item_list__sbf_range_date_slider(array &$variables) {
+  /** @var \Drupal\facets\Entity\FacetInterface $facet */
+  $facet = $variables['facet'];
+  if ($facet !== NULL) {
+    if ($facet->get('show_title') === TRUE) {
+      $variables['title'] = $facet->label();
+    }
+  }
   template_preprocess_item_list($variables);
 }
