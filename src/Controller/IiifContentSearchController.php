@@ -792,6 +792,7 @@ class IiifContentSearchController extends ControllerBase {
         'limit' => $limit,
         'offset' => $offset,
       ]);
+      $query->setSearchId('sbf_iiifcontentseaarch_from_solr');
 
       $parse_mode = $this->parseModeManager->createInstance('terms');
       $query->setParseMode($parse_mode);

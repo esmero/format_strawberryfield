@@ -771,6 +771,10 @@ class WebAnnotationController extends ControllerBase {
         'limit' => $limit,
         'offset' => $offset,
       ]);
+      // Needed bc the default might Clash with a View! and Facets!
+      // And end running facets and setting active values on every request!
+      // @NOTE: New to me Diego. See \Drupal\facets\EventSubscriber\SearchApiSubscriber::queryAlter
+      $query->setSearchId('sbf_webannotation_from_solr');
 
       $parse_mode = $this->parseModeManager->createInstance('direct');
       $query->setParseMode($parse_mode);
