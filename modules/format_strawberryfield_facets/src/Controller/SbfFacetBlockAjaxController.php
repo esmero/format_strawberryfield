@@ -55,6 +55,38 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
     $container = \Drupal::getContainer();
     $container->set('request_stack', $request_stack);
     /* end patching */
+    // MMM.. the parent controller is not passing the settings! Aha. That is why
+    // we fail... we can solve that?
+
+    $facets_blocks = $request->request->all()['facets_blocks'] ?? [];
+    // Make sure we are not updating blocks multiple times.
+    $facets_blocks = array_unique($facets_blocks);
+    // Build the facets blocks found for the current request and update.
+    foreach ($facets_blocks as $block_id => $block_selector) {
+      $block_entity = $this->storage->load($block_id);
+      if ($block_entity) {
+        // Damn Lazy builder!
+        // Libraries will pass via ajax_page_state, but we need the settings too.
+        // Drupal. You are SO random.
+        $render_array  = \Drupal\block\BlockViewBuilder::preRender(\Drupal\block\BlockViewBuilder::lazyBuilder($block_id, 'full'));
+        $drupal_settings = [];
+        if (isset($render_array['content'][0]['#attached']['drupalSettings']) && is_array($render_array['content'][0]['#attached']['drupalSettings'])) {
+          $drupal_settings = array_merge($drupal_settings, $render_array['content'][0]['#attached']['drupalSettings']);
+        }
+        if (isset($render_array['content']['#attached']['drupalSettings']) && is_array($render_array['content']['#attached']['drupalSettings'])) {
+          $drupal_settings = array_merge($drupal_settings, $render_array['content']['#attached']['drupalSettings']);
+        }
+        if (isset($render_array['#attached']['drupalSettings']) && is_array($render_array['#attached']['drupalSettings'])) {
+          $drupal_settings = array_merge($drupal_settings, $render_array['#attached']['drupalSettings']);
+        }
+        if (!empty($drupal_settings)) {
+          $response->addAttachments(['drupalSettings' => $drupal_settings]);
+        }
+      }
+    }
+
+
+
     return $response;
   }
 }
