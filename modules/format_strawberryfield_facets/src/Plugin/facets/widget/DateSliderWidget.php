@@ -59,8 +59,9 @@ class DateSliderWidget extends WidgetPluginBase {
     $range = $this->getRangeFromResults($results);
 
     ksort($results);
-
+    // Active does not seem to respect the input? Maybe the processor is not doing it right?
     $active = $facet->getActiveItems();
+
     $real_min = $range['min'] ?? NULL;
     $real_max = $range['max'] ?? NULL;
 
@@ -110,11 +111,17 @@ class DateSliderWidget extends WidgetPluginBase {
     // The results set on the facet are sorted where the minimum is the first
     // item and the last one is the one with the highest results, so it's safe
     // to use min/max.
-    foreach($js_values as $key => $values) {
-      $labels[$key] = $values['label']. ($show_numbers ? ' (' . $values['count'] . ')' : '');
+    foreach($js_values as $key => $js_value) {
+      $labels[$key] = $js_value['label']. ($show_numbers ? ' (' . $js_value['count'] . ')' : '');
     }
 
+    // Independently if the max/min are set from search or from fixed values
+    // these ones here need to be min/max we have either from search/or fixed if no query yet
+    // Also, we need to check if we need to cap these based on the widget settings
+
     $values = [$year_min, $year_max];
+
+
     $selected_minmax = [gmdate('Y', (int) $active_min), gmdate('Y', (int) $active_max)];
     $real_minmax = [$min, $max];
     $id =  Html::getUniqueId('facet-sbf-slider-'.$facet->id());
@@ -146,7 +153,7 @@ class DateSliderWidget extends WidgetPluginBase {
         $url->setRouteParameter('facets_query', '');
         $url->setOption('query', $params);
       }
-      // Revisit $max_items; The count is correct but it is the "date" values count ... not the actual results
+      // Revisit $max_items; The count is correct, but it is the "date" values count ... not the actual results
       // So confusing.
       $result_item = new Result($facet, 'reset_all', $this->getConfiguration()['reset_text'], $max_items);
       $result_item->setActiveState(FALSE);
@@ -184,10 +191,14 @@ class DateSliderWidget extends WidgetPluginBase {
     }
     if ($url_for_js && $url_for_js instanceof \Drupal\core\Url) {
       $url = $url_for_js->toString();
+      // We need to add the #theme key to avoid having \template_preprocess_item_list()
+      // Assume the theme from the main facet needs to be inherited
+      // Deleting all classes.
       $build['#items'] = [
         [
           '#type' => 'html_tag',
           '#tag' => 'div',
+          '#theme' => 'html_tag',
           '#attributes' => [
             'class' => ['sbf-date-facet-slider'],
             'id' => $id,
