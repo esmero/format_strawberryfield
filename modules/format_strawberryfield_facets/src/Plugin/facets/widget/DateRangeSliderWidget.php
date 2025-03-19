@@ -52,6 +52,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
 
     if ($this->getConfiguration()['allow_full_entry']) {
       $build['#items']['manual_input']['manual_input_full'] = [
+        '#type' => 'container',
         'min_full' => [
           '#type' => 'date',
           '#title' => $this->t('Date from'),
@@ -93,6 +94,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
     }
     if ($this->getConfiguration()['allow_year_entry']) {
       $build['#items']['manual_input']['manual_input_year'] = [
+        '#type' => 'container',
         'min_year' => [
           '#type' => 'number',
           '#title' => $this->t('Year from'),
