@@ -146,15 +146,28 @@ class TwigExtension extends AbstractExtension {
     ];
   }
 
-  public function sbfDrupalView($name, $display_id = 'default', $page = 0) {
-      $args = func_get_args();
-      // Remove $name, $display_id and $page from the arguments.
-      unset($args[0], $args[1],  $args[2]);
-      $view = Views::getView($name);
-      if (!$view || !$view->access($display_id)) {
-        return NULL;
-      }
+  public function sbfDrupalView($name, $display_id = 'default', $page = 0, array $exposed_filters = []) {
+    $args = func_get_args();
+    // Remove $name, $display_id and $page from the arguments.
+    unset($args[0], $args[1],  $args[2]);
+    $exposed_filters = $args[3];
+    unset($args[3]);
+    $view = Views::getView($name);
+    if (!$view || !$view->access($display_id)) {
+      return NULL;
+    }
     $view->setCurrentPage($page);
+    if (!empty($exposed_filters)) {
+      // @TODO see if URL arguments from the request query
+      // could end permeating here generating a mess. Leaving this snippet
+      // In case we decide it is needed/useful.
+       /* $exposed_filters = array_merge(
+        $view->getExposedInput(),
+        $exposed_filters
+      ); */
+      $view->setExposedInput($exposed_filters);
+    }
+
     $output = $view->executeDisplay($display_id, $args);
     return is_array($output) && isset($output['#markup']) ? $output['#markup'] : NULL;
   }
@@ -180,7 +193,7 @@ class TwigExtension extends AbstractExtension {
     string $label,
     string $entity_type,
     string $bundle_identifier = NULL,
-           $limit = 1
+    $limit = 1
   ): ?array {
     $fields = [
       'node' => ['title', 'type'],
@@ -236,13 +249,14 @@ class TwigExtension extends AbstractExtension {
    * array and fail on non Valid UTF8. No user provided Bit Masks are allowed
    *
    * @param mixed $value the value to decode
+   * @param bool $htmlentitydecode
    *
    * @return mixed The JSON decoded value
    *    - NULL if failure, not the right type (e.g Iterable) or if NULL
    *    - TRUE/FALSE
    *    - An array
    */
-  public function sbfJsonDecode($value) {
+  public function sbfJsonDecode($value, $htmlentitydecode = FALSE) {
     if ($value instanceof Markup) {
       $value = (string) $value;
     }
@@ -251,6 +265,9 @@ class TwigExtension extends AbstractExtension {
       return NULL;
     }
     try {
+      if ($htmlentitydecode) {
+        $value = html_entity_decode($value);
+      }
       return json_decode($value, TRUE, 64,
         JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
     } catch (\Exception $exception) {
@@ -667,7 +684,7 @@ class TwigExtension extends AbstractExtension {
           }
         }
         if($found && isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
-            return file_get_contents($file->getFileUri());
+          return file_get_contents($file->getFileUri());
         }
       }
     }
