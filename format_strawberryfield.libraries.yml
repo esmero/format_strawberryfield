@@ -25,7 +25,7 @@ jmespath_strawberry:
 
 popper:
   js:
-    https://unpkg.com/@popperjs/core@2 : { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@popperjs/core@2/dist/umd/popper.min.js : { external: true, minified: true, preprocess: false}
   css:
     component:
       css/popper.css: { }
@@ -208,7 +208,7 @@ mirador_projectmirador_4:
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://unpkg.com/mirador@4.0.0-alpha.2/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/mirador@4.0.0-alpha.2/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - format_strawberryfield/mirador_font
@@ -298,11 +298,11 @@ leaflet_markercluster:
     url: https://github.com/Leaflet/Leaflet.markercluster/blob/master/MIT-LICENCE.txt
     gpl-compatible: true
   js:
-    https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.min.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css: { external: true}
-      https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css: { external: true}
+      https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css: { external: true}
+      https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css: { external: true}
 
 leaflet_subgroup:
   version: 1.0.2
@@ -486,7 +486,7 @@ clipboard_copy:
     url: https://github.com/github/clipboard-copy-element/blob/main/LICENSE
     gpl-compatible: true
   js:
-    https://unpkg.com/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
+    https://cdn.jsdelivr.net/npm/@github/clipboard-copy-element@1.1.2/dist/index.umd.js: { external: true, minified: false, preprocess: false }
 
 clipboard_copy_strawberry:
   version: 1.2
