@@ -9,6 +9,8 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Http\RequestStack as DrupalRequestStack;
 use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\PathProcessor\PathProcessorManager;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\CurrentRouteMatch;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -157,12 +159,20 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
         $block_view = $this->entityTypeManager
           ->getViewBuilder('block')
           ->view($block_entity);
-        $block_view = (string) $this->renderer->renderInIsolation($block_view);
-        $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block_view));
+        $context = new RenderContext();
+        $block = $this->renderer->executeInRenderContext($context, function () use ($block_view) {
+          return $this->renderer->render($block_view);
+        });
+        // @TODO. Lazybuilder might be in place but can't be handled the same. See \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView?
+        if (is_array($block_view['#attached'] ?? NULL) && !empty($block_view['#attached'] ?? NULL)) {
+          $response->addAttachments($block_view['#attached']);
+        }
+        if (is_array($block_view['content']['#attached'] ?? NULL) && !empty($block_view['content']['#attached'] ?? NULL)) {
+          $response->addAttachments($block_view['content']['#attached']);
+        }
+        $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block));
       }
     }
-
-
 
     return $response;
   }
