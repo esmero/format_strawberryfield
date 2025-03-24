@@ -41,7 +41,12 @@ class SearchApiDateRange extends QueryTypePluginBase {
 
       if (count($active_items)) {
         $filter = $query->createConditionGroup($operator, ['facet:' . $field_identifier]);
+        // When set this will contain a 0, 1 with the real values and a min and max with the set values from the widget.
+
         foreach ($active_items as $value) {
+          if (is_array($value) && count($value) > 2) {
+            $value = array_slice($value, 0, 2);
+          }
           $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
         }
         $query->addConditionGroup($filter);

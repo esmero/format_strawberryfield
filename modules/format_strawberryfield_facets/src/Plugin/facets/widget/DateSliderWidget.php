@@ -36,6 +36,7 @@ class DateSliderWidget extends WidgetPluginBase {
         'show_ad_bc' => TRUE,
         'show_reset_link' => FALSE,
         'hide_reset_when_no_selection' => FALSE,
+        'restrict_frequency_to_range' => TRUE,
         'reset_text' => $this->t('Reset'),
         'submit_text' => $this->t('Update'),
         'max_value' => gmdate('Y', time()),
@@ -58,8 +59,12 @@ class DateSliderWidget extends WidgetPluginBase {
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
     $range = $this->getRangeFromResults($results);
 
+    // Capping needs to happen if
+    // - restrict_frequency_to_range -> only if restrict_to_fixed  and max_value and max_values are set/
+    // OR/AND restrict_to_fixed  and max_value and max_values are set.
+
+
     ksort($results);
-    // Active does not seem to respect the input? Maybe the processor is not doing it right?
     $active = $facet->getActiveItems();
 
     $real_min = $range['min'] ?? NULL;
@@ -99,20 +104,26 @@ class DateSliderWidget extends WidgetPluginBase {
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
         $dt = new DateTime('@'.$result->getRawValue());
+        $js_year = $dt->format('Y');
         $dt->setTimezone(new DateTimeZone('America/New_York'));
-        $previous_count =  isset($js_values[$dt->format('Y')]) ? $js_values[$dt->format('Y')]['count'] : 0;
+        $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
-        $js_values[$dt->format('Y')] = [
+        $js_values[$js_year] = [
           'count' => ((int) $result->getCount() + $previous_count),
-          'label' =>  $dt->format('Y'),
+          'label' =>  $js_year,
         ];
       }
     }
+    ksort($js_values);
     // The results set on the facet are sorted where the minimum is the first
     // item and the last one is the one with the highest results, so it's safe
     // to use min/max.
+    $chart_data = [];
+    $chart_labels = [];
     foreach($js_values as $key => $js_value) {
       $labels[$key] = $js_value['label']. ($show_numbers ? ' (' . $js_value['count'] . ')' : '');
+      $chart_data[] = $js_value['count'];
+      $chart_labels[] = $js_value['label'];
     }
 
     // Independently if the max/min are set from search or from fixed values
@@ -196,27 +207,53 @@ class DateSliderWidget extends WidgetPluginBase {
       // Deleting all classes.
       $build['#items'] = [
         [
-          '#type' => 'html_tag',
-          '#tag' => 'div',
-          '#theme' => 'html_tag',
+          '#type' => 'container',
           '#attributes' => [
-            'class' => ['sbf-date-facet-slider'],
-            'id' => $id,
-            'data-min' => $unix_min,
-            'data-max' => $unix_max,
-            'data-drupal-url' => $url
+            'style' => 'width:100%;max-height:12rem',
+            'class' => ['sbf-date-facet-slider-chart'],
           ],
+          'chart' => [
+          '#type' => 'html_tag',
+            '#tag' => 'canvas',
+            '#theme' => 'html_tag',
+            '#attributes' => [
+              'id' => $id.'-chart',
+            ],
+          ]
         ],
+        [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#theme' => 'html_tag',
+        '#attributes' => [
+          'class' => ['sbf-date-facet-slider'],
+          'data-min' => $unix_min,
+          'data-max' => $unix_max,
+          'id' =>  $id,
+          'data-drupal-url' => $url
+        ]
+      ]
       ];
     }
     else {
       // If we could not get a URL we can build a widget here. Return the original Build.
-       return $build;
-     }
+      return $build;
+    }
 
 
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
     $build['#attached']['library'][] = 'core/drupal.dialog';
+
+    // For the chart.
+    if ($chart_labels[0] != $year_min) {
+      array_unshift($chart_labels, $year_min);
+      array_unshift($chart_data, 0);
+    }
+    // For the chart.
+    if (end($chart_labels) != $year_max) {
+      $chart_labels[] = $year_max;
+      $chart_data[] = 0;
+    }
 
     $build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()] = [
       'htmlid' => $id,
@@ -229,6 +266,8 @@ class DateSliderWidget extends WidgetPluginBase {
       'suffix' => $this->getConfiguration()['suffix'],
       'step' => $this->getConfiguration()['step'],
       'labels' => $labels,
+      'chart_data' => $chart_data,
+      'chart_labels' => $chart_labels,
     ];
     $build['#attributes']['class'][] = 'js-facets-widget';
     if (!empty($reset_link)) {
@@ -271,14 +310,10 @@ class DateSliderWidget extends WidgetPluginBase {
 
     $form['min_value'] = [
       '#type' => 'number',
-      '#title' => $this->t('Minimum value'),
+      '#title' => $this->t('Minimum value (in Years)'),
+      '#description' => t('Used as hard minimum limit if "Minimum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked'),
       '#default_value' => $config['min_value'],
       '#size' => 10,
-      '#states' => [
-        'visible' => [
-          'input[name="widget_config[min_type]"]' => ['value' => 'fixed'],
-        ],
-      ],
     ];
 
     $form['max_type'] = [
@@ -293,20 +328,22 @@ class DateSliderWidget extends WidgetPluginBase {
 
     $form['max_value'] = [
       '#type' => 'number',
-      '#title' => $this->t('Maximum value'),
+      '#title' => $this->t('Maximum value (in Years)'),
       '#default_value' => $config['max_value'],
-      '#description' => t('Any valued larger than the current YEAR will be capped to NOW().No metadata futurism for the sake of performance.'),
+      '#description' => t('Used as hard maximum limit if "Maximum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked. Any valued larger than the current YEAR will be capped to NOW().No metadata futurism for the sake of performance.'),
       '#size' => 5,
-      '#states' => [
-        'visible' => [
-          'input[name="widget_config[max_type]"]' => ['value' => 'fixed'],
-        ],
-      ],
     ];
     $form['restrict_to_fixed'] =  [
       '#type'          => 'checkbox',
-      '#title'         => $this->t('Even if Results are used as max/min, cap max and min to the Fixed values. This allows Outliers and wrong metadata to be not taking in account.'),
+      '#title'         => $this->t('Cap result based max/min to Fixed Ranges.'),
+      '#description'        => $this->t('Even if Results are used as max/min, cap max and min to the Fixed values. Requires Fixed values to be set. This allows Outliers and wrong metadata to be not taking in account.'),
       '#default_value' => $config['restrict_to_fixed'] ?? $this->defaultConfiguration()['restrict_to_fixed'],
+    ];
+    $form['restrict_frequency_to_range'] =  [
+      '#type'          => 'checkbox',
+      '#title'         => $this->t('Truncate Facet results outside of the user selected range'),
+      '#description'         => $this->t('Matches might bring dates (e.g an ADO has multiple dates) that fall outside of the user selected range. e.g one date matches, but facet of the complete results might include a non matching too. If this is selected those values will be ignored in the slider and Frequency Graph'),
+      '#default_value' => $config['restrict_frequency_to_range'] ?? $this->defaultConfiguration()['restrict_frequency_to_range'],
     ];
 
     $form['reset_text'] = [

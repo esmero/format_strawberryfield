@@ -13,11 +13,15 @@
     attach: function (context, settings) {
       if (settings.facets !== 'undefined' && settings.facets.sliders !== 'undefined') {
         $.each(settings.facets.sliders, function (facet, slider_settings) {
-          const elementsToAttach = once('js-facets-sbf-daterange-slider', '[data-drupal-facet-id="'+facet+'"]', context);
-          const $dateRangeFacets = $(elementsToAttach);
+          const $dateRangeFacets = once('js-facets-sbf-daterange-slider', '[data-drupal-facet-id="'+facet+'"]', context);
           if ($dateRangeFacets.length > 0) {
-            $dateRangeFacets.each(function (index, widget) {
+            $dateRangeFacets.forEach((widget) => {
                 const $widget = widget;
+                const slider = widget.querySelector(".sbf-date-facet-slider");
+                const svg = context.querySelector("#"+slider.id + "-chart");
+                if (slider_settings?.chart_data && svg) {
+                  Drupal.facets.addChart(svg, slider_settings)
+                }
                 Drupal.facets.addSlider(widget, slider_settings);
               }
             );
@@ -26,6 +30,62 @@
       }
     }
   };
+
+    Drupal.facets.addChart = function (element, settings ) {
+      let ctx = element.getContext('2d');
+      let historgram = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: settings.chart_labels,
+          datasets: [
+            {
+              data: settings.chart_data,
+              borderColor: 'blue',
+              borderWidth: 1,
+              fill: true,
+              stepped: true
+            },
+          ]
+        },
+        options: {
+          plugins: {
+            legend: {
+              display: false
+            },
+          },
+          pointRadius: 0,
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: false,
+                text: 'Year',
+                font: {
+                  padding: 1,
+                  size: 8,
+                  weight: 'bold',
+                  family: 'Arial'
+                },
+                color: 'black'
+              }
+            },
+            y: {
+              title: {
+                display: false,
+                text: 'Count',
+                font: {
+                  size: 8,
+                  weight: 'bold',
+                  family: 'Arial'
+                },
+                color: 'black'
+              },
+              beginAtZero: true,
+            }
+          }
+        }
+      });
+    }
 
     Drupal.facets.addSlider = function (widget, slider_settings) {
       var defaults = {
