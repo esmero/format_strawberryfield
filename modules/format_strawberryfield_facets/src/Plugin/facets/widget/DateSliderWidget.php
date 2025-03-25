@@ -63,7 +63,6 @@ class DateSliderWidget extends WidgetPluginBase {
     // - restrict_frequency_to_range -> only if restrict_to_fixed  and max_value and max_values are set/
     // OR/AND restrict_to_fixed  and max_value and max_values are set.
 
-
     ksort($results);
     $active = $facet->getActiveItems();
 
@@ -127,7 +126,7 @@ class DateSliderWidget extends WidgetPluginBase {
     }
 
     // Independently if the max/min are set from search or from fixed values
-    // these ones here need to be min/max we have either from search/or fixed if no query yet
+    // these here need to be min/max we have either from search/or fixed if no query yet
     // Also, we need to check if we need to cap these based on the widget settings
 
     $values = [$year_min, $year_max];
@@ -283,20 +282,6 @@ class DateSliderWidget extends WidgetPluginBase {
   public function buildConfigurationForm(array $form, FormStateInterface $form_state, FacetInterface $facet) {
     $config = $this->getConfiguration();
     $form = parent::buildConfigurationForm($form, $form_state, $facet);
-
-    $form['prefix'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Value prefix'),
-      '#size' => 5,
-      '#default_value' => $config['prefix'],
-    ];
-
-    $form['suffix'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Value suffix'),
-      '#size' => 5,
-      '#default_value' => $config['suffix'],
-    ];
 
     $form['min_type'] = [
       '#type' => 'radios',
