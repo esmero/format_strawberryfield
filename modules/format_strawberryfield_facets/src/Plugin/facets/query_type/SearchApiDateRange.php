@@ -33,7 +33,9 @@ class SearchApiDateRange extends QueryTypePluginBase {
       if ($query->getProcessingLevel() === QueryInterface::PROCESSING_FULL) {
         // Set the options for the actual query.
         $options = &$query->getOptions();
-        $options['search_api_facets'][$field_identifier] = $this->getFacetOptions();
+        $facet_options_clean = $this->getFacetOptions();
+        $options['search_api_facets'][$field_identifier] = $facet_options_clean;
+        $options['sbf_date_stats_field'][$field_identifier] = $this->getFacetOptions();
       }
 
       // Add the filter to the query if there are active values.
@@ -93,16 +95,47 @@ class SearchApiDateRange extends QueryTypePluginBase {
   protected function getFacetOptions() {
 
     $this->facet->getActiveItems();
-    $url_processor_handler = $this->facet->getProcessors()['url_processor_handler'];
-    $url_processor = $url_processor_handler->getProcessor();
-    $filter_key = $url_processor->getActiveFilters();
+    // We will use the Widget Config here to pass min/max and other things
+    $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
+    $min = $widget_config['min_value'] ?? NULL;
+    $max = $widget_config['max_value'] ?? NULL;
+    // These will be swapped by active values, if any
+    // GAP will be recalculated if active values are present.
+    // We use 'search_api_granular' instead of this plugin, so we can
+    // make Search API SOLR call directly a Solarium JSON RANGE FACET.
+    // See \Drupal\search_api_solr\Plugin\search_api\backend\SearchApiSolrBackend::setFacets
+    /*
+     * $facet_field = $facet_set->createFacetRange([
+            'local_key' => $solr_field,
+            'field' => $solr_field,
+            'start' => $info['min_value'],
+            'end' => $info['max_value'],
+            'gap' => $info['granularity'],
+          ]);
+          $includes = [];
+          if ($info['include_lower']) {
+            $includes[] = 'lower';
+          }
+          if ($info['include_upper']) {
+            $includes[] = 'upper';
+          }
+          if ($info['include_edges']) {
+            $includes[] = 'edge';
+          }
+     */
     return [
       'field' => $this->facet->getFieldIdentifier(),
       'limit' => $this->facet->getHardLimit(),
       'operator' => $this->facet->getQueryOperator(),
       'min_count' => $this->facet->getMinCount(),
       'missing' => $this->facet->isMissing(),
-      'query_type' => $this->getPluginId(),
+      'query_type' =>  'search_api_granular',
+      'min_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0,0,0,1,1, $min)),
+      'max_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0,0,0,12,31, $max)),
+      'granularity' => '+10YEAR',
+      'include_lower' => TRUE,
+      'include_upper' => TRUE,
+      'include_edges' => TRUE,
     ];
   }
 
