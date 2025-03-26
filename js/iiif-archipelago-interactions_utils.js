@@ -128,12 +128,12 @@
           let control_points = Math.floor((path_d.split(",").length * 2) + 1);
           const len = newpath.getTotalLength();
           if (len > 0) {
-       /*     for (let i = 0; i < control_points; i++) {
-              var p = newpath.getPointAtLength(i * len / (control_points - 1));
-              allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
-              //points.push([pt.x, pt.y]);
-            }
-*/
+            /*     for (let i = 0; i < control_points; i++) {
+                   var p = newpath.getPointAtLength(i * len / (control_points - 1));
+                   allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
+                   //points.push([pt.x, pt.y]);
+                 }
+     */
 
             let p = newpath.getPointAtLength(0);
             let seg = newpath.getPathSegAtLength(0);
@@ -250,14 +250,43 @@
     },
 
 
-  getIIIFServices: function (iiifmanifest) {
+    getIIIFServices: function (iiifmanifest) {
 
-    // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
-    // @by awesome https://github.com/digitaldogsbody Mike Bennet
-    const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
-    return image_services;
+      // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
+      // @by awesome https://github.com/digitaldogsbody Mike Bennet
+      const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
+      return image_services;
+    },
+
+    getUrlFragments: function () {
+      const fragment = window.location.hash.substring(1);
+      // Split into key-value pairs
+      const urlArray = fragment.split('/');
+      const urlHash = {};
+      const params = {};
+      const allowed_arguments = ['page','search'];
+
+      // The iabookreader code is really not strong
+
+      for (let i = 0; i < urlArray.length; i += 2) {
+        if (allowed_arguments.includes(urlArray[i]) && typeof(urlArray[i + 1]) !== 'undefined') {
+          urlHash[urlArray[i]] = urlArray[i + 1];
+        }
+      }
+
+      if (typeof (urlHash['page']) != 'undefined' ) {
+        // page was set -- may not be int
+        params.page = decodeURIComponent(urlHash['page']);
+      }
+
+      if (typeof (urlHash['search']) != 'undefined') {
+        params.search = decodeURIComponent((urlHash['search'])).replace(/\+/g, ' ');
+      }
+
+      return params
     }
   };
+
 
   /* Make it part of the Global Drupal Object */
   Drupal.FormatStrawberryfieldIiifUtils = FormatStrawberryfieldIiifUtils;
