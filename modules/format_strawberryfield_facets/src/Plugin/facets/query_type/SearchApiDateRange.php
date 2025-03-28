@@ -35,13 +35,15 @@ class SearchApiDateRange extends QueryTypePluginBase {
         $options = &$query->getOptions();
         $facet_options_clean = $this->getFacetOptions();
         $options['search_api_facets'][$field_identifier] = $facet_options_clean;
-        $options['sbf_date_stats_field'][$field_identifier] = $this->getFacetOptions();
+        $options['sbf_date_stats_field'][$field_identifier] = $facet_options_clean;
       }
 
       // Add the filter to the query if there are active values.
       $active_items = $this->facet->getActiveItems();
 
       if (count($active_items)) {
+
+
         $filter = $query->createConditionGroup($operator, ['facet:' . $field_identifier]);
         // When set this will contain a 0, 1 with the real values and a min and max with the set values from the widget.
 
@@ -49,6 +51,24 @@ class SearchApiDateRange extends QueryTypePluginBase {
           if (is_array($value) && count($value) > 2) {
             $value = array_slice($value, 0, 2);
           }
+          // Calculate dynamic gap. Active Items will be in unix time/ We need years
+          $options = &$query->getOptions();
+          if (isset($options['search_api_facets'][$field_identifier])) {
+            $min = $value[0] ?? 0;
+            $max = $value[1] ?? time();
+            // Seconds in a year; 31556952
+            $min_count_for_facet =  $this->facet->getHardLimit();
+            $min_count_for_facet = $min_count_for_facet > 0 ? $min_count_for_facet : 50;
+            // A min count of 0 is not useful. We will never really get all of them here
+            // So ... in that case we might decide on the actual gap by using an arbitrary that fits in a year?
+            $diff_years = gmdate('Y', $max) -  gmdate('Y',$min);
+            $gap = abs(ceil($diff_years / $min_count_for_facet));
+            $gap = $gap == 0 ? 1 : $gap;
+            $gap = (int) round($gap,0);
+            $options['search_api_facets'][$field_identifier]['granularity'] = '+'.$gap.'YEAR';
+            $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
+          }
+
           $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
         }
         $query->addConditionGroup($filter);
@@ -132,7 +152,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
       'query_type' =>  'search_api_granular',
       'min_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0,0,0,1,1, $min)),
       'max_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0,0,0,12,31, $max)),
-      'granularity' => '+10YEAR',
+      'granularity' => '+1YEAR',
       'include_lower' => TRUE,
       'include_upper' => TRUE,
       'include_edges' => TRUE,

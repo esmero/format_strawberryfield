@@ -33,7 +33,7 @@
 
     Drupal.facets.addChart = function (element, settings ) {
       let ctx = element.getContext('2d');
-      let historgram = new Chart(ctx, {
+      let histogram = new Chart(ctx, {
         type: 'line',
         data: {
           labels: settings.chart_labels,
@@ -41,9 +41,12 @@
             {
               data: settings.chart_data,
               borderColor: 'blue',
+              backgroundColor: 'lightblue',
               borderWidth: 1,
               fill: true,
-              stepped: true
+              stepped: true,
+              showLine: false,
+              tension: 0.5
             },
           ]
         },
@@ -198,8 +201,6 @@
         //slider.dataset.max = max;
       };
       $("input.facet-date-range.form-control", widget).on("change", changeHandlerInput);
-
-
     };
 
-  })(jQuery);
+  })(jQuery, Chart);
