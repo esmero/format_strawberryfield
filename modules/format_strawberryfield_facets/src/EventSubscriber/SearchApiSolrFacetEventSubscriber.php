@@ -54,7 +54,7 @@ class SearchApiSolrFacetEventSubscriber implements EventSubscriberInterface {
         'field' => $solr_field_names[$sbf_date_ranges['field']],
         'start' => '1876-01-01T00:00:00Z',
         'end' => '2025-01-01T00:00:00Z',
-        'gap' => '+10YEARS',
+        'gap' => '+10YEAR',
         'other'=> JsonRange::OTHER_ALL
       ]);*/
       $stats = $solarium_query->getStats();
