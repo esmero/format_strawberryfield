@@ -393,6 +393,9 @@ field.formatter.settings.strawberry_pannellum_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Panorama Upload JSON keys to filter against'
+    viewer_overrides:
+      type: string
+      label: 'Pannellum JSON based Viewer Overrides'
 
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
