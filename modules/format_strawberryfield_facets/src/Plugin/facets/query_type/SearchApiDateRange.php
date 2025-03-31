@@ -65,6 +65,8 @@ class SearchApiDateRange extends QueryTypePluginBase {
             $gap = abs(ceil($diff_years / $min_count_for_facet));
             $gap = $gap == 0 ? 1 : $gap;
             $gap = (int) round($gap,0);
+            $options['search_api_facets'][$field_identifier]['min_value'] = gmdate('Y-m-d\TH:i:s\Z',$min);
+            $options['search_api_facets'][$field_identifier]['max_value'] = gmdate('Y-m-d\TH:i:s\Z',$max);
             $options['search_api_facets'][$field_identifier]['granularity'] = '+'.$gap.'YEAR';
             $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
           }
