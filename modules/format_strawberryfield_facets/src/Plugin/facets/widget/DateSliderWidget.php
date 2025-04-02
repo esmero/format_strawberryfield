@@ -107,18 +107,18 @@ class DateSliderWidget extends WidgetPluginBase {
       // But here we move to formatted
       $max = gmdate('Y-m-d', (int) $max);
     }
+    $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
 
     $labels = [];
     $js_values = [];
 
     $max_items = 0;
     // Get the Timezone from Drupal or the Index.
-    $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
         $dt = new DateTime('@'.$result->getRawValue());
-        $js_year = $dt->format('Y');
         $dt->setTimezone(new DateTimeZone($time_zone));
+        $js_year = $dt->format('Y');
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
         $js_values[$js_year] = [
@@ -282,6 +282,7 @@ class DateSliderWidget extends WidgetPluginBase {
       'max' => (int)$selected_minmax[1],
       'values' => $values,
       'real_minmax' => $real_minmax,
+      'time_zone' => $time_zone,
       'value' => isset($active[0]) ? (float) $active[0] : '',
       'step' => $this->getConfiguration()['step'],
       'labels' => $labels,
