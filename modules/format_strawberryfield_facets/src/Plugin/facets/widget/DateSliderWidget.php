@@ -35,6 +35,9 @@ class DateSliderWidget extends WidgetPluginBase {
         'allow_year_entry' => TRUE,
         'show_reset_link' => FALSE,
         'hide_reset_when_no_selection' => FALSE,
+        'show_histogram' => TRUE,
+        'histogram_bg_color' => 'CornflowerBlue',
+        'histogram_color' => 'LightSkyBlue',
         'restrict_frequency_to_range' => TRUE,
         'reset_text' => $this->t('Reset'),
         'submit_text' => $this->t('Update'),
@@ -120,8 +123,10 @@ class DateSliderWidget extends WidgetPluginBase {
     $chart_labels = [];
     foreach($js_values as $key => $js_value) {
       $labels[$key] = $js_value['label']. ($show_numbers ? ' (' . $js_value['count'] . ')' : '');
-      $chart_data[] = $js_value['count'];
-      $chart_labels[] = $js_value['label'];
+      if ($this->getConfiguration()['show_histogram']) {
+        $chart_data[] = $js_value['count'];
+        $chart_labels[] = $js_value['label'];
+      }
     }
 
     // Independently if the max/min are set from search or from fixed values
@@ -203,22 +208,26 @@ class DateSliderWidget extends WidgetPluginBase {
       // We need to add the #theme key to avoid having \template_preprocess_item_list()
       // Assume the theme from the main facet needs to be inherited
       // Deleting all classes.
-      $build['#items'] = [
-        [
-          '#type' => 'container',
-          '#attributes' => [
-            'style' => 'width:100%;max-height:12rem',
-            'class' => ['sbf-date-facet-slider-chart'],
-          ],
-          'chart' => [
-          '#type' => 'html_tag',
-            '#tag' => 'canvas',
-            '#theme' => 'html_tag',
+      $build['#items'] = [];
+      if ( $this->getConfiguration()['max_type'] ) {
+        $build['#items'][] =
+          [
+            '#type' => 'container',
             '#attributes' => [
-              'id' => $id.'-chart',
+              'style' => 'width:100%;max-height:12rem',
+              'class' => ['sbf-date-facet-slider-chart'],
             ],
-          ]
-        ],
+            'chart' => [
+              '#type' => 'html_tag',
+              '#tag' => 'canvas',
+              '#theme' => 'html_tag',
+              '#attributes' => [
+                'id' => $id . '-chart',
+              ],
+            ]
+          ];
+      }
+      $build['#items'][] =
         [
         '#type' => 'html_tag',
         '#tag' => 'div',
@@ -230,8 +239,8 @@ class DateSliderWidget extends WidgetPluginBase {
           'id' =>  $id,
           'data-drupal-url' => $url
         ]
-      ]
       ];
+
     }
     else {
       // If we could not get a URL we can build a widget here. Return the original Build.
@@ -260,12 +269,12 @@ class DateSliderWidget extends WidgetPluginBase {
       'values' => $values,
       'real_minmax' => $real_minmax,
       'value' => isset($active[0]) ? (float) $active[0] : '',
-      'prefix' => $this->getConfiguration()['prefix'],
-      'suffix' => $this->getConfiguration()['suffix'],
       'step' => $this->getConfiguration()['step'],
       'labels' => $labels,
       'chart_data' => $chart_data,
       'chart_labels' => $chart_labels,
+      'chart_color' => $this->getConfiguration()['histogram_color'],
+      'chart_bg_color' => $this->getConfiguration()['histogram_bg_color']
     ];
     $build['#attributes']['class'][] = 'js-facets-widget';
     if (!empty($reset_link)) {
@@ -298,6 +307,7 @@ class DateSliderWidget extends WidgetPluginBase {
       '#description' => t('Used as hard minimum limit if "Minimum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked'),
       '#default_value' => $config['min_value'],
       '#size' => 10,
+      '#required' => TRUE,
     ];
 
     $form['max_type'] = [
@@ -315,6 +325,7 @@ class DateSliderWidget extends WidgetPluginBase {
       '#title' => $this->t('Maximum value (in Years)'),
       '#default_value' => $config['max_value'],
       '#description' => t('Used as hard maximum limit if "Maximum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked. Any valued larger than the current YEAR will be capped to NOW().No metadata futurism for the sake of performance.'),
+      '#required' => TRUE,
       '#size' => 5,
     ];
     $form['restrict_to_fixed'] =  [
@@ -381,6 +392,33 @@ class DateSliderWidget extends WidgetPluginBase {
       '#type'          => 'checkbox',
       '#title'         => $this->t('Allow manual Full YYYY entry'),
       '#default_value' => $config['allow_year_entry'],
+    ];
+    $form['show_histogram'] =  [
+      '#type'          => 'checkbox',
+      '#title'         => $this->t('Display Histogram'),
+      '#default_value' => $config['show_histogram'] ?? $this->defaultConfiguration()['show_histogram'],
+    ];
+    $form['histogram_color'] =  [
+      '#type' => 'textfield',
+      '#title' => $this->t('Histogram Line Color.'),
+      '#size' => 128,
+      '#default_value' => $config['histogram_color'] ?? $this->defaultConfiguration()['histogram_color'],
+      '#states' => [
+        'visible' => [
+          ':input[name="widget_config[show_histogram]"]' => ['checked' => TRUE],
+        ],
+      ]
+    ];
+    $form['histogram_bg_color'] =  [
+      '#type' => 'textfield',
+      '#title' => $this->t('Histogram Background Color.'),
+      '#size' => 128,
+      '#default_value' => $config['histogram_color'] ?? $this->defaultConfiguration()['histogram_bg_color'],
+      '#states' => [
+        'visible' => [
+          ':input[name="widget_config[show_histogram]"]' => ['checked' => TRUE],
+        ],
+      ]
     ];
     return $form;
   }

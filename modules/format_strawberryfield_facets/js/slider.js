@@ -40,12 +40,12 @@
           datasets: [
             {
               data: settings.chart_data,
-              borderColor: 'blue',
-              backgroundColor: 'lightblue',
+              borderColor: settings?.chart_color || 'blue',
+              backgroundColor: settings?.chart_bg_color || 'green',
               borderWidth: 1,
               fill: true,
               stepped: true,
-              showLine: false,
+              showLine: true,
               tension: 0.5
             },
           ]
