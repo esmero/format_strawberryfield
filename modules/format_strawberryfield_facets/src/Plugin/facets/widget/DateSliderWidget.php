@@ -189,6 +189,8 @@ class DateSliderWidget extends WidgetPluginBase {
 
       // Build item.
       $reset_link = $this->buildListItems($facet, $result_item);
+      // Don't show the count. That might confuse users
+      $reset_link['#title']['#show_count'] =  FALSE;
 
       // Add a class for the reset link wrapper.
       $reset_link['#wrapper_attributes']['class'][] = 'facets-reset';
@@ -209,7 +211,7 @@ class DateSliderWidget extends WidgetPluginBase {
       // Assume the theme from the main facet needs to be inherited
       // Deleting all classes.
       $build['#items'] = [];
-      if ( $this->getConfiguration()['max_type'] ) {
+      if ( $this->getConfiguration()['show_histogram'] ) {
         $build['#items'][] =
           [
             '#type' => 'container',
