@@ -9,6 +9,8 @@ use Drupal\facets\Result\Result;
 use Drupal\facets\Widget\WidgetPluginBase;
 use DateTime;
 use DateTimeZone;
+use Drupal\search_api_solr\Utility\Utility;
+
 /**
  * The slider widget.
  *
@@ -54,29 +56,35 @@ class DateSliderWidget extends WidgetPluginBase {
     $build = parent::build($facet);
 
     $results = $facet->getResults();
+    // Need to reflect if we really return if there are no results or we
+    // at least show the "reset" link?
     if (empty($results)) {
       return $build;
     }
 
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
+    // Range is Unixtime array
     $range = $this->getRangeFromResults($results);
 
     // Capping needs to happen if
-    // - restrict_frequency_to_range -> only if restrict_to_fixed  and max_value and max_values are set/
+    // - restrict_frequency_to_range -> only if restrict_to_fixed  max_value and min_values are always defined now.
     // OR/AND restrict_to_fixed  and max_value and max_values are set.
 
     ksort($results);
+    // Should we cap active to results?
     $active = $facet->getActiveItems();
-
+    // UnixTime
     $real_min = $range['min'] ?? NULL;
     $real_max = $range['max'] ?? NULL;
 
+    // UnixTime
     $active_min = reset($active)['min'] ?? $real_min;
     $active_max = reset($active)['max'] ?? $real_max;
 
     // Give some defaults
     $year_max = gmdate('Y', (int) $active_max);
     $year_min = gmdate('Y', (int) $active_min);
+    // UnixTime
     $unix_max = $active_max;
     $unix_min = $active_min;
 
@@ -90,11 +98,13 @@ class DateSliderWidget extends WidgetPluginBase {
     if (isset($min) && !empty($min)) {
       $year_min = gmdate('Y', (int) $min);
       $unix_min = (int) $min;
+      // But here we move to formatted
       $min = gmdate('Y-m-d', (int) $min);
     }
     if (isset($max) && !empty($max)) {
       $year_max = gmdate('Y', (int) $max);
       $unix_max = $max;
+      // But here we move to formatted
       $max = gmdate('Y-m-d', (int) $max);
     }
 
@@ -102,11 +112,13 @@ class DateSliderWidget extends WidgetPluginBase {
     $js_values = [];
 
     $max_items = 0;
+    // Get the Timezone from Drupal or the Index.
+    $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
         $dt = new DateTime('@'.$result->getRawValue());
         $js_year = $dt->format('Y');
-        $dt->setTimezone(new DateTimeZone('America/New_York'));
+        $dt->setTimezone(new DateTimeZone($time_zone));
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
         $js_values[$js_year] = [
@@ -116,7 +128,7 @@ class DateSliderWidget extends WidgetPluginBase {
       }
     }
     ksort($js_values);
-    // The results set on the facet are sorted where the minimum is the first
+    // The results set on Fthe facet are sorted where the minimum is the first
     // item and the last one is the one with the highest results, so it's safe
     // to use min/max.
     $chart_data = [];
@@ -415,7 +427,7 @@ class DateSliderWidget extends WidgetPluginBase {
       '#type' => 'textfield',
       '#title' => $this->t('Histogram Background Color.'),
       '#size' => 128,
-      '#default_value' => $config['histogram_color'] ?? $this->defaultConfiguration()['histogram_bg_color'],
+      '#default_value' => $config['histogram_bg_color'] ?? $this->defaultConfiguration()['histogram_bg_color'],
       '#states' => [
         'visible' => [
           ':input[name="widget_config[show_histogram]"]' => ['checked' => TRUE],
