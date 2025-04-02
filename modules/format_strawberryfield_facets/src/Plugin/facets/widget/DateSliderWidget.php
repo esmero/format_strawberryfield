@@ -316,7 +316,7 @@ class DateSliderWidget extends WidgetPluginBase {
       '#type' => 'radios',
       '#options' => [
         'fixed' => $this->t('Fixed value'),
-        'search_result' => $this->t('Based on search result'),
+        'search_result' => $this->t('Based on search results'),
       ],
       '#title' => $this->t('Maximum value type'),
       '#default_value' => $config['max_type'],
@@ -333,13 +333,13 @@ class DateSliderWidget extends WidgetPluginBase {
     $form['restrict_to_fixed'] =  [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Cap result based max/min to Fixed Ranges.'),
-      '#description'        => $this->t('Even if Results are used as max/min, cap max and min to the Fixed values. Requires Fixed values to be set. This allows Outliers and wrong metadata to be not taking in account.'),
+      '#description'        => $this->t('Even if max and min are "Based on search results", max and min will be capped to the Fixed values. This allows Outliers and wrong metadata to be never be taken in account.'),
       '#default_value' => $config['restrict_to_fixed'] ?? $this->defaultConfiguration()['restrict_to_fixed'],
     ];
     $form['restrict_frequency_to_range'] =  [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Truncate Facet results outside of the user selected range'),
-      '#description'         => $this->t('Matches might bring dates (e.g an ADO has multiple dates) that fall outside of the user selected range. e.g one date matches, but facet of the complete results might include a non matching too. If this is selected those values will be ignored in the slider and Frequency Graph'),
+      '#description'         => $this->t('Matches might bring dates (e.g an ADO has multiple dates) that fall outside of the user selected range. e.g one date matches, but facet of the complete results might include a non matching too. If this is checked, those values will be ignored in the slider and Frequency Graph'),
       '#default_value' => $config['restrict_frequency_to_range'] ?? $this->defaultConfiguration()['restrict_frequency_to_range'],
     ];
 
@@ -382,7 +382,7 @@ class DateSliderWidget extends WidgetPluginBase {
       '#title'         => $this->t('Variable date Granularity based on results'),
       '#default_value' => $config['step_variable_granularity'],
       '#description'   => $this->t(
-        'When enabled, sliders steps will vary based on the min/max facet values. By default base slider step in years will be used.'
+        'When enabled, sliders steps will vary based on the min/max facet values. By default base slider "step" setting in years will be used.'
       ),
     ];
     $form['allow_full_entry'] =  [
