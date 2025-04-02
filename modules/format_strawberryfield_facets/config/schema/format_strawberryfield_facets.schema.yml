@@ -60,9 +60,6 @@ facet.widget.config.sbf_range_date_slider:
     allow_year_entry:
       type: boolean
       label: 'Allows manual Year entry'
-    show_ad_bc:
-      type: boolean
-      label: 'Show BC/AD for negative dates'
     show_reset_link:
       type: boolean
       label: 'Show reset link'

@@ -33,7 +33,6 @@ class DateSliderWidget extends WidgetPluginBase {
         'restrict_to_fixed' => TRUE,
         'allow_full_entry' => TRUE,
         'allow_year_entry' => TRUE,
-        'show_ad_bc' => TRUE,
         'show_reset_link' => FALSE,
         'hide_reset_when_no_selection' => FALSE,
         'restrict_frequency_to_range' => TRUE,
@@ -383,13 +382,6 @@ class DateSliderWidget extends WidgetPluginBase {
       '#title'         => $this->t('Allow manual Full YYYY entry'),
       '#default_value' => $config['allow_year_entry'],
     ];
-    $form['show_ad_bc'] =  [
-      '#type'          => 'checkbox',
-      '#title'         => $this->t('use BC/AD select box. Recommended. If disabled, any manual entry before 0 AD, will require a negative sign and will be validated as good as possible using JS'),
-      '#description'         => $this->t('This has not effect if your data has no dates BC'),
-      '#default_value' => $config['show_ad_bc'],
-    ];
-
     return $form;
   }
 
