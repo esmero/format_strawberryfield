@@ -116,7 +116,7 @@ class DateSliderWidget extends WidgetPluginBase {
     // Get the Timezone from Drupal or the Index.
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
-        $dt = new DateTime('@'.$result->getRawValue());
+        $dt = new DateTime('@'.$result->getRawValue(), new DateTimeZone('UTC'));
         $dt->setTimezone(new DateTimeZone($time_zone));
         $js_year = $dt->format('Y');
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
@@ -128,7 +128,7 @@ class DateSliderWidget extends WidgetPluginBase {
       }
     }
     ksort($js_values);
-    // The results set on Fthe facet are sorted where the minimum is the first
+    // The results set on the facet are sorted where the minimum is the first
     // item and the last one is the one with the highest results, so it's safe
     // to use min/max.
     $chart_data = [];
@@ -276,10 +276,25 @@ class DateSliderWidget extends WidgetPluginBase {
       $chart_data[] = 0;
     }
 
+    // WE beed to define here if we are going for the "selected minmax"
+    // Or for the minmax that actually fit the range/from facets
+    // Or for the Fixed min max
+    // All depends on settings.
+    if ($this->getConfiguration()['restrict_frequency_to_range'] ?? NULL) {
+      $slider_min = (int)$real_minmax[0];
+      $slider_max = (int)$real_minmax[1];
+    }
+    else {
+      $slider_min = (int)$selected_minmax[0];
+      $slider_max = (int)$selected_minmax[1];
+    }
+
+
+
     $build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()] = [
       'htmlid' => $id,
-      'min' => (int)$selected_minmax[0],
-      'max' => (int)$selected_minmax[1],
+      'min' => $slider_min,
+      'max' => $slider_max,
       'values' => $values,
       'real_minmax' => $real_minmax,
       'time_zone' => $time_zone,
@@ -351,8 +366,8 @@ class DateSliderWidget extends WidgetPluginBase {
     ];
     $form['restrict_frequency_to_range'] =  [
       '#type'          => 'checkbox',
-      '#title'         => $this->t('Truncate Facet results outside of the user selected range'),
-      '#description'         => $this->t('Matches might bring dates (e.g an ADO has multiple dates) that fall outside of the user selected range. e.g one date matches, but facet of the complete results might include a non matching too. If this is checked, those values will be ignored in the slider and Frequency Graph'),
+      '#title'         => $this->t('Use the real facet max/min instead of the User selected input'),
+      '#description'         => $this->t('When checked, the user input will not be used in the Widget, but the actual max/min from the facets'),
       '#default_value' => $config['restrict_frequency_to_range'] ?? $this->defaultConfiguration()['restrict_frequency_to_range'],
     ];
 
