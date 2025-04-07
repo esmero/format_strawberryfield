@@ -46,7 +46,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
       $active_items = $this->facet->getActiveItems();
 
       if (count($active_items)) {
-
         $filter = $query->createConditionGroup($operator, ['facet:' . $field_identifier]);
         // When set this will contain a 0, 1 with the real values and a min and max with the set values from the widget.
         $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
@@ -54,6 +53,8 @@ class SearchApiDateRange extends QueryTypePluginBase {
           if (is_array($value) && count($value) > 2) {
             $value = array_slice($value, 0, 2);
           }
+          $min_value = (int) $value[0];
+          $max_value = (int) $value[1] ;
           // Calculate dynamic gap. Active Items will be in unix time/ We need years
           $options = &$query->getOptions();
           if (isset($options['search_api_facets'][$field_identifier])) {
@@ -97,6 +98,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
             $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
           }
 
+          $value = [$min_value, $max_value];
           $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
         }
         $query->addConditionGroup($filter);
