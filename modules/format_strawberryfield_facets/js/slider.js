@@ -81,6 +81,10 @@
                   weight: 'bold',
                   family: 'Arial'
                 },
+                ticks: {
+                  // forces step size to be 50 units
+                  stepSize: 10
+                },
                 color: 'black'
               },
               beginAtZero: true,
@@ -112,6 +116,9 @@
 
       function toTimestamp(strDate) {
         var datum = Date.parse(strDate);
+        if (Number.isNaN(datum)) {
+          return Date.now() / 1000;
+        }
         return datum / 1000;
       }
 
@@ -152,7 +159,6 @@
         });
       var changeHandlerInput = function (e) {
         //e.preventDefault();
-        console.log(e);
         let error = Drupal.t("Wrong date");
         const slider = widget.querySelector('.sbf-date-facet-slider')
         let min_timestamp =  slider.dataset.min;
@@ -172,6 +178,7 @@
           }
           else {
             max = ui_max = parseInt(e.target.value);
+            max = max + '-12-31T23:59:59Z';
             max_timestamp =  toTimestamp(max);
           }
         }
