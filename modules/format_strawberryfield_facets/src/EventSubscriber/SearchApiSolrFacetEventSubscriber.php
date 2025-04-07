@@ -47,7 +47,6 @@ class SearchApiSolrFacetEventSubscriber implements EventSubscriberInterface {
     if ($query->getOption('sbf_date_stats_field')) {
       $solr_field_names = $query->getIndex()->getServerInstance()->getBackend()->getSolrFieldNames($query->getIndex());
       $facet_set = $solarium_query->getFacetSet();
-      //['local_key' => 'priceranges', 'field' => 'price', 'start'=>1 ,'end'=>300,'gap'=>100, 'other'=>JsonRange::OTHER_ALL]
       foreach( $query->getOption('sbf_date_stats_field') as $sbf_date_ranges) {
       /*$facet_set->createJsonFacetRange([
         'local_key' => $sbf_date_ranges['field'].'-sbf-date-stats',
