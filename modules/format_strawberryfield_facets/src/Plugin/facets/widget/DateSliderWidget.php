@@ -65,10 +65,11 @@ class DateSliderWidget extends WidgetPluginBase {
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
     // Range is Unixtime array
     $range = $this->getRangeFromResults($results);
-
-    // Capping needs to happen if
-    // - restrict_frequency_to_range -> only if restrict_to_fixed  max_value and min_values are always defined now.
-    // OR/AND restrict_to_fixed  and max_value and max_values are set.
+    // Give $min a $max a default
+    $min = $this->getConfiguration()['min_value'] ?? 0;
+    $max = $this->getConfiguration()['max_value'] ?? date('Y');
+    $min = strtotime($min.'-01-01');
+    $max= strtotime($max.'-12-31');
 
     ksort($results);
     // Should we cap active to results?
@@ -106,6 +107,7 @@ class DateSliderWidget extends WidgetPluginBase {
       $unix_max = $max;
       // But here we move to formatted
       $max = gmdate('Y-m-d', (int) $max);
+      // But for $max we literally need the last day of the year.
     }
     $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
 
@@ -116,7 +118,7 @@ class DateSliderWidget extends WidgetPluginBase {
     // Get the Timezone from Drupal or the Index.
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
-        $dt = new DateTime('@'.$result->getRawValue(), new DateTimeZone('UTC'));
+        $dt = new DateTime('@'.$result->getRawValue());
         $dt->setTimezone(new DateTimeZone($time_zone));
         $js_year = $dt->format('Y');
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
@@ -264,18 +266,20 @@ class DateSliderWidget extends WidgetPluginBase {
 
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
 
-    // For the chart.
-    if ($chart_labels[0] != $year_min) {
-      array_unshift($chart_labels, $year_min);
-      array_unshift($chart_data, 0);
-    }
-    // For the chart.
-    if (end($chart_labels) != $year_max) {
-      $chart_labels[] = $year_max;
-      $chart_data[] = 0;
-    }
+   if ($this->getConfiguration()['show_histogram'] ?? NULL && !empty($chart_labels) && !empty($chart_data)) {
+     // For the chart.
+     if ($chart_labels[0] != $year_min) {
+       array_unshift($chart_labels, $year_min);
+       array_unshift($chart_data, 0);
+     }
+     // For the chart.
+     if (end($chart_labels) != $year_max) {
+       $chart_labels[] = $year_max;
+       $chart_data[] = 0;
+     }
+   }
 
-    // WE beed to define here if we are going for the "selected minmax"
+    // WE need to define here if we are going for the "selected minmax"
     // Or for the minmax that actually fit the range/from facets
     // Or for the Fixed min max
     // All depends on settings.
