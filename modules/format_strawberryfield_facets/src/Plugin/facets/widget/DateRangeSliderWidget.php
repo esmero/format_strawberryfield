@@ -62,7 +62,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#date_date_element' => 'date',
           '#date_time_element' => 'none',
           '#date_year_range' => $facet_settings['min'].':'.$facet_settings['max'],
-          '#date_timezone' => $facet_settings['time_zone'] ?? 'Asia/Kolkata',
+          '#date_timezone' => $facet_settings['time_zone'] ?? 'UTC',
           '#attributes' => [
             'class' => ['facet-date-range'],
             'id' => $facet->id() . '_min',
