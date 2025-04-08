@@ -67,7 +67,7 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
       $new_request->request->set('ajax_page_state', $request->request->all('ajax_page_state'));
     }
     elseif ($request->query->has('ajax_page_state')) {
-      $new_request->query->set('ajax_page_state', $request->query->all('ajax_page_state'));
+      $new_request->request->set('ajax_page_state', $request->query->all('ajax_page_state'));
     }
 
     $processed = $this->pathProcessor->processInbound($path, $new_request);
@@ -81,17 +81,15 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
     $container = \Drupal::getContainer();
     $container->set('request_stack', $request_stack);
     $active_facet = $request->request->get('active_facet');
-
+    $drupal_settings = [];
+    $libs = [];
     // Build the facets blocks found for the current request and update.
     foreach ($facets_blocks as $block_id => $block_selector) {
       $block_entity = $this->storage->load($block_id);
 
       if ($block_entity) {
-        // Render a block, then add it to the response as a replace command.
-        // We pre-render the via the lazy builder bc we need a fully formed render array
-        // To get the JS Drupal Settings. The settings are accumulated and passed as the last array
-        // on the replaceCommand()
-        $settings = [];
+        // We only pre-render the lazyBuilder so deeper settings/libraries can be "seen"
+        // But the ReplaceCommmand internal Attachment extractor.
         $render_array = \Drupal\block\BlockViewBuilder::lazyBuilder($block_id, 'full');
         if (isset($render_array['#block'])) {
           $render_array = \Drupal\block\BlockViewBuilder::preRender($render_array);
@@ -101,18 +99,8 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
           // the original/pre-build like the parent method does. (twice the processing)
           unset($render_array['#pre_render']);
         }
-
-        if (isset($render_array['content'][0]['#attached']['drupalSettings']) && is_array($render_array['content'][0]['#attached']['drupalSettings'])) {
-          $settings = array_merge_recursive($settings, $render_array['content'][0]['#attached']['drupalSettings']);
-        }
-        if (isset($render_array['content']['#attached']['drupalSettings']) && is_array($render_array['content']['#attached']['drupalSettings'])) {
-          $settings = array_merge_recursive($settings, $render_array['content']['#attached']['drupalSettings']);
-        }
-        if (isset($render_array['#attached']['drupalSettings']) && is_array($render_array['#attached']['drupalSettings'])) {
-          $settings = array_merge_recursive($settings, $render_array['#attached']['drupalSettings']);
-        }
-        $block_view = (string) $this->renderer->renderInIsolation($render_array);
-        $response->addCommand(new ReplaceCommand($block_selector, $block_view, $settings));
+        //$block_view = (string) $this->renderer->renderInIsolation($render_array);*/
+        $response->addCommand(new ReplaceCommand($block_selector, $render_array));
       }
     }
 
@@ -130,11 +118,9 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
         $block_view = $this->entityTypeManager
           ->getViewBuilder('block')
           ->view($block_entity);
-        $block_view = (string) $this->renderer->renderInIsolation($block_view);
-        $response->addCommand(new ReplaceCommand('[data-drupal-facets-summary-id=' . $facet_summary_wrapper_id . ']', $block_view, $settings));
+        $response->addCommand(new ReplaceCommand('[data-drupal-facets-summary-id=' . $facet_summary_wrapper_id . ']', $block_view));
       }
     }
-
     return $response;
   }
 }

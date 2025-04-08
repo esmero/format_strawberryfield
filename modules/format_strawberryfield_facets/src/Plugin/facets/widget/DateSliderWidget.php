@@ -263,7 +263,6 @@ class DateSliderWidget extends WidgetPluginBase {
 
 
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
-    $build['#attached']['library'][] = 'core/drupal.dialog';
 
     // For the chart.
     if ($chart_labels[0] != $year_min) {
@@ -289,7 +288,8 @@ class DateSliderWidget extends WidgetPluginBase {
       $slider_max = (int)$selected_minmax[1];
     }
 
-
+    // because of settings deep merging we need to encode any data passed as
+    // variable sized array and decode in JS back
 
     $build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()] = [
       'htmlid' => $id,
@@ -300,9 +300,9 @@ class DateSliderWidget extends WidgetPluginBase {
       'time_zone' => $time_zone,
       'value' => isset($active[0]) ? (float) $active[0] : '',
       'step' => $this->getConfiguration()['step'],
-      'labels' => $labels,
-      'chart_data' => $chart_data,
-      'chart_labels' => $chart_labels,
+      'labels' => json_encode($labels),
+      'chart_data' => json_encode($chart_data),
+      'chart_labels' => json_encode($chart_labels),
       'chart_color' => $this->getConfiguration()['histogram_color'],
       'chart_bg_color' => $this->getConfiguration()['histogram_bg_color']
     ];

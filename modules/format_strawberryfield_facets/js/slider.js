@@ -33,13 +33,15 @@
 
     Drupal.facets.addChart = function (element, settings ) {
       let ctx = element.getContext('2d');
+      let chart_data  = JSON.parse(settings.chart_data);
+      let chart_labels = JSON.parse(settings.chart_labels);
       let histogram = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: settings.chart_labels,
+          labels: chart_labels,
           datasets: [
             {
-              data: settings.chart_data,
+              data: chart_data,
               borderColor: settings?.chart_color || 'blue',
               backgroundColor: settings?.chart_bg_color || 'green',
               borderWidth: 1,
@@ -144,7 +146,6 @@
           changeHandler();
         }
       });
-
       $.extend(defaults, slider_settings);
 
       var $slider = $('.sbf-date-facet-slider', widget).slider(defaults)
@@ -155,7 +156,7 @@
         .slider('float', {
           prefix: slider_settings.prefix,
           suffix: slider_settings.suffix,
-          labels: slider_settings.labels
+          labels: JSON.parse(slider_settings.labels)
         });
       var changeHandlerInput = function (e) {
         //e.preventDefault();
@@ -196,6 +197,7 @@
           e.target.reportValidity()
         }
         else {
+
           $slider.slider('option', 'values', [ui_min, ui_max]).slider("pips", "refresh").slider("float", "refresh");
           slider.dataset.min = min_timestamp;
           slider.dataset.max = max_timestamp;
