@@ -88,21 +88,24 @@ class DateSliderWidget extends WidgetPluginBase {
     // UnixTime
     $unix_max = $active_max;
     $unix_min = $active_min;
+    // Chances are we will always a real_min being capped down (bc of Face Range queries)
+    // So we only opt for $real_min IF $active and real compared by YEAR are different.
 
     if ($real_min && $this->getConfiguration()['min_type'] == 'search_result') {
-      $min = $active_min < $real_min ? $real_min : $active_min;
+
+      $min = (int)gmdate('Y', $active_min) < (int)gmdate('Y', $real_min) ? $real_min : $active_min;
     }
     if ($real_max && $this->getConfiguration()['max_type'] == 'search_result') {
-      $max = $active_max > $real_max ? $real_max : $active_max;
+      $max = (int)gmdate('Y', $active_max) > (int)gmdate('Y',$real_max) ? $real_max : $active_max;
     }
 
-    if (isset($min) && !empty($min)) {
+    if (!empty($min)) {
       $year_min = gmdate('Y', (int) $min);
       $unix_min = (int) $min;
       // But here we move to formatted
       $min = gmdate('Y-m-d', (int) $min);
     }
-    if (isset($max) && !empty($max)) {
+    if (!empty($max)) {
       $year_max = gmdate('Y', (int) $max);
       $unix_max = $max;
       // But here we move to formatted
@@ -284,8 +287,8 @@ class DateSliderWidget extends WidgetPluginBase {
     // Or for the Fixed min max
     // All depends on settings.
     if ($this->getConfiguration()['restrict_frequency_to_range'] ?? NULL) {
-      $slider_min = (int)$real_minmax[0];
-      $slider_max = (int)$real_minmax[1];
+      $slider_min = (int)$year_min;
+      $slider_max = (int)$year_max;
     }
     else {
       $slider_min = (int)$selected_minmax[0];
