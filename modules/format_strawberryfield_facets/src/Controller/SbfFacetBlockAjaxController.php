@@ -99,7 +99,6 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
           // the original/pre-build like the parent method does. (twice the processing)
           unset($render_array['#pre_render']);
         }
-        //$block_view = (string) $this->renderer->renderInIsolation($render_array);*/
         $response->addCommand(new ReplaceCommand($block_selector, $render_array));
       }
     }
