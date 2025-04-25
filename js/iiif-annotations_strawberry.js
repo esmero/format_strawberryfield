@@ -34,7 +34,7 @@
             }
             var annotorious_annotations = [];
             var groupssettings = {};
-            // Only attach to images that have an ID and a not empty data-sbf-annotations-nodeuuid porperty
+            // Only attach to images that have an ID and a not empty data-sbf-annotations-nodeuuid property
             const elementsToAttach = once('attache_annotations', 'img[data-sbf-annotations-nodeuuid][id]:not([data-sbf-annotations-nodeuuid=""])', context);
             $(elementsToAttach).each(function (index, value) {
                 // Get the node uuid for this element
@@ -42,12 +42,15 @@
                 let node_uuid = $(this).data("sbf-annotations-nodeuuid");
                 let file_uuid = $(this).data("sbf-annotations-fileuuid");
                 let processors = $(this).data("sbf-annotations-processors");
-                if (typeof processors !== "undefined") {
+                let flavor_id = $(this).data("sbf-annotations-flavorid");
+                // Processor can be starting in 1.5.0 be ommited if we have a file_uuid
+                if (typeof file_uuid !== "undefined" && (processors !== "undefined" || flavor_id !== "undefined")) {
                     groupssettings[element_id] = {
                         "webannotations": false,
                         "nodeuuid": node_uuid,
                         "file_uuid": file_uuid,
-                        "processors": processors
+                        "processors": processors,
+                        "flavor_id": flavor_id
                     }
                 }
             });
@@ -105,6 +108,7 @@
                             data: {
                                 'target_resource_uuid': groupssetting.file_uuid,
                                 'processors': groupssetting.processors,
+                                'flavor_id': groupssetting.flavor_id
                             },
                             success: function (pagedata) {
                                 annotorious[this.element_id].setAnnotations(pagedata);
