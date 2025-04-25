@@ -409,7 +409,7 @@ class StrawberryADOJoin extends FilterPluginBase {
 
 
   /**
-   * Retrieves a list of all available fulltext fields.
+   * Retrieves a list of all available ADO NID fields.
    *
    * @return string[]
    *   An options list of fulltext field identifiers mapped to their prefixed
@@ -440,7 +440,7 @@ class StrawberryADOJoin extends FilterPluginBase {
   }
 
   /**
-   * Retrieves a list of all available fulltext fields.
+   * Retrieves a list of all available ADO Type fields.
    *
    * @return string[]
    *   An options list of fulltext field identifiers mapped to their prefixed

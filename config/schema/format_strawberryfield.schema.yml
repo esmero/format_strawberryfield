@@ -39,6 +39,27 @@ format_strawberryfield.iiif_settings:
       sequence:
         type: string
         label: 'A Search API field'
+    iiif_content_search_api_metadata:
+      type: bool
+      label: 'If IIIF Content Search Should also search/return metadata.'
+    iiiif_content_search_api_metadata_parent_node_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Fields that can be used to connect a Node to a Parent ADO/or itself.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiiif_content_search_api_metadata_node_uuid_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Field holding its own UUID or other UUIDs.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiiif_content_search_api_metadata_node_fulltext_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Fields to search/math metadata against.'
+      sequence:
+        type: string
+        label: 'A Search API field'
     iiif_content_search_api_results_per_page:
       type: int
       label: 'Number of results per page'

@@ -307,13 +307,37 @@ class IiifContentSearchController extends ControllerBase {
             $text_processors = array_map('trim', $text_processors);
             $text_processors = array_filter($text_processors);
 
+            $metadata_search = $this->iiifConfig->get('iiif_content_search_api_metadata') ?? FALSE;
 
-            if (count($visual_processors)) {
-              $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
+            // Initialize bc we will share this.
+            $jmespath_image_searchresult = [];
+
+            // For metadata search results we will re-use the static::IIIF_V3_JMESPATH results. We need the Canvas/NODE UUID.
+            // This assumes a pattern where canvases have a /do/uuid in them.
+
+            if ($metadata_search || count($visual_processors)) {
+              $jmespath_image_searchresult = StrawberryfieldJsonHelper::searchJson(
                 static::IIIF_V3_JMESPATH, $jsonArray
               );
-              $image_hash = $this->cleanImageJmesPathResult($jmespath_searchresult);
-              unset($jmespath_searchresult);
+            }
+
+            if ($metadata_search) {
+              $ado_hash = $this->cleanADOJmesPathResult($jmespath_image_searchresult);
+              $ado_hash = $ado_hash;
+              if (count($ado_hash)) {
+                foreach (array_chunk($ado_hash, 100, true) as $ado_hash_chunk) {
+                  $results_chunk = $this->metadatafromSolrIndex($the_query_string, [$node->id()], array_keys($ado_hash_chunk),($page * $per_page), $per_page);
+                  $results_metadata['annotations'] = array_merge(($results_metadata['annotations'] ?? []), $results_chunk['annotations'] ?? []);
+                  // If we got what we wanted in number we could bail out before iterating over more Node UUIDs ?
+                  $results_metadata['total'] = ($results_metadata['total'] ?? 0) +  ($results_metadata['total'] ?? 0);
+                }
+              }
+            }
+
+
+            if (count($visual_processors)) {
+              $image_hash = $this->cleanImageJmesPathResult($jmespath_image_searchresult);
+              unset($jmespath_image_searchresult);
               if (count($image_hash)) {
                 // If images are too many we can hit maxClause limit of Solr. We will chunk and query multiple times
                 foreach (array_chunk($image_hash, 100, true) as $image_hash_chunk) {
@@ -346,7 +370,7 @@ class IiifContentSearchController extends ControllerBase {
               $jmespath_searchresult = StrawberryfieldJsonHelper::searchJson(
                 static::IIIF_V3_JMESPATH_TEXT, $jsonArray
               );
-              // Mirador does not know how to target a Text Annotation that is Suplemental. So target the Canvas
+              // Mirador does not know how to target a Text Annotation that is Supplemental. So target the Canvas
               $text_hash = $this->cleanTextJmesPathResult($jmespath_searchresult, FALSE);
               unset($jmespath_searchresult);
               if (count($text_hash)) {
@@ -562,6 +586,52 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
             }
+            // Metadata  Annotations
+            if (count($results_metadata['annotations'] ?? [])) {
+              $i = 0;
+              foreach ($results_metadata['annotations'] as $node_uuid => $hit_per_canvas) {
+                $snippet = '';
+                // A single ADO will have a single abstract. So one Canvas per snippet.
+                $i++;
+                // We have a simpler structure here
+                if ($node_uuid && isset($ado_hash[$node_uuid])) {
+                  $target = $ado_hash[$node_uuid] ?? [];
+                  foreach ($target as $target_id => $target_data) {
+                    if ($target_id) {
+                      // V1
+                      // Generate the entry
+                      if ($version == "v1") {
+                        $entries[] = [
+                          "@id" => $current_url_clean
+                            . "/{$page}/annotation/anno-result-metadata/$i",
+                          "@type" => "oa:Annotation",
+                          "motivation" => "painting",
+                          "resource" => [
+                            "@type" => "cnt:ContentAsHTML",
+                            "chars" => $hit_per_canvas['boxes']['snippet'],
+                          ],
+                          "on" => ($target_id).'#'
+                        ];
+                      } elseif ($version == "v2") {
+                        $entries[] = [
+                          "id" => $current_url_clean
+                            . "/{$page}/annotation/anno-result-metadata/$i",
+                          "type" => "Annotation",
+                          "motivation" => "painting",
+                          "body" => [
+                            "type" => "TextualBody",
+                            "value" => $hit_per_canvas['boxes']['snippet'],
+                            "format" => "text/html",
+                          ],
+                          "target" => $target_id.'#'
+                        ];
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
 
             if (count($entries) == 0) {
               $total = 0;
@@ -672,6 +742,38 @@ class IiifContentSearchController extends ControllerBase {
   }
 
   /**
+   * Cleans the over complex original JMESPATH result for Images to a reversed array.
+   *
+   * @param array $jmespath_searchresult
+   *
+   * @return array
+   */
+  protected function cleanADOJmesPathResult(array $jmespath_searchresult): array {
+    $ado_hash = [];
+    foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
+      foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
+        // [1] contains here the actual canvas. [0] is the image URL
+        $path = pathinfo($image_canvas_pair[1] ?? '/');
+        $parts = explode("/", $path['dirname']);
+        $node_uuid = NULL;
+        foreach ($parts as $order => $part) {
+          if (($part == "do") && isset($parts[$order+1]) && Uuid::isValid($parts[$order+1])) {
+            $node_uuid = $parts[$order+1];
+            break;
+          }
+        }
+        if (!$node_uuid) {
+          // just skip if we have no File uuid.
+          continue;
+        }
+        $ado_hash[$node_uuid][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
+      }
+    }
+    unset($jmespath_searchresult);
+    return $ado_hash;
+  }
+
+  /**
    * Cleans the over complex original JMESPATH result for a VTT to a reversed array.
    *
    * @param array $jmespath_searchresult
@@ -759,7 +861,7 @@ class IiifContentSearchController extends ControllerBase {
 
 
   /**
-   * OCR/Annnotation Search Controller specific to IIIF Content Search Needs
+   * OCR/Annotation Search Controller specific to IIIF Content Search Needs
    *
    * @param string $term
    * @param array $processors
@@ -792,7 +894,7 @@ class IiifContentSearchController extends ControllerBase {
         'limit' => $limit,
         'offset' => $offset,
       ]);
-      $query->setSearchId('sbf_iiifcontentseaarch_from_solr');
+      $query->setSearchId('sbf_iiifcontentsearch_from_solr');
 
       $parse_mode = $this->parseModeManager->createInstance('terms');
       $query->setParseMode($parse_mode);
@@ -1080,6 +1182,134 @@ class IiifContentSearchController extends ControllerBase {
     }
     $search_result['annotations'] = $result_snippets;
     $search_result['total'] = $results->getResultCount();
+    return $search_result;
+  }
+
+  /**
+   * Metadata Search Controller specific to IIIF Content Search Needs
+   *
+   * @param string $term
+   * @param array $node_ids
+   *  List of Node IDs.
+   * @param array $node_uuids
+   *  List of Node UUIDs. Only used if UUID is indexed and a smaller number.
+   * @param int $offset
+   * @param int $limit
+   *
+   * @return array
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function metadatafromSolrIndex(string $term, array $node_ids = [], $node_uuids = [] ,$offset = 0, $limit = 100): array {
+
+    $indexes_enabled = [];
+    $indexes = $this->entityTypeManager()
+      ->getStorage('search_api_index')
+      ->loadMultiple();
+    // Add the indexes with matching server to $indexes_by_server
+    $indexes_enabled = [];
+    foreach ($indexes as $index) {
+      if ($index->isServerEnabled() && $index->isValidDatasource('entity:node')) {
+        $indexes_enabled[] = $index;
+      }
+    }
+
+    /* @var \Drupal\search_api\IndexInterface[] $indexes */
+
+    $result_snippets = [];
+    $search_result = [];
+    $count = 0;
+    $full_text_fields_for_this_index = [];
+    $allfields_translated_to_solr = [];
+
+    foreach ($indexes_enabled as $search_api_index) {
+      $allfields_translated_to_solr = $search_api_index->getServerInstance()
+        ->getBackend()
+        ->getSolrFieldNames($search_api_index);
+      // Create the query.
+      $query = $search_api_index->query([
+        'limit' => $limit,
+        'offset' => $offset,
+      ]);
+      //$query->setSearchId('sbf_iiifcontentsearch_metadata_from_solr');
+
+      $parse_mode = $this->parseModeManager->createInstance('terms');
+      $query->setParseMode($parse_mode);
+      $query->keys($term);
+      foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_fulltext_fields') as $full_text_field) {
+        if (isset($allfields_translated_to_solr[$full_text_field])) {
+          $full_text_fields_for_this_index[] = $full_text_field;
+        }
+      }
+      if (count($full_text_fields_for_this_index)) {
+        $query->setFulltextFields($full_text_fields_for_this_index);
+      }
+      else {
+        continue; // Means this index has none of the defined fields.
+      }
+
+      $query->addCondition('search_api_datasource', 'entity:node');
+      // @TODO research if we can do a single Query instead of multiple ones?
+      $node_conditions = $query->createConditionGroup('OR');
+
+      // If Nodes are passed use them as conditionals
+      if (count($node_ids)) {
+        foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_parent_node_fields') ?? [] as $node_field) {
+          if (isset($allfields_translated_to_solr[$node_field])) {
+            $node_conditions->addCondition($node_field, $node_ids, 'IN');
+            $fields_to_retrieve[$node_field] = $allfields_translated_to_solr[$node_field];
+          }
+        }
+      }
+
+      if (isset($allfields_translated_to_solr['sequence_id'])) {
+        $fields_to_retrieve['sequence_id'] = $allfields_translated_to_solr['sequence_id'];
+        $query->sort('sequence_id', QueryInterface::SORT_ASC);
+      }
+
+      if (count($node_uuids)) {
+        //Note here. If we don't have any fields configured the response will contain basically ANYTHING
+        foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_uuid_fields') ?? [] as $uuid_field) {
+          if (isset($allfields_translated_to_solr[$uuid_field])) {
+            $node_conditions->addCondition($uuid_field, $node_uuids, 'IN');
+
+            $fields_to_retrieve[$uuid_field]
+              = $allfields_translated_to_solr[$uuid_field];
+          }
+        }
+      }
+
+      if (!count($node_conditions->getConditions())) {
+        // in case no IDs or UUIDs are passed to filter, simply limit all to less
+        $query->setOption('limit', 10);
+      }
+      else {
+        $query->addConditionGroup($node_conditions);
+      }
+      // This might/not/be/respected. (API v/s reality)
+      $query->setOption('search_api_retrieved_field_values', array_values($fields_to_retrieve));
+      $query->sort('search_api_relevance', 'DESC');
+      $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
+      $results = $query->execute();
+
+      if ($results->getResultCount() >= 1) {
+        $count = $count + $results->getResultCount();
+        // This applies to all searches with hits.
+        foreach ($results as $result) {
+          $node_result = $result->getOriginalObject(TRUE);
+          if ($node_result) {
+            $node_uuid = $result->getOriginalObject(TRUE)->getValue()->uuid();
+            $result_snippets[$node_uuid]['boxes'] = [
+                'snippet' =>  $result->getExcerpt(),
+                'hit' => implode(' ', $result->getAllExtraData()['highlighted_keys'] ?? $term),
+              ];
+          }
+        }
+      }
+    }
+    $search_result['annotations'] = $result_snippets;
+    $search_result['total'] = $count;
     return $search_result;
   }
 }
