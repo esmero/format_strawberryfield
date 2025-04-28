@@ -55,6 +55,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('format_strawberryfield.embargo_settings');
+
     $form['info'] = [
       '#markup' => $this->t('This form allows you to enable/disable embargo functionality enforced at the Formatter level and configure on which JSON Key/values those will act.'),
     ];
@@ -80,6 +81,55 @@ class EmbargoSettingsForm extends ConfigFormBase {
       '#required' => FALSE
     ];
 
+    $form['global_ip_bypass_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable Global IP Range Bypass Settings'),
+      '#return_value' => TRUE,
+      '#default_value' => $config->get('global_ip_bypass_enabled') ?? FALSE,
+    ];
+
+    $form['global_ip_bypass_mode'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Global IP Range Bypass Mode'),
+      '#options' => [
+        'replace' => $this->t('Global IPs win over IP bypass values defined at ADO level'),
+        'additive' => $this->t('Global IPs are added to IP embargo bypass values defined at ADO level'),
+        'local' =>  $this->t('Global IPs are ignored when an ADO holds IP embargo bypass values'),
+      ],
+      '#default_value' => $config->get('global_ip_bypass_mode') ?? 'local',
+      '#states' => [
+        'required' => [
+          ':input[name="global_ip_bypass_enabled"]' => ['checked' => true],
+          'AND',
+          ':input[name="enabled"]' => ['checked' => true],
+          'AND',
+          ':input[name="ip_json_key"]' => ['filled' => true],
+        ],
+      ]
+    ];
+
+    $global_ip_bypass = $config->get('global_ip_bypass_addresses') ?? [];
+    $global_ip_bypass = implode("\n", $global_ip_bypass);
+
+    $form['global_ip_bypass_addresses'] = [
+      '#type' => 'textarea',
+      '#title' => $this->t('Global IP addresses and ranges embargo bypass'),
+      '#cols' => '80',
+      '#rows' => '10',
+      '#description' => $this->t("Specify IP addresses in CDIR format. Enter one IP/IP Range per line."),
+      '#default_value' => $global_ip_bypass ?? '',
+      '#required' => FALSE,
+      '#states' => [
+        'required' => [
+          ':input[name="global_ip_bypass_enabled"]' => ['checked' => true],
+          'AND',
+          ':input[name="ip_json_key"]' => ['filled' => true],
+          'AND',
+          ':input[name="enabled"]' => ['checked' => true],
+        ],
+      ],
+    ];
+
     return parent::buildForm($form, $form_state);
   }
 
@@ -87,10 +137,15 @@ class EmbargoSettingsForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
+    // Global IPs as array
+    $global_ips = array_map('trim', explode("\n", $form_state->getValue('global_ip_bypass_addresses')));
     $this->config('format_strawberryfield.embargo_settings')
       ->set('date_until_json_key',trim($form_state->getValue('date_until_json_key')))
       ->set('ip_json_key', trim($form_state->getValue('ip_json_key')))
       ->set('enabled', (bool) $form_state->getValue('enabled'))
+      ->set('global_ip_bypass_enabled', (bool) $form_state->getValue('global_ip_bypass_enabled') ?? FALSE)
+      ->set('global_ip_bypass_mode', $form_state->getValue('global_ip_bypass_mode') ?? 'local')
+      ->set('global_ip_bypass_addresses', $global_ips ?? [])
       ->save();
     parent::submitForm($form, $form_state);
   }
