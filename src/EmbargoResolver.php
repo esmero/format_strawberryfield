@@ -180,8 +180,9 @@ class EmbargoResolver implements EmbargoResolverInterface {
             if ($this->embargoConfig->get('global_ip_bypass_enabled')) {
               $global_ip_embargo = FALSE;
               // If the key is there and set to TRUE. Replace/Additive/Local does not apply here
-              if (is_bool($jsondata[$ip_embargo_key]) && $jsondata[$ip_embargo_key] == TRUE) {
-                $global_ip_embargo = evaluateGlobalIPembargo($current_ip);
+              if (is_bool($jsondata[$ip_embargo_key] ?? []) && $jsondata[$ip_embargo_key] == TRUE) {
+                $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
+                $noembargo = $noembargo && $ip_embargo;
               }
               // Only makes sense to check the modes IF the ADO already had IP data and was evaluated.
               elseif ($ip_evaluated) {
@@ -189,14 +190,15 @@ class EmbargoResolver implements EmbargoResolverInterface {
                 // Replace means global ip bypass wins. So any other evaluation that e.g would allow
                 // a user to bypass is invalidated, and we need to re-evaluate.
                 if ($mode == "replace") {
-                  $ip_embargo = $global_ip_embargo;
+                  $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
                   $noembargo = $noembargo && $ip_embargo;
                 }
                 if ($mode == "additive") {
-                  $ip_embargo = $global_ip_embargo || $ip_embargo;
+                  $ip_embargo = $this->evaluateGlobalIPembargo($current_ip) || $ip_embargo;
                   $noembargo = $noembargo && $ip_embargo;
                 }
                 if ($mode == "local") {
+                  // Do nothing really.
                   $ip_embargo = $ip_embargo;
                 }
               }

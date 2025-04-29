@@ -84,6 +84,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
     $form['global_ip_bypass_enabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable Global IP Range Bypass Settings'),
+      '#description' => $this->t('To allow global IP embargo bypass settings to act on an ADO, add the previous JSON key setting to the ADO with a value of boolean "true". e.g <code>{ "ip_embargo_bypass": true }</code> '),
       '#return_value' => TRUE,
       '#default_value' => $config->get('global_ip_bypass_enabled') ?? FALSE,
     ];
@@ -91,10 +92,11 @@ class EmbargoSettingsForm extends ConfigFormBase {
     $form['global_ip_bypass_mode'] = [
       '#type' => 'select',
       '#title' => $this->t('Global IP Range Bypass Mode'),
+      '#description' => $this->t('These modes only affect already embargoed ADOs with values that hold IP addresses that allow a bypass'),
       '#options' => [
-        'replace' => $this->t('Global IPs win over IP bypass values defined at ADO level'),
-        'additive' => $this->t('Global IPs are added to IP embargo bypass values defined at ADO level'),
-        'local' =>  $this->t('Global IPs are ignored when an ADO holds IP embargo bypass values'),
+        'replace' => $this->t('Global IPs win over IP bypass "IP address(es)" values defined at ADO level'),
+        'additive' => $this->t('Global IPs are added to IP embargo bypass "IP address(es)" values defined at ADO level'),
+        'local' =>  $this->t('Global IPs are ignored when an ADO holds IP embargo bypass "IP address(es)" values'),
       ],
       '#default_value' => $config->get('global_ip_bypass_mode') ?? 'local',
       '#states' => [
