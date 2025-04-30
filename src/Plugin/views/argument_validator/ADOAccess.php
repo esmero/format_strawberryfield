@@ -2,7 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\views\argument_validator;
 
-use Drupal\Component\Annotation\Plugin;
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -11,13 +11,11 @@ use Drupal\Core\Plugin\Context\EntityContextDefinition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Drupal\views\Attribute\ViewsArgumentValidator;
-use Drupal\views\Plugin\Derivative\ViewsEntityArgumentValidator;
 use Drupal\views\Plugin\views\argument\ArgumentPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\views\Plugin\views\argument_validator\Entity;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
-
+use Drupal\Core\Cache\Cache;
 /**
  * Defines ADO argument validator plugine.
  */
@@ -26,7 +24,15 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
   title: new TranslatableMarkup('ADO access and Embargo Validator'),
   entity_type: 'node',
 )]
-class ADOAccess extends Entity {
+class ADOAccess extends Entity implements CacheableDependencyInterface {
+
+
+  protected array $cacheTags = [];
+
+   protected array $cacheContext = [];
+
+   const MAX_CACHE = 0;
+
 
   /**
    * The entity type manager.
@@ -96,7 +102,6 @@ class ADOAccess extends Entity {
       $container->get('format_strawberryfield.embargo_resolver')
     );
   }
-
   /**
    * {@inheritdoc}
    */
@@ -253,6 +258,7 @@ class ADOAccess extends Entity {
 
     if ($this->options['operation'] == "view_embargoed") {
       $embargoed = FALSE;
+      $embargo_info = [];
       if ($sbf_fields = $this->strawberryfieldUtilityService->bearsStrawberryfield(
         $entity
       )) {
@@ -266,11 +272,30 @@ class ADOAccess extends Entity {
               // Under any JSON error return no access. No logging here.
               return FALSE;
             }
-            $embargo_info = $this->embargoResolver->embargoInfo($entity->uuid(), $jsondata);
+            $embargo_info = $this->embargoResolver->embargoInfo($entity, $jsondata);
             $embargoed = $embargo_info[0] ?? FALSE || $embargoed;
+            $embargo_context = [];
+            $embargo_tags = [];
+            if (is_array($embargo_info)) {
+              $embargo_tags[] = 'format_strawberryfield:all_embargo';
+              if ($embargo_info[1]) {
+                $embargo_tags[] = 'format_strawberryfield:embargo:'
+                  . $embargo_info[1];
+              }
+              //$embargo_info[3] == "cacheable"
+
+              if ($embargo_info[2] || !$embargo_info[3]) {
+                $embargo_context[] = 'ip';
+              }
+              $embargo_tags[] = 'user.roles';
+              $embargo_tags[] = 'config:format_strawberryfield.embargo_settings';
+              $embargo_tags =  Cache::mergeTags($embargo_tags, $entity->getCacheTags());
+              $this->setCacheContext($embargo_context);
+              $this->setCacheTags($embargo_tags);
+            }
           }
         }
-        if (!$embargoed) {
+        if ($embargoed) {
           return FALSE;
         }
         // Return denied bc FALSE means no access.
@@ -320,6 +345,34 @@ class ADOAccess extends Entity {
     return EntityContextDefinition::fromEntityTypeId($this->definition['entity_type'])
       ->setLabel($this->argument->adminLabel())
       ->setRequired(FALSE);
+  }
+
+  public function getCacheTags(): array {
+    return $this->cacheTags;
+  }
+
+  public function setCacheTags(array $cacheTags): void {
+    $this->cacheTags = $cacheTags;
+  }
+
+  public function setCacheContext(array $cacheContext): void {
+    $this->cacheContext = $cacheContext;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function getCacheContexts() {
+    return $this->cacheContext;
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public function getCacheMaxAge() {
+    if  ($this->options['operation'] == "view_embargoed") {
+      return static::MAX_CACHE;
+    }
   }
 
 }

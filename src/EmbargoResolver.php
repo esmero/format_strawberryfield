@@ -56,6 +56,13 @@ class EmbargoResolver implements EmbargoResolverInterface {
    */
   protected array $resolvedEmbargos = [];
 
+  /**
+   * A Per HTTP Request static cache of resolved Embargoes
+   *
+   * @var array
+   */
+  protected array $resolvedEmbargosNID = [];
+
 
   /**
    * DisplayResolver constructor.
@@ -77,15 +84,16 @@ class EmbargoResolver implements EmbargoResolverInterface {
    *    If not possible we return an array with more info.
    *    If the user is anonymous, and IP data is present in the ADO, we kill the cache too.
    *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    * @param array $jsondata
    *
    * @return array
    *    Returns array
    *    with [(bool) embargoed, $date|FALSE, (bool) IP is enforced], (bool) if cacheable at all or not
-   *
    */
-  public function embargoInfo(string $uuid, array $jsondata) {
-
+  public function embargoInfo(ContentEntityInterface $entity, array $jsondata) {
+    $uuid = $entity->uuid();
+    $nid = $entity->id();
     static $cache = [];
     $cache_id = $uuid . md5(serialize($jsondata));
     // This cache will only work per extending class
@@ -210,7 +218,8 @@ class EmbargoResolver implements EmbargoResolverInterface {
     $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
 
     $cache[$cache_id] = $embargo_info;
-    $this->resolvedEmbargos[$uuid] = $embargo_info;
+    $this->resolvedEmbargos[$uuid] = $this->resolvedEmbargosNID[$nid] = $embargo_info;
+
     return $embargo_info;
   }
 
@@ -227,7 +236,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
   }
 
   /**
-   * Getter for the resolved Static embargoe Cache
+   * Getter for the resolved Static embargo Cache
    *
    * @param string $uuid
    *    The UUID of a node for which an embargo might/not have been resolved
@@ -236,6 +245,19 @@ class EmbargoResolver implements EmbargoResolverInterface {
    */
   public function getResolvedEmbargoesByUUid(string $uuid): array {
     return $this->resolvedEmbargos[$uuid] ?? [];
+  }
+
+
+  /**
+   * Getter for the resolved Static embargo Cache
+   *
+   * @param string $uuid
+   *    The UUID of a node for which an embargo might/not have been resolved
+   * @return array
+   *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+   */
+  public function getResolvedEmbargoesByNiD(int $nid): array {
+    return $this->resolvedEmbargosNID[$nid] ?? [];
   }
 
 

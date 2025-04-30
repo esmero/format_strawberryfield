@@ -10,6 +10,9 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Display\EntityDisplayInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Swaggest\JsonDiff\JsonDiff;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\cache\CachePluginBase;
+use Drupal\Core\Cache\Cache;
 
 /**
  * Implements hook_page_attachments().
@@ -406,4 +409,89 @@ function _format_strawberryfield_metadata_preview_error_handler($error_level, $m
         _drupal_error_handler($error_level, $message, $filename, $line, $context);
         break;
     }
+}
+
+/**
+ *
+ * implements hook_views_pre_build
+ *
+ * Used to kill caching if we are using our custom ado_access ADO/NODE
+ * argument validator.
+ *
+ * @param \Drupal\views\ViewExecutable $view
+ *
+ * @return void
+ */
+function format_strawberryfield_views_pre_build(ViewExecutable $view) {
+  foreach ($view->argument ?? [] as $argument) {
+    if ($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
+      if ($argument->options['specify_validation'] ?? FALSE) {
+        if ($argument->options['validate']['type'] ?? NULL == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
+          // We have to kill the cache if we are evaluating ADO & Embargo accesss arguments
+          // Issue is "when" evaluation is FALSE, the Views returns (*empty?) before we have the chance
+          // To alter it post_render. Performance v/s Flexibility/Consistency. The later one wins here.
+          $view->element['#cache']['max-age'] = 0;
+          $view->display_handler->overrideOption('cache', [
+            'type' => 'time',
+            'options' => [
+              'results_lifespan' => '0',
+              'output_lifespan' => '0',
+            ],
+          ]);
+        }
+        break;
+      }
+    }
+  }
+}
+
+/**
+ *  implements hook_views_post_render
+ *
+ *  Really only applies when the ado_access argument decides the user can
+ *  See the NODE (not embargoed). In a case of not, we don't run this at all.
+ *  And we simply set caching to none. The most common case is IP address
+ *  That varies of course per call.
+ *
+ * @param \Drupal\views\ViewExecutable $view
+ * @param $output
+ * @param \Drupal\views\Plugin\views\cache\CachePluginBase $cache
+ *
+ * @return void
+ */
+function format_strawberryfield_views_post_render(ViewExecutable $view, &$output, CachePluginBase $cache) {
+  $view =  $view;
+  foreach ($view->argument ?? [] as $argument) {
+    if($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
+      if ($argument->options['specify_validation'] ?? FALSE) {
+        if ($argument->options['validate']['type'] ?? NULL == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
+          $embargo_tags = [];
+          $embargo_context = [];
+          foreach ($argument->value as $value) {
+            $embargo_info = \Drupal::service('format_strawberryfield.embargo_resolver')->getResolvedEmbargoesByNiD($value);
+            if (is_array($embargo_info)) {
+              $embargo_tags[] = 'format_strawberryfield:all_embargo';
+              if ($embargo_info[1]) {
+                $embargo_tags[] = 'format_strawberryfield:embargo:'
+                  . $embargo_info[1];
+              }
+              if ($embargo_info[2]) {
+                $embargo_context[] = 'ip';
+              }
+            }
+            if (($embargo_info[3] ?? TRUE) == FALSE) {
+              $view->element['#cache']['max-age'] = 0;
+              $output['#cache']['max-age'] = 0;
+            }
+          }
+          $view->element['#cache']['max-age'] = 0;
+          $output['#cache']['max-age'] = 0;
+          $output['#cache']['contexts'] = Cache::mergeContexts($output['#cache']['contexts'] ?? [], ['user.permissions', 'user.roles'], $embargo_context);
+          $view->element['#cache']['contexts'] = Cache::mergeContexts($view->element['#cache']['contexts'] ?? [], ['user.permissions', 'user.roles'], $embargo_context);
+          $output['#cache']['tags'] = Cache::mergeTags($output['#cache']['tags'] ?? [], $embargo_tags,['config:format_strawberryfield.embargo_settings']);
+          $view->element['#cache']['tags'] = Cache::mergeTags($view->element['#cache']['tags'] ?? [], $embargo_tags,['config:format_strawberryfield.embargo_settings']);
+        }
+      }
+    }
+  }
 }
