@@ -220,7 +220,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         }
       },
       }*/
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];

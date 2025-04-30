@@ -542,7 +542,7 @@ class MetadataAPIController extends ControllerBase
                         }
                         // @TODO make embargo its own method.
                         $embargo_info = $this->embargoResolver->embargoInfo(
-                          $node->uuid(), $jsondata
+                          $node, $jsondata
                         );
                         // This one is for the Twig template
                         // We do not need the IP here. No use of showing the IP at all?
