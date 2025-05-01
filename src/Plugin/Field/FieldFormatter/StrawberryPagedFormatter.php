@@ -528,7 +528,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         );
 
         $embargo_info = $this->embargoResolver->embargoInfo(
-          $item->getEntity()->uuid(), $jsondata
+          $item->getEntity(), $jsondata
         );
         // This one is for the Twig template
         // We do not need the IP here. No use of showing the IP at all?
@@ -704,7 +704,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
     }
 
     $embargo_info = $this->embargoResolver->embargoInfo(
-      $item->getEntity()->uuid(), $jsondata
+      $item->getEntity(), $jsondata
     );
 
     if (is_array($embargo_info)) {

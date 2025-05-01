@@ -290,8 +290,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
          }
       }*/
       $embargoed = FALSE;
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
-        ->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // Check embargo
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];

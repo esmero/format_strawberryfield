@@ -547,7 +547,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       // A rendered Manifest
       if ($hide_on_embargo) {
         $embargo_info = $this->embargoResolver->embargoInfo(
-          $item->getEntity()->uuid(), $jsondata
+          $item->getEntity(), $jsondata
         );
 
 

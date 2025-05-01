@@ -614,7 +614,9 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
     $context['language'] = \Drupal::languageManager()->getCurrentLanguage();
     $user = \Drupal::currentUser();
     $context['is_admin'] = $user->hasPermission('access administration pages');
+    $context['is_anonymous'] = $user->isAnonymous() ?? FALSE;
     $context['logged_in'] = $user->isAuthenticated();
+    $context['user_roles'] = $user->getRoles() ?? [];
     return $context;
   }
 

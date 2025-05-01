@@ -194,8 +194,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
          }
       }*/
       $i = 0;
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
-        ->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // Check embargo
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];

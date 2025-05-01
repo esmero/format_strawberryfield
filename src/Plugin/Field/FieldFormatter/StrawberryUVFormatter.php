@@ -285,7 +285,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
       // A rendered Manifest
       if ($hide_on_embargo) {
         $embargo_info = $this->embargoResolver->embargoInfo(
-          $item->getEntity()->uuid(), $jsondata
+          $item->getEntity(), $jsondata
         );
         if (is_array($embargo_info)) {
           $embargoed = $embargo_info[0];
