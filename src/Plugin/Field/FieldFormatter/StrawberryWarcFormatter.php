@@ -139,6 +139,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
     $navbar = $this->getSetting('navbar');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     //@TODO allow more than one?
     $number_warcs = $this->getSetting('number_warcs');
 
@@ -202,7 +203,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
         if ($embargo_info[1]) {
           $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -213,7 +214,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
         $upload_keys = $embargo_upload_keys_string;
       }
 
-      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+      if (!$embargoed || (!empty($embargo_upload_keys_string) && !$hide_on_embargo) || ($embargoed && !$hide_on_embargo)) {
         $ordersubkey = 'sequence';
         // Since the conditionals here are more complex
         // we do not call $this->fetchMediaFromJsonWithFilter()

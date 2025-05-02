@@ -8,6 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
@@ -776,6 +777,9 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || (int) $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $embargo_context = [];
+    $embargo_tags = [];
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $overlaysource = is_array($this->getSetting('overlaysource')) ? $this->getSetting('overlaysource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
@@ -808,17 +812,32 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
       }
       /* @var array $jsondata */
       $jsondata = json_decode($item->value, TRUE);
-      // @TODO use future flatversion precomputed at field level as a property
+      // @TODO use future flat version precomputed at field level as a property
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+      }
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
+      // Check embargo
+      if (is_array($embargo_info)) {
+        $embargoed = $embargo_info[0];
+        $embargo_tags[] = 'format_strawberryfield:all_embargo';
+        if ($embargo_info[1]) {
+          $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
+        }
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
+          $embargo_context[] = 'ip';
+        }
+      }
+      else {
+        $embargoed = FALSE;
       }
 
       $json_key = trim($this->getSetting('json_key_source'));
       // Check if we have a json key and it returns an actual value
       // @TODO if the key has no . (dots) we can simply evaluate as an array key
       // That is faster.
-      if (empty($json_key) || !empty($item->searchPath($json_key))) {
+      if ((empty($json_key) || !empty($item->searchPath($json_key))) &&  (!$embargoed || ($embargoed && !$hide_on_embargo)) ) {
         // Processes GeoJSON
         foreach ($mediasource as $iiifsource) {
           $pagestrategy = (string)$iiifsource;
@@ -947,6 +966,13 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
           }
         }
       }
+    }
+    $elements['#cache'] = [
+      'context' => Cache::mergeContexts($items->getEntity()->getCacheContexts(), ['user.permissions', 'user.roles'], $embargo_context),
+      'tags' => Cache::mergeTags($items->getEntity()->getCacheTags(), $embargo_tags, ['config:format_strawberryfield.embargo_settings']),
+    ];
+    if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+      $elements['#cache']['max-age'] = 0;
     }
     unset($item->_attributes);
     return $elements;

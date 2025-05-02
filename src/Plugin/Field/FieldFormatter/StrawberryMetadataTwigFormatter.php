@@ -195,6 +195,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     $elements = [];
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $nodeid = $items->getEntity()->id();
     $embargo_context = [];
     $embargo_tags = [];
@@ -256,45 +257,48 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       }
 
       try {
-        // @TODO So we can generate two type of outputs here,
-        // A) HTML visible (like smart metadata displays)
-        // B) Downloadable formats.
-        // C) Embeded (but hidden JSON-LD, etc)
-        // So we need to make sure People can "tag" that need.
+        if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+          // @TODO So we can generate two type of outputs here,
+          // A) HTML visible (like smart metadata displays)
+          // B) Downloadable formats.
+          // C) Embeded (but hidden JSON-LD, etc)
+          // So we need to make sure People can "tag" that need.
 
-        // Order as: structures based on sequence key
-        // We will assume here people are using our automatic keys
-        // If they are using other ones, they will have to apply ordering
-        // Directly on their Twig Templates.
-        $ordersubkey = 'sequence';
-        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
-          StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        }
-        $context = [
-          'data' => $jsondata,
-          'node' => $items->getEntity(),
-          'iiif_server' => $this->getIiifUrls()['public'],
-        ] + $context_embargo;
-        $original_context = $context;
+          // Order as: structures based on sequence key
+          // We will assume here people are using our automatic keys
+          // If they are using other ones, they will have to apply ordering
+          // Directly on their Twig Templates.
+          $ordersubkey = 'sequence';
+          foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+            StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+          }
+          $context = [
+              'data' => $jsondata,
+              'node' => $items->getEntity(),
+              'iiif_server' => $this->getIiifUrls()['public'],
+            ] + $context_embargo;
+          $original_context = $context;
 
-        // Allow other modules to provide extra Context!
-        // Call modules that implement the hook, and let them add items.
-        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
-        // In case someone decided to wipe the original context?
-        // We bring it back!
-        $context = $context + $original_context;
-        $templaterenderelement = $metadatadisplayentity->processHtml($context);
+          // Allow other modules to provide extra Context!
+          // Call modules that implement the hook, and let them add items.
+          \Drupal::moduleHandler()
+            ->alter('format_strawberryfield_twigcontext', $context);
+          // In case someone decided to wipe the original context?
+          // We bring it back!
+          $context = $context + $original_context;
+          $templaterenderelement = $metadatadisplayentity->processHtml($context);
 
-        if ($usemetadatalabel) {
-          $elements[$delta]['container'] = [
-            '#type' => 'details',
-            '#title' => $metadatadisplayentity->toLink()->getText(),
-            '#open' => FALSE,
-            'content' => $templaterenderelement,
-          ];
-        }
-        else {
-          $elements[$delta]['content'] = $templaterenderelement;
+          if ($usemetadatalabel) {
+            $elements[$delta]['container'] = [
+              '#type' => 'details',
+              '#title' => $metadatadisplayentity->toLink()->getText(),
+              '#open' => FALSE,
+              'content' => $templaterenderelement,
+            ];
+          }
+          else {
+            $elements[$delta]['content'] = $templaterenderelement;
+          }
         }
       }
       catch (\Exception $e) {
