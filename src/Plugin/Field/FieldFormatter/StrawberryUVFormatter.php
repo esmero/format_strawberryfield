@@ -124,8 +124,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
     return parent::defaultSettings() + [
         'metadataexposeentity_source' => NULL,
         'max_width' => 720,
-        'max_height' => 480,
-        'hide_on_embargo' => FALSE,
+        'max_height' => 480
       ];
   }
 
@@ -236,11 +235,6 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
-    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
-      [
-        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
-      ]
-    );
     return array_merge($summary, parent::settingsSummary());
   }
 
@@ -254,7 +248,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
-    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     // This won't be evaluated and will stay false even if embargoed
     // if hide_on_embargo is not enabled
     // bc all embargo decision will anyways be delegated to the
@@ -294,7 +288,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
             $embargo_tags[] = 'format_strawberryfield:embargo:'
               . $embargo_info[1];
           }
-          if ($embargo_info[2]) {
+          if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
             $embargo_context[] = 'ip';
           }
         }
