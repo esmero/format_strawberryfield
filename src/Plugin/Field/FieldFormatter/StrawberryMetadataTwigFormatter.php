@@ -111,11 +111,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
       'metadatadisplayentity_uuid' => NULL,
       'metadatadisplayentity_uselabel' => TRUE,
+      'hide_on_embargo' => FALSE
     ];
   }
 
@@ -124,12 +127,12 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $entity = NULL;
+    $form = parent::settingsForm($form, $form_state);
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-
-    return [
+    $form = $form + [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
       ],
@@ -163,6 +166,10 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
       ],
     ];
+    // These don't apply to this Formatter.
+    unset($form['upload_json_key_source']);
+    unset($form['embargo_json_key_source']);
+    return $form;
   }
 
   /**
