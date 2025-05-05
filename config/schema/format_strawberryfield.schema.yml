@@ -84,6 +84,15 @@ format_strawberryfield.embargo_settings:
       type: boolean
       label: 'If Embargo is Globally enabled'
       default: false
+    global_ip_bypass_mode:
+      type: boolean
+      label: 'If Global IP Range Bypass Mode is enabled'
+      default: false
+    global_ip_bypass_addresses:
+      type: array
+      items:
+        type: string
+      label: 'global_ip_bypass_addresses list'
 
 field.formatter.settings.strawberry_audio_formatter:
   type: mapping
