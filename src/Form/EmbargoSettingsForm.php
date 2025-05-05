@@ -81,6 +81,19 @@ class EmbargoSettingsForm extends ConfigFormBase {
       '#required' => FALSE
     ];
 
+    $form['file_embargo_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => 'Embargo Direct File Paths',
+      '#description' => $this->t('If enabled, users that cannot bypass an embargo, even if they know the direct path to a file, will not be able to download or stream media. The Site administrator will be responsible for hiding Formatters(Viewers) that are file based to avoid them showing up without media. Formatters will not act on this option and automatically hide themselves. IIIF URLs are not affected by this. Note: this has performance implications, especially on streamed media, even if the user is allowed to see an ADO that holds a media file.'),      '#description' => $this->t('If enabled, users that can not bypass an embargo, even if they know the direct path to a file, will not be able to download or stream. The Site administrator will be responsible of hiding Formatters(Viewers) that are file based to avoid them showing up without media. Formatters will not act automatically hiding themselves on this option. Note: this has performance implications, specially on streamed media, even if the user is allowed to see an ADO that holds a file.'),
+      '#default_value' => $config->get('file_embargo_enabled') ?? '',
+      '#required' => FALSE,
+      '#states' => [
+        'visible' => [
+          ':input[name="enabled"]' => ['checked' => true],
+        ],
+      ]
+    ];
+
     $form['global_ip_bypass_enabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable Global IP Range Bypass Settings'),
@@ -145,6 +158,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
       ->set('date_until_json_key',trim($form_state->getValue('date_until_json_key')))
       ->set('ip_json_key', trim($form_state->getValue('ip_json_key')))
       ->set('enabled', (bool) $form_state->getValue('enabled'))
+      ->set('file_embargo_enabled', (bool) $form_state->getValue('file_embargo_enabled'))
       ->set('global_ip_bypass_enabled', (bool) $form_state->getValue('global_ip_bypass_enabled') ?? FALSE)
       ->set('global_ip_bypass_mode', $form_state->getValue('global_ip_bypass_mode') ?? 'local')
       ->set('global_ip_bypass_addresses', $global_ips ?? [])

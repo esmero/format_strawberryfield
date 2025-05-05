@@ -84,6 +84,10 @@ format_strawberryfield.embargo_settings:
       type: boolean
       label: 'If Embargo is Globally enabled'
       default: false
+    file_embargo_enabled:
+      type: boolean
+      label: 'If File download paths should also inherit embargo.'
+      default: false
     global_ip_bypass_enabled:
       type: boolean
       label: 'If Global IP Range Bypass Settings are enabled'

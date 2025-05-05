@@ -331,4 +331,12 @@ class EmbargoResolver implements EmbargoResolverInterface {
     return FALSE;
   }
 
+  public function isEmbargoEnabled(): bool {
+    return (bool) $this->embargoConfig->get('enabled');
+  }
+
+  public function isFileEmbargoEnabled(): bool {
+    return (bool) ($this->embargoConfig->get('enabled') && $this->embargoConfig->get('file_embargo_enabled'));
+  }
+
 }

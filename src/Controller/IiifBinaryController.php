@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\StreamWrapper\StreamWrapperInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -42,6 +43,11 @@ class IiifBinaryController extends ControllerBase {
   protected $strawberryfieldUtility;
 
   /**
+   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface
+   */
+  protected $embargoResolver;
+
+  /**
    * IiifBinaryController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
@@ -53,11 +59,13 @@ class IiifBinaryController extends ControllerBase {
   public function __construct(
     RequestStack $request_stack,
     StrawberryfieldUtilityService $strawberryfield_utility_service,
-    EntityTypeManagerInterface $entitytype_manager
+    EntityTypeManagerInterface $entitytype_manager,
+    EmbargoResolverInterface $embargo_resolver,
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->entityTypeManager = $entitytype_manager;
+    $this->embargoResolver = $embargo_resolver;
   }
 
   /**
@@ -67,7 +75,8 @@ class IiifBinaryController extends ControllerBase {
     return new static(
       $container->get('request_stack'),
       $container->get('strawberryfield.utility'),
-      $container->get('entity_type.manager')
+      $container->get('entity_type.manager'),
+      $container->get('format_strawberryfield.embargo_resolver'),
     );
   }
 
@@ -83,6 +92,8 @@ class IiifBinaryController extends ControllerBase {
    * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse|\Symfony\Component\HttpFoundation\Response | RangedRemoteFileRespone
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
    */
   public function servefile(Request $request, ContentEntityInterface $node, string $uuid, string $format = 'default.jpg') {
     //@TODO check if format passed matches file type. If not abort.
@@ -124,6 +135,37 @@ class IiifBinaryController extends ControllerBase {
             break;
           }
         }
+        if ($found && $this->embargoResolver->isFileEmbargoEnabled()) {
+          //embargo evaluation is done IF found, and enabled.
+          /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
+          // This will try with any possible match.
+          foreach ($field->getIterator() as $itemfield) {
+            $jsondata = json_decode($itemfield->value, TRUE);
+            // @TODO use future flatversion precomputed at field level as a property
+            $json_error = json_last_error();
+            if ($json_error == JSON_ERROR_NONE) {
+              $embargo_info = $this->embargoResolver->embargoInfo($node, $jsondata);
+              // Check embargo
+              if (is_array($embargo_info)) {
+                $embargoed = $embargo_info[0];
+              }
+              else {
+                $embargoed =FALSE;
+              }
+
+              if ($embargoed) {
+                throw new AccessDeniedHttpException(
+                  "You don't have Permissions to access the Requested Resource"
+                );
+              }
+            }
+            else {
+              throw new \Exception(
+                "No Strawberry field found for {$node} ."
+              );
+            }
+          }
+        }
       }
 
       // If media has no file item.
@@ -132,6 +174,10 @@ class IiifBinaryController extends ControllerBase {
           "The Requested Resource does not exist in this Digital Object"
         );
       }
+
+      // Only get the RAW JSON and evaluate embargo if enabled
+
+
 
       $stream = $request->query->get('stream');
       $uri = $found->getFileUri(); // The source URL

@@ -25,4 +25,14 @@ interface EmbargoResolverInterface {
    */
   public function embargoInfo(ContentEntityInterface $entity, array $jsondata);
 
+  /**
+   * @return bool
+   */
+  public function isEmbargoEnabled():bool;
+
+  /**
+   * @return bool
+   */
+  public function isFileEmbargoEnabled():bool;
+
 }
