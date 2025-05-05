@@ -84,10 +84,14 @@ format_strawberryfield.embargo_settings:
       type: boolean
       label: 'If Embargo is Globally enabled'
       default: false
-    global_ip_bypass_mode:
+    global_ip_bypass_enabled:
       type: boolean
-      label: 'If Global IP Range Bypass Mode is enabled'
+      label: 'If Global IP Range Bypass Settings are enabled'
       default: false
+    global_ip_bypass_mode:
+      type: string
+      label: 'Global IP Range Bypass Mode'
+      default: 'local'
     global_ip_bypass_addresses:
       type: array
       items:
