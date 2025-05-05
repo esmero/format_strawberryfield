@@ -611,7 +611,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   // Should we put a thumb? Just hide?
                   // @TODO we can bring a plugin here and there that deals with
                   $elements[$delta]['panorama' . $i] = [
-                    '#markup' => '<i class="fas fa-times-circle"></i>',
+                    '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
                     '#prefix' => '<span>',
                     '#suffix' => '</span>',
                   ];

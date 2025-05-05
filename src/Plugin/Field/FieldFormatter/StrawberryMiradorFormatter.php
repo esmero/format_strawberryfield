@@ -121,7 +121,9 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
@@ -134,7 +136,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         'viewer_overrides' => '',
         'max_width' => 720,
         'max_height' => 480,
-        'hide_on_embargo' => TRUE,
+        'hide_on_embargo' => FALSE,
       ];
   }
 
@@ -654,7 +656,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

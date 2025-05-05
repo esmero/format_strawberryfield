@@ -323,7 +323,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
               // Should we put a thumb? Just hide?
               // @TODO we can bring a plugin here and there that deals with
               $elements[$delta]['media_thumb' . $i] = [
-                '#markup' => '<i class="fas fa-times-circle"></i>',
+                '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
                 '#prefix' => '<span>',
                 '#suffix' => '</span>',
               ];

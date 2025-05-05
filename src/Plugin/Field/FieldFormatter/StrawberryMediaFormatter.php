@@ -325,7 +325,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

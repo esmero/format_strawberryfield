@@ -121,7 +121,9 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
         'iiif_group' => TRUE,
         'mediasource' => 'json_key',
         'json_key_source' => 'as:image',
@@ -132,6 +134,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
         'max_height' => 480,
         'textselection' => FALSE,
         'hascover_json_key_source' => 'hascover',
+        'hide_on_embargo' => FALSE,
         'ia_reader_images_base_url' => 'https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/images/',
       ];
   }
@@ -612,7 +615,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
 
     if (empty($element)) {
       $element = [
-        '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+        '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
         '#prefix' => '<span>',
         '#suffix' => '</span>',
       ];

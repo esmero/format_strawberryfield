@@ -322,7 +322,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
 
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];
