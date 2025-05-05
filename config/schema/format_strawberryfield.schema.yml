@@ -9,7 +9,7 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Internal IIIF server URL'
     iiif_content_search_api_page_count:
-      type: int
+      type: integer
       label: 'The max results to show per page on a iiif_content_search_api_page_count'
     iiif_content_search_api_visual_enabled_processors:
       type: string
@@ -21,13 +21,13 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Comma separated list of Strawberry Runner Processors for plain text annotations (no OCR) that can be fetched by the Content Search API on query.'
     iiif_content_search_api_active:
-      type: bool
+      type: boolean
       label: 'If IIIF Content Search API V1 and V2 are enabled.'
     iiif_content_search_validate_exposed:
-      type: bool
+      type: boolean
       label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
     iiif_content_search_time_targetannotations:
-      type: bool
+      type: boolean
       label: 'If IIIF Content Search results for Time based media target the VTT annotation itself or the parent Canvas'
     iiif_content_search_api_parent_node_fields:
       type: sequence
@@ -40,7 +40,7 @@ format_strawberryfield.iiif_settings:
         type: string
         label: 'A Search API field'
     iiif_content_search_api_metadata:
-      type: bool
+      type: boolean
       label: 'If IIIF Content Search Should also search/return metadata.'
     iiiif_content_search_api_metadata_parent_node_fields:
       type: sequence
@@ -61,10 +61,10 @@ format_strawberryfield.iiif_settings:
         type: string
         label: 'A Search API field'
     iiif_content_search_api_results_per_page:
-      type: int
+      type: string
       label: 'Number of results per page'
     iiif_content_search_api_query_length:
-      type: int
+      type: string
       label: 'max size of the allowed term passed (?q)'
 
 
@@ -93,8 +93,8 @@ format_strawberryfield.embargo_settings:
       label: 'Global IP Range Bypass Mode'
       default: 'local'
     global_ip_bypass_addresses:
-      type: array
-      items:
+      type: sequence
+      sequence:
         type: string
       label: 'global_ip_bypass_addresses list'
 
