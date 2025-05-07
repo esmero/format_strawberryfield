@@ -178,7 +178,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
           $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       } else {
@@ -199,7 +199,7 @@ class StrawberryImageFormatter extends StrawberryBaseFormatter {
         $upload_keys = $embargo_upload_keys;
       }
 
-      if (!$embargoed || (!empty($embargo_upload_keys_string))) {
+      if (!$embargoed || (!empty($embargo_upload_keys_string) && !$hide_on_embargo) || ($embargoed && !$hide_on_embargo)) {
         $ordersubkey = 'sequence';
         $media = $this->fetchMediaFromJsonWithFilter(
           $delta, $items, $elements,

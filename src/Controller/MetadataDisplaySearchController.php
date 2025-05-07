@@ -280,7 +280,7 @@ class MetadataDisplaySearchController extends
                 $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
                 $context_embargo['data_embargo']['until'] = $embargo_info[1];
               }
-              if ($embargo_info[2]) {
+              if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
                 $embargo_context[] = 'ip';
               }
             }

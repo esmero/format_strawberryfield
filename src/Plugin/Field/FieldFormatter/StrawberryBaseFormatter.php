@@ -122,6 +122,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       'use_iiif_globals' => TRUE,
       'upload_json_key_source' => '',
       'embargo_json_key_source' => '',
+      'hide_on_embargo' => TRUE
     ];
   }
 
@@ -166,6 +167,9 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     ]);
     $summary[] = $this->t('Embargo Alternate upload JSON Keys: %value', [
       '%value' => strlen(trim($this->getSetting('embargo_json_key_source' ) ?? '')) == 0 ? 'Do not provide alternate files when embargoed' : $this->getSetting('embargo_json_key_source')
+    ]);
+    $summary[] = $this->t('Viewer for embargoed Objects is %hide', [
+        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
     ]);
     return $summary;
   }
@@ -237,6 +241,16 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
         ],
       ],
       '#element_validate' => [[$this, 'validateUrl']],
+    ];
+    $element['hide_on_embargo'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
+      '#description' => $this->t('Recommended. If unchecked, acting on an embargo could still be managed at either a Metadata Display Level (e.g a IIIF Manifest) or the Media/File itself, if enabled.'),
+      '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
+      '#required' => FALSE,
+      '#attributes' => [
+        'data-formatter-selector' => 'hide_on_embargo',
+      ],
     ];
 
     return $element;

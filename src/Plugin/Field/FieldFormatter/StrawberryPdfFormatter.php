@@ -168,6 +168,8 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
+    $embargoed = FALSE;
     $embargo_context = [];
     $embargo_tags = [];
 
@@ -233,7 +235,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -241,7 +243,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
         $context_embargo['data_embargo']['embargoed'] = $embargo_info;
       }
 
-      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+      if (!$embargoed || (!empty($embargo_upload_keys_string) && !$hide_on_embargo) || ($embargoed && !$hide_on_embargo)) {
         $ordersubkey = 'sequence';
         $conditions[] = [
           'source' => ['dr:mimetype'],
@@ -255,7 +257,7 @@ class StrawberryPdfFormatter extends StrawberryBaseFormatter {
 
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

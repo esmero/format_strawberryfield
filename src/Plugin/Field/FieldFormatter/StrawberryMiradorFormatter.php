@@ -121,7 +121,9 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
@@ -464,11 +466,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     if ($this->getSetting('custom_js')) {
       $summary[] = $this->t('Using Custom Mirador with Plugins');
     }
-    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
-      [
-        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
-      ]
-    );
 
     return array_merge($summary, parent::settingsSummary());
   }
@@ -484,7 +481,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     $max_height = $this->getSetting('max_height');
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
-    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $viewer_overrides = $this->getSetting('viewer_overrides');
     $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
 
@@ -558,7 +555,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             $embargo_tags[] = 'format_strawberryfield:embargo:'
               . $embargo_info[1];
           }
-          if ($embargo_info[2]) {
+          if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
             $embargo_context[] = 'ip';
           }
         }
@@ -659,7 +656,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

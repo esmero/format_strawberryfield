@@ -121,7 +121,9 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
         'metadataexposeentity_source' => NULL,
         'max_width' => 720,
         'max_height' => 480,
@@ -236,11 +238,6 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
-    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
-      [
-        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
-      ]
-    );
     return array_merge($summary, parent::settingsSummary());
   }
 
@@ -254,7 +251,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
 
-    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     // This won't be evaluated and will stay false even if embargoed
     // if hide_on_embargo is not enabled
     // bc all embargo decision will anyways be delegated to the
@@ -294,7 +291,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
             $embargo_tags[] = 'format_strawberryfield:embargo:'
               . $embargo_info[1];
           }
-          if ($embargo_info[2]) {
+          if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
             $embargo_context[] = 'ip';
           }
         }
@@ -360,7 +357,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

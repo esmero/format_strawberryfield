@@ -277,6 +277,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
 
@@ -353,7 +354,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -610,7 +611,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   // Should we put a thumb? Just hide?
                   // @TODO we can bring a plugin here and there that deals with
                   $elements[$delta]['panorama' . $i] = [
-                    '#markup' => '<i class="fas fa-times-circle"></i>',
+                    '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
                     '#prefix' => '<span>',
                     '#suffix' => '</span>',
                   ];
