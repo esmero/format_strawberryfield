@@ -445,7 +445,6 @@ field.formatter.settings.strawberry_pannellum_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
-
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'

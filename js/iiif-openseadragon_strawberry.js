@@ -545,6 +545,9 @@
           if (!groupsinfojsons.hasOwnProperty(group)) {
             groupsinfojsons[group] = [infojson];
             groupsinfomanifests[group] = [drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl];
+            if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
+              groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+            }
             if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
               icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
             }
@@ -585,6 +588,7 @@
           }
           else {
             groupsinfojsons[group].push(infojson);
+            groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
             groupsinfomanifests[group].push(drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl);
             // hide other strawberry-media-items
             $(this).height(0);
@@ -674,13 +678,45 @@
             const $iiifmanifest = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest($manifest);
             $iiifmanifest.then(iiifmanifest_promise_resolved => {
               let $iiif_parsed = Drupal.FormatStrawberryfieldIiifUtils.getIIIFServices(iiifmanifest_promise_resolved);
+              let future_canvas_promises = [];
               if (Array.isArray($iiif_parsed)) {
                 $iiif_parsed = $iiif_parsed.map($canvas_structure => {
-                  const first_image_service = $canvas_structure.items.map($item => $item.service_ids[0]);
-                  infojson.push(first_image_service[0]+'/info.json');
-                  // this is async so it should have started already
+                  if ($canvas_structure?.items !== null) {
+                      // this is async so it should have started already
+                    const first_image_service = $canvas_structure.items.map($item => $item.service_ids[0]);
+                    infojson.push(first_image_service[0] + '/info.json');
+                  } else if ($canvas_structure?.canvas_id) {
+                    const $iiifCanvas = Drupal.FormatStrawberryfieldIiifUtils.fetchIIIFManifest($canvas_structure.canvas_id);
+                    future_canvas_promises.push($iiifCanvas);
+                  }
                 });
               }
+              if (future_canvas_promises.length > 0) {
+                  Promise.allSettled(future_canvas_promises).then(iiifCanvas_promises_resolved => {
+                      iiifCanvas_promises_resolved.forEach((iiifCanvas_promise_resolved) => {
+                        if (iiifCanvas_promise_resolved.status == "fulfilled") {
+                          let $iiif_canvas_parsed = Drupal.FormatStrawberryfieldIiifUtils.getIIIFServicesForCanvas(iiifCanvas_promise_resolved.value);
+                          if (Array.isArray($iiif_canvas_parsed)) {
+                              $iiif_canvas_parsed = $iiif_canvas_parsed.map($canvas_structure_remote => {
+                                  if ($canvas_structure_remote?.items !== null) {
+                                      // this is async so it should have started already
+                                      const first_image_service = $canvas_structure_remote.items.map($item => $item.service_ids[0]);
+                                      tiles.push(first_image_service[0] + '/info.json');
+                                      viewers[element_id].addTiledImage({tileSource: first_image_service[0] + '/info.json'});
+                                      //viewers[element_id].tileSources = viewers[element_id].tileSources.concat(first_image_service[0] + '/info.json');
+                                      if (tiles.length > 1) {
+                                          viewers[element_id].addReferenceStrip();
+                                      }
+                                  }
+                              });
+                          }
+                      }});
+                          viewers[element_id].open(tiles, 0);
+                          viewers[element_id].addReferenceStrip();
+                  }
+                  )
+              }
+
               infojson.forEach($tile => {tiles.push($tile);viewers[element_id].addTiledImage({tileSource: $tile });});
               viewers[element_id].tileSources = viewers[element_id].tileSources.concat(infojson);
               if (infojson.length >= 1) {
@@ -691,6 +727,8 @@
                 loadFirstAnnotationOfGroup(group);
                 viewers[element_id].goToPage(0);
               }
+            }).catch(function () {
+                console.log("IIIF Loading from URL failed and Rejected");
             });
           });
         }

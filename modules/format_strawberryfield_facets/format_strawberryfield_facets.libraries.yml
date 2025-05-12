@@ -13,6 +13,12 @@ jquery.ui.slider.pips:
   dependencies:
     - jquery_ui_slider/slider
 
+charts:
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js:  { external: true, minified: true, preprocess: false}
+  dependencies:
+    - core/drupal
+
 slider:
   version: VERSION
   js:
@@ -23,8 +29,8 @@ slider:
   dependencies:
     - core/drupal
     - core/drupalSettings
-    - core/jquery.once
     - format_strawberryfield_facets/jquery.ui.slider.pips
+    - format_strawberryfield_facets/charts
     - jquery_ui_touch_punch/touch-punch
     - core/once
 
