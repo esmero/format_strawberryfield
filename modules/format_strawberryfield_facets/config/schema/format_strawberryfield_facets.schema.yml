@@ -46,11 +46,35 @@ facet.widget.config.sbf_range_date_slider:
       type: string
       label: 'Maximum type'
     max_value:
-      type: float
+      type: integer
       label: 'Maximum value'
+    restrict_to_fixed:
+      type: Boolean
+      label: 'Always cap values to Fixed max and min'
     step:
-      type: float
+      type: integer
       label: 'Step'
+    allow_full_entry:
+      type: boolean
+      label: 'Allows manual Full entry'
+    allow_year_entry:
+      type: boolean
+      label: 'Allows manual Year entry'
+    show_reset_link:
+      type: boolean
+      label: 'Show reset link'
+    hide_reset_when_no_selection:
+      type: boolean
+      label: 'Hide Reset when no active value'
+    reset_text:
+      type: text
+      label: 'Label for the Reset Link'
+    submit_text:
+      type: text
+      label: 'Label for the Submit Button'
+    step_variable_granularity:
+      type: boolean
+      label: 'Vary Steps based on Facets max/min'
 
 plugin.plugin_configuration.facets_processor.sbf_exclude_specified_items:
   type: mapping

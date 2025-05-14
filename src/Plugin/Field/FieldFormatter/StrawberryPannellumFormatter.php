@@ -340,7 +340,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         }
       }
 
-      $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];

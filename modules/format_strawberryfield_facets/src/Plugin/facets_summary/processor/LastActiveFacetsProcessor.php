@@ -366,8 +366,8 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
     // By default, there should be no config form.
     $config = $this->getConfiguration();
     $build['message'] = [
-      '#type' => 'markdown',
-      '#markdown' => $this->t('It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
+      '#type' => 'markup',
+      '#markup' => $this->t('It is recommended to disable the `Show a text when there are no results` Processor when using this one.')
     ];
     $build['enable'] = [
       '#type' => 'checkbox',

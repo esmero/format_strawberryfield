@@ -894,6 +894,7 @@ class IiifContentSearchController extends ControllerBase {
         'limit' => $limit,
         'offset' => $offset,
       ]);
+      $query->setSearchId('sbf_iiifcontentsearch_from_solr');
 
       $query->setSearchId('sbf_iiifcontentsearch_from_solr');
 

@@ -7,6 +7,7 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Plugin\Context\ContextRepositoryInterface;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 
 /**
@@ -32,16 +33,23 @@ class ViewModeResolver implements ViewModeResolverInterface {
   protected $strawberryfieldUtility;
 
   /**
+   * @var \Drupal\Core\Plugin\Context\ContextRepositoryInterface
+   */
+  private ContextRepositoryInterface $ContextRepository;
+
+  /**
    * DisplayResolver constructor.
    *
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The config factory.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service
    *   The SBF utility Service.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory.
+   * @param \Drupal\Core\Plugin\Context\ContextRepositoryInterface $contextRepository
    */
-  public function __construct(StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service, ConfigFactoryInterface $config_factory) {
+  public function __construct(StrawberryfieldUtilityServiceInterface $strawberryfield_utility_service, ConfigFactoryInterface $config_factory, ContextRepositoryInterface $contextRepository) {
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->configFactory = $config_factory;
+    $this->ContextRepository = $contextRepository;
   }
 
   /**

@@ -196,6 +196,7 @@ BookReader.prototype.setup = (function(super_) {
             numPages: null,
             bookUrl: null
         };
+        this.leafsToUUids = {};
         this.searchTerm = '';
         this.searchResults = null;
         this.searchInsideUrl = options.searchInsideUrl;
@@ -382,6 +383,7 @@ function processBehaviorToIABookreaderModeV2(jsonLd) {
 
 BookReader.prototype.parseSequence = function (sequenceId) {
     var self = this;
+
     // viewingDirection is the same in V2 and V3 BUT on V2 it can be inside a sequence ..
     if (typeof(self.jsonLd.viewingDirection) !== "undefined") {
         if (self.jsonLd.viewingDirection == "right-to-left") {
@@ -560,11 +562,14 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                         imageObj.canvasHeight = canvas.height;
 
                         if (!(/#xywh/).test(image.on)) {
-                            imagesList.push(imageObj);
+                          imagesList.push(imageObj);
+                          const UUIDandSequence = self.getUUIDAndSequencefromCanvas(canvas['@id']);
+                          if (UUIDandSequence) {
+                            self.leafsToUUids[UUIDandSequence] = imagesList.length;
+                          }
                         }
                     }
                 });
-
             }
         });
 
@@ -598,6 +603,10 @@ BookReader.prototype.parseSequence = function (sequenceId) {
                         // Add it to the images list
                         if (!(/#xywh/).test(annotation.target)) {
                             imagesList.push(imageObj);
+                            const UUIDandSequence = self.getUUIDAndSequencefromCanvas(item.id);
+                            if (UUIDandSequence) {
+                              self.leafsToUUids[UUIDandSequence] = imagesList.length;
+                            }
                         }
                     }
                 });
@@ -702,6 +711,41 @@ BookReader.prototype.getIIIFInfoJsonFromURL = function(string){
     return string;
   }
 }
+
+BookReader.prototype.getUUIDAndSequencefromCanvas = function(string){
+  let url;
+
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return '';
+  }
+  let path = url.pathname;
+  // IIIF will have  id/crop/size/rotation/filename So we will split and reverse
+  if (path !== '/') {
+    // Assumes /somestuff/84e618e0-3456-4edd-841e-5b4c9e8e0490/canvas/p1
+    let path_parts = path.split("/");
+    if (path_parts.length >= 5) {
+      path_parts = path_parts.reverse();
+      path_parts = path_parts.slice(0,3);
+      if (path_parts.length == 3) {
+        const page = path_parts[0].replace(/\D/g,'');
+        const uuid = path_parts[2];
+        // We will use this as an index to match File UUIDs and their internal Sequence IDs to IABookreader pages.
+        return uuid + '/' + page;
+      }
+    }
+    else {
+      // Might be non IIIF, so we return the Image itself.
+      return null;
+    }
+  }
+  else {
+    return null;
+  }
+}
+
+
 
 /**
  * @param  {number} index
@@ -893,13 +937,22 @@ BookReader.prototype.search =  (function(super_) {
                         return typeof a === 'object' && !Array.isArray(a) && a !== null
                     }
                 );
+
                 searchInsideResults.matches.forEach(function(match,index,array) {
+                    let uuid = match?.sbf_metadata.file_uuid;
                     match.par[0].boxes.forEach(function(box,index,array) {
-                        var pageindex = self.leafNumToIndex(array[index].page);
+                        let page = array[index].page;
+                        if (self.leafsToUUids.hasOwnProperty(uuid+'/'+(parseInt(page)+1))) {
+                          page = self.leafsToUUids[uuid+'/'+(parseInt(page)+1)];
+                          page = page - 1;
+                        }
+                        var pageindex = self.leafNumToIndex(page);
                         array[index].l = Math.round(box.l * self.getPageWidth(pageindex));
                         array[index].t = Math.round(box.t * self.getPageHeight(pageindex));
                         array[index].r = Math.round(box.r * self.getPageWidth(pageindex));
                         array[index].b = Math.round(box.b * self.getPageHeight(pageindex));
+                        array[index].page = page;
+                        match.par[0].page = page;
                     })
                 });
                 hasCustomSuccess

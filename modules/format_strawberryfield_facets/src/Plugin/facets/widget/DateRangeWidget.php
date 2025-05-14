@@ -15,7 +15,7 @@ use Drupal\facets\Widget\WidgetPluginBase;
  *
  * @FacetsWidget(
  *   id = "sbf_date_range",
- *   label = @Translation("Format Strawberryfield Date Range Picker"),
+ *   label = @Translation("Format Strawberryfield Date Range Picker (No Slider)"),
  *   description = @Translation("A widget that shows a Date Range Picker."),
  * )
  */
@@ -62,8 +62,6 @@ class DateRangeWidget extends WidgetPluginBase {
     if (isset($max) && !empty($max)) {
       $max = gmdate('Y-m-d', (int) $max);
     }
-
-
 
     $build['#items'] = [
       'min' => [
