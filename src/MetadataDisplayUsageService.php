@@ -56,6 +56,11 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
   protected $moduleHandler;
 
   /**
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  private ConfigFactoryInterface $configFactory;
+
+  /**
    * @param EntityRepositoryInterface $entity_repository
    * @param EntityTypeManagerInterface $entity_type_manager
    * @param ConfigFactoryInterface $config_factory
