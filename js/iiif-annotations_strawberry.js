@@ -20,6 +20,11 @@
             var disableUrlClickWhenVisible = function (event) {
                 // Bound to groupsetting (this)
                 event.preventDefault();
+                // We have no way of cancelling / avoiding bubbling on the annotation onClik
+               // we actually have to check if someone clicked the SVG wrapper.
+                if (event.target.tagName != 'svg') {
+                  return;
+                }
                 // If there is a Link around the image we will reuse as direct link
                 // if we don't prevent the default.
                 // Sadly there is no getVisible() method. But we can check the annotationlayer if any

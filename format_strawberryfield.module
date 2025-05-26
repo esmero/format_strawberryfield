@@ -426,7 +426,7 @@ function format_strawberryfield_views_pre_build(ViewExecutable $view) {
   foreach ($view->argument ?? [] as $argument) {
     if ($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
       if ($argument->options['specify_validation'] ?? FALSE) {
-        if ($argument->options['validate']['type'] ?? NULL == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
+        if (($argument->options['validate']['type'] ?? NULL) == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
           // We have to kill the cache if we are evaluating ADO & Embargo accesss arguments
           // Issue is "when" evaluation is FALSE, the Views returns (*empty?) before we have the chance
           // To alter it post_render. Performance v/s Flexibility/Consistency. The later one wins here.
@@ -464,7 +464,7 @@ function format_strawberryfield_views_post_render(ViewExecutable $view, &$output
   foreach ($view->argument ?? [] as $argument) {
     if($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
       if ($argument->options['specify_validation'] ?? FALSE) {
-        if ($argument->options['validate']['type'] ?? NULL == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
+        if (($argument->options['validate']['type'] ?? NULL) == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
           $embargo_tags = [];
           $embargo_context = [];
           foreach ($argument->value as $value) {

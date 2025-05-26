@@ -79,7 +79,7 @@
           if (queryString == '') {
             // Thanking the Red Wizards for providing this even before we have an actually bookmarkable URL
             let query_object = drupalSettings?.path?.currentQuery ?? {};
-            console.log(JSON.stringify(query_object));
+            //console.log(JSON.stringify(query_object));
             //TODO. So far we had no need for this but the right approach if this is needed would be
             // queryString = JSON.stringify(query_object);
             // And then make it part of the submit_settings object.
