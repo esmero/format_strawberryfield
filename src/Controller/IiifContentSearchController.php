@@ -107,6 +107,13 @@ class IiifContentSearchController extends ControllerBase {
   private $iiifConfig;
 
   /**
+   * The Embargo Resolber
+   *
+   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface $embargoResolver
+   */
+  private $embargoResolver;
+
+  /**
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    *
    * @return \Drupal\format_strawberryfield\Controller\IiifContentSearchController
