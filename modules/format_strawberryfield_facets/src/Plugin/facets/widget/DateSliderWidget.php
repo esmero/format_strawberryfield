@@ -239,7 +239,6 @@ class DateSliderWidget extends WidgetPluginBase {
             'chart' => [
               '#type' => 'html_tag',
               '#tag' => 'canvas',
-              '#theme' => 'html_tag',
               '#attributes' => [
                 'id' => $id . '-chart',
               ],
@@ -250,7 +249,6 @@ class DateSliderWidget extends WidgetPluginBase {
         [
         '#type' => 'html_tag',
         '#tag' => 'div',
-        '#theme' => 'html_tag',
         '#attributes' => [
           'class' => ['sbf-date-facet-slider'],
           'data-min' => $unix_min,
