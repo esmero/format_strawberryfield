@@ -189,7 +189,9 @@
           }
         });
         if (reloadfacets) {
-          Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+          if (typeof Drupal.AjaxFacetsView != "undefined") {
+            Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+          }
         }
       }
     }
