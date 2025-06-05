@@ -56,10 +56,11 @@
             var facetLink = $(this).find('a');
             // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
             // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
-            // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
+            // This is needed since Facet URL generator will (for good reasons) remove the ?page=argument.
             // And also is absolutely unaware of pagers with different names!
             Drupal.AjaxFacetsView.UpdateView(facetLink.attr('href'), current_dom_id, view_path);
               all_dom_ids_need_refresh.forEach((other_dom_id) => {
+                // Check if we need to update this ones too for 1.6? Same as we do for paged views?
               });
 
           });
@@ -75,8 +76,10 @@
                 // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
                 // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
                 // And also is absolutely unaware of pagers with different names!
+                console.log(url);
                 Drupal.AjaxFacetsView.UpdateView(url, current_dom_id, view_path);
                 all_dom_ids_need_refresh.forEach((other_dom_id) => {
+                  Drupal.AjaxFacetsView.UpdateView(url, other_dom_id, view_path);
                 });
               });
             }

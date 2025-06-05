@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield\Controller;
 
 use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Component\Uuid\Uuid;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -101,7 +102,8 @@ class WebAnnotationController extends ControllerBase {
     RendererInterface $renderer,
     MimeTypeGuesserInterface $mime_type_guesser,
     PrivateTempStoreFactory $temp_store_factory,
-    ParseModePluginManager $parse_mode_manager
+    ParseModePluginManager $parse_mode_manager,
+    ConfigFactoryInterface $config_factory
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
@@ -110,6 +112,7 @@ class WebAnnotationController extends ControllerBase {
     $this->mimeTypeGuesser = $mime_type_guesser;
     $this->tempStore = $temp_store_factory->get('webannotation');
     $this->parseModeManager = $parse_mode_manager;
+    $this->configFactory = $config_factory;
   }
 
   /**
@@ -132,7 +135,7 @@ class WebAnnotationController extends ControllerBase {
    * Persist in temp Storage Webannotation Controller (POST).
    *
    * @param \Symfony\Component\HttpFoundation\Request
-   *   The Full HTTPD Resquest
+   *   The Full HTTP Request
    * @param \Drupal\Core\Entity\ContentEntityInterface $node
    *   A Node as argument
    *
