@@ -53,6 +53,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         $config['api_type'] ?? 'REST'
       );
       $form_state->setValue(
+        'resumption_token',
+        $config['resumption_token'] ?? ''
+      );
+      $form_state->setValue(
         'processor_wrapper_level_entity_id',
         $config['metadataWrapperDisplayentity'][0]
       );
@@ -233,6 +237,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         ],
         '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('api_type') : 'REST',
       ],
+      'resumption_token' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('resumption token name'),
+        '#description' => $this->t('Normally used by OAI-PMH where it is named "resumptionToken".<br>When present and not empty, this "GET" argument name will be automatically populated and processed by the API to fetch whatever is next in the API (e.g. page=2 if the current request was page=1) and decoded back to expand a full query needed, same as one would call the API with all arguments. This will only happen IF the number of results of a View are equal or larger than the Paged number (e.g. 25) defined at the View, since a "next cursor" makes no sense if there is nothing else to fetch. In other words, the encoded value will hold internally same values one would use to call the API but incrementing to listing cursor.<br>It requires a "pager" is mapped and make sure no other Open API argument is named like this one. To access it inside a Metadata Display (e.g. the API Wrapper) use <em>data_api.resumption_token<em>. It will hold an "array" with 3 values: the name provided here, the expanded equivalent (as query arguments) and the base64 encoded value (the one to be passed as a GET argument to resume). Leave empty to disable.'),
+        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('resumption_token') : 'resumptionToken',
+      ],
       'metadata_api_configure_button' => [
         '#type' => 'submit',
         '#name' => 'metadata_api_configure',
@@ -409,24 +419,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 
 
   /**
-   * Handles form submissions for the API source subform.
-   */
-  public function editAdvancedMapping($form, FormStateInterface $form_state) {
-    $triggering = $form_state->getTriggeringElement();
-    if (isset($triggering['#rowtoedit'])) {
-      $parameters = $form_state->get('parameters') ? $form_state->get(
-        'parameters'
-      ) : [];
-      $mappings = $form_state->get('parameters') ? $form_state->get(
-        'parameters'
-      ) : [];
-      $form_state->setValue(['api-argument-config','mapping'],  $parameters[$triggering['#rowtoedit']]);
-      $this->messenger()->addWarning(t('You are editing advanced mappings for @param_name', ['@param_name' => $triggering['#rowtoedit']]), FALSE);
-    }
-    $form_state->setRebuild();
-  }
-
-  /**
    * Submit handler for the "deleteone" button.
    *
    * Adds Key and View Mode to the Table Drag  Table.
@@ -480,33 +472,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->setRebuild();
   }
 
-	/**
-	 * Submit handler for the "addmore" button.
-	 *
-	 * Adds an API Argument to the form state.
-	 */
-	public function submitAjaxAddAdvancedMapping(array &$form, FormStateInterface $form_state) {
-
-		$parameters = $form_state->get('advanced_mapping') ? $form_state->get(
-			'advanced_mapping'
-		) : [];
-		$name = $form_state->getValue(['api-argument-config','mapping','name']);
-		if ($name) {
-			$advanced_mapping_clean = $form_state->getValue(['api-argument-config','mapping']);
-			unset($advanced_mapping_clean['metadata_api_configure_button']);
-			$advanced_mapping[$name] = [
-				'advanced_mapping' => $advanced_mapping_clean
-			];
-			$form_state->set('advanced_mapping', $advanced_mapping);
-		}
-		// Re set since they might have get lost during the Ajax/Limited validation
-		// processing.
-
-		$views_source_ids = $form_state->getValue('views_source_ids') ??  $form_state->get('views_source_ids_tmp');
-		$form_state->setValue('views_source_ids', $views_source_ids);
-		$form_state->setRebuild();
-	}
-
   /**
    * Submit handler for the "addmore" button.
    *
@@ -533,7 +498,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $new_form_state = clone $form_state;
     // no need to unset original values, they won't match Entities properties
     $config['openAPI'] =  !empty($new_form_state->getValue(['api_parameters_list','table-row'])) &&
-      is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
+    is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
     $configOpenAPIClean = [];
@@ -549,6 +514,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
     $config['api_type'][] = $form_state->getValue('api_type', 'REST');
+    $config['resumption_token'] = trim($form_state->getValue('resumption_token', ''));
     $new_form_state->setValue('views_source_ids', $form_state->get('views_source_ids_tmp') ??  $form_state->getValue('views_source_ids'));
     $new_form_state->setValue('configuration', $config);
     $this->entity = $this->buildEntity($form, $new_form_state);
@@ -558,9 +524,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state = $form_state;
     $name = [];
     if (!empty($form_state->getValue(['api_parameters_list','table-row'])) &&
-    is_array($form_state->getValue(['api_parameters_list','table-row']))) {
+      is_array($form_state->getValue(['api_parameters_list','table-row']))) {
       foreach($form_state->getValue(['api_parameters_list','table-row']) as $argument_settings) {
         if (isset($argument_settings['name'])) {
+          if (trim($argument_settings['name']) == trim($form_state->getValue('resumption_token', ''))) {
+            $form_state->setErrorByName('resumption_token', 'Your resumption token name is exists also as an API argument name. Please fix.');
+          }
           $name[$argument_settings['name']] = $argument_settings['name'];
         }
       }
@@ -640,8 +609,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
             $views_argument_options[$selected_view.':@page'] = "Views Pager Page";
           }
         }
-				// Also allow The Complete View to be called.
-				$views_argument_options[$selected_view.':@view'] = "Call The View Without any argmuments";
+        // Also could allow The Complete View to be called. Future 1.6.0
+        // $views_argument_options[$selected_view.':@view'] = "Call The View Without any argmuments";
       }
       $form_state->set('views_argument_options', $views_argument_options);
     }
@@ -681,8 +650,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#description'   => $this->t(
           'The Views that will provide data for this API. Only View Displays that return machinable responses like REST, Entity References or FEED can serve as source. To can add multiple ones to serve different API results.'
         ),
-        '#options'       => $views,
-        '#default_value' => $selected_views,
+        '#options'       => $views ?? [],
+        '#default_value' => $selected_views ?? [],
         '#required'      => TRUE,
       ];
 
@@ -951,245 +920,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
   }
 
 
-	/**
-	 * Builds the configuration form the advanced mapping of a parameter
-	 *
-	 * @param array $form
-	 *   An associative array containing the initial structure of the plugin form.
-	 * @param \Drupal\Core\Form\FormStateInterface $form_state
-	 *   The current state of the complete form.
-	 */
-	public function buildAvancedMappingConfigForm(array &$form, FormStateInterface $form_state) {
-		$selected_views = $form_state->getValue('views_source_ids');
-		// As defined in https://github.com/OAI/OpenAPI-Specification/blob/3.0.2/versions/3.0.2.md#parameter-object
-		$hide = TRUE;
-		if ($form_state->getTriggeringElement()
-			&& ($form_state->getTriggeringElement()['#parents'][0] == 'add_more' || isset($form_state->getTriggeringElement()['#rowtoedit']))
-		) {
-			$hide = FALSE;
-		}
-		if (!$hide) {
-			$form['api-argument-config']['mapping'] = [
-				'#type'       => 'fieldset',
-				'#title'      => 'Configure Advanced Mapping for this parameter',
-				'#tree'       => TRUE,
-				'#attributes' => [
-					'id' => 'api-argument-config-params-internal'
-				]
-			];
-			$form['api-argument-config']['mapping']['name'] = [
-				'#type'          => 'textfield',
-				'#title'         => $this->t('Name'),
-				'#description'   => $this->t(
-					'The name of the parameter. Parameter names are case sensitive.'
-				),
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','name']) ?? NULL,
-				'#required'      => TRUE,
-				'#disabled' => isset($form_state->getTriggeringElement()['#rowtoedit']),
-			];
-			$form['api-argument-config']['mapping']['in'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('In'),
-				'#description'   => $this->t('The location of the parameter'),
-				'#options'       => [
-					'query'  => 'query',
-					'header' => 'header',
-					'path'   => 'path',
-					'cookie' => 'cookie'
-				],
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','in']) ?? 'query',
-				'#required'      => TRUE,
-			];
-
-			$form['api-argument-config']['mapping']['description'] = [
-				'#type'          => 'textfield',
-				'#title'         => $this->t('Description'),
-				'#description'   => $this->t(
-					'A brief description of the parameter. This could contain examples of use.'
-				),
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','description']) ?? NULL,
-				'#required'      => FALSE,
-			];
-			$form['api-argument-config']['mapping']['required'] = [
-				'#type'          => 'checkbox',
-				'#title'         => $this->t('Required'),
-				'#description'   => $this->t(
-					'Determines whether this parameter is mandatory. If "in" is "path" this will be checked automatically.'
-				),
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','required']) ?? FALSE,
-				'#required'      => FALSE,
-			];
-			$form['api-argument-config']['mapping']['deprecated'] = [
-				'#type'          => 'checkbox',
-				'#title'         => $this->t('Deprecate'),
-				'#description'   => $this->t(
-					'Specifies that a parameter is deprecated and SHOULD be transitioned out of usage.'
-				),
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','deprecated']) ?? FALSE,
-				'#required'      => FALSE,
-			];
-			// https://github.com/OAI/OpenAPI-Specification/blob/3.0.2/versions/3.0.2.md#style-values
-			$form['api-argument-config']['mapping']['style'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('Style'),
-				'#description'   => $this->t(
-					'Describes how the parameter value will be serialized depending on the type of the parameter value.'
-				),
-				'#options'       => [
-					'form'           => 'form',
-					'simple'         => 'simple',
-					'label'          => 'label',
-					'matrix'         => 'matrix',
-					'spaceDelimited' => 'spaceDelimited',
-					'pipeDelimited'  => 'pipeDelimited',
-					'deepObject'     => 'deepObject',
-				],
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','style']) ?? 'form',
-				'#required'      => TRUE,
-			];
-			$form['api-argument-config']['mapping']['schema'] = [
-				'#type' => 'fieldset',
-				'#tree' => TRUE,
-			];
-			// All of these will be readOnly: true
-			$form['api-argument-config']['mapping']['schema']['type'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('type'),
-				'#description'   => $this->t('The data type of the parameter value.'),
-				'#options'       => [
-					'array'   => 'array',
-					'string'  => 'string',
-					'integer' => 'integer',
-					'number'  => 'number',
-					'object'  => 'object',
-					'boolean' => 'boolean',
-				],
-				'#default_value' => $form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string',
-				'#required'      => TRUE,
-			];
-
-			$form['api-argument-config']['mapping']['schema']['array_type'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('array type'),
-				'#description'   => $this->t('The data type of an array item/entry '),
-				'#options'       => [
-					'string'        => 'string',
-					'integer'       => 'integer',
-					'number'        => 'number',
-					'boolean'       => 'boolean',
-					'any/arbitrary' => '{}',
-				],
-				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'array') ? $form_state->getValue(['api-argument-config','mapping','param','schema','type']) : 'string',
-				'#required'      => TRUE,
-			];
-			$form['api-argument-config']['mapping']['schema']['string_format'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('string format'),
-				'#empty_option'  => $this->t(' - No format -'),
-				'#description'   => $this->t(
-					'Server hint for how a string should be processed.'
-				),
-				'#options'       => [
-					'uuid'      => 'uuid',
-					'email'     => 'email',
-					'date'      => 'date',
-					'date-time' => 'date-time',
-					'password'  => 'password',
-					'byte'      => 'byte (base64  encoded)',
-					'binary'    => 'binary (file)'
-				],
-				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
-				'#required'      => FALSE,
-			];
-			$form['api-argument-config']['mapping']['schema']['string_pattern'] = [
-				'#type'          => 'textfield',
-				'#title'         => $this->t('Pattern'),
-				'#description'   => $this->t(
-					'Regular expression template for a string value e.g SSN: ^\d{3}-\d{2}-\d{4}$'
-				),
-				'#default_value' =>  ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','pattern']) : NULL,
-				'#required'      => FALSE,
-			];
-
-			$form['api-argument-config']['mapping']['schema']['number_format'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('format'),
-				'#empty_option'  => $this->t(' - No format -'),
-				'#description'   => $this->t(
-					'Server hint for how a number should be processed.'
-				),
-				'#options'       => [
-					'float'  => 'float',
-					'double' => 'double',
-				],
-				'#default_value' =>  ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'number') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
-				'#required'      => FALSE,
-			];
-			$form['api-argument-config']['mapping']['schema']['integer_format'] = [
-				'#type'          => 'select',
-				'#title'         => $this->t('format'),
-				'#empty_option'  => $this->t(' - No format -'),
-				'#description'   => $this->t(
-					'Server hint for how a integer should be processed.'
-				),
-				'#options'       => [
-					'int32' => 'int32',
-					'int64' => 'int64',
-				],
-				'#default_value' => ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? 'string' == 'integer') ? $form_state->getValue(['api-argument-config','mapping','param','schema','format']) : NULL,
-				'#required'      => FALSE,
-			];
-			$enum = ($form_state->getValue(['api-argument-config','mapping','param','schema','type']) ?? NULL == 'string') ? $form_state->getValue(['api-argument-config','mapping','param','schema','enum']) : NULL;
-			if (is_array($enum)) {
-				$enum = implode(",", $enum);
-			}
-			$form['api-argument-config']['mapping']['schema']['enum'] = [
-				'#type'          => 'textfield',
-				'#title'         => $this->t('Enumeration'),
-				'#description'   => $this->t(
-					'A controlled list of elegible options for this paramater. Use comma separated list of strings or leave empty'
-				),
-				'#default_value' =>  $enum,
-				'#required'      => FALSE,
-			];
-		}
-
-		$form['api-argument-config']['mapping']['metadata_api_configure_button'] = [
-			'#type' => 'submit',
-			'#name' => 'metadata_api_parameter_configure',
-			'#value' => $this->t('Save Advanced Mappings'),
-			'#limit_validation_errors' => [['api-argument-config']],
-			'#submit' => ['::submitAjaxAddAdvancedMapping'],
-			'#ajax' => [
-				'callback' => '::buildAjaxAPIParameterListConfigForm',
-				'wrapper' => 'api-parameters-list-form',
-			],
-			'#attributes' => [
-				'class' => $hide ? ['js-hide'] : [],
-			]
-		];
-		$form['api-argument-config']['mapping']['metadata_api_cancel_button'] = [
-			'#type' => 'button',
-			'#name' => 'metadata_api_parameter_cancel',
-			'#limit_validation_errors' => [],
-			'#value' => $this->t('Cancel'),
-			'#submit' => ['::submitAjaxAddAdvancedMapping'],
-			'#ajax' => [
-				'callback' => '::buildAjaxAPIParameterConfigCancelForm',
-				'wrapper' => 'api-parameters-list-form',
-			],
-			'#attributes' => [
-				'class' => $hide ? ['js-hide'] : [],
-			]
-		];
-	}
-
-
-
-
-
-
-
 
   /**
    * Builds the configuration form listing current Parameter.
@@ -1261,41 +991,14 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ];
       if ($form_state->get('views_argument_options')) {
         $form['api_parameters_list']['table-row'][$index]['mapping'] = [
-          'basic' => [
-          '#type'          => 'checkboxes',
-          '#title'         => $this->t('Mapping'),
-          '#options'       => $form_state->get('views_argument_options') ?? [],
-          '#required'      => FALSE,
-          // If not #validated, dynamically populated dropdowns don't work.
-          '#validated'     => TRUE,
-          '#default_value' => $parameter_config['mapping'] ?? [],
-        ],
-        'advanced_mapping' => [
-          '#type' => 'submit',
-          '#rowtoedit' => $index,
-          '#name' => 'edititem_' . $index,
-          '#value' => t('Advanced Mapping'),
-          // No validation.
-          '#limit_validation_errors' => [['table-row']],
-          // #submit required if ajax!.
-          '#submit' => ['::editAdvancedMapping'],
-          '#ajax' => [
-            'callback' => '::buildAjaxAPIAdvancedMappingConfigForm',
-            'wrapper' => 'api-argument-config',
-          ],
-        ]
-          ];
-				/*if (($parameter_config['param']['required'] ?? FALSE) && (is_array($parameter_config['param']['schema']['enum'] ?? NULL))) {
-					$form['api_parameters_list']['table-row'][$index]['mapping_conditional'] = [
-						'#type'          => 'checkboxes',
-						'#title'         => $this->t('Mapping'),
-						'#options'       => $form_state->get('views_argument_options') ?? [],
-						'#required'      => FALSE,
-						// If not #validated, dynamically populated dropdowns don't work.
-						'#validated'     => TRUE,
-						'#default_value' => $parameter_config['mapping'] ?? [],
-					];
-				}*/
+            '#type'          => 'checkboxes',
+            '#title'         => $this->t('Mapping'),
+            '#options'       => $form_state->get('views_argument_options') ?? [],
+            '#required'      => FALSE,
+            // If not #validated, dynamically populated dropdowns don't work.
+            '#validated'     => TRUE,
+            '#default_value' => $parameter_config['mapping']['basic'] ?? ($parameter_config['mapping'] ?? []),
+        ];
       }
       else {
         $form['api_parameters_list']['table-row'][$index]['mapping'] = [
