@@ -730,7 +730,7 @@ class MetadataAPIController extends ControllerBase
         $get_query = $context_parameters['query'];
         foreach ($views_pager_argument_names as $pager_argument_name => $pager_argument_value) {
           // we add 2 bc internally it is 0, externally 1, we need the next.
-          $get_query[$pager_argument_name] = (int) $current_page + 2;
+          $get_query[$pager_argument_name] = (int) $pager_argument_value + 1;
         }
         $resumption_token_encoded_url = http_build_query($get_query);
         $resumption_token_encoded_url = '?'.$resumption_token_encoded_url;
