@@ -588,7 +588,9 @@
           }
           else {
             groupsinfojsons[group].push(infojson);
-            groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+            if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
+              groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+            }
             groupsinfomanifests[group].push(drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl);
             // hide other strawberry-media-items
             $(this).height(0);
