@@ -10,10 +10,10 @@
 
 .facets-widget-sbf_range_date_slider {
     color: black;
-    color: var(--bb-primary-dark, --bs-body-color) !important;
+    color: var(--bb-primary-dark, var(--bs-body-color, black)) !important;
 }
 
 .facets-widget-sbf_range_date_slider .form-control {
   color: black;
-  color: var(--bb-primary-dark, --bs-body-color) !important;
+  color: var(--bb-primary-dark, var(--bs-body-color, black)) !important;
 }
