@@ -52,54 +52,74 @@ class SearchApiDateRange extends QueryTypePluginBase {
         foreach ($active_items as $value) {
           if (is_array($value) && count($value) > 2) {
             $value = array_slice($value, 0, 2);
+            $value = array_values($value);
           }
-          $min_value = (int) $value[0];
-          $max_value = (int) $value[1] ;
-          // Calculate dynamic gap. Active Items will be in unix time/ We need years
-          $options = &$query->getOptions();
-          if (isset($options['search_api_facets'][$field_identifier])) {
-            $min = (int) $value[0] ?? 0;
-            $max = (int) $value[1] ?? time();
-            // Seconds in a year; 31556952
-            $min_count_for_facet =  $this->facet->getHardLimit();
-            $min_count_for_facet = $min_count_for_facet > 0 ? $min_count_for_facet : 50;
-            // A min count of 0 is not useful. We will never really get all of them here
-            // So ... in that case we might decide on the actual gap by using an arbitrary that fits in a year?
-            $diff_years = gmdate('Y', $max) -  gmdate('Y',$min);
-            $gap = abs(ceil($diff_years / $min_count_for_facet));
-            $gap = $gap == 0 ? 1 : $gap;
-            $gap = (int) round($gap,0);
-            // Now, Solr Index might have dates offset. Bc Drupal will calculate a certain date based on its internal timezone
-            // during "index" but Solr will get then another based on UTC
-            // Basically If someone asks for 1911-1915 (and our date is 1911/1915) Solr will really have
-            //" dm_date_created_original":["1911-01-01T05:00:00Z", "1916-01-01T04:59:59Z"]
-            // Or drm_date_as_range":["[1911-01-01T05:00:00Z TO 1916-01-01T04:59:59Z]"],
+          if (is_array($value) && count($value) == 2 && isset($value[0]) && isset($value[1])) {
+            $min_value = (int) $value[0];
+            $max_value = (int) $value[1];
+            // Calculate dynamic gap. Active Items will be in unix time/ We need years
+            $options = &$query->getOptions();
+            if (isset($options['search_api_facets'][$field_identifier])) {
+              $min = (int) ($value[0] ?? 0);
+              $max = (int) ($value[1] ?? time());
+              // Seconds in a year; 31556952
+              if ($min > $max) {
+                // IN case someone inverts the whole stuff
+                $orig_min = $min;
+                $min = $max;
+                $max = $orig_min;
+              }
 
+              $min_count_for_facet = $this->facet->getHardLimit();
+              $min_count_for_facet = $min_count_for_facet > 0 ? $min_count_for_facet : 50;
+              // A min count of 0 is not useful. We will never really get all of them here
+              // So ... in that case we might decide on the actual gap by using an arbitrary that fits in a year?
+              try {
+                $diff_years = gmdate('Y', $max) - gmdate('Y', $min);
+                $gap = abs(ceil($diff_years / $min_count_for_facet));
+                $gap = $gap == 0 ? 1 : $gap;
+                $gap = (int) round($gap, 0);
+                // Now, Solr Index might have dates offset. Bc Drupal will calculate a certain date based on its internal timezone
+                // during "index" but Solr will get then another based on UTC
+                // Basically If someone asks for 1911-1915 (and our date is 1911/1915) Solr will really have
+                //" dm_date_created_original":["1911-01-01T05:00:00Z", "1916-01-01T04:59:59Z"]
+                // Or drm_date_as_range":["[1911-01-01T05:00:00Z TO 1916-01-01T04:59:59Z]"],
 
-            $dt_min_utc = new DateTime('@'.$min);
-            $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'),new DateTimeZone($time_zone));
-            $dt_max_utc = new DateTime('@'.$max);
-            $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'),new DateTimeZone($time_zone));
-            // Offset can be retrieved from both min or max.
-            $offset = $dt_max->getOffset()/3600;
+                $dt_min_utc = new DateTime('@' . $min);
+                $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+                $dt_max_utc = new DateTime('@' . $max);
+                $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+                // Offset can be retrieved from both min or max.
+                $offset = $dt_max->getOffset() / 3600;
 
-            if ($offset < 0) {
-              $min_value = $dt_min->add(new DateInterval('PT'.abs($offset).'H'))->format('Y-m-d\TH:i:s\Z');
-              $max_value = $dt_max->add(new DateInterval('PT'.abs($offset).'H'))->format('Y-m-d\TH:i:s\Z');
+                if ($offset < 0) {
+                  $min_value = $dt_min->add(new DateInterval('PT' . abs($offset) . 'H'))
+                    ->format('Y-m-d\TH:i:s\Z');
+                  $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))
+                    ->format('Y-m-d\TH:i:s\Z');
+                }
+                else {
+                  $min_value = $dt_min->sub(new DateInterval('PT' . $offset . 'H'))
+                    ->format('Y-m-d\TH:i:s\Z');
+                  $max_value = $dt_max->sub(new DateInterval('PT' . $offset . 'H'))
+                    ->format('Y-m-d\TH:i:s\Z');
+                }
+
+                $options['search_api_facets'][$field_identifier]['min_value'] = $min_value;
+                $options['search_api_facets'][$field_identifier]['max_value'] = $max_value;
+                $options['search_api_facets'][$field_identifier]['granularity'] = '+' . $gap . 'YEAR';
+                $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
+              }
+              catch (\Exception $e) {
+                // Some gmdate math failed. WE do not keep processing and return to the defaults.
+                $min_value = $min;
+                $max_value = $max;
+              }
             }
-            else {
-              $min_value = $dt_min->sub(new DateInterval('PT'.$offset.'H'))->format('Y-m-d\TH:i:s\Z');
-              $max_value = $dt_max->sub(new DateInterval('PT'.$offset.'H'))->format('Y-m-d\TH:i:s\Z');
-            }
 
-            $options['search_api_facets'][$field_identifier]['min_value'] = $min_value;
-            $options['search_api_facets'][$field_identifier]['max_value'] = $max_value;
-            $options['search_api_facets'][$field_identifier]['granularity'] = '+'.$gap.'YEAR';
-            $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
+            $value = [$min_value, $max_value];
+            $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
           }
-
-          $value = [$min_value, $max_value];
-          $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
         }
         $query->addConditionGroup($filter);
       }
