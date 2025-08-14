@@ -3,7 +3,7 @@ services:
     class: Drupal\format_strawberryfield\TwigExtension
     tags:
       - {name: twig.extension}
-    arguments: ['@renderer', '@plugin.manager.search_api.parse_mode']
+    arguments: ['@renderer', '@plugin.manager.search_api.parse_mode', '@request_stack', '@kernel']
   format_strawberryfield.deletetmpstorage_subscriber:
     class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldDeleteTmpStorage
     tags:
@@ -16,7 +16,7 @@ services:
     arguments: [ '@string_translation', '@messenger', '@logger.factory' ]
   format_strawberryfield.view_mode_resolver:
     class: Drupal\format_strawberryfield\ViewModeResolver
-    arguments: ['@strawberryfield.utility', '@config.factory']
+    arguments: ['@strawberryfield.utility', '@config.factory', '@context.repository']
   format_strawberryfield.embargo_resolver:
     class: Drupal\format_strawberryfield\EmbargoResolver
     arguments: ['@config.factory', '@current_user', '@request_stack']

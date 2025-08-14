@@ -121,7 +121,9 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
         'mediasource' => [
           'metadataexposeentity' => 'metadataexposeentity',
         ],
@@ -208,29 +210,27 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('mediasource') ?? [],
           '#required' => TRUE,
           '#attributes' => [
-            'data-formatter-selector' => 'mediasource',
+            'data-mirador-formatter-selector' => 'mediasource',
           ],
           '#ajax' => $ajax,
         ],
         'custom_js' => [
           '#type' => 'checkbox',
-          '#title' => t('Use Custom Archipelago Mirador with Plugins'),
+          '#title' => t('Use Custom Archipelago Mirador 4.0 with Image Tools Plugin'),
           '#default_value' => $this->getSetting('custom_js') ?? FALSE,
           '#attributes' => [
-            'data-formatter-selector' => 'custom-js',
+            'data-mirador2-formatter-selector' => 'custom_js',
           ],
         ],
         'mirador_version' => [
           '#type' => 'radios',
-          '#options' => [3 => 'Mirador 3', 4 => 'Mirador 4'],
+          '#options' => [3 => 'Mirador 3.3', 4 => 'Mirador 4.0'],
           '#title' => t('Which Version from CDN'),
           '#default_value' => $this->getSetting('mirador_version') ?? 3,
           '#states' => [
-            [
               'visible' => [
-                ':input[data-formatter-selector="custom-js"]' => ['checked' => FALSE],
-              ]
-            ],
+                ':checkbox[data-mirador2-formatter-selector="custom_js"]' => ['checked' => FALSE],
+              ],
           ]
         ],
         'viewer_overrides' => [
@@ -270,12 +270,12 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#states' => [
             [
               'visible' => [
-                ':input[data-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
+                ':input[data-mirador-formatter-selector="mediasource"][value="metadataexposeentity"]' => ['checked' => TRUE],
               ]
             ],
             [
               'visible' => [
-                ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
+                ':input[data-mirador-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
               ]
             ]
           ],
@@ -288,7 +288,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('manifesturl_json_key_source'),
           '#states' => [
             'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
+              ':input[data-mirador-formatter-selector="mediasource"][value="manifesturl"]' => ['checked' => TRUE],
             ],
           ],
         ],
@@ -303,7 +303,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           ),
           '#states' => [
             'visible' => [
-              ':input[data-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
+              ':input[data-mirador-formatter-selector="mediasource"][value="manifestnodelist"]' => ['checked' => TRUE],
             ],
           ],
         ],
@@ -335,7 +335,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
           '#required' => FALSE,
           '#attributes' => [
-            'data-formatter-selector' => 'hide_on_embargo',
+            'data-mirador-formatter-selector' => 'hide_on_embargo',
           ],
         ],
       ] + parent::settingsForm($form, $form_state);
@@ -464,11 +464,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     if ($this->getSetting('custom_js')) {
       $summary[] = $this->t('Using Custom Mirador with Plugins');
     }
-    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
-      [
-        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
-      ]
-    );
 
     return array_merge($summary, parent::settingsSummary());
   }
@@ -484,7 +479,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     $max_height = $this->getSetting('max_height');
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
-    $hide_on_embargo =  $this->getSetting('hide_on_embargo');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $viewer_overrides = $this->getSetting('viewer_overrides');
     $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
 
@@ -547,7 +542,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       // A rendered Manifest
       if ($hide_on_embargo) {
         $embargo_info = $this->embargoResolver->embargoInfo(
-          $item->getEntity()->uuid(), $jsondata
+          $item->getEntity(), $jsondata
         );
 
 
@@ -558,7 +553,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
             $embargo_tags[] = 'format_strawberryfield:embargo:'
               . $embargo_info[1];
           }
-          if ($embargo_info[2]) {
+          if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
             $embargo_context[] = 'ip';
           }
         }
@@ -659,7 +654,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

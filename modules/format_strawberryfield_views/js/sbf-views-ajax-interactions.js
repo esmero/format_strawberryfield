@@ -35,7 +35,16 @@
                 view_instance.settings.view_args = image_annotation;
               }
             }
-            view_instance.$view.trigger("RefreshView");
+            //view_instance.$view.trigger("RefreshView");
+
+            let href = window.location.href;
+            if (typeof Drupal.AjaxFacetsView != "undefined") {
+              Drupal.AjaxFacetsView.UpdateView(href, view_instance.settings.view_dom_id, "/views/ajax"/*view_instance.settings.view_path*/);
+            }
+            else {
+              view_instance.$view.trigger("RefreshView");
+            }
+            //Drupal.AjaxFacetsView.updateFacetsBlocks(href, view_instance.settings.view_name ,  view_instance.settings.view_display_id);
           }
         }
       }
@@ -44,7 +53,7 @@
 
   Drupal.behaviors.sbf_views_ajax_interactions = {
     attach: function (context, settings) {
-      once('listen-ado-view-change', 'div.view', context).forEach(function (value, index) {
+      once('listen-ado-view-change', 'body').forEach(function (value, index) {
         console.log("initializing 'sbf:ado:view:change' event listener on ADO changes");
         // Because this is a single Listener for all views that have this enabled
         // the actual caller id will be passed as part of the event data

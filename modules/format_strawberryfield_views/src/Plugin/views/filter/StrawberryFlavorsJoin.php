@@ -119,7 +119,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
       '#title' => $this->t('How/if at all to query Flavors when a negation is present.'),
       '#description' => $this->t('Because the nature of many to one of Strawberry Flavors (e.g many pages of a book) a
       negation in the query string might still bring up some pages where that negation does not apply ending in ADOs/Nodes (because of the join) being added to the results that -in the
-       strict sense of something not being present in a book- might be missleading. This setting allows to decide what to do on a negation'),
+       strict sense of something not being present in a book- might be misleading. This setting allows to decide what to do on a negation'),
       '#options' => [
         'omit' => $this->t('Do not join Flavors in the presence of a negation'),
         'include' => $this->t('Join Flavors in the presence of a negation even if that brings more results back'),
@@ -146,6 +146,8 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     // We only know how to join on Solr. All rest is bad poetry
     if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
       $index_fields = $query->getIndex()->getFields(TRUE);
+      $solr_field_names = $backend
+        ->getSolrFieldNames($query->getIndex());
       /* @var \Drupal\views\Plugin\views\display\DisplayPluginBase[] $filters */
       $filters = $this->view->getHandlers('filter', NULL);
       $value = "";
@@ -174,7 +176,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
       }
       // If value == "" do nothing, no need to JOIN SBF for that.
       if ($type == 'fulltext' && $full_text && ((is_scalar($full_text) && strlen($full_text) > 0) || (is_array($full_text) && count($full_text) > 0 ))) {
-
+        $join_structure = [];
         // Never ever make it easy Solr!
         // This is the Join Subquery, sadly not useful "directly" for Flavor Highlights IF the conjunction is AND
         // Because the AND implies matches across the union/intersection of main query and the Join
@@ -207,16 +209,24 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
             return;
           }
           $subquery_hl = $this->buildFlavorSubQuery($query, $parse_mode, $this->options['sbf_fields'], $full_text);
+          foreach ($this->options['join_fields'] as $join_field) {
+            // 'from_search_api' is used to store the original field name (not solr) for SBF Backend Highlight
+            if (isset($solr_field_names[$join_field])) {
+              $join_structure[] = [
+                'from_search_api' => $join_field,
+                'from' => $solr_field_names[$join_field],
+                'to' =>  'its_nid',
+                'v' => $subquery,
+                'hl' => $subquery_hl,
+              ];
+            }
+          }
 
-          $join_structure = [
-            'from' => 'its_parent_id',
-            'to'   => 'its_nid',
-            'v'    => $subquery,
-            'hl'   => $subquery_hl,
-          ];
           // 'hl' will be used by
           // \Drupal\strawberryfield\Plugin\search_api\processor\StrawberryFieldHighlight::highlightFlavorsFromIndex
-          $this->getQuery()->setOption('sbf_join_flavor', $join_structure);
+          if (!empty($join_structure)) {
+            $this->getQuery()->setOption('sbf_join_flavor', $join_structure);
+          }
         }
       }
       elseif ($type == 'advanced_fulltext') {

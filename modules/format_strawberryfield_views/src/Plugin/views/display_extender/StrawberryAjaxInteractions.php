@@ -24,6 +24,18 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
    */
   public function buildOptionsForm(&$form, FormStateInterface $form_state) {
     if ($form_state->get('section') == 'use_ajax') {
+      $form['sbf_ajax_dont_seturl'] = [
+        '#title'         => $this->t('Do not set the Browser URL with arguments on Ajax driven Views.'),
+        '#type'          => 'checkbox',
+        '#description'   => $this->t('Archipelago will set on every Ajax View loaded the URL.If you have multiple Views on a single Page you might want to check this box to only have one driving the Bookmarkable URL.'),
+        '#default_value' => $this->options['sbf_ajax_dont_seturl'] ?? 0,
+        '#states'        => [
+          'enabled' => [
+            ':input[name="use_ajax"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+
       $form['sbf_ajax_interactions'] = [
         '#title'         => $this->t('Strawberryfield ADO to ADO Interactions'),
         '#type'          => 'checkbox',
@@ -63,6 +75,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
   public function submitOptionsForm(&$form, FormStateInterface $form_state) {
     if ($form_state->get('section') == 'use_ajax') {
       $this->options['sbf_ajax_interactions'] = $form_state->cleanValues()->getValue('sbf_ajax_interactions');
+      $this->options['sbf_ajax_dont_seturl'] = $form_state->cleanValues()->getValue('sbf_ajax_dont_seturl');
       if ($this->options['sbf_ajax_interactions']) {
         $this->options['sbf_ajax_interactions_arguments']
           = $form_state->cleanValues()->getValue(
@@ -99,6 +112,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       // Prevent use ajax history when ajax for view are disabled.
       $form_state->setValue('sbf_ajax_interactions', FALSE);
       $form_state->setValue('sbf_ajax_interactions_arguments', NULL);
+      $form_state->setValue('sbf_ajax_dont_seturl', FALSE);
     }
   }
   /**

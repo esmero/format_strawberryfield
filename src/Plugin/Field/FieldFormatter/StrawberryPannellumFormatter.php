@@ -126,11 +126,12 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         'max_width' => 600,
         'max_height' => 400,
         'panorama_type' => 'equirectangular',
-        'json_key_settings' => 'as:formatter',
+        'json_key_settings' => 'ap:viewerhints',
         'image_type' => 'jpg',
         'number_images' => 1,
         // todo: quality, rotation, and hotspotdebug not used but I put them in schema for now
         'quality' => 'default',
+        'viewer_overrides' => '',
         'rotation' => '0',
         'hotSpotDebug' => TRUE,
         'autoLoad' => FALSE,
@@ -165,8 +166,21 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         ],
         'json_key_settings' => [
           '#type' => 'textfield',
-          '#title' => t('JSON Key from where to fetch Pannellum Viewer Settings'),
-          '#default_value' => $this->getSetting('json_key_settings'),
+          '#title' => t('JSON Key from where to fetch Pannellum Viewer Settings.'),
+          '#description' => t('To conform to other Strawberryfield formatters and their Viewers overrides settings, this should be set to <em>ap:viewerhints</em>, but this formatter allows to use the legacy as:formatter too'),
+          '#default_value' => 'ap:viewerhints',
+        ],
+        'viewer_overrides' => [
+          '#type' => 'textarea',
+          '#title' => $this->t('Advanced: a JSON with Panellum viewer Settings.'),
+          '#description' => $this->t('See <a href="https://github.com/mpetroff/pannellum/blob/master/doc/json-config-parameters.md">https://github.com/mpetroff/pannellum/blob/master/doc/json-config-parameters.md</a>. Leave Empty to use defaults.
+   <em>panorama</em> can not be overriden. Use with caution. An ADO can also override this formatter\'s settings by providing the following JSON key for a single panorama: @ado_override or for a tour per scene (with scene 1 as an example) as  @ado_override_tour',[
+            '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_pannellum_formatter" => ["mouseZoom" => FALSE]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT),
+            '@ado_override_tour' => json_encode(["ap:viewerhints" => ["strawberry_pannellum_formatter" => ["1" => ["mouseZoom" => FALSE]]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+          ]),
+          '#default_value' => $this->getSetting('viewer_overrides'),
+          '#element_validate' => [[$this, 'validateJSON']],
+          '#required' => FALSE,
         ],
         'number_images' => [
           '#type' => 'number',
@@ -257,12 +271,13 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $multiscene = trim($this->getSetting('json_key_multiscene') ?? '');
     $settings_hotspotdebug = $this->getSetting('hotSpotDebug');
     $settings_autoload = $this->getSetting('autoLoad');
-    $settings_key = $this->getSetting('json_key_settings');
+    $settings_key = $this->getSetting('json_key_settings') ?? "ap:viewerhints";
 
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $upload_keys = array_map('trim', $upload_keys);
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
 
@@ -284,7 +299,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
       }
 
       $jsondata = json_decode($item->value, TRUE);
-      // @TODO use future flatversion precomputed at field level as a property
+
       $json_error = json_last_error();
       if ($json_error != JSON_ERROR_NONE) {
         $message = $this->t(
@@ -298,7 +313,34 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
       }
 
-      $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity()->uuid(), $jsondata);
+      $viewer_overrides = $this->getSetting('viewer_overrides');
+      $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+
+      $json_error = json_last_error();
+      if ($json_error == JSON_ERROR_NONE) {
+        $viewer_overrides = $viewer_overrides_json;
+      }
+      else {
+        // Because this particular formatter will pass a single config, we need
+        // to ensure it is an array, so we can merge it later in the code.
+        $viewer_overrides = [];
+      }
+
+      if (isset($jsondata[$settings_key][$this->getPluginId()]) &&
+        is_array($jsondata[$settings_key][$this->getPluginId()]) &&
+        !empty($jsondata[$settings_key][$this->getPluginId()])) {
+        // if we could decode it, it is already JSON.
+        $viewer_overrides = $jsondata[$settings_key][$this->getPluginId()];
+        foreach ($viewer_overrides as $setting_key => $setting_value) {
+            if (is_array($setting_value)) {
+              // We remove any legacy $mediakey][setting here. We only deal with that if the mediakey matches
+              // further down.
+              unset($viewer_overrides[$setting_key]);
+            }
+        }
+      }
+
+      $embargo_info = $this->embargoResolver->embargoInfo($item->getEntity(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
@@ -312,7 +354,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -338,6 +380,14 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
             $nodeid
           );
           if (is_array($elements[$delta]) && !empty($elements[$delta])) {
+            // because we are calling each individual panorama recursively here
+            // we need to merge the settings back. Panorama level settings should win.
+            // But we don't have the $htmlid anymore. So we iterate.
+            foreach ($elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'] ?? [] as $hmtl_id_scene => $attached_settings) {
+              $scene_settings = $attached_settings['settings'] ?? [];
+              $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$hmtl_id_scene]['settings'] = array_merge($scene_settings,
+                $viewer_overrides);
+            }
             continue;
           }
         }
@@ -471,7 +521,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                     /* @TODO This might go better in a general page template preprocess
                     or template. Having two (by mistake) modals with the same
                     ID might be a mess.
-                    */
+                     */
                     $elements[$delta]['modal'] =  [
                       '#type' => 'markup',
                       '#allowed_tags' => ['button','span','div', 'h5'],
@@ -490,35 +540,30 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         </div>
     </div>'
                     ];
-                    // Lets add hotspots
-                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = [
+
+                    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = array_merge($viewer_overrides, [
                       'hotSpotDebug' => $settings_hotspotdebug,
                       'autoLoad' => $settings_autoload,
-                    ];
-                    // Let's check if the user provided in-metadata settings for the viewer
-                    // This is needed to adjust ROLL/PITCH/ETC for partial panoramas.
-                    // @TODO. We can maybe have an option where $mediaitemkey is not set
-                    // And then have general settings for every image?
+                    ]);
+
+                    // @NOTE: for 1.5.0 the use of a $mediaitemkey item and a settings keys is discouraged.
+                    // For a panorama, if one of the scenes (at each individual ADO level) had a key, those would be merged here
+                    // But since many panoramas could commpete, and also each panorama would not have more than a single Image,
+                    // having  "as:formatter": {
+                    //"strawberry_pannellum_formatter": {
+                    //"urn:uuid:b999aec3-dd4d-4894-af5e-7f8f0b651f1e": {
+                    //"settings": {
+                    //"mouseZoom": false
+                    //}
+                    // is more complex to write than
+                    // ap:viewerhints:{"strawberry_pannellum_formatter": {"mouseZoom": false}} which is the prefered way
+                    // Still, for backwayds compatibility reasons we will keep this.
                     if (isset($jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings'])) {
-                      // We only want a few settings here.
-                      // Question is do we allow everything pannellum can?
-                      // Or do we control this?
-                      // @see https://pannellum.org/documentation/reference/
-                      /*
-                      const $haov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.haov;
-                      const $vaov = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vaov;
-                      const $minYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minYaw;
-                      const $maxYaw = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxYaw;
-                      const $vOffset = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.vOffset;
-                      const $maxPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.maxPitch;
-                      const $minPitch = drupalSettings.format_strawberryfield.pannellum[element_id].settings?.minPitch;
-                       */
                       $viewer_settings = $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'];
                       $viewer_settings = array_merge($viewer_settings,
                         $jsondata[$settings_key][$this->pluginId][$mediaitemkey]['settings']);
                       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['settings'] = $viewer_settings;
                     }
-
 
                     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['nodeuuid'] = $nodeuuid;
                     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['pannellum'][$htmlid]['width'] = $max_width_css;
@@ -534,7 +579,6 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                       "type": "info",
                       "pitch": "-4.409886580572494"
                      }, */
-                    // @TODO enable multiple scenes and more hotspot options
 
                     if (isset($jsondata[$hotspots])) {
                       $hotspotsjs = [];
@@ -567,7 +611,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                   // Should we put a thumb? Just hide?
                   // @TODO we can bring a plugin here and there that deals with
                   $elements[$delta]['panorama' . $i] = [
-                    '#markup' => '<i class="fas fa-times-circle"></i>',
+                    '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
                     '#prefix' => '<span>',
                     '#suffix' => '</span>',
                   ];
@@ -628,73 +672,73 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
         // Don't allow circular references
         if ($nid != $ownnodeid)
           $node = $this->entityTypeManager->getStorage('node')->load($nid);
-          if (!$node) {
-            continue;
-          }
-          $type = $this->pluginId;
-          $settings = $this->getSettings();
-          // Let's reuse the same settings we have!
-          // but remove 'multiscene' key to make sure
-          // That we don't end loading circular
-          // references, deep tours in tours or even ourselves!
-          $settings['json_key_multiscene'] = '';
-          if ($this->checkAccess($node)) {
-            foreach ($node->{$fieldname} as $i => $delta) {
-              // @see \Drupal\Core\Entity\EntityViewBuilderInterface::viewField()
-              $renderarray = $delta->view(
-                ['type' => $type, 'settings' => $settings]
-              );
-              // We only want first image always.
-              if (isset($renderarray['panorama1'])) {
-                if ($key == 0) {
-                  $reusedarray = $renderarray;
-                  // Lets build our objects here!
-                  $default_scene->firstScene = "{$nid}";
-                  $single_scene_details = new \stdClass();
-                  $single_scene_details->title = $node->label();
-                  $single_scene_details->type = 'equirectangular';
-                  if (isset($scenes['hfov'])) {
-                    $single_scene_details->hfov = (int) $scenes['hfov'];
-                  }
-                  if (isset($scenes['pitch'])) {
-                    $single_scene_details->pitch = (int) $scenes['pitch'];
-                  }
-                  if (isset($scenes['yaw'])) {
-                    $single_scene_details->yaw = (int) $scenes['yaw'];
-                  }
-                  $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
-                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
-                  $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                  // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
-                  $single_scenes->{"$nid"} = clone $single_scene_details;
-                  $panorama_id = $renderarray['panorama1']['#attributes']['id'];
+        if (!$node) {
+          continue;
+        }
+        $type = $this->pluginId;
+        $settings = $this->getSettings();
+        // Let's reuse the same settings we have!
+        // but remove 'multiscene' key to make sure
+        // That we don't end loading circular
+        // references, deep tours in tours or even ourselves!
+        $settings['json_key_multiscene'] = '';
+        if ($this->checkAccess($node)) {
+          foreach ($node->{$fieldname} as $i => $delta) {
+            // @see \Drupal\Core\Entity\EntityViewBuilderInterface::viewField()
+            $renderarray = $delta->view(
+              ['type' => $type, 'settings' => $settings]
+            );
+            // We only want first image always.
+            if (isset($renderarray['panorama1'])) {
+              if ($key == 0) {
+                $reusedarray = $renderarray;
+                // Lets build our objects here!
+                $default_scene->firstScene = "{$nid}";
+                $single_scene_details = new \stdClass();
+                $single_scene_details->title = $node->label();
+                $single_scene_details->type = 'equirectangular';
+                if (isset($scenes['hfov'])) {
+                  $single_scene_details->hfov = (int) $scenes['hfov'];
+                }
+                if (isset($scenes['pitch'])) {
+                  $single_scene_details->pitch = (int) $scenes['pitch'];
+                }
+                if (isset($scenes['yaw'])) {
+                  $single_scene_details->yaw = (int) $scenes['yaw'];
+                }
+                $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
+                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
+                $single_scenes->{"$nid"} = clone $single_scene_details;
+                $panorama_id = $renderarray['panorama1']['#attributes']['id'];
 
-                  unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
+                unset($reusedarray['panorama1']["#attached"]["drupalSettings"]["format_strawberryfield"][$panorama_id]["hotspots"]);
+              }
+              else {
+                $single_scene_details->title = $node->label();
+                $single_scene_details->type = 'equirectangular';
+                if (isset($scenes['hfov'])) {
+                  $single_scene_details->hfov = (int) $scenes['hfov'];
                 }
-                else {
-                  $single_scene_details->title = $node->label();
-                  $single_scene_details->type = 'equirectangular';
-                  if (isset($scenes['hfov'])) {
-                    $single_scene_details->hfov = (int) $scenes['hfov'];
-                  }
-                  if (isset($scenes['pitch'])) {
-                    $single_scene_details->pitch = (int) $scenes['pitch'];
-                  }
-                  if (isset($scenes['yaw'])) {
-                    $single_scene_details->yaw = (int) $scenes['yaw'];
-                  }
-                  $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
-                  // Adds the mobile version which on the JS will replace the normal panorama if
-                  // we are on mobile mode.
-                  $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
-                  $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
-                  $single_scenes->{"$nid"} = clone $single_scene_details;
+                if (isset($scenes['pitch'])) {
+                  $single_scene_details->pitch = (int) $scenes['pitch'];
                 }
+                if (isset($scenes['yaw'])) {
+                  $single_scene_details->yaw = (int) $scenes['yaw'];
+                }
+                $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
+                // Adds the mobile version which on the JS will replace the normal panorama if
+                // we are on mobile mode.
+                $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
+                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                $single_scenes->{"$nid"} = clone $single_scene_details;
               }
             }
           }
         }
       }
+    }
     $full_tour->default = $default_scene;
     $full_tour->scenes = $single_scenes;
     //@TODO we should validate these puppies probably.

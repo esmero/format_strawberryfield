@@ -381,7 +381,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       // used to query the Aggregated field.
       $sbf_highligh_solr_fields = [];
       $flat_key_sbf_highlight = [];
-
+      // Keeps track of the source fields configured at the aggregated field level for the HL processor.
+      $sbf_highligh_join_fields_from_config = [];
       foreach ($query_able_data as &$query_able_datum_fields) {
         foreach ($query_able_datum_fields['fields'] ?? [] as $field) {
           if (isset($solr_field_names[$field])
@@ -420,6 +421,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
                     && $index_field_item->getPropertyPath() == 'plaintext'
                   ) {
                     $sbf_names = [];
+                    $sbf_highligh_join_fields_from_config = array_merge($sbf_highligh_join_fields_from_config, $index_field->getConfiguration()['join_fields'] ?? ['parent_id']);
                     $sbf_first_name = reset($field_names[$sbf_field]);
                     if (strpos($sbf_first_name, 't') === 0) {
                       // Add all language-specific field names. This should work for
@@ -521,6 +523,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       $this->getQuery()->setFulltextFields([]);
       if (count($flat_key_sbf_highlight)) {
         $this->getQuery()->setOption('sbf_advanced_search_filter_flavor_hl', implode(" ", $flat_key_sbf_highlight));
+        // also adds as an option the fields the aggregated one is using so he HL processor can dig deeper when Querying.
+        $this->getQuery()->setOption('sbf_advanced_search_filter_flavor_join_search_api_fields_hl', array_unique(array_values($sbf_highligh_join_fields_from_config)));
       }
     }
     else {
@@ -642,6 +646,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       '#title' => !$form_state->get('exposed') ? $this->t('Value') : '',
       '#size' => 30,
       '#default_value' => $this->value[$this->options['expose']['identifier']] ?? '',
+      '#context' => [
+        '#filter_type' => 'sbf_advanced_search'
+      ],
     ];
     if (!empty($this->options['expose']['placeholder'])) {
       $form['value']['#attributes']['placeholder'] = $this->options['expose']['placeholder'];
@@ -718,6 +725,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         $searched_fields_identifier
           = $this->options['expose']['searched_fields_id'];
       }
+      $inter_field_op_fields_identifier = $this->options['id'] . '_op';
+      if (!empty($this->options['expose']['operator_id'])) {
+        $inter_field_op_fields_identifier
+          = $this->options['expose']['operator_id'];
+      }
 
       // Remove the group operator if found
       unset($form[$searched_fields_identifier]);
@@ -729,6 +741,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#multiple' => $this->options['expose']['multiple'] ?? FALSE,
         '#size'     => $multiple_exposed_fields,
         '#default_value' => $form_state->getValue($searched_fields_identifier),
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
+        ],
         '#attributes' => [
           'data-advanced-search-type' => 'fields'
         ]
@@ -741,6 +756,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       }
 
       $form[$this->options['id'] . '_wrapper'][$searched_fields_identifier] = $newelements[$searched_fields_identifier];
+      if (isset($form[$this->options['id'] . '_wrapper'][$inter_field_op_fields_identifier])) {
+        $form[$this->options['id'] . '_wrapper'][$inter_field_op_fields_identifier]['#attributes']['data-advanced-search-type'] = 'boolean';
+      }
     }
 
     $advanced_search_operator_id = $this->options['id'] . '_group_operator';
@@ -765,6 +783,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#default_value' => $form_state->getValue($advanced_search_operator_id,'or'),
         '#attributes' => [
           'data-advanced-search-type' => 'op'
+        ],
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
         ]
       ];
       $form[$this->options['id'] . '_wrapper'][$advanced_search_operator_id] = $newelements[$advanced_search_operator_id];
@@ -809,6 +830,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
         '#access' => $enable_more,
         '#weight' => '-100',
         '#group' => 'actions',
+        '#context' => [
+          '#filter_type' => 'sbf_advanced_search'
+        ],
       ];
       // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
       // trick the JS, won't be able to process more or less than we have defined in the settings.
@@ -843,6 +867,9 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
           '#access' => $enable_less,
           '#weight' => '-101',
           '#group' => 'actions',
+          '#context' => [
+            '#filter_type' => 'sbf_advanced_search'
+          ],
         ];
       }
     // If classic mode, hide instead of disabling. The form is still validated, so people even if they tru to
@@ -906,6 +933,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
        }
        if ($i >= $this->options['expose']['advanced_search_fields_count_min'] && $multiple_delone) {
          // Only add a minus for counts larger than the minimum.
+         $single_delete_one['#group'] = $this->options['id'] . '_wrapper_' . $i;
          $form[$this->options['id'] . '_wrapper_' . $i][$this->options['id'] . '_delone_' . $i] = $single_delete_one;
        }
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
@@ -935,8 +963,11 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
        $form[$this->options['id'].'_wrapper_'.$i]['#title_display'] = 'invisible';
      }
    }
+   // Adds also the data attribute but with a different value to the main/initial wrapper.
+   if (isset($form[$this->options['id'].'_wrapper'])) {
+     $form[$this->options['id'].'_wrapper']['#attributes']['data-advanced-wrapper'] = "main";
+   }
 
-    $form = $form;
   }
 
 

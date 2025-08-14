@@ -88,8 +88,8 @@
                     // or POST ones.
                     var inputs_in_form = {};
                     $('input[type=select], input[type=hidden], input[type=text]', $modal_exposed_form).not('[data-drupal-selector=edit-reset]').each(function (index) {
-                        inputs_in_form[$(this).attr('name')] = $(this).attr('name');
-                      });
+                      inputs_in_form[$(this).attr('name')] = $(this).attr('name');
+                    });
                     var $clean_url_split = selfSettings.url.split('?');
                     var $clean_url_base =  $clean_url_split.shift();
                     var searchParams = new URLSearchParams(selfSettings.url.substring(selfSettings.url.indexOf('?')));
@@ -145,7 +145,7 @@
   };
 
   /**
-   * Overrides beforeSend to trigger facetblocks/modal views exposed blocks update on exposed filter change.
+   * Overrides beforeSend to trigger facet blocks/modal views exposed blocks update on exposed filter change.
    *
    * @param {XMLHttpRequest} xmlhttprequest
    *   Native Ajax object.
@@ -157,11 +157,10 @@
     var ajax_views_call = false;
     var view_name = null;
     var view_display_id = null;
-
+    var href = window.location.href;
     // Get view from options.
     if (typeof options.extraData !== 'undefined' && typeof options.extraData.view_name !== 'undefined') {
       ajax_views_call = true;
-      var href = window.location.href;
       var settings = drupalSettings;
       const $current_form_params_as_array = this.$form.serializeArray();
       href = addExposedFiltersToModalExposedViewsBlockUrl(href, options.extraData.view_name, options.extraData.view_display_id, $current_form_params_as_array);
@@ -190,7 +189,9 @@
           }
         });
         if (reloadfacets) {
-          Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+          if (typeof Drupal.AjaxFacetsView != "undefined") {
+            Drupal.AjaxFacetsView.updateFacetsBlocks(href, options.extraData.view_name, options.extraData.view_display_id);
+          }
         }
       }
     }
@@ -208,35 +209,52 @@
           view_display_id = options.data.hasOwnProperty('view_display_id') ? options.data['view_display_id'] : null;
         }
       }
+      // We could have an "else here". Normally a "facet_link" inside options.data as a single string,
+      // calling the wrapper url would qualify.
+      // facet processing has already logic to remove pages (page independent) so we are good there.
+      // @Note ad @TODO. we could force ML tokens to be passed to the facet_link though.
     }
 
     // Check if this is going into an ajax/views call.
     if (ajax_views_call && view_name && view_display_id) {
+      // This is a form and is a submissions and leading to an ajax call.
+      // We need to avoid passing to the Ajax Controller the Page bc it will break a new query if the results
+      // Don't include as many pages.
+      // href has already that removed via addExposedFiltersToModalExposedViewsBlockUrl. Let's re-assign
+      this.url = href;
+      // options url might share the same arguments but a different path.
+      // Might contain ajax data passed by drupal/theme ajax. Let's do it manually.
+      const options_url_params = Drupal.Views.parseQueryString(options.url);
+      delete options_url_params['page'];
+      options.url =  options.url.split('?')[0] + '?' + $.param(options_url_params);
+
       var exposed_form_selector = '#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-');
       var $exposed_form = $(exposed_form_selector).length;
       if ($exposed_form > 0) {
         $exposed_form = 1;
       }
-     if (typeof(options.extraData) != 'undefined') {
+      if (typeof(options.extraData) != 'undefined') {
         options.extraData = {};
       }
       options.extraData = $.extend({}, options.extraData, {
         exposed_form_display: $exposed_form
       });
 
-     if (typeof(options.data) == 'string') {
-       var params = Drupal.Views.parseQueryString(options.data);
-       params['exposed_form_display'] = $exposed_form;
-       options.data = $.param(params);
-     }
-     else {
-       if  ((options.data == null) || (typeof(options.data) == 'undefined')) {
-         options.data = {};
-       }
-       options.data['exposed_form_display'] = $exposed_form;
-     }
+      if (typeof(options.data) == 'string') {
+        var params = Drupal.Views.parseQueryString(options.data);
+        params['exposed_form_display'] = $exposed_form;
+        delete params['page']
+        options.data = $.param(params);
+      }
+      else {
+        if  ((options.data == null) || (typeof(options.data) == 'undefined')) {
+          options.data = {};
+        }
+        options.data['exposed_form_display'] = $exposed_form;
+      }
     }
-    // Call the original Drupal method with the right context.
+
+    // Call the original Drupal method with the right context and modified URLs when needed.
     beforeSend.apply(this, [xmlhttprequest,options]);
   }
 
@@ -245,13 +263,20 @@
     // In case the default exposed form ID is also there.
     var $exposed_form = $('form#views-exposed-form-' + view_name.replace(/_/g, '-') + '-' + view_display_id.replace(/_/g, '-'));
     var params = Drupal.Views.parseQueryString(href);
+    // Form submissions via ajax are permeating also the "page" argument.
+    // That is so bad. Bc a next search might hit, but not on the same page
+    delete params['page'];
 
     $.each($exposed_form.serializeArray(), function () {
-      params[this.name] = this.value;
+      if (this.name !== 'page') {
+        params[this.name] = this.value;
+      }
     });
 
     $.each(current_form_params_as_array,  function () {
-      params[this.name] = this.value;
+      if (this.name!== 'page') {
+        params[this.name] = this.value;
+      }
     });
 
     return href.split('?')[0] + '?' + $.param(params);

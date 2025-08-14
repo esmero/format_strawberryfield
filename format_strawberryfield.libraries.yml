@@ -6,6 +6,7 @@ iiif_formatstrawberryfield_utils:
   dependencies:
     - core/jquery
     - core/drupal
+    - core/once
     - core/drupalSettings
     - format_strawberryfield/jmespath_strawberry
     - format_strawberryfield/svgpath_polyfull
@@ -191,23 +192,23 @@ pdfs_strawberry:
     - format_strawberryfield/iiif_formatstrawberryfield_utils
 
 mirador_projectmirador:
-  version: 3.3.0
+  version: 3.4.0
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/mirador@3.3.0/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/mirador@3.4.0/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_projectmirador_4:
-  version: 4.0.0-alpha
+  version: 4.0.0-alpha4
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://unpkg.com/mirador@4.0.0-alpha.2/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
+    https://unpkg.com/mirador@4.0.0-alpha.4/dist/mirador.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
   dependencies:
     - format_strawberryfield/mirador_font
@@ -219,13 +220,13 @@ mirador_font:
       'https://fonts.googleapis.com/css?family=Roboto:300,400,500': { external: true }
 
 mirador_archipelago_custom:
-  version: 3.3.0
+  version: 4.0.0
   license:
     name: Apache
     url: //github.com/ProjectMirador/mirador/blob/master/LICENSE
     gpl-compatible: true
   js:
-    js/mirador-archipelago.js: {minified: false, preprocess: false}
+    js/mirador4-image.min.js: {minified: false, preprocess: false}
     https://cdn.jsdelivr.net/npm/redux-saga@1.2.3/dist/redux-saga.umd.min.js: { external: true, minified: true, preprocess: false}
 
 mirador_strawberry:

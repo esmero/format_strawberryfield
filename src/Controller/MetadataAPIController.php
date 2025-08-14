@@ -195,11 +195,31 @@ class MetadataAPIController extends ControllerBase
     }
     // Now make the passed argument in the path one of the parameters if
     // any is Path (first only for now)
-    // @TODO. If i don't use levels = 1 i could avoud the initial {} in path argument at all..
+    // @TODO. If i don't use levels = 1 i could avoid the initial {} in path argument at all..
     $path = dirname($full_path, 1);
     $pathargument = '';
     $schema_parameters = [];
-    $parameters = $metadataapiconfig_entity->getConfiguration()['openAPI'];
+    $metadataapiconfig = $metadataapiconfig_entity->getConfiguration();
+    $parameters = $metadataapiconfig['openAPI'] ?? [];
+
+    // Check if we have a resumption token configured first
+    $token_value = NULL;
+    $cloned_request = NULL;
+    $token_value = NULL;
+    $cloned_request = $request->duplicate();
+    $resumption_token = $metadataapiconfig['resumption_token'] ?? '';
+    if (strlen($resumption_token) > 0) {
+      $token_value = $request->query->getString($resumption_token, '');
+      if (strlen($token_value) > 0) {
+        $token_value = base64_decode($token_value);
+        $query_str = parse_url($token_value, PHP_URL_QUERY);
+        parse_str($query_str, $query_params);
+        if (is_array($query_params) && !empty($query_params))
+          $cloned_request = $request->duplicate($query_params);
+        // Now now...
+      }
+    }
+
 
     foreach ($parameters as $param) {
       // @TODO For now we need to make sure there IS a single path argument
@@ -220,7 +240,7 @@ class MetadataAPIController extends ControllerBase
       ->getRequestValidator();
     //@TODO inject as $psrHttpFactory
     $psrRequest = \Drupal::service('psr7.http_message_factory')->createRequest(
-      $request
+      $cloned_request
     );
 
     // Will hold all arguments and will be passed to the twig templates.
@@ -230,11 +250,16 @@ class MetadataAPIController extends ControllerBase
       if ($match) {
         $context_parameters['path']
           = $clean_path_parameter_with_values = $match->parseParams($full_path);
-        $context_parameters['post'] = $request->request->all();
-        $context_parameters['query'] = $request->query->all();
-        $context_parameters['header'] = $request->headers->all();
-        $context_parameters['cookie'] = $request->cookies->all();
+        $context_parameters['post'] = $cloned_request->request->all();
+        $context_parameters['query'] = $cloned_request->query->all();
+        $context_parameters['header'] = $cloned_request->headers->all();
+        $context_parameters['cookie'] = $cloned_request->cookies->all();
         $matched_parameters_views_pairing = $this->pairParametersToViews($parameters, $context_parameters);
+      }
+      else {
+        throw new BadRequestHttpException(
+          'Wrong API arguments'
+        );
       }
     } catch (\Exception $exception) {
       // @see https://github.com/thephpleague/openapi-psr7-validator#exceptions
@@ -247,6 +272,8 @@ class MetadataAPIController extends ControllerBase
     $context = [];
     $embargo_context = [];
     $embargo_tags = [];
+    // Keeps the actual names of the argument holding a pager.
+    $views_pager_argument_names = [];
 
     // Now get the wrapper Twig template
     if (($metadatadisplay_wrapper_entity
@@ -292,12 +319,13 @@ class MetadataAPIController extends ControllerBase
       $used_views = $metadataapiconfig_entity->getViewsSourceId() ?? [];
       $views_with_values = [];
       $views_pager = [];
+      $views_pager_name = [];
       // This will be passed to the Wrapper.
       $processed_nodes_via_templates = [];
 
-      foreach ($matched_parameters_views_pairing as $views_with_argument_and_values) {
-        [$view_id, $display_id, $argument, $value] = explode(
-          ':', $views_with_argument_and_values, 4
+      foreach (($matched_parameters_views_pairing['in_request'] ?? []) as $views_with_argument_and_values) {
+        [$view_id, $display_id, $argument, $value, $param_name] = explode(
+          ':', $views_with_argument_and_values, 5
         );
         // Pager is a weird one. The argument itself has an extra "@" so we don't confuse it with a user exposed argument named pager.
         // Exposed arguments/filters in Drupal don't allow that value.
@@ -307,6 +335,21 @@ class MetadataAPIController extends ControllerBase
           }
           else {
             $views_pager[$view_id][$display_id] = $value;
+            $views_pager_name[$view_id][$display_id] = $param_name;
+          }
+        }
+      }
+
+      foreach (($matched_parameters_views_pairing['pagers'] ?? []) as $views_with_argument_and_values) {
+        [$view_id, $display_id, $argument, $value, $param_name] = explode(
+          ':', $views_with_argument_and_values, 5
+        );
+        // Pager is a weird one. The argument itself has an extra "@" so we don't confuse it with a user exposed argument named pager.
+        // Exposed arguments/filters in Drupal don't allow that value.
+        if (in_array($view_id.':'.$display_id, $used_views)){
+          if ($argument == "@page") {
+            $views_pager[$view_id][$display_id] = $value;
+            $views_pager_name[$view_id][$display_id] = $param_name;
           }
         }
       }
@@ -335,7 +378,12 @@ class MetadataAPIController extends ControllerBase
               $limit = $items_per_page;
             }
             if ($page = $views_pager[$view_id][$display_id] ?? 1) {
-              // Drupal users page = 0, we use page = 1;
+              // Drupal uses page = 0, we use page = 1;
+              // Only set the actual Page value to be used by the resumption token IF we are here
+              if (isset($views_pager_name[$view_id][$display_id])) {
+                $views_pager_argument_names[$views_pager_name[$view_id][$display_id]] = $page;
+              }
+
               $page = (int)$page >= 1 ? (int) $page : 1;
               $offset = $items_per_page * ($page - 1);
             }
@@ -499,7 +547,8 @@ class MetadataAPIController extends ControllerBase
               // Here we go .. cache or not cache?
               if ($cached && $metadataapiconfig_entity->isCache()) {
                 $processed_nodes_via_templates = $cached->data ?? [];
-              } else {
+              }
+              else {
                 // NOT CACHED, regenerate
                 foreach ($executable->result as $resultRow) {
                   if ($resultRow instanceof \Drupal\search_api\Plugin\views\ResultRow) {
@@ -542,7 +591,7 @@ class MetadataAPIController extends ControllerBase
                         }
                         // @TODO make embargo its own method.
                         $embargo_info = $this->embargoResolver->embargoInfo(
-                          $node->uuid(), $jsondata
+                          $node, $jsondata
                         );
                         // This one is for the Twig template
                         // We do not need the IP here. No use of showing the IP at all?
@@ -563,7 +612,7 @@ class MetadataAPIController extends ControllerBase
                             $context_embargo['data_embargo']['until']
                               = $embargo_info[1];
                           }
-                          if ($embargo_info[2]) {
+                          if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
                             $embargo_context[] = 'ip';
                           }
                         } else {
@@ -624,6 +673,14 @@ class MetadataAPIController extends ControllerBase
                   $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
                 );
               }
+
+              // Now. If we got fewer results than the limit we will remove the resumption token if existing at all
+              if (isset($views_pager_name[$view_id][$display_id]) && isset( $views_pager_argument_names[$views_pager_name[$view_id][$display_id]])) {
+                if (count($processed_nodes_via_templates ?? []) < $num_per_page) {
+                  unset($views_pager_argument_names[$views_pager_name[$view_id][$display_id]]);
+                }
+              }
+
               // @TODO add option that allows the Admin to ask for a rendered VIEW too
               $executable->destroy();
             }
@@ -666,6 +723,29 @@ class MetadataAPIController extends ControllerBase
         ]
       ];
       $context_wrapper['data_api'] = $context_parameters;
+      // We will only have a resuption token IF there are move values to come
+      // And we have a pager.
+      $resumption_token_base64 = NULL;
+      if (!empty($views_pager_argument_names) && $resumption_token != '') {
+        $get_query = $context_parameters['query'];
+        foreach ($views_pager_argument_names as $pager_argument_name => $pager_argument_value) {
+          // we add 2 bc internally it is 0, externally 1, we need the next.
+          $get_query[$pager_argument_name] = (int) $pager_argument_value + 1;
+        }
+        $resumption_token_encoded_url = http_build_query($get_query);
+        $resumption_token_encoded_url = '?'.$resumption_token_encoded_url;
+        $resumption_token_base64 = base64_encode($resumption_token_encoded_url);
+      }
+      if ($resumption_token_base64) {
+        $context_wrapper['data_api']['resumption_token'] = [
+          $resumption_token,
+          $resumption_token_encoded_url,
+          $resumption_token_base64
+        ];
+      }
+      else {
+        $context_wrapper['data_api']['resumption_token'] = [];
+      }
       unset($context_wrapper['data_api']['cookie']);
       unset($context_wrapper['data_api']['header']);
       $context_wrapper['data_api_context'] = 'wrapper';
@@ -702,7 +782,7 @@ class MetadataAPIController extends ControllerBase
             break;
 
           case 'application/xml':
-          case 'text/text':
+          case 'text/plain':
           case 'text/turtle':
           case 'text/html':
           case 'text/csv':
@@ -721,7 +801,7 @@ class MetadataAPIController extends ControllerBase
 
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
-          $response->headers->set('access-control-allow-origin', '*');
+          $response->headers->set('Access-Control-Allow-Origin', '*');
           $response->addCacheableDependency($metadataapiconfig_entity);
           $response->addCacheableDependency($metadatadisplay_item_entity);
           $response->addCacheableDependency(
@@ -759,7 +839,7 @@ class MetadataAPIController extends ControllerBase
             break;
 
           case 'application/xml':
-          case 'text/text':
+          case 'text/plain':
           case 'text/turtle':
           case 'text/html':
           case 'text/csv':
@@ -841,11 +921,21 @@ class MetadataAPIController extends ControllerBase
 
   private function pairParametersToViews(array $parameters, $request_value)
   {
-    $pairings = [];
+    $pairings['in_request'] = [];
+    $pairings['pagers'] = [];
+
+    // WE need to deal with Pager as an exception. If configured and not passed we need to still
+    // add to the pairings bc in code we do set it to page=1 later on.
     foreach ($parameters as $param_name => $paramconfig_setting) {
       foreach ($paramconfig_setting['mapping'] ?? [] as $mapped) {
         if (isset($request_value[$paramconfig_setting['param']['in']][$param_name]) && !empty($mapped)) {
-          $pairings[] = $mapped . ':' . $request_value[$paramconfig_setting['param']['in']][$param_name];
+          // New, adds also the param name to the string.
+          $pairings['in_request'][] = $mapped . ':' . $request_value[$paramconfig_setting['param']['in']][$param_name]. ':' .$param_name;
+        }
+        elseif (!empty($mapped) && str_ends_with($mapped, ':@page')) {
+          // if the pager value was NOT passed explicitly we set it here
+          $pager_value = $request_value[$paramconfig_setting['param']['in']][$param_name] ?? 1;
+          $pairings['pagers'][] = $mapped . ':' . $pager_value. ':' .$param_name;
         }
       }
     }

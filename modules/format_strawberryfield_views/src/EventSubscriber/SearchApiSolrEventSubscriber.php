@@ -36,30 +36,34 @@ class SearchApiSolrEventSubscriber implements EventSubscriberInterface {
     }
     if ($query->getOption('sbf_join_flavor')) {
       $options = $query->getOption('sbf_join_flavor');
-      if (is_array($options) &&
-        !empty($options['from']) &&
-        !empty($options['to']) &&
-        !empty($options['v'])) {
-        // Options might contain more data used for HL/Advanced search etc.
-        // see \Drupal\format_strawberryfield_views\Plugin\views\filter\StrawberryFlavorsJoin::query
-        $conjunction = $options['#conjunction'] ?? 'OR'; // Used to connect the join with the main one
-        $join_term['from'] = $options['from'];
-        $join_term['to'] = $options['to'];
-        $subquery = $options['v'];
-        $join_term['v'] = '$subquery';
-        // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
-        // This is desired because it will be faster
-        // Also adding $options['score'] = 'none' even faster.
-        // @TODO enable extra UUID type Solr field to be used as joined ones
-        $join = $solarium_query->getHelper()->qparser(
-          'join',
-          $join_term
-        );
-        $new_query_string = $solarium_query->getQuery() . " {$conjunction} " . $join;
-        $solarium_query->setQuery($new_query_string);
-        $solarium_query->addParam(
-          'subquery', $subquery
-        );
+      if (is_array($options)) {
+        foreach ($options as $key => $option) {
+          if (is_array($option) &&
+            !empty($option['from']) &&
+            !empty($option['to']) &&
+            !empty($option['v'])) {
+            // Options might contain more data used for HL/Advanced search etc.
+            // see \Drupal\format_strawberryfield_views\Plugin\views\filter\StrawberryFlavorsJoin::query
+            $conjunction = $option['#conjunction'] ?? 'OR'; // Used to connect the join with the main one
+            $join_term['from'] = $option['from'];
+            $join_term['to'] = $option['to'];
+            $subquery = $option['v'];
+            $join_term['v'] = '$subquery_'.$key;
+            // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
+            // This is desired because it will be faster
+            // Also adding $options['score'] = 'none' even faster.
+            // @TODO enable extra UUID type Solr field to be used as joined ones
+            $join = $solarium_query->getHelper()->qparser(
+              'join',
+              $join_term
+            );
+            $new_query_string = $solarium_query->getQuery() . " {$conjunction} " . $join;
+            $solarium_query->setQuery($new_query_string);
+            $solarium_query->addParam(
+              'subquery_'.$key, $subquery
+            );
+          }
+        }
       }
     }
     elseif ($query->getOption('sbf_join_flavor_advanced')) {
@@ -69,7 +73,7 @@ class SearchApiSolrEventSubscriber implements EventSubscriberInterface {
         !empty($options['to']) &&
         !empty($options['v'])) {
         $subquery = $options['v'];
-        $options['v'] = '$subquery';
+        $options['v'] = '$subquery_adv';
         // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
         // This is desired because it will be faster
         // Also adding $options['score'] = 'none' even faster.
@@ -81,8 +85,65 @@ class SearchApiSolrEventSubscriber implements EventSubscriberInterface {
         $new_query_string = $solarium_query->getQuery() . ' OR ' . $join;
         $solarium_query->setQuery($new_query_string);
         $solarium_query->addParam(
-          'subquery', $subquery
+          'subquery_adv', $subquery
         );
+      }
+    }
+    if ($query->getOption('sbf_join_ado')) {
+      $options = $query->getOption('sbf_join_ado');
+      if (is_array($options)) {
+        foreach ($options as $key => $option) {
+          if (is_array($option) &&
+            !empty($option['from']) &&
+            !empty($option['to']) &&
+            !empty($option['v'])) {
+            // Options might contain more data used for HL/Advanced search etc.
+            // see \Drupal\format_strawberryfield_views\Plugin\views\filter\StrawberryFlavorsJoin::query
+            $conjunction = $option['#conjunction'] ?? 'OR'; // Used to connect the join with the main one
+            $join_term['from'] = $option['from'];
+            $join_term['to'] = $option['to'];
+            $subquery = $option['v'];
+            $join_term['v'] = '$subquery_ado_'.$key;
+            // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
+            // This is desired because it will be faster
+            // Also adding $options['score'] = 'none' even faster.
+            // @TODO enable extra UUID type Solr field to be used as joined ones
+            $join = $solarium_query->getHelper()->qparser(
+              'join',
+              $join_term
+            );
+            $new_query_string = $solarium_query->getQuery() . " {$conjunction} " . $join;
+            $solarium_query->setQuery($new_query_string);
+            $solarium_query->addParam(
+              'subquery_ado_'.$key, $subquery
+            );
+          }
+        }
+      }
+    }
+    elseif ($query->getOption('sbf_join_ado_advanced')) {
+      $substitutions = $query->getOption('sbf_join_ado_advanced');
+      foreach ($substitutions as $key => $options) {
+        if (is_array($options) &&
+          !empty($options['from']) &&
+          !empty($options['to']) &&
+          !empty($options['v'])) {
+          $subquery = $options['v'];
+          $options['v'] = '$subquery_ado_adv' . $key;
+          // $options['method'] = 'topLevelDV' or 'dvWithScore' This requires docvalues to be set on the joined fields
+          // This is desired because it will be faster
+          // Also adding $options['score'] = 'none' even faster.
+          // @TODO enable extra UUID type Solr field to be used as joined ones
+          $join = $solarium_query->getHelper()->qparser(
+            'join',
+            $options
+          );
+          $new_query_string = $solarium_query->getQuery() . ' OR ' . $join;
+          $solarium_query->setQuery($new_query_string);
+          $solarium_query->addParam(
+            'subquery_ado_adv'. $key, $subquery
+          );
+        }
       }
     }
   }

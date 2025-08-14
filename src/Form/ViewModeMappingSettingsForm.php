@@ -4,6 +4,7 @@ namespace Drupal\format_strawberryfield\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\search_api\Entity\Index;
@@ -55,7 +56,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
     $config = $this->config('format_strawberryfield.viewmodemapping_settings');
     $form['info'] = [
       '#markup' => $this->t(
-        'This Form allows you to map ADO (Archipelago Digital Object) "types" to existing Drupal View Mode Configurations.'
+        'This Form allows you to map ADO (Archipelago Digital Object) "types" to Drupal View Modes.'
       ),
     ];
 
@@ -124,6 +125,22 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
           'action' => 'order',
           'relationship' => 'sibling',
           'group' => 'table-sort-weight',
+        ],
+      ],
+    ];
+    $form['usage_notes'] = [
+      '#title' => $this->t('Usage Notes'),
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE,
+      '#tree' => TRUE,
+      'notes_list' => [
+        '#theme' => 'item_list',
+        '#items' => [
+          $this->t('"The ADO Type" refers to the solr indexed value as configured in the Archipelago @solr_settings_link form. Note that it could be referring to any "type" value nested at any level in your JSON metadata.',
+            ['@solr_settings_link' => \Drupal::service('link_generator')->generate('Important Solr Settings', Url::fromRoute('strawberryfield.important_solr_settings_form'))]),
+          $this->t('You may select "!" if you need to map an ADO JSON "type" value to a View Mode where that type is not yet available. After creating the mapping, you can edit the ADO Type directly.'),
+          $this->t('If more than one view mode mapping is enabled for a given "type" value, the <strong>first</strong> will prevail.'),
         ],
       ],
     ];
@@ -221,9 +238,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       ->getStorage('search_api_index')
       ->loadMultiple();
 
+    $field = $this->config('strawberryfield.archipelago_solr_settings.ado_type')->get('field') ?? 'type_1';
     $facets = [
       'type' => [
-        'field' => 'type_1',
+        'field' => $field,
         'limit' => 50,
         'operator' => 'AND',
         'min_count' => 1,

@@ -9,7 +9,7 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Internal IIIF server URL'
     iiif_content_search_api_page_count:
-      type: int
+      type: integer
       label: 'The max results to show per page on a iiif_content_search_api_page_count'
     iiif_content_search_api_visual_enabled_processors:
       type: string
@@ -21,13 +21,13 @@ format_strawberryfield.iiif_settings:
       type: string
       label: 'Comma separated list of Strawberry Runner Processors for plain text annotations (no OCR) that can be fetched by the Content Search API on query.'
     iiif_content_search_api_active:
-      type: bool
+      type: boolean
       label: 'If IIIF Content Search API V1 and V2 are enabled.'
     iiif_content_search_validate_exposed:
-      type: bool
+      type: boolean
       label: 'If IIIF Only explicit definitions in a manifest allow a search against them'
     iiif_content_search_time_targetannotations:
-      type: bool
+      type: boolean
       label: 'If IIIF Content Search results for Time based media target the VTT annotation itself or the parent Canvas'
     iiif_content_search_api_parent_node_fields:
       type: sequence
@@ -39,11 +39,32 @@ format_strawberryfield.iiif_settings:
       sequence:
         type: string
         label: 'A Search API field'
+    iiif_content_search_api_metadata:
+      type: boolean
+      label: 'If IIIF Content Search Should also search/return metadata.'
+    iiiif_content_search_api_metadata_parent_node_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Fields that can be used to connect a Node to a Parent ADO/or itself.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiiif_content_search_api_metadata_node_uuid_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Field holding its own UUID or other UUIDs.'
+      sequence:
+        type: string
+        label: 'A Search API field'
+    iiiif_content_search_api_metadata_node_fulltext_fields:
+      type: sequence
+      label: 'Strawberry ADO Source Search API Fields to search/math metadata against.'
+      sequence:
+        type: string
+        label: 'A Search API field'
     iiif_content_search_api_results_per_page:
-      type: int
+      type: string
       label: 'Number of results per page'
     iiif_content_search_api_query_length:
-      type: int
+      type: string
       label: 'max size of the allowed term passed (?q)'
 
 
@@ -63,6 +84,23 @@ format_strawberryfield.embargo_settings:
       type: boolean
       label: 'If Embargo is Globally enabled'
       default: false
+    file_embargo_enabled:
+      type: boolean
+      label: 'If File download paths should also inherit embargo.'
+      default: false
+    global_ip_bypass_enabled:
+      type: boolean
+      label: 'If Global IP Range Bypass Settings are enabled'
+      default: false
+    global_ip_bypass_mode:
+      type: string
+      label: 'Global IP Range Bypass Mode'
+      default: 'local'
+    global_ip_bypass_addresses:
+      type: sequence
+      sequence:
+        type: string
+      label: 'global_ip_bypass_addresses list'
 
 field.formatter.settings.strawberry_audio_formatter:
   type: mapping
@@ -97,6 +135,9 @@ field.formatter.settings.strawberry_audio_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Audio and Subtitle Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
@@ -138,6 +179,9 @@ field.formatter.settings.strawberry_image_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_media_formatter:
   type: mapping
   label: 'Specific Config for strawberry_media_formatter'
@@ -193,6 +237,9 @@ field.formatter.settings.strawberry_media_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
     mediasource:
       type: mapping
       label: 'Sources for IIIF URL'
@@ -212,9 +259,6 @@ field.formatter.settings.strawberry_media_formatter:
     viewer_overrides:
       type: string
       label: 'OSD JSON based Viewer Overrides'
-    hide_on_embargo:
-      type: string
-      label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 field.formatter.settings.strawberry_3d_formatter:
   type: mapping
@@ -251,6 +295,9 @@ field.formatter.settings.strawberry_3d_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of 3D Model, UV textures and MTL Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_metadata_formatter:
   type: mapping
   label: 'Specific Config for strawberry_metadata_formatter using Twig'
@@ -342,7 +389,6 @@ field.formatter.settings.strawberry_paged_formatter:
       type: boolean
       label: 'If textselection from DjaVUXML should be enabled or not'
 
-
 field.formatter.settings.strawberry_pannellum_formatter:
   type: mapping
   label: 'Specific Config for strawberry_pannellum_formatter'
@@ -393,7 +439,12 @@ field.formatter.settings.strawberry_pannellum_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Image Panorama Upload JSON keys to filter against'
-
+    viewer_overrides:
+      type: string
+      label: 'Pannellum JSON based Viewer Overrides'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 field.formatter.settings.strawberry_video_formatter:
   type: mapping
   label: 'Specific Config for strawberry_video_formatter'
@@ -431,6 +482,9 @@ field.formatter.settings.strawberry_video_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of Video and Subtitle Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 field.formatter.settings.strawberry_pdf_formatter:
   type: mapping
@@ -471,6 +525,10 @@ field.formatter.settings.strawberry_pdf_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of PDF Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+
 field.formatter.settings.strawberry_uv_formatter:
   type: mapping
   label: 'Specific Config for strawberry_uv_formatter'
@@ -600,6 +658,9 @@ field.formatter.settings.strawberry_warc_formatter:
     embargo_json_key_source:
       type: string
       label: 'When embargoed, comma separated list of WebArchive packages Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 
 # Multiple JSON type / View Mode Mappings
 format_strawberryfield.viewmodemapping_settings:
@@ -702,6 +763,9 @@ field.formatter.settings.strawberry_map_formatter:
     embargo_json_key_source:
       type: string
       label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 # Given any DS field plugin formatter key a type
 ds.field_plugin.*:
   type: mapping
@@ -761,6 +825,9 @@ field.formatter.settings.strawberry_citation_formatter:
         label: 'style'
     localekey:
       type: string
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
 condition.plugin.ado_type_condition:
   type: condition.plugin
   label: 'ADO Type Condition'
@@ -782,3 +849,27 @@ condition.plugin.ado_jmespath_condition:
       label: 'ADO JMESPATHS'
       sequence:
         type: string
+condition.plugin.ado_flavor_condition:
+  type: condition.plugin
+  label: 'ADO Flavor Condition'
+  mapping:
+    ado_flavors:
+      type: sequence
+      label: 'ADO Flavors'
+      sequence:
+        type: string
+    ado_flavors_op:
+      type: boolean
+      label: 'If all Flavours need to match'
+    ado_direct:
+      type: boolean
+      label: 'IF ADO has indexed (Search API) Flavor'
+    ado_children:
+      type: boolean
+      label: 'IF Children of ADO have at least one indexed (Search API) Flavour'
+    ado_grandchildren:
+      type: boolean
+      label: 'IF Grand Children of ADO have at least one indexed (Search API) Flavour'
+    ado_level_op:
+      type: boolean
+      label: 'IF all child levels need to match'

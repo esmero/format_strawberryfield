@@ -139,6 +139,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
     $navbar = $this->getSetting('navbar');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
     $max_height = $this->getSetting('max_height');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     //@TODO allow more than one?
     $number_warcs = $this->getSetting('number_warcs');
 
@@ -194,8 +195,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
          }
       }*/
       $i = 0;
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
-        ->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // Check embargo
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
@@ -203,7 +203,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
         if ($embargo_info[1]) {
           $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -214,7 +214,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
         $upload_keys = $embargo_upload_keys_string;
       }
 
-      if (!$embargoed || !empty($embargo_upload_keys_string)) {
+      if (!$embargoed || (!empty($embargo_upload_keys_string) && !$hide_on_embargo) || ($embargoed && !$hide_on_embargo)) {
         $ordersubkey = 'sequence';
         // Since the conditionals here are more complex
         // we do not call $this->fetchMediaFromJsonWithFilter()
@@ -323,7 +323,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
               // Should we put a thumb? Just hide?
               // @TODO we can bring a plugin here and there that deals with
               $elements[$delta]['media_thumb' . $i] = [
-                '#markup' => '<i class="fas fa-times-circle"></i>',
+                '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
                 '#prefix' => '<span>',
                 '#suffix' => '</span>',
               ];

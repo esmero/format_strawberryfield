@@ -194,7 +194,22 @@
           }
         }
 
-        const newParams = Object.fromEntries(new URLSearchParams(location.search))
+        const newParams = {};
+        const urlArray = location.hash.replace('#','').split('/');
+        const urlHash = {};
+        // Because one action might not have the value for another action
+        // We will parse the params upfront from the hash.
+        for (let i = 0; i < urlArray.length; i += 2) {
+          urlHash[urlArray[i]] = urlArray[i + 1];
+        }
+        if (urlHash['search'] != undefined) {
+          newParams.search = decodeURIComponent(urlHash['search'].replace(/\+/g, " "));
+        }
+        if (urlHash['page'] != undefined) {
+          newParams.page = decodeURIComponent(urlHash['page'].replace(/\+/g, " "));
+        }
+
+
         if (
           action.type === ActionTypes.SET_CANVAS ||
           action.type === ActionTypes.SET_WINDOW_VIEW_TYPE
@@ -226,6 +241,8 @@
               manifestId: manifest.id,
             })).view
           }
+          let allCanvases = yield effects.select(Mirador.selectors.getCanvases, { windowId});
+
           let canvasIds = [];
           let currentDrupalNodeId = [];
           let currentDrupalNodeForViews = [];
@@ -280,14 +297,15 @@
               canvas => canvas['@id']
             );
           }
-
           // Build page parameter
-          const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
-          if (view === 'single' || canvasIndices.length == 1) {
-            newParams.page = canvasIndices[0]
-          } else if (view === 'book') {
-            newParams.page = canvasIndices.find(e => !!e).join(',')
+          if (visibleCanvases?.length) {
+            const canvasIndices = visibleCanvases.map(c => canvasIds.indexOf(c) + 1)
+            if (canvasIndices.length == 1) {
+              newParams.page = canvasIndices[0]
+            }
           }
+          // even if we have no search being triggered by interactions, we should fetch the
+
           // Now at the end. If a VTT annotation requested a Canvas to be set. we need to check if we have in the config
           // A temporary stored valued of the last clicked annotation.
           // Use if here.
@@ -309,13 +327,12 @@
         else if (action.type === ActionTypes.REMOVE_SEARCH) {
           delete newParams.search
         }
-
+        // Set the fragment, no matter what.
         let $fragment = '';
         for (const [p, val] of new URLSearchParams(newParams).entries()) {
           $fragment += `${p}/${val}/`;
         };
         $fragment = $fragment.slice(0, -1);
-
         history.replaceState(
           { searchParams: newParams },
           '',
@@ -367,12 +384,6 @@
               allowClose: false,
               imageToolsEnabled: true,
               imageToolsOpen: true,
-              views: [
-                { key: 'single', behaviors: [null, 'individuals'] },
-                { key: 'book', behaviors: [null, 'paged'] },
-                { key: 'scroll', behaviors: ['continuous'] },
-                { key: 'gallery' },
-              ],
             };
             $options.windows[0].workspaceControlPanel = {
               enabled: false
@@ -381,6 +392,18 @@
               isWorkspaceAddVisible: false,
               allowNewWindows: true,
             };
+            // Needed bc of how Image Pluging uses Canvas info/get Image from OSD to apply effects.
+            $options.osdConfig = {
+              crossOriginPolicy: 'Anonymous'
+            }
+            $options.theme = {
+              palette: {
+                primary: {
+                  main: '#1967d2',
+                },
+              },
+            };
+
           }
 
 
@@ -401,6 +424,46 @@
               $manifests[manifestURL] = new Object({'provider':'See Metadata'});
             })
             $options.manifests = $manifests;
+          }
+
+          const readFragmentSearch = function() {
+            const urlArray = window.location.hash.replace('#','').split('/');
+            const urlHash = {};
+            for (let i = 0; i < urlArray.length; i += 2) {
+              urlHash[urlArray[i]] = urlArray[i + 1];
+            }
+            if (urlHash['search'] != undefined) {
+              return decodeURIComponent(urlHash['search'].replace(/\+/g, " "));
+            }
+            else {
+              return '';
+            }
+          };
+
+          const readFragmentPage = function() {
+            const urlArray = window.location.hash.replace('#','').split('/');
+            const urlHash = {};
+            for (let i = 0; i < urlArray.length; i += 2) {
+              urlHash[urlArray[i]] = urlArray[i + 1];
+            }
+            if (urlHash['page'] != undefined) {
+              return parseInt(decodeURIComponent(urlHash['page'].replace(/\+/g, " ")));
+            }
+            else {
+              return 0;
+            }
+          };
+
+          const search_string = readFragmentSearch();
+          const page_string = readFragmentPage();
+          if (search_string.length > 0 ) {
+            $options.windows[0].defaultSearchQuery = search_string;
+          }
+          // Note. if the setting "switchCanvasOnSearch": true is selected
+          // And there is a search
+          // And there is a hit, start canvas will have no effect. You are warned.
+          if (parseInt(page_string) > 0 ) {
+            $options.windows[0].canvasIndex = parseInt(page_string) - 1 ;
           }
 
           // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
@@ -428,16 +491,26 @@
                 });
               }
             }
+
             $options = {
               ...$options,
               ...viewer_override,
             };
           }
+          $options.state = {};
 
           //@TODO add an extra Manifests key with every other one so people can select the others.
           if (drupalSettings.format_strawberryfield.mirador[element_id]['custom_js'] == true) {
-            const miradorInstance = renderMirador($options);
-            console.log('initializing Custom Mirador 3.3.0')
+            const miradorInstance = Mirador.viewerWithImagePlugin($options, [formatStrawberryFieldReactPlugin]);
+            console.log('initializing Custom Mirador 4.0 with Image Tools')
+            if (miradorInstance) {
+              // To allow bubling up we need to add this one to the document
+              // Multiple Miradors will replace each other?
+              // @TODO check on that diego..
+              document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
+              document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
+              const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
+            }
           }
           else {
             const miradorInstance = Mirador.viewer($options, [formatStrawberryFieldReactPlugin]);
@@ -448,8 +521,10 @@
               // @TODO check on that diego..
               document.addEventListener('sbf:canvas:change', CaptureAdoMiradorCanvasChange.bind(document, miradorInstance, element_id));
               document.addEventListener('sbf:ado:change', CaptureAdoMiradorAdoChange.bind(document, miradorInstance, element_id));
+              const windowId = Object.keys(miradorInstance.store.getState().windows)[0];
             }
           }
+
           // Work around https://github.com/ProjectMirador/mirador/issues/3486
           const mirador_window = document.getElementById(element_id);
           var observer = new MutationObserver(function(mutations) {

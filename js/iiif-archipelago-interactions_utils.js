@@ -1,9 +1,10 @@
-(function ($, Drupal, drupalSettings, jmespath) {
+(function ($, Drupal, drupalSettings, jmespath, once) {
 
   'use strict';
   var FormatStrawberryfieldIiifUtils = {
 
     images_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
+    images_canvas_jmespath_pattern: "[{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}]",
     geoannotation_jmespath_pattern: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id, \"annotation\": items[?motivation == 'georeferencing'].{\"features\": not_null(body[].features[], body.features), \"target\": target}}}",
     geoannotation_jmespath_pattern_split: "items[?type == 'Canvas'].{\"canvas_id\":id ,\"annotations\": annotations[?type == 'AnnotationPage'].{\"id\":id,\"features\": items[?motivation == 'georeferencing'].body[].features, \"target\": items[?motivation == 'georeferencing'].target}}",
     images_jmespath_pattern_with_canvasids: "items[?type == 'Canvas' && id=='{{token1}}'].{\"canvas_id\":id ,\"items\": items[?type == 'AnnotationPage'].{\"id\":id,\"image_ids\": items[?motivation == 'painting'].body.id, \"service_ids\": items[?motivation == 'painting'].body.service[].{type: not_null(type, \"@type\"), id: not_null(id, \"@id\")}[?starts_with(type, 'ImageService')].id }}",
@@ -44,7 +45,23 @@
         nodeidsArray = nodeids
       }
       const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {nodeid: nodeidsArray} });
-      el.dispatchEvent(event);
+      // A view might/might not have yet attach itself to listen.
+      // We have no control on Behavior attachment order in Drupal
+      // And can also not make this library depend at all on sbf-views-ajax-interactions.
+      // But we can check if it is already attached but just using once()
+      // and if not, delay with a future timeout the dispatching in the hope it finds its way.
+      // Literally give it a second after sync code has run.
+      // See  Drupal.behaviors.sbf_views_ajax_interactions
+      const viewEventListenerInit = once.filter('listen-ado-view-change', 'body')
+      if (!viewEventListenerInit?.length) {
+        setTimeout(() => {
+           el.dispatchEvent(event);
+         }
+         , 1000);
+     }
+     else {
+       el.dispatchEvent(event);
+     }
       return this;
     },
 
@@ -61,7 +78,16 @@
         encodedImageAnnotationOne = encodedImageAnnotation
       }
       const event = new CustomEvent('sbf:ado:view:change', { bubbles: true, detail: {image_annotation: encodedImageAnnotationOne} });
-      el.dispatchEvent(event);
+      const viewEventListenerInit = once.filter('listen-ado-view-change', 'body')
+      if (!viewEventListenerInit?.length) {
+        setTimeout(() => {
+            el.dispatchEvent(event);
+          }
+          , 1000);
+      }
+      else {
+        el.dispatchEvent(event);
+      }
       return this;
     },
 
@@ -75,7 +101,11 @@
       return this;
     },
     fetchIIIFManifest: async function (iiifmanifesturl) {
-      const response = await fetch(iiifmanifesturl);
+      const response = await fetch(iiifmanifesturl, {
+          mode: 'cors',
+          method: 'GET'
+        }
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -256,10 +286,17 @@
     // @by awesome https://github.com/digitaldogsbody Mike Bennet
     const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
     return image_services;
+    },
+
+  getIIIFServicesForCanvas: function (iiifcanvas) {
+      // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
+      // @by awesome https://github.com/digitaldogsbody Mike Bennet
+    const image_services = jmespath.search(iiifcanvas, this.images_canvas_jmespath_pattern);
+    return image_services;
     }
-  };
+};
 
   /* Make it part of the Global Drupal Object */
   Drupal.FormatStrawberryfieldIiifUtils = FormatStrawberryfieldIiifUtils;
 
-})(jQuery, Drupal, drupalSettings, jmespath);
+})(jQuery, Drupal, drupalSettings, jmespath, once);

@@ -27,8 +27,18 @@ delete strawberryfield webannotation:
   description: 'This permission only applies if editing the Entity (e.g) that holds the given Strawberry Field is also granted.'
   restrict access: TRUE
 see strawberryfield embargoed ados:
-  title: 'See Embargoed object metadata and assets'
+  title: 'See All Embargoed object metadata and assets'
   description: 'If an Object is embargoed this permission will allow any role with this assigned to bypass it.'
+  warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled.'
+  restrict access: TRUE
+see strawberryfield time embargoed ados:
+  title: 'See All Date/Time Embargoed object metadata and assets'
+  description: 'If an Object is embargoed by Time/date, this permission will allow any role with this assigned to bypass it.'
+  warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled.'
+  restrict access: TRUE
+see strawberryfield IP embargoed ados:
+  title: 'See All IP Embargoed object metadata and assets'
+  description: 'If an Object is embargoed by IP/IP Ranges, this permission will allow any role with this assigned to bypass it.'
   warning: 'This is not ACL. Enforced Embargo configured JSON keys will not act on Formatters if a user has this enabled.'
   restrict access: TRUE
 view strawberryfield api:

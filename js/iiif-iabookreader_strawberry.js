@@ -331,7 +331,7 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
     var index = this.currentIndex();
     //OLD//var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json");
     //var tilesourceUri = this.getPageProp(index, 'infojson');
-    var tilesourceUri = this.getPageURI(index, 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(index, 1, 0));
+    var tilesourceUri = this.getIIIFInfoJsonFromURL(this.getPageURI(index, 1, 0)) ;
     var dosd = $(osd_common.replace(/\[ID\]/g, "osd_s").replace('[TS]', tilesourceUri));
     jViewpageDiv.html(dosd);
   }
@@ -346,7 +346,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
     if (typeof this.getPageURI(indices[0], 1, 0) != 'undefined') {
       //OLD//var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json");
       //var tilesourceUri_left = this.getPageProp(indices[0], 'infojson');
-      var tilesourceUri_left = this.getPageURI(indices[0], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[0], 1, 0));
+
+      var tilesourceUri_left = this.getIIIFInfoJsonFromURL(this.getPageURI(indices[0], 1, 0)) ;
       var osd_left = osd_common.replace(/\[ID\]/g, "osd_l").replace('[TS]', tilesourceUri_left);
     }
     else {
@@ -358,7 +359,8 @@ BookReader.prototype.buildViewpageDiv = function(jViewpageDiv) {
     if (typeof this.getPageURI(indices[1], 1, 0) != 'undefined') {
       //OLD//var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json");
       //var tilesourceUri_right = this.getPageProp(indices[1], 'infojson');
-      var tilesourceUri_right = this.getPageURI(indices[1], 1, 0).replace(/full.*/, "info.json") + getURLArgument(this.getPageURI(indices[1], 1, 0));
+
+      var tilesourceUri_right = this.getIIIFInfoJsonFromURL(this.getPageURI(indices[1], 1, 0)) ;
       var osd_right = osd_common.replace(/\[ID\]/g, "osd_r").replace('[TS]', tilesourceUri_right);
     }
     else {

@@ -215,7 +215,7 @@ class MetadataExposeDisplayController extends ControllerBase {
           }
 
           $embargo_info = $this->embargoResolver->embargoInfo(
-            $node->uuid(), $jsondata
+            $node, $jsondata
           );
           // This one is for the Twig template
           // We do not need the IP here. No use of showing the IP at all?
@@ -236,7 +236,7 @@ class MetadataExposeDisplayController extends ControllerBase {
                 . $embargo_info[1];
               $context_embargo['data_embargo']['until'] = $embargo_info[1];
             }
-            if ($embargo_info[2]) {
+            if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
               $embargo_context[] = 'ip';
             }
           }
@@ -297,7 +297,7 @@ class MetadataExposeDisplayController extends ControllerBase {
             break;
 
           case 'application/xml':
-          case 'text/text':
+          case 'text/plain':
           case 'text/turtle':
           case 'text/html':
           case 'text/csv':
@@ -316,7 +316,7 @@ class MetadataExposeDisplayController extends ControllerBase {
 
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
-          $response->headers->set('access-control-allow-origin','*');
+          $response->headers->set('Access-Control-Allow-Origin','*');
           $response->addCacheableDependency($node);
           $response->addCacheableDependency($metadatadisplay_entity);
           $response->addCacheableDependency($metadataexposeconfig_entity);

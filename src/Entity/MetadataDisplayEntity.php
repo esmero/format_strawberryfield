@@ -164,6 +164,16 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
 
   CONST ERRORED_CACHE_TAG_ID = 'format_strawberry:metadata_display_errored:';
 
+  CONST ALLOWED_MIMETYPES = [
+    'text/html' => 'HTML',
+    'application/json' => 'JSON',
+    'application/ld+json' => 'JSON-LD',
+    'application/xml' => 'XML',
+    'text/plain' => 'TEXT',
+    'text/turtle' => 'RDF/TURTLE',
+    'text/csv' => 'CSV',
+  ];
+
   /**
    * Calculated Twig vars used by this template.
    *
@@ -397,15 +407,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
         'default_value' => 'text/html',
         'max_length' => 64,
         'cardinality' => 1,
-        'allowed_values' => [
-          'text/html' => 'HTML',
-          'application/json' => 'JSON',
-          'application/ld+json' => 'JSON-LD',
-          'application/xml' => 'XML',
-          'text/text' => 'TEXT',
-          'text/turtle' => 'RDF/TURTLE',
-          'text/csv' => 'CSV',
-        ],
+        'allowed_values' => static::ALLOWED_MIMETYPES,
       ])
       ->setRequired(TRUE)
       ->setDisplayOptions('view', [
@@ -612,7 +614,9 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
     $context['language'] = \Drupal::languageManager()->getCurrentLanguage();
     $user = \Drupal::currentUser();
     $context['is_admin'] = $user->hasPermission('access administration pages');
+    $context['is_anonymous'] = $user->isAnonymous() ?? FALSE;
     $context['logged_in'] = $user->isAuthenticated();
+    $context['user_roles'] = $user->getRoles() ?? [];
     return $context;
   }
 

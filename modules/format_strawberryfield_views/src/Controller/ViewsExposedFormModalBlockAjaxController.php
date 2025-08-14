@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Controller;
 
+use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
@@ -9,6 +10,8 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Http\RequestStack as DrupalRequestStack;
 use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\PathProcessor\PathProcessorManager;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\CurrentRouteMatch;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -123,10 +126,35 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
       throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
     }
 
+    // Now Dear Diego. the page argument is permeating on a POST
+    // Making a new query that was on page 100 fail bc it might not a page 100 for that query
+    // Drupal is hard
+    $path_expanded = UrlHelper::parse($path);
+    $filtered = UrlHelper::filterQueryParameters(
+      $path_expanded['query'], ['page']
+    );
+    $path_expanded['query'] = $filtered;
+    UrlHelper::buildQuery($path_expanded['query']);
+    $path_object = \Drupal::pathValidator()->getUrlIfValid($path_expanded['path']);
+    if (!$path_object) {
+      // Stay on the same page if the redirect was invalid.
+      throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
+    }
+    $path_object->setOptions($path_expanded);
+    $path = $path_object->toString();
+
     // Make sure we are not updating blocks multiple times.
     $modalviews_blocks = array_unique($modalviews_blocks);
 
     $new_request = Request::create($path);
+    $new_request->setSession($request->getSession());
+    // Add ajax_page_state to the new request if set.
+    if ($request->request->has('ajax_page_state')) {
+      $new_request->request->set('ajax_page_state', $request->request->all('ajax_page_state'));
+    }
+    elseif ($request->query->has('ajax_page_state')) {
+      $new_request->query->set('ajax_page_state', $request->query->all('ajax_page_state'));
+    }
     $request_stack = new \Symfony\Component\HttpFoundation\RequestStack;
 
     $processed = $this->pathProcessor->processInbound($path, $new_request);
@@ -149,10 +177,21 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
         $block_view = $this->entityTypeManager
           ->getViewBuilder('block')
           ->view($block_entity);
-        $block_view = (string) $this->renderer->renderPlain($block_view);
-        $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block_view));
+        $context = new RenderContext();
+        $block = $this->renderer->executeInRenderContext($context, function () use ($block_view) {
+          return $this->renderer->render($block_view);
+        });
+        // @TODO. Lazybuilder might be in place but can't be handled the same. See \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView?
+        if (is_array($block_view['#attached'] ?? NULL) && !empty($block_view['#attached'] ?? NULL)) {
+          $response->addAttachments($block_view['#attached']);
+        }
+        if (is_array($block_view['content']['#attached'] ?? NULL) && !empty($block_view['content']['#attached'] ?? NULL)) {
+          $response->addAttachments($block_view['content']['#attached']);
+        }
+        $response->addCommand(new ReplaceCommand('[data-drupal-modalblock-selector="js-modal-form-views-block-id-' .$block_id.'"]', $block));
       }
     }
+
     return $response;
   }
 }

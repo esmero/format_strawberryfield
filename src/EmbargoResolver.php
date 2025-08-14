@@ -56,6 +56,13 @@ class EmbargoResolver implements EmbargoResolverInterface {
    */
   protected array $resolvedEmbargos = [];
 
+  /**
+   * A Per HTTP Request static cache of resolved Embargoes
+   *
+   * @var array
+   */
+  protected array $resolvedEmbargosNID = [];
+
 
   /**
    * DisplayResolver constructor.
@@ -77,15 +84,16 @@ class EmbargoResolver implements EmbargoResolverInterface {
    *    If not possible we return an array with more info.
    *    If the user is anonymous, and IP data is present in the ADO, we kill the cache too.
    *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    * @param array $jsondata
    *
    * @return array
    *    Returns array
    *    with [(bool) embargoed, $date|FALSE, (bool) IP is enforced], (bool) if cacheable at all or not
-   *
    */
-  public function embargoInfo(string $uuid, array $jsondata) {
-
+  public function embargoInfo(ContentEntityInterface $entity, array $jsondata) {
+    $uuid = $entity->uuid();
+    $nid = $entity->id();
     static $cache = [];
     $cache_id = $uuid . md5(serialize($jsondata));
     // This cache will only work per extending class
@@ -121,59 +129,114 @@ class EmbargoResolver implements EmbargoResolverInterface {
       $embargo_info = [!$noembargo, FALSE , FALSE, $cacheable];
     }
     else {
-      // Check the actual embargo options
-      $date_embargo_key = $this->embargoConfig->get('date_until_json_key') ?? '';
-      if (strlen($date_embargo_key) > 0 && !empty($jsondata[$date_embargo_key]) && is_string($jsondata[$date_embargo_key])) {
-        $date = $this->parseStringToDate(trim($jsondata[$date_embargo_key]));
-        if ($date) {
-          if ((strtotime(date('Y-m-d')) - strtotime($date)) > 0 ) {
-            $noembargo = TRUE;
-          }
-          else {
-            $noembargo = FALSE;
-            $date_embargo = TRUE;
+      if ($this->currentUser->hasPermission('see strawberryfield time embargoed ados')) {
+        $noembargo = TRUE;
+        $date_embargo = FALSE;
+      }
+      else {
+        // Check the actual embargo options
+        $date_embargo_key = $this->embargoConfig->get('date_until_json_key') ?? '';
+        if (strlen($date_embargo_key) > 0 && !empty($jsondata[$date_embargo_key]) && is_string($jsondata[$date_embargo_key])) {
+          $date = $this->parseStringToDate(trim($jsondata[$date_embargo_key]));
+          if ($date) {
+            if ((strtotime(date('Y-m-d')) - strtotime($date)) > 0) {
+              $noembargo = TRUE;
+            }
+            else {
+              $noembargo = FALSE;
+              $date_embargo = TRUE;
+            }
           }
         }
       }
-      $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
-      if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
-        $current_ip =  $this->requestStack->getCurrentRequest()->getClientIp();
-        if ($this->currentUser->isAnonymous()) {
-          if (\Drupal::moduleHandler()->moduleExists('page_cache')) {
-            // we won't be able to cache varying contexts for anonymous, so
-            // simply kill the page cache
-            \Drupal::service('page_cache_kill_switch')->trigger();
-            $cacheable = FALSE;
+      if ($this->currentUser->hasPermission('see strawberryfield IP embargoed ados')) {
+        $ip_embargo = FALSE;
+      }
+      else {
+        $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
+        if (strlen($ip_embargo_key) > 0 && !empty($jsondata[$ip_embargo_key])) {
+          $current_ip = $this->requestStack->getCurrentRequest()->getClientIp();
+          if ($this->currentUser->isAnonymous()) {
+            if (\Drupal::moduleHandler()->moduleExists('page_cache')) {
+              // we won't be able to cache varying contexts for anonymous, so
+              // simply kill the page cache
+              \Drupal::service('page_cache_kill_switch')->trigger();
+              $cacheable = FALSE;
+            }
           }
-        }
-        // Why would the current IP not be present? Should we deny all if that
-        // exception happens?
-        if ($current_ip) {
-          if (is_array($jsondata[$ip_embargo_key])) {
-            foreach($jsondata[$ip_embargo_key] as $ip_embargo_value) {
-              if (is_string($ip_embargo_value)) {
-                $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
-                // Here we need to do it differently. We will || all the $ip_embargo
-                // and then check the $noembargo variable outside of this loop
+          // Why would the current IP not be present? Should we deny all if that
+          // exception happens?
+          if ($current_ip) {
+            $ip_evaluated = FALSE;
+            if (is_array($jsondata[$ip_embargo_key])) {
+              foreach ($jsondata[$ip_embargo_key] as $ip_embargo_value) {
+                if (is_string($ip_embargo_value)) {
+                  $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
+                  // Here we need to do it differently. We will || all the $ip_embargo
+                  // and then check the $noembargo variable outside of this loop
+                  $ip_evaluated = TRUE;
+                }
+              }
+              $noembargo = $noembargo && $ip_embargo;
+            }
+            elseif (is_string($jsondata[$ip_embargo_key])) {
+              $ip_embargo = IpUtils::checkIp4($current_ip, trim($jsondata[$ip_embargo_key]));
+              $noembargo = $noembargo && $ip_embargo;
+              $ip_evaluated = TRUE;
+            }
+
+            if ($this->embargoConfig->get('global_ip_bypass_enabled')) {
+              $global_ip_embargo = FALSE;
+              // If the key is there and set to TRUE. Replace/Additive/Local does not apply here
+              if (is_bool($jsondata[$ip_embargo_key] ?? []) && $jsondata[$ip_embargo_key] == TRUE) {
+                $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
+                $noembargo = $noembargo && $ip_embargo;
+              }
+              // Only makes sense to check the modes IF the ADO already had IP data and was evaluated.
+              elseif ($ip_evaluated) {
+                $mode = $this->embargoConfig->get('global_ip_bypass_mode');
+                // Replace means global ip bypass wins. So any other evaluation that e.g would allow
+                // a user to bypass is invalidated, and we need to re-evaluate.
+                if ($mode == "replace") {
+                  $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
+                  $noembargo = $noembargo && $ip_embargo;
+                }
+                if ($mode == "additive") {
+                  $ip_embargo = $this->evaluateGlobalIPembargo($current_ip) || $ip_embargo;
+                  $noembargo = $noembargo && $ip_embargo;
+                }
+                if ($mode == "local") {
+                  // Do nothing really.
+                  $ip_embargo = $ip_embargo;
+                }
               }
             }
-            $noembargo = $noembargo && $ip_embargo;
-          }
-          elseif (is_string($jsondata[$ip_embargo_key])) {
-            $ip_embargo = IpUtils::checkIp4($current_ip, trim($jsondata[$ip_embargo_key]));
-            $noembargo = $noembargo && $ip_embargo;
           }
         }
       }
-      $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
     }
+    $embargo_info = [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+
     $cache[$cache_id] = $embargo_info;
-    $this->resolvedEmbargos[$uuid] = $embargo_info;
+    $this->resolvedEmbargos[$uuid] = $this->resolvedEmbargosNID[$nid] = $embargo_info;
+
     return $embargo_info;
   }
 
+
+  public function evaluateGlobalIPembargo($current_ip) {
+    $ip_embargo = FALSE;
+    $global_ips = $this->embargoConfig->get('global_ip_bypass_addresses') ?? [];
+    foreach ($global_ips as $ip_embargo_value) {
+      if (is_string($ip_embargo_value)) {
+        $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
+      }
+    }
+    return $ip_embargo;
+  }
+
   /**
-   * Getter for the resolved Static embargoe Cache
+   * Getter for the resolved Static embargo Cache
    *
    * @param string $uuid
    *    The UUID of a node for which an embargo might/not have been resolved
@@ -182,6 +245,19 @@ class EmbargoResolver implements EmbargoResolverInterface {
    */
   public function getResolvedEmbargoesByUUid(string $uuid): array {
     return $this->resolvedEmbargos[$uuid] ?? [];
+  }
+
+
+  /**
+   * Getter for the resolved Static embargo Cache
+   *
+   * @param string $uuid
+   *    The UUID of a node for which an embargo might/not have been resolved
+   * @return array
+   *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
+   */
+  public function getResolvedEmbargoesByNiD(int $nid): array {
+    return $this->resolvedEmbargosNID[$nid] ?? [];
   }
 
 
@@ -253,6 +329,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
       return $d->format('Y-m-d');
     }
     return FALSE;
+  }
+
+  public function isEmbargoEnabled(): bool {
+    return (bool) $this->embargoConfig->get('enabled');
+  }
+
+  public function isFileEmbargoEnabled(): bool {
+    return (bool) ($this->embargoConfig->get('enabled') && $this->embargoConfig->get('file_embargo_enabled'));
   }
 
 }

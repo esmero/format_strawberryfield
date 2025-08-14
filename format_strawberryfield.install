@@ -39,7 +39,7 @@ function format_strawberryfield_update_8001() {
         'application/json' => 'JSON',
         'application/ld+json' => 'JSON-LD',
         'application/xml' => 'XML',
-        'text/text' => 'TEXT',
+        'text/plain' => 'TEXT',
         'text/turtle' => 'RDF/TURTLE',
         'text/csv' => 'CSV',
       ],
@@ -362,3 +362,23 @@ function format_strawberryfield_update_9001() {
     return 'Metadata API Configuration Entity already exists';
   }
 }
+
+
+/**
+ * Implements hook_update_N().
+ *
+ * Updates Mimetypes for text/plain
+ *
+ */
+function format_strawberryfield_update_9002() {
+  $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $field_storage_definition = $definition_update_manager->getFieldStorageDefinition('mimetype', 'metadatadisplay_entity');
+  $settings = $field_storage_definition->getSettings();
+  $settings['allowed_values'] = \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity::ALLOWED_MIMETYPES;
+  $field_storage_definition->setSettings($settings);
+  $definition_update_manager->updateFieldStorageDefinition($field_storage_definition);
+}
+
+
+
+

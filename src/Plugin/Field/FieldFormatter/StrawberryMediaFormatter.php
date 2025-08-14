@@ -58,7 +58,6 @@ class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
         'viewer_overrides' => '',
         'mediasource' => NULL,
         'main_mediasource' => NULL,
-        'hide_on_embargo' => FALSE,
       ] + parent::defaultSettings();
   }
 
@@ -236,11 +235,6 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
         '%max_height' => $this->getSetting('max_height') . ' pixels',
       ]
     );
-    $summary[] = $this->t('Viewer for embargoed Objects is %hide',
-      [
-        '%hide' => $this->getSetting('hide_on_embargo') ? 'hidden' : 'visible'
-      ]
-    );
 
     return $summary;
   }
@@ -289,9 +283,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
          "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
          }
       }*/
-      $embargoed = FALSE;
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()
-        ->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // Check embargo
       if (is_array($embargo_info)) {
         $embargoed = $embargo_info[0];
@@ -299,7 +291,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
         if ($embargo_info[1]) {
           $embargo_tags[] = 'format_strawberryfield:embargo:' . $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -333,7 +325,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
       }
       if (empty($elements[$delta])) {
         $elements[$delta] = [
-          '#markup' => '<i class="d-none fas fa-times-circle"></i>',
+          '#markup' => '<i class="d-none field-iiif-no-viewer"></i>',
           '#prefix' => '<span>',
           '#suffix' => '</span>',
         ];

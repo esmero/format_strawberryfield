@@ -2,12 +2,25 @@
 
 namespace Drupal\format_strawberryfield;
 
+use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;
+use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Render\AttachmentsInterface;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Render\RenderableInterface;
+use Drupal\format_strawberryfield\Template\TwigNodeVisitor;
+use Drupal\file\FileInterface;
 use Drupal\search_api\Query\QueryInterface;
-use Drupal\search_api\SearchApiException;
-use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
+use Psr\Log\LogLevel;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
+use Twig\Environment;
 use Twig\Extension\AbstractExtension;
 use Twig\Markup;
+use Twig\Markup as TwigMarkup;
+use Twig\Runtime\EscaperRuntime;
 use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -16,6 +29,7 @@ use Drupal\format_strawberryfield\CiteProc\Render;
 use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\Core\Render\RendererInterface;
 use EDTF\EdtfFactory;
+use Drupal\views\Views;
 
 /**
  * Class TwigExtension.
@@ -39,16 +53,32 @@ class TwigExtension extends AbstractExtension {
   protected $renderer;
 
   /**
+   * The request stack.
+   *
+   * @var \Symfony\Component\HttpFoundation\RequestStack
+   */
+  protected $requestStack;
+
+  /**
+   * @var HttpKernelInterface
+   */
+  protected HttpKernelInterface $httpKernel;
+
+  /**
    * Constructs \Drupal\format_strawberryfield\TwigExtension
    *
-   * @param \Drupal\Core\Render\RendererInterface $renderer
+   * @param RendererInterface $renderer
    *   The renderer.
-   * @param \Drupal\search_api\ParseMode\ParseModePluginManager $parse_mode_manager
+   * @param ParseModePluginManager $parse_mode_manager
    *   The search API parse mode manager.
+   * @param RequestStack $request_stack
+   * @param HttpKernelInterface $http_kernel
    */
-  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager) {
+  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager, RequestStack $request_stack, HttpKernelInterface $http_kernel) {
     $this->renderer = $renderer;
     $this->parseModeManager = $parse_mode_manager;
+    $this->requestStack = $request_stack;
+    $this->httpKernel = $http_kernel;
   }
 
   public function getTests(): array {
@@ -80,6 +110,8 @@ class TwigExtension extends AbstractExtension {
         [$this, 'clipboardCopy']),
       new TwigFunction('sbf_search_api',
         [$this, 'searchApiQuery']),
+      new TwigFunction('sbf_file_content', [$this, 'sbfFileContent'], ['is_safe' => ['all']]),
+      new TwigFunction('sbf_drupal_view_paged',[$this, 'sbfDrupalView'])
     ];
   }
 
@@ -98,8 +130,48 @@ class TwigExtension extends AbstractExtension {
         ['is_safe' => ['all']]),
       new TwigFilter('edtf_2_iso_date', [$this, 'edtfToIsoDate'],
         ['is_safe' => ['all']]),
+      // Replace Drupal core's twig escape filter, that throws exception on invalid render array with our own.
+      new TwigFilter('format_strawberry_safe_escape', [$this, 'escapeFilter'], ['needs_environment' => TRUE, 'is_safe_callback' => 'twig_escape_filter_is_safe']),
     ];
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getNodeVisitors() {
+    // The node visitor is needed to wrap all variables with
+    // render_var -> TwigExtension->renderVar() function.
+    return [
+      new TwigNodeVisitor(),
+    ];
+  }
+
+  public function sbfDrupalView($name, $display_id = 'default', $page = 0, array $exposed_filters = []) {
+    $args = func_get_args();
+    // Remove $name, $display_id and $page from the arguments.
+    unset($args[0], $args[1],  $args[2]);
+    $exposed_filters = $args[3];
+    unset($args[3]);
+    $view = Views::getView($name);
+    if (!$view || !$view->access($display_id)) {
+      return NULL;
+    }
+    $view->setCurrentPage($page);
+    if (!empty($exposed_filters)) {
+      // @TODO see if URL arguments from the request query
+      // could end permeating here generating a mess. Leaving this snippet
+      // In case we decide it is needed/useful.
+       /* $exposed_filters = array_merge(
+        $view->getExposedInput(),
+        $exposed_filters
+      ); */
+      $view->setExposedInput($exposed_filters);
+    }
+
+    $output = $view->executeDisplay($display_id, $args);
+    return is_array($output) && isset($output['#markup']) ? $output['#markup'] : NULL;
+  }
+
 
   /**
    * Returns entity ids of entities with matching title/name/label.
@@ -177,13 +249,14 @@ class TwigExtension extends AbstractExtension {
    * array and fail on non Valid UTF8. No user provided Bit Masks are allowed
    *
    * @param mixed $value the value to decode
+   * @param bool $htmlentitydecode
    *
    * @return mixed The JSON decoded value
    *    - NULL if failure, not the right type (e.g Iterable) or if NULL
    *    - TRUE/FALSE
    *    - An array
    */
-  public function sbfJsonDecode($value) {
+  public function sbfJsonDecode($value, $htmlentitydecode = FALSE) {
     if ($value instanceof Markup) {
       $value = (string) $value;
     }
@@ -192,6 +265,9 @@ class TwigExtension extends AbstractExtension {
       return NULL;
     }
     try {
+      if ($htmlentitydecode) {
+        $value = html_entity_decode($value);
+      }
       return json_decode($value, TRUE, 64,
         JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
     } catch (\Exception $exception) {
@@ -582,5 +658,188 @@ class TwigExtension extends AbstractExtension {
       return $return;
     }
     return [];
+  }
+
+  public function sbfFileContent(string $node_uuid, string $file_uuid, string $format) {
+    try {
+      /** @var ContentEntityInterface[] $nodes */
+      $nodes = \Drupal::entityTypeManager()
+        ->getStorage('node')
+        ->loadByProperties(['uuid' => $node_uuid]);
+      $node = reset($nodes);
+
+      if ($node && $node->access('view') && $node->hasField('field_file_drop')) {
+        /** @var FileInterface[] $files */
+        $files = \Drupal::entityTypeManager()
+          ->getStorage('file')
+          ->loadByProperties(['uuid' => $file_uuid]);
+        $file = reset($files);
+        $found = FALSE;
+        $files_referenced = $node->get('field_file_drop')->getValue();
+        foreach ($files_referenced as $fileinfo) {
+          if ($fileinfo['target_id'] == $file->id()) {
+            /* @var $found \Drupal\file\Entity\File */
+            $found = $file;
+            break;
+          }
+        }
+        if($found && isset(MetadataDisplayEntity::ALLOWED_MIMETYPES[$file->getMimeType()])) {
+          return file_get_contents($file->getFileUri());
+        }
+      }
+    }
+    catch (\Exception $exception) {
+      return '';
+    }
+
+    return '';
+  }
+
+  /**
+   * Overrides drupal_escape().
+   *
+   * Replacement function for Drupal's core Twig's escape filter.
+   *
+   * @param \Twig\Environment $env
+   *   A Twig Environment instance.
+   * @param mixed $arg
+   *   The value to be escaped.
+   * @param string $strategy
+   *   The escaping strategy. Defaults to 'html'.
+   * @param string $charset
+   *   The charset.
+   * @param bool $autoescape
+   *   Whether the function is called by the auto-escaping feature (TRUE) or by
+   *   the developer (FALSE).
+   *
+   * @return string|null
+   *   The escaped, rendered output, or NULL if there is no valid output.
+   *
+   * @throws \Exception
+   *   When $arg is passed as an object which does not implement __toString(),
+   *   RenderableInterface or toString().
+   */
+  public function escapeFilter(Environment $env, $arg, $strategy = 'html', $charset = NULL, $autoescape = FALSE) {
+    // Check for a numeric zero int or float.
+    if ($arg === 0 || $arg === 0.0) {
+      return 0;
+    }
+
+    // Return early for NULL and empty arrays.
+    if ($arg == NULL) {
+      return NULL;
+    }
+
+    // Quick and simple. We can only bail out Array keys that are numeric that have also a scalar as value.
+    // Many render arrays can be nested of sub-sub things. One does never know.
+    if (is_array($arg)) {
+      foreach ($arg as $key => $value) {
+        if (is_int($key) && is_scalar($value)) {
+          \Drupal::logger('format_strawberryfield')->log(LogLevel::WARNING, 'Array can not be printed via Template for key <em>@key</em> with value: <em>@value</em>', [
+            '@key' => $key,
+            '@value' => $value,
+          ]);
+          if (!(isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0)) {
+            return NULL;
+          }
+        }
+      }
+    }
+
+    $this->bubbleArgMetadata($arg);
+
+
+    // Keep \Twig\Markup objects intact to support autoescaping.
+    if ($autoescape && ($arg instanceof TwigMarkup || $arg instanceof MarkupInterface)) {
+      return $arg;
+    }
+
+    $return = NULL;
+
+    if (is_scalar($arg)) {
+      $return = (string) $arg;
+    }
+    elseif (is_object($arg)) {
+      if ($arg instanceof RenderableInterface) {
+        $arg = $arg->toRenderable();
+      }
+      elseif (method_exists($arg, '__toString')) {
+        $return = (string) $arg;
+      }
+      // You can't throw exceptions in the magic PHP __toString() methods, see
+      // http://php.net/manual/language.oop5.magic.php#object.tostring so
+      // we also support a toString method.
+      elseif (method_exists($arg, 'toString')) {
+        $return = $arg->toString();
+      }
+      else {
+        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+      }
+    }
+
+    // We have a string or an object converted to a string: Autoescape it!
+    if (isset($return)) {
+      if ($autoescape && $return instanceof MarkupInterface) {
+        return $return;
+      }
+      // Drupal only supports the HTML escaping strategy, so provide a
+      // fallback for other strategies.
+      if ($strategy == 'html') {
+        return Html::escape($return);
+      }
+      return $env->getRuntime(EscaperRuntime::class)->escape($return, $strategy, $charset, $autoescape);
+    }
+
+    // This could be a normal render array, which is no longer safe by definition bc renderer is too strict on render arrays
+    // Early return if this element was pre-rendered (no need to re-render).
+    if (isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0) {
+      return $arg['#markup'];
+    }
+
+    $arg['#printed'] = FALSE;
+    $rendered_value = NULL;
+    try {
+      $rendered_value = $this->renderer->render($arg);
+    }
+    catch (\LogicException $e) {
+      // We can't just catch any exception. The Ajax responder from the FormBuilder will throw exceptions
+      // Just to close the response! Drupal gosh. So hard!
+      // This Might fail on an AjaxResponse or anything that is using RenderRoot?
+      // I have no solution yet.
+      // But will work on Template previews and full page renders.
+      \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
+    }
+    return $rendered_value;
+  }
+
+  /**
+   * Bubbles Twig template argument's cacheability & attachment metadata.
+   *
+   * For example: a generated link or generated URL object is passed as a Twig
+   * template argument, and its bubbleable metadata must be bubbled.
+   *
+   * @see \Drupal\Core\GeneratedLink
+   * @see \Drupal\Core\GeneratedUrl
+   *
+   * @param mixed $arg
+   *   A Twig template argument that is about to be printed.
+   *
+   * @see \Drupal\Core\Theme\ThemeManager::render()
+   * @see \Drupal\Core\Render\RendererInterface::render()
+   */
+  protected function bubbleArgMetadata($arg) {
+    // If it's a renderable, then it'll be up to the generated render array it
+    // returns to contain the necessary cacheability & attachment metadata. If
+    // it doesn't implement CacheableDependencyInterface or AttachmentsInterface
+    // then there is nothing to do here.
+    if ($arg instanceof RenderableInterface || !($arg instanceof CacheableDependencyInterface || $arg instanceof AttachmentsInterface)) {
+      return;
+    }
+
+    $arg_bubbleable = [];
+    BubbleableMetadata::createFromObject($arg)
+      ->applyTo($arg_bubbleable);
+
+    $this->renderer->render($arg_bubbleable);
   }
 }

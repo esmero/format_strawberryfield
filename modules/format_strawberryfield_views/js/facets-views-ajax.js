@@ -22,7 +22,7 @@
       // Loop through all facets.
       $.each(settings.facets_views_ajax, function (facetId, facetSettings) {
         // Get the View for the current facet.
-        var view, current_dom_id, view_path;
+        var view, current_dom_id, view_path, all_dom_ids_need_refresh = [];
         if (settings.views && settings.views.ajaxViews) {
           $.each(settings.views.ajaxViews, function (domId, viewSettings) {
             // Check if we have facet for this view.
@@ -31,20 +31,38 @@
               current_dom_id = viewSettings.view_dom_id;
               view_path = facetSettings.ajax_path;
             }
+            else {
+              // Means we don't have facets for this view, but we still might have a pager that needs to be reloaded, so it catches up with the Facet Query arguments.
+              const pagers = $('.js-view-dom-id-' + viewSettings.view_dom_id).find(
+                '.js-pager__items a, th.views-field a, .attachment .views-summary a',
+              );
+              if (typeof pagers !== "undefined" &&  pagers.length > 0) {
+                // means we have a pager
+                all_dom_ids_need_refresh.push(viewSettings.view_dom_id);
+              }
+            }
           });
         }
 
         if (!view || view.length != 1) {
           return;
         }
-
+        all_dom_ids_need_refresh = Array.from(new Set(all_dom_ids_need_refresh));
         // Update view on summary block click.
         if (Drupal.AjaxFacetsView.updateFacetsSummaryBlock() && (facetId === 'facets_summary_ajax')) {
             const elementsToAttach = once('summaryblock_attache', '[data-drupal-facets-summary-id=' + facetSettings.facets_summary_id + ']', context);
             $(elementsToAttach).children('ul').children('li').click(function (e) {
             e.preventDefault();
             var facetLink = $(this).find('a');
+            // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
+            // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
+            // This is needed since Facet URL generator will (for good reasons) remove the ?page=argument.
+            // And also is absolutely unaware of pagers with different names!
             Drupal.AjaxFacetsView.UpdateView(facetLink.attr('href'), current_dom_id, view_path);
+              all_dom_ids_need_refresh.forEach((other_dom_id) => {
+                // Check if we need to update this ones too for 1.6? Same as we do for paged views?
+              });
+
           });
         }
         // Update view on facet item click.
@@ -54,7 +72,15 @@
               $(facet_item).unbind('facets_filter.facets');
               $(facet_item).on('facets_filter.facets', function (event, url) {
                 $('.js-facets-widget').trigger('facets_filtering');
+                // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
+                // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
+                // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
+                // And also is absolutely unaware of pagers with different names!
+                console.log(url);
                 Drupal.AjaxFacetsView.UpdateView(url, current_dom_id, view_path);
+                all_dom_ids_need_refresh.forEach((other_dom_id) => {
+                  Drupal.AjaxFacetsView.UpdateView(url, other_dom_id, view_path);
+                });
               });
             }
           });
@@ -68,14 +94,16 @@
 
   Drupal.AjaxFacetsView.UpdateView = function (href, current_dom_id, view_path) {
     // Refresh view.
-    if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
+    var atLeastone = false;
+      if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
+        atLeastone = true;
       var views_parameters = Drupal.Views.parseQueryString(href);
       let views_path = 'search';
       if (Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path !== 'undefined') {
         views_path = Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path;
       }
-      var views_arguments = Drupal.Views.parseViewArgs(href, views_path);
-      var views_settings = $.extend(
+      const views_arguments = Drupal.Views.parseViewArgs(href, views_path);
+      const views_settings = $.extend(
         {},
         Drupal.views.instances['views_dom_id:' + current_dom_id].settings,
         views_arguments,
@@ -83,14 +111,28 @@
       );
       // Not even needed here if we are using the original element settings ....mmmm
       // Update View.
-      var views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
+      const views_ajax_settings = Drupal.views.instances['views_dom_id:' + current_dom_id].element_settings;
       views_ajax_settings.submit = views_settings;
       // Used to be the way in Drupal 9.x to 10.0 ... views_ajax_settings.url = view_path + '?q=' + href;
       views_ajax_settings.url = view_path;
 
-      var viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
-      viewRefreshAjaxObject.execute();
+      const viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
+      const success = viewRefreshAjaxObject.success();
 
+      viewRefreshAjaxObject.success = function (response, status) {
+        return Promise.resolve(
+          Drupal.Ajax.prototype.success.call(viewRefreshAjaxObject, response, status),
+        ).then(() => {
+          Drupal.AjaxFacetsView.updateFacetsBlocks(href, views_settings.view_name, views_settings.view_display_id);
+          if (typeof(drupalSettings.format_strawberryfield_views) !== 'undefined') {
+            // Refresh facets blocks.
+            Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
+          }
+        });
+      };
+      viewRefreshAjaxObject.execute();
+    }
+    if (atLeastone) {
       // Update url.
       window.historyInitiated = true;
       window.history.pushState(null, document.title, href);
@@ -102,11 +144,6 @@
           window.location.reload();
         }
       });
-      this.updateFacetsBlocks(href, views_settings.view_name, views_settings.view_display_id);
-      if (typeof(drupalSettings.format_strawberryfield_views) !== 'undefined') {
-        // Refresh facets blocks.
-        Drupal.updateModalViewsFormBlocks(href, views_settings.view_name, views_settings.view_display_id);
-      }
     }
   }
   Drupal.AjaxFacetsView.updateFacetsBlocks = function (href, view_id, current_display_id) {
@@ -133,7 +170,6 @@
 
     // Update facets summary block.
     if (this.updateFacetsSummaryBlock()) {
-
       var $facet_summary_wrapper = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']');
       if ($facet_summary_wrapper.length > 0) {
         var facet_summary_wrapper_id = $facet_summary_wrapper.attr('id');
@@ -148,7 +184,9 @@
         facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
       }
     }
-    Drupal.ajax(facet_settings).execute();
+    if (Object.keys(facet_settings.submit.facets_blocks).length > 0) {
+      Drupal.ajax(facet_settings).execute();
+    }
   };
 
   // Helper function to determine if we should update the summary block.

@@ -172,6 +172,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $entity,
+        '#maxlength' => 300,
       ],
       'citationstyle' => [
         '#type' => 'select',
@@ -237,6 +238,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $elements = [];
     $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $nodeid = $items->getEntity()->id();
     $embargo_context = [];
     $embargo_tags = [];
@@ -277,7 +279,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           ]);
         return $elements[$delta] = ['#markup' => $message];
       }
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
@@ -291,7 +293,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
           $context_embargo['data_embargo']['until'] = $embargo_info[1];
         }
-        if ($embargo_info[2]) {
+        if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
           $embargo_context[] = 'ip';
         }
       }
@@ -300,74 +302,77 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
       }
 
       try {
-        // @TODO So we can generate two type of outputs here,
-        // A) HTML visible (like smart metadata displays)
-        // B) Downloadable formats.
-        // C) Embeded (but hidden JSON-LD, etc)
-        // So we need to make sure People can "tag" that need.
+        if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+          // @TODO So we can generate two type of outputs here,
+          // A) HTML visible (like smart metadata displays)
+          // B) Downloadable formats.
+          // C) Embeded (but hidden JSON-LD, etc)
+          // So we need to make sure People can "tag" that need.
 
-        // Order as: structures based on sequence key
-        // We will assume here people are using our automatic keys
-        // If they are using other ones, they will have to apply ordering
-        // Directly on their Twig Templates.
-        $ordersubkey = 'sequence';
-        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
-          StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        }
-        $context = [
-            'data' => $jsondata,
-            'node' => $items->getEntity(),
-            'iiif_server' => $this->getIiifUrls()['public'],
-          ] + $context_embargo;
-        $original_context = $context;
+          // Order as: structures based on sequence key
+          // We will assume here people are using our automatic keys
+          // If they are using other ones, they will have to apply ordering
+          // Directly on their Twig Templates.
+          $ordersubkey = 'sequence';
+          foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+            StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+          }
+          $context = [
+              'data' => $jsondata,
+              'node' => $items->getEntity(),
+              'iiif_server' => $this->getIiifUrls()['public'],
+            ] + $context_embargo;
+          $original_context = $context;
 
-        // Allow other modules to provide extra Context!
-        // Call modules that implement the hook, and let them add items.
-        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
-        // In case someone decided to wipe the original context?
-        // We bring it back!
-        $context = $context + $original_context;
-        // Render data from metadata template into JSON string.
-        $rendered_json_string = $metadatadisplayentity->renderNative($context);
+          // Allow other modules to provide extra Context!
+          // Call modules that implement the hook, and let them add items.
+          \Drupal::moduleHandler()
+            ->alter('format_strawberryfield_twigcontext', $context);
+          // In case someone decided to wipe the original context?
+          // We bring it back!
+          $context = $context + $original_context;
+          // Render data from metadata template into JSON string.
+          $rendered_json_string = $metadatadisplayentity->renderNative($context);
 
-        // Get styles selected from formatter settings.
-        $selected_styles = $this->settings['citationstyle'];
-        // Get language key from settings.
-        $selected_locale_key = false;
-        if ($this->getSetting('localekey')) {
-          $selected_locale_key = $this->settings['localekey'];
-        }
-        $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : false;
-        if ($selected_locale_value) {
-          $available_locale = trim($selected_locale_value);
-        }
-        elseif ($langcode) {
-          $available_locale = trim($langcode);
-        }
+          // Get styles selected from formatter settings.
+          $selected_styles = $this->settings['citationstyle'];
+          // Get language key from settings.
+          $selected_locale_key = FALSE;
+          if ($this->getSetting('localekey')) {
+            $selected_locale_key = $this->settings['localekey'];
+          }
+          $selected_locale_value = array_key_exists($selected_locale_key, $jsondata) ? $jsondata[$selected_locale_key] : FALSE;
+          if ($selected_locale_value) {
+            $available_locale = trim($selected_locale_value);
+          }
+          elseif ($langcode) {
+            $available_locale = trim($langcode);
+          }
 
-        $data = json_decode($rendered_json_string);
-        $json_error = json_last_error();
-        if ($json_error != JSON_ERROR_NONE) {
-          $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
-            [
-              '@id' => $nodeid,
-              '@field' => $items->getName(),
-            ]);
-          return $elements[$delta] = ['#markup' => $message];
+          $data = json_decode($rendered_json_string);
+          $json_error = json_last_error();
+          if ($json_error != JSON_ERROR_NONE) {
+            $message = $this->t('There was an issue decoding your metadata as JSON for node @id, field @field',
+              [
+                '@id' => $nodeid,
+                '@field' => $items->getName(),
+              ]);
+            return $elements[$delta] = ['#markup' => $message];
+          }
+          $render = new Render();
+          $bibliography = $render->bibliography($available_locale, $selected_styles, $data);
+          $elements[$delta] = [
+            '#type' => 'container',
+            '#attributes' => [
+              'id' => 'bibliography' . $uniqueid,
+              'class' => ['bibliography'],
+            ]
+          ];
+          $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
+          $elements[$delta]['bibliography'] = [
+            '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
+          ];
         }
-        $render = new Render();
-        $bibliography = $render->bibliography($available_locale, $selected_styles, $data);
-        $elements[$delta] = [
-          '#type' => 'container',
-          '#attributes' => [
-            'id' => 'bibliography' . $uniqueid,
-            'class' => ['bibliography'],
-          ]
-        ];
-        $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
-        $elements[$delta]['bibliography'] = [
-          '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
-        ];
       }
       catch (\Exception $e) {
         // Render each element as markup.

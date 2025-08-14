@@ -268,7 +268,7 @@ class MetadataDisplaySearchController extends
               }
             }
 
-            $embargo_info = $this->embargoResolver->embargoInfo($node->uuid(), $jsondata);
+            $embargo_info = $this->embargoResolver->embargoInfo($node, $jsondata);
             // This one is for the Twig template
             // We do not need the IP here. No use of showing the IP at all?
             $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
@@ -280,7 +280,7 @@ class MetadataDisplaySearchController extends
                 $embargo_tags[]= 'format_strawberryfield:embargo:'.$embargo_info[1];
                 $context_embargo['data_embargo']['until'] = $embargo_info[1];
               }
-              if ($embargo_info[2]) {
+              if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
                 $embargo_context[] = 'ip';
               }
             }

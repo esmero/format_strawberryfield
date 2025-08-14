@@ -5,6 +5,7 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\StreamWrapper\StreamWrapperInterface;
+use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -42,6 +43,11 @@ class IiifBinaryController extends ControllerBase {
   protected $strawberryfieldUtility;
 
   /**
+   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface
+   */
+  protected $embargoResolver;
+
+  /**
    * IiifBinaryController constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
@@ -53,11 +59,13 @@ class IiifBinaryController extends ControllerBase {
   public function __construct(
     RequestStack $request_stack,
     StrawberryfieldUtilityService $strawberryfield_utility_service,
-    EntityTypeManagerInterface $entitytype_manager
+    EntityTypeManagerInterface $entitytype_manager,
+    EmbargoResolverInterface $embargo_resolver,
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
     $this->entityTypeManager = $entitytype_manager;
+    $this->embargoResolver = $embargo_resolver;
   }
 
   /**
@@ -67,7 +75,8 @@ class IiifBinaryController extends ControllerBase {
     return new static(
       $container->get('request_stack'),
       $container->get('strawberryfield.utility'),
-      $container->get('entity_type.manager')
+      $container->get('entity_type.manager'),
+      $container->get('format_strawberryfield.embargo_resolver'),
     );
   }
 
@@ -83,6 +92,8 @@ class IiifBinaryController extends ControllerBase {
    * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Symfony\Component\HttpFoundation\StreamedResponse|\Symfony\Component\HttpFoundation\Response | RangedRemoteFileRespone
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
    */
   public function servefile(Request $request, ContentEntityInterface $node, string $uuid, string $format = 'default.jpg') {
     //@TODO check if format passed matches file type. If not abort.
@@ -124,6 +135,37 @@ class IiifBinaryController extends ControllerBase {
             break;
           }
         }
+        if ($found && $this->embargoResolver->isFileEmbargoEnabled()) {
+          //embargo evaluation is done IF found, and enabled.
+          /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
+          // This will try with any possible match.
+          foreach ($field->getIterator() as $itemfield) {
+            $jsondata = json_decode($itemfield->value, TRUE);
+            // @TODO use future flatversion precomputed at field level as a property
+            $json_error = json_last_error();
+            if ($json_error == JSON_ERROR_NONE) {
+              $embargo_info = $this->embargoResolver->embargoInfo($node, $jsondata);
+              // Check embargo
+              if (is_array($embargo_info)) {
+                $embargoed = $embargo_info[0];
+              }
+              else {
+                $embargoed =FALSE;
+              }
+
+              if ($embargoed) {
+                throw new AccessDeniedHttpException(
+                  "You don't have Permissions to access the Requested Resource"
+                );
+              }
+            }
+            else {
+              throw new \Exception(
+                "No Strawberry field found for {$node} ."
+              );
+            }
+          }
+        }
       }
 
       // If media has no file item.
@@ -132,6 +174,10 @@ class IiifBinaryController extends ControllerBase {
           "The Requested Resource does not exist in this Digital Object"
         );
       }
+
+      // Only get the RAW JSON and evaluate embargo if enabled
+
+
 
       $stream = $request->query->get('stream');
       $uri = $found->getFileUri(); // The source URL
@@ -200,23 +246,23 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set("Content-Length", $size);
         $response->prepare($request);
         $response->setCallback(function () use ($uri) {
-            // We may want to force Garbage Collection here
-            // Even if globally available...
-            $i = 0;
-            gc_enable();
-            $stream = fopen($uri, 'r');
-            // While the stream is still open
-            while (!feof($stream)) {
-              $i++;
-              if ($i == 10000) {
-                gc_collect_cycles();
-                $i = 0;
-              }
-              // Read 1,024 bytes from the stream
-              echo fread($stream, 8192);
+          // We may want to force Garbage Collection here
+          // Even if globally available...
+          $i = 0;
+          gc_enable();
+          $stream = fopen($uri, 'r');
+          // While the stream is still open
+          while (!feof($stream)) {
+            $i++;
+            if ($i == 10000) {
+              gc_collect_cycles();
+              $i = 0;
             }
-            // Be sure to close the stream resource when you're done with it
-            fclose($stream);
+            // Read 1,024 bytes from the stream
+            echo fread($stream, 8192);
+          }
+          // Be sure to close the stream resource when you're done with it
+          fclose($stream);
         });
 
         return $response;
@@ -242,15 +288,30 @@ class IiifBinaryController extends ControllerBase {
           // S3 or remote storage needs this. Common Archipelago
           // Deployment use case.
           $response = new RangedRemoteFileRespone($uri);
+          $response->setETag($etag, TRUE);
+          $response->headers->set("Content-Type", $mime);
+          $response->prepare($request);
         } else {
           // Should be able to handle ranged?
           // see https://github.com/symfony/symfony/pull/38516/files
           $response = new BinaryFileResponse($uri);
+          $response->setETag($etag, TRUE);
+          $response->headers->set("Content-Type", $mime);
+          $response->prepare($request);
+        }
+        if ($request->headers->has('Range')) {
+          // Again..
+          if (!in_array($response->getStatusCode(), [206,406])) {
+            $range = $request->headers->get('Range') ?? '';
+            // Work around for Safari: the range request for Video/Audio might be 0 - filesize-1 so the whole thing.
+            // But that will bypass a ranged response header from & status from the ::prepare method and return a 200.
+            [$start, $end] = explode('-', substr($range, 6), 2) + [0];
+            if ($start == 0 && $end == $size-1) {
+              $response->headers->set('Content-Range', sprintf('bytes %s-%s/%s', $start, $end, $size));
+            }
+          }
         }
 
-        $response->setETag($etag, TRUE);
-        $response->headers->set("Content-Type", $mime);
-        $response->prepare($request);
         $response->setContentDisposition(
           ResponseHeaderBag::DISPOSITION_INLINE,
           $filename

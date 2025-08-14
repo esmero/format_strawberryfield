@@ -53,6 +53,10 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         $config['api_type'] ?? 'REST'
       );
       $form_state->setValue(
+        'resumption_token',
+        $config['resumption_token'] ?? ''
+      );
+      $form_state->setValue(
         'processor_wrapper_level_entity_id',
         $config['metadataWrapperDisplayentity'][0]
       );
@@ -198,6 +202,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' =>  $wrapper_template,
+        '#maxlength' => 300,
       ],
       'processor_item_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
@@ -207,6 +212,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#validate_reference' => TRUE,
         '#required' => TRUE,
         '#default_value' => $item_template,
+        '#maxlength' => 300,
       ],
       'active' => [
         '#type' => 'checkbox',
@@ -230,6 +236,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           'SWORD' => 'Sword 1.x & 2.x',
         ],
         '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('api_type') : 'REST',
+      ],
+      'resumption_token' => [
+        '#type' => 'textfield',
+        '#title' => $this->t('resumption token name'),
+        '#description' => $this->t('Normally used by OAI-PMH where it is named "resumptionToken".<br>When present and not empty, this "GET" argument name will be automatically populated and processed by the API to fetch whatever is next in the API (e.g. page=2 if the current request was page=1) and decoded back to expand a full query needed, same as one would call the API with all arguments. This will only happen IF the number of results of a View are equal or larger than the Paged number (e.g. 25) defined at the View, since a "next cursor" makes no sense if there is nothing else to fetch. In other words, the encoded value will hold internally same values one would use to call the API but incrementing to listing cursor.<br>It requires a "pager" is mapped and make sure no other Open API argument is named like this one. To access it inside a Metadata Display (e.g. the API Wrapper) use <em>data_api.resumption_token<em>. It will hold an "array" with 3 values: the name provided here, the expanded equivalent (as query arguments) and the base64 encoded value (the one to be passed as a GET argument to resume). Leave empty to disable.'),
+        '#default_value' => (!$metadataconfig->isNew()) ? $form_state->getValue('resumption_token') : 'resumptionToken',
       ],
       'metadata_api_configure_button' => [
         '#type' => 'submit',
@@ -271,6 +283,16 @@ class MetadataAPIConfigEntityForm extends EntityForm {
    * Handles Parameter config display
    */
   public function buildAjaxAPIParameterConfigForm(array $form, FormStateInterface $form_state) {
+    $response = new AjaxResponse();
+    $response->addCommand(
+      new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
+    );
+    $response->addCommand(new ScrollTopCommand('[data-drupal-selector="edit-api-argument-config"]'));
+    $response->addCommand(new InvokeCommand('[data-drupal-api-selector="api-add-parameter-config-button"]', 'addClass', ['js-hide']));
+    return $response;
+  }
+
+  public function buildAjaxAPIAdvancedMappingConfigForm(array $form, FormStateInterface $form_state) {
     $response = new AjaxResponse();
     $response->addCommand(
       new ReplaceCommand("#api-argument-config", $form['api-argument-config'])
@@ -395,6 +417,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state->setRebuild();
   }
 
+
   /**
    * Submit handler for the "deleteone" button.
    *
@@ -475,7 +498,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $new_form_state = clone $form_state;
     // no need to unset original values, they won't match Entities properties
     $config['openAPI'] =  !empty($new_form_state->getValue(['api_parameters_list','table-row'])) &&
-      is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
+    is_array($new_form_state->getValue(['api_parameters_list','table-row'])) ? $new_form_state->getValue(['api_parameters_list','table-row']) : [];
     // Return this to expanded form to make editing easier but also to conform to
     // Drupal schema and clean up a little bit?
     $configOpenAPIClean = [];
@@ -491,6 +514,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $config['metadataWrapperDisplayentity'][] = $form_state->getValue('processor_wrapper_level_entity_id', NULL);
     $config['metadataItemDisplayentity'][] = $form_state->getValue('processor_item_level_entity_id', NULL);
     $config['api_type'][] = $form_state->getValue('api_type', 'REST');
+    $config['resumption_token'] = trim($form_state->getValue('resumption_token', ''));
     $new_form_state->setValue('views_source_ids', $form_state->get('views_source_ids_tmp') ??  $form_state->getValue('views_source_ids'));
     $new_form_state->setValue('configuration', $config);
     $this->entity = $this->buildEntity($form, $new_form_state);
@@ -500,9 +524,12 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     $form_state = $form_state;
     $name = [];
     if (!empty($form_state->getValue(['api_parameters_list','table-row'])) &&
-    is_array($form_state->getValue(['api_parameters_list','table-row']))) {
+      is_array($form_state->getValue(['api_parameters_list','table-row']))) {
       foreach($form_state->getValue(['api_parameters_list','table-row']) as $argument_settings) {
         if (isset($argument_settings['name'])) {
+          if (trim($argument_settings['name']) == trim($form_state->getValue('resumption_token', ''))) {
+            $form_state->setErrorByName('resumption_token', 'Your resumption token name is exists also as an API argument name. Please fix.');
+          }
           $name[$argument_settings['name']] = $argument_settings['name'];
         }
       }
@@ -582,6 +609,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
             $views_argument_options[$selected_view.':@page'] = "Views Pager Page";
           }
         }
+        // Also could allow The Complete View to be called. Future 1.6.0
+        // $views_argument_options[$selected_view.':@view'] = "Call The View Without any argmuments";
       }
       $form_state->set('views_argument_options', $views_argument_options);
     }
@@ -621,8 +650,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#description'   => $this->t(
           'The Views that will provide data for this API. Only View Displays that return machinable responses like REST, Entity References or FEED can serve as source. To can add multiple ones to serve different API results.'
         ),
-        '#options'       => $views,
-        '#default_value' => $selected_views,
+        '#options'       => $views ?? [],
+        '#default_value' => $selected_views ?? [],
         '#required'      => TRUE,
       ];
 
@@ -890,6 +919,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     ];
   }
 
+
+
   /**
    * Builds the configuration form listing current Parameter.
    *
@@ -960,13 +991,13 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ];
       if ($form_state->get('views_argument_options')) {
         $form['api_parameters_list']['table-row'][$index]['mapping'] = [
-          '#type'          => 'checkboxes',
-          '#title'         => $this->t('Mapping'),
-          '#options'       => $form_state->get('views_argument_options') ?? [],
-          '#required'      => FALSE,
-          // If not #validated, dynamically populated dropdowns don't work.
-          '#validated'     => TRUE,
-          '#default_value' => $parameter_config['mapping'] ?? [],
+            '#type'          => 'checkboxes',
+            '#title'         => $this->t('Mapping'),
+            '#options'       => $form_state->get('views_argument_options') ?? [],
+            '#required'      => FALSE,
+            // If not #validated, dynamically populated dropdowns don't work.
+            '#validated'     => TRUE,
+            '#default_value' => $parameter_config['mapping']['basic'] ?? ($parameter_config['mapping'] ?? []),
         ];
       }
       else {

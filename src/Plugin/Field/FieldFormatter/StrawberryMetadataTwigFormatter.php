@@ -111,11 +111,14 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    * {@inheritdoc}
    */
   public static function defaultSettings() {
-    return parent::defaultSettings() + [
+    $settings = parent::defaultSettings();
+    unset($settings['hide_on_embargo']);
+    return $settings + [
       'label' => 'Descriptive Metadata',
       'specs' => 'http://schema.org',
       'metadatadisplayentity_uuid' => NULL,
       'metadatadisplayentity_uselabel' => TRUE,
+      'hide_on_embargo' => FALSE
     ];
   }
 
@@ -124,12 +127,12 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
    */
   public function settingsForm(array $form, FormStateInterface $form_state) {
     $entity = NULL;
+    $form = parent::settingsForm($form, $form_state);
     if ($this->getSetting('metadatadisplayentity_uuid')) {
       $entities = $this->entityTypeManager->getStorage('metadatadisplay_entity')->loadByProperties(['uuid' => $this->getSetting('metadatadisplayentity_uuid')]);
       $entity = reset($entities);
     }
-
-    return [
+    $form = $form + [
       'customtext' => [
         '#markup' => '<h3>Use this form to select the template for your metadata.</h3><p>Several templates such as MODS 3.6 and a simple Object Description ship with Archipelago. To design your own template for any metadata standard you like, or see the full list of existing templates, visit <a href="/metadatadisplay/list">/metadatadisplay/list</a>. </p>',
       ],
@@ -141,6 +144,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => TRUE,
         '#required' => TRUE,
+        '#maxlength' => 300,
         '#default_value' => $entity,
       ],
       'specs' => [
@@ -162,6 +166,10 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         '#default_value' => $this->getSetting('metadatadisplayentity_uselabel'),
       ],
     ];
+    // These don't apply to this Formatter.
+    unset($form['upload_json_key_source']);
+    unset($form['embargo_json_key_source']);
+    return $form;
   }
 
   /**
@@ -194,6 +202,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     $elements = [];
     $usemetadatalabel = $this->getSetting('metadatadisplayentity_uselabel');
     $metadatadisplayentity_uuid = $this->getSetting('metadatadisplayentity_uuid');
+    $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $nodeid = $items->getEntity()->id();
     $embargo_context = [];
     $embargo_tags = [];
@@ -231,7 +240,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
         return  ['#markup' => $message, '#cache' => ['max-age' => 0]];
       }
 
-      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity()->uuid(), $jsondata);
+      $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
       // This one is for the Twig template
       // We do not need the IP here. No use of showing the IP at all?
       $context_embargo = ['data_embargo' => ['embargoed' => false, 'until' => NULL]];
@@ -255,45 +264,48 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       }
 
       try {
-        // @TODO So we can generate two type of outputs here,
-        // A) HTML visible (like smart metadata displays)
-        // B) Downloadable formats.
-        // C) Embeded (but hidden JSON-LD, etc)
-        // So we need to make sure People can "tag" that need.
+        if (!$embargoed || ($embargoed && !$hide_on_embargo)) {
+          // @TODO So we can generate two type of outputs here,
+          // A) HTML visible (like smart metadata displays)
+          // B) Downloadable formats.
+          // C) Embeded (but hidden JSON-LD, etc)
+          // So we need to make sure People can "tag" that need.
 
-        // Order as: structures based on sequence key
-        // We will assume here people are using our automatic keys
-        // If they are using other ones, they will have to apply ordering
-        // Directly on their Twig Templates.
-        $ordersubkey = 'sequence';
-        foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
-          StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
-        }
-        $context = [
-          'data' => $jsondata,
-          'node' => $items->getEntity(),
-          'iiif_server' => $this->getIiifUrls()['public'],
-        ] + $context_embargo;
-        $original_context = $context;
+          // Order as: structures based on sequence key
+          // We will assume here people are using our automatic keys
+          // If they are using other ones, they will have to apply ordering
+          // Directly on their Twig Templates.
+          $ordersubkey = 'sequence';
+          foreach (StrawberryfieldJsonHelper::AS_FILE_TYPE as $key) {
+            StrawberryfieldJsonHelper::orderSequence($jsondata, $key, $ordersubkey);
+          }
+          $context = [
+              'data' => $jsondata,
+              'node' => $items->getEntity(),
+              'iiif_server' => $this->getIiifUrls()['public'],
+            ] + $context_embargo;
+          $original_context = $context;
 
-        // Allow other modules to provide extra Context!
-        // Call modules that implement the hook, and let them add items.
-        \Drupal::moduleHandler()->alter('format_strawberryfield_twigcontext', $context);
-        // In case someone decided to wipe the original context?
-        // We bring it back!
-        $context = $context + $original_context;
-        $templaterenderelement = $metadatadisplayentity->processHtml($context);
+          // Allow other modules to provide extra Context!
+          // Call modules that implement the hook, and let them add items.
+          \Drupal::moduleHandler()
+            ->alter('format_strawberryfield_twigcontext', $context);
+          // In case someone decided to wipe the original context?
+          // We bring it back!
+          $context = $context + $original_context;
+          $templaterenderelement = $metadatadisplayentity->processHtml($context);
 
-        if ($usemetadatalabel) {
-          $elements[$delta]['container'] = [
-            '#type' => 'details',
-            '#title' => $metadatadisplayentity->toLink()->getText(),
-            '#open' => FALSE,
-            'content' => $templaterenderelement,
-          ];
-        }
-        else {
-          $elements[$delta]['content'] = $templaterenderelement;
+          if ($usemetadatalabel) {
+            $elements[$delta]['container'] = [
+              '#type' => 'details',
+              '#title' => $metadatadisplayentity->toLink()->getText(),
+              '#open' => FALSE,
+              'content' => $templaterenderelement,
+            ];
+          }
+          else {
+            $elements[$delta]['content'] = $templaterenderelement;
+          }
         }
       }
       catch (\Exception $e) {
