@@ -4,6 +4,10 @@ namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
 use Drupal\Component\Utility\Html;
 use Drupal\facets\FacetInterface;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+use DateTime;
+use DateTimeZone;
+use DateInterval;
 
 /**
  * The range slider widget.
@@ -199,12 +203,22 @@ class DateRangeSliderWidget extends DateSliderWidget {
       if ($result->getRawValue() == 'summary_date_facet') {
         continue;
       }
-      $min = $min ?? $result->getRawValue();
-      $max = $max ?? $result->getRawValue();
-      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
-      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
+      // Warning. Depending on the "field" (normal data v/s date range) type RAW values might be UNIX Time stamps or actual
+      // ISO Dates. Normalize to unix.
+
+      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
+      $min = $min ?? $raw;
+      $max = $max ?? $raw;
+      $min = $min < $raw ? $min : $raw;
+      $max = $max > $raw ? $max : $raw;
     }
+    // Should we yet again cast via timezone here
+    // date -r -4197038400
+    //Sat Dec 31 23:17:15 LMT 1836
+   //  but the input once transformed was properly 1837
+
     return ['min' => $min, 'max' => $max];
   }
+
 
 }
