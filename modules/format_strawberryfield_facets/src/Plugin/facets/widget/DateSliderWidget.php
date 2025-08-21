@@ -9,7 +9,10 @@ use Drupal\facets\Result\Result;
 use Drupal\facets\Widget\WidgetPluginBase;
 use DateTime;
 use DateTimeZone;
+use DateInterval;
 use Drupal\search_api_solr\Utility\Utility;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+
 
 /**
  * The slider widget.
@@ -63,7 +66,7 @@ class DateSliderWidget extends WidgetPluginBase {
     }
 
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
-    // Range is Unixtime array
+    // Range is Unixtime array after normalization.
     $range = $this->getRangeFromResults($results);
     // Give $min a $max a default
     $min = $this->getConfiguration()['min_value'] ?? 0;
@@ -81,6 +84,8 @@ class DateSliderWidget extends WidgetPluginBase {
     // UnixTime
     $active_min = reset($active)['min'] ?? $real_min;
     $active_max = reset($active)['max'] ?? $real_max;
+    $active_min = (int) $active_min;
+    $active_max = (int) $active_max;
 
     // Give some defaults
     $year_max = gmdate('Y', (int) $active_max);
@@ -91,11 +96,11 @@ class DateSliderWidget extends WidgetPluginBase {
     // Chances are we will always a real_min being capped down (bc of Face Range queries)
     // So we only opt for $real_min IF $active and real compared by YEAR are different.
 
-    if ($real_min && $this->getConfiguration()['min_type'] == 'search_result') {
+    if (is_numeric($real_min) && $this->getConfiguration()['min_type'] == 'search_result') {
 
       $min = (int)gmdate('Y', $active_min) < (int)gmdate('Y', $real_min) ? $real_min : $active_min;
     }
-    if ($real_max && $this->getConfiguration()['max_type'] == 'search_result') {
+    if (is_numeric($real_max) && $this->getConfiguration()['max_type'] == 'search_result') {
       $max = (int)gmdate('Y', $active_max) > (int)gmdate('Y',$real_max) ? $real_max : $active_max;
     }
 
@@ -121,9 +126,20 @@ class DateSliderWidget extends WidgetPluginBase {
     // Get the Timezone from Drupal or the Index.
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
-        $dt = new DateTime('@'.$result->getRawValue());
+        $dt = new DateTime();
+        $dt->setTimestamp(intval(DateRangeProcessor::DateToUnix($result->getRawValue())));
         $dt->setTimezone(new DateTimeZone($time_zone));
-        $js_year = $dt->format('Y');
+        $offset = $dt->getOffset() / 3600;
+        $offset = (int) $offset;
+        if ($offset < 0) {
+          $js_year = $dt->add(new DateInterval('PT' . abs($offset) . 'H'))
+            ->format('Y');
+        }
+        else {
+          $js_year = $dt->sub(new DateInterval('PT' . $offset . 'H'))
+            ->format('Y');
+        }
+
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
         $js_values[$js_year] = [
@@ -141,10 +157,12 @@ class DateSliderWidget extends WidgetPluginBase {
     foreach($js_values as $key => $js_value) {
       $labels[$key] = $js_value['label']. ($show_numbers ? ' (' . $js_value['count'] . ')' : '');
       if ($this->getConfiguration()['show_histogram']) {
-        $chart_data[] = $js_value['count'];
-        $chart_labels[] = $js_value['label'];
+        $chart_data[$key] = $js_value['count'];
+        $chart_labels[$key] = $js_value['label'];
       }
     }
+    $chart_data = array_values($chart_data);
+    $chart_labels = array_values($chart_labels);
 
     // Independently if the max/min are set from search or from fixed values
     // these here need to be min/max we have either from search/or fixed if no query yet
@@ -471,5 +489,27 @@ class DateSliderWidget extends WidgetPluginBase {
 
     return FALSE;
   }
+  protected function getRangeFromResults(array $results) {
+    /* @var \Drupal\facets\Result\ResultInterface[] $results */
+    $min = NULL;
+    $max = NULL;
+    foreach ($results as $result) {
+      if ($result->getRawValue() == 'summary_date_facet') {
+        continue;
+      }
+      // Warning. Depending on the "field" (normal data v/s date range) type RAW values might be UNIX Time stamps or actual
+      // ISO Dates. Normalize to unix.
+
+      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
+      $min = $min ?? $raw;
+      $max = $max ?? $raw;
+      $min = $min < $raw ? $min : $raw;
+      $max = $max > $raw ? $max : $raw;
+    }
+
+
+    return ['min' => $min, 'max' => $max];
+  }
+
 
 }
