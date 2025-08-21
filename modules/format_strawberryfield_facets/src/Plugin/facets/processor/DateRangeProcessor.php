@@ -205,17 +205,18 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       if ($result->getRawValue() == 'summary_date_facet') {
         continue;
       }
-      $min = $min ?? $result->getRawValue();
-      $max = $max ?? $result->getRawValue();
-      if ($result->getRawValue() >= $min) {
+      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
+      $min = $min ?? $raw;
+      $max = $max ?? $raw;
+      if ($raw >= $min) {
         $count = $count + $result->getCount();
       }
-      if ($result->getRawValue() <= $max) {
+      if ($raw <= $max) {
         $count = $count + $result->getCount();
       }
 
-      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
-      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
+      $min = $min < $raw ? $min : $raw;
+      $max = $max > $raw ? $max : $raw;
     }
     if ($min && $max && $count) {
       return ['min' => $min, 'max' => $max, 'count' => $count];
@@ -266,5 +267,28 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       ],
     ];
     return $build;
+  }
+  /**
+   * Parses a possible ISO8601 from Solr date into Unix timestamp
+   *
+   * @param $date
+   *
+   * @return int|null
+   */
+  public static function DateToUnix($date): ?int {
+    if (is_numeric($date)) {
+      return (int) $date;
+    }
+
+    //\EDTF\EdtfFactory::newParser()->parse('-0013-01-01T04:56:02Z')->getEdtfValue()
+    // PHP is the worst. I know the format (used to generate) is DATE_ATOM
+    // But can't explicitly create from format.
+    $dateTime = new \DateTimeImmutable($date);
+    if ($dateTime) {
+      return $dateTime->getTimestamp();
+    }
+    else {
+      return NULL;
+    }
   }
 }
