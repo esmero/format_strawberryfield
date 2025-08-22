@@ -186,9 +186,11 @@ class EmbargoResolver implements EmbargoResolverInterface {
             }
 
             if ($this->embargoConfig->get('global_ip_bypass_enabled')) {
-              $global_ip_embargo = FALSE;
               // If the key is there and set to TRUE. Replace/Additive/Local does not apply here
-              if (is_bool($jsondata[$ip_embargo_key] ?? []) && $jsondata[$ip_embargo_key] == TRUE) {
+              // Variations of TRUE.
+              $global_ip_embargo = $jsondata[$ip_embargo_key] ?? FALSE;
+              $global_ip_embargo = ((is_bool($global_ip_embargo) && $global_ip_embargo == TRUE) || $global_ip_embargo == "1" || $global_ip_embargo == 1);
+              if ($global_ip_embargo) {
                 $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
                 $noembargo = $noembargo && $ip_embargo;
               }
