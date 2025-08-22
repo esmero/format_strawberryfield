@@ -19,7 +19,7 @@ use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProces
  *
  * @FacetsWidget(
  *   id = "sbf_date_slider",
- *   label = @Translation("Format Strawberryfield Date slider"),
+ *   label = @Translation("Format Strawberryfield Date Slider"),
  *   description = @Translation("A widget that shows a slider for Dates."),
  * )
  */
