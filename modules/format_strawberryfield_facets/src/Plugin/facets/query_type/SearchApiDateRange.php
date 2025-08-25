@@ -91,8 +91,9 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
                 // Offset can be retrieved from both min or max.
                 $offset = $dt_max->getOffset() / 3600;
-
+                $offset = (int) $offset;
                 if ($offset < 0) {
+
                   $min_value = $dt_min->add(new DateInterval('PT' . abs($offset) . 'H'))
                     ->format('Y-m-d\TH:i:s\Z');
                   $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))
@@ -208,5 +209,4 @@ class SearchApiDateRange extends QueryTypePluginBase {
       'include_edges' => TRUE,
     ];
   }
-
 }
