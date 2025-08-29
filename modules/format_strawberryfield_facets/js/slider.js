@@ -116,13 +116,12 @@
 
 
 
-
       function toTimestamp(year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0) {
         // Date.parse works only on safari for BCE!
         // New approach. Date Constructor
         let date_from_parts = new Date();
         date_from_parts.setFullYear(parseInt(year));
-        date_from_parts.setMonth(parseInt(month));
+        date_from_parts.setMonth(parseInt(month)-1);
         date_from_parts.setDate(parseInt(day));
         date_from_parts.setHours(hour,minute,second,millisecond);
         const datum = date_from_parts.getTime();
@@ -135,6 +134,8 @@
       function autoSubmit(widget) {
         const slider = widget.querySelector('.sbf-date-facet-slider')
         const url = slider.dataset.drupalUrl;
+        console.log(slider.dataset.min);
+        console.log(slider.dataset.max);
         return url.replace('__date_range_min__', slider.dataset.min).replace('__date_range_max__', slider.dataset.max);
       }
 
@@ -187,7 +188,8 @@
           }
           else {
             max = ui_max = parseInt(e.target.value);
-            max_timestamp =  toTimestamp(max, 12, 31, 23, 59, 59, 999);
+            max_timestamp =  toTimestamp(max, 12, 31, 0, 0, 0, 0);
+            console.log(max_timestamp);
           }
         }
         else if (e.target.type == "date") {
@@ -205,7 +207,7 @@
               max = ui_max = date_from_input.getFullYear();
               let month = date_from_input.getMonth();
               let day = date_from_input.getDay();
-              max_timestamp = toTimestamp(min, month, day, 23, 59, 59, 999);
+              max_timestamp = toTimestamp(min, month, day, 0, 0, 0, 0);
             }
           }
         }
@@ -213,7 +215,6 @@
           e.target.reportValidity()
         }
         else {
-
           $slider.slider('option', 'values', [ui_min, ui_max]).slider("pips", "refresh").slider("float", "refresh");
           slider.dataset.min = min_timestamp;
           slider.dataset.max = max_timestamp;
