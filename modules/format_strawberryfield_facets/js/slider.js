@@ -101,8 +101,9 @@
         stop: function (event, ui) {
           if (slider_settings.range) {
             const slider = widget.querySelector('.sbf-date-facet-slider')
-            const min = toTimestamp( ui.values[0]);
-            const max = toTimestamp( ui.values[1]);
+            const min = toTimestamp( ui.values[0], 1, 1);
+            // for max, we will add the last day of the year.
+            const max = toTimestamp(ui.values[1], 12, 31);
             slider.dataset.min = min;
             slider.dataset.max = max;
           }
@@ -116,12 +117,19 @@
 
 
 
-      function toTimestamp(strDate) {
-        var datum = Date.parse(strDate);
+      function toTimestamp(year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0) {
+        // Date.parse works only on safari for BCE!
+        // New approach. Date Constructor
+        let date_from_parts = new Date();
+        date_from_parts.setFullYear(parseInt(year));
+        date_from_parts.setMonth(parseInt(month));
+        date_from_parts.setDate(parseInt(day));
+        date_from_parts.setHours(hour,minute,second,millisecond);
+        const datum = date_from_parts.getTime();
         if (Number.isNaN(datum)) {
-          return Date.now() / 1000;
+          return Math.round(Date.now() / 1000);
         }
-        return datum / 1000;
+        return Math.round(datum / 1000);
       }
 
       function autoSubmit(widget) {
@@ -175,22 +183,30 @@
         if (e.target.type == "number") {
           if (e.target.dataset?.type == "date-range-min") {
             min = ui_min = parseInt(e.target.value);
-            min_timestamp =  toTimestamp(min);
+            min_timestamp =  toTimestamp(min, 1, 1, 0, 0);
           }
           else {
             max = ui_max = parseInt(e.target.value);
-            max = max + '-12-31T23:59:59Z';
-            max_timestamp =  toTimestamp(max);
+            max_timestamp =  toTimestamp(max, 12, 31, 23, 59, 59, 999);
           }
         }
         else if (e.target.type == "date") {
           if (e.target.dataset?.type == "date-range-min") {
-            min = ui_min =new Date(e.target.value).getFullYear();
-            min_timestamp = toTimestamp(e.target.value);
-          }
-          else {
-            max = ui_max = new Date(e.target.value).getFullYear();
-            max_timestamp = toTimestamp(e.target.value);
+            let date_from_input = new Date(e.target.value);
+            if (typeof date_from_input == Date) {
+              min = ui_min = date_from_input.getFullYear();
+              let month = date_from_input.getMonth();
+              let day = date_from_input.getDay();
+              min_timestamp = toTimestamp(min, month, day);
+            }
+          } else {
+            let date_from_input = new Date(e.target.value);
+            if (typeof date_from_input == Date) {
+              max = ui_max = date_from_input.getFullYear();
+              let month = date_from_input.getMonth();
+              let day = date_from_input.getDay();
+              max_timestamp = toTimestamp(min, month, day, 23, 59, 59, 999);
+            }
           }
         }
         if ($slider.slider('option').min > min || $slider.slider('option').max < max) {
@@ -202,12 +218,6 @@
           slider.dataset.min = min_timestamp;
           slider.dataset.max = max_timestamp;
         }
-
-
-        //const min = toTimestamp( ui.values[0]);
-        //const max = toTimestamp( ui.values[1]);
-        //slider.dataset.min = min;
-        //slider.dataset.max = max;
       };
       $("input.facet-date-range.form-control", widget).on("change", changeHandlerInput);
     };
