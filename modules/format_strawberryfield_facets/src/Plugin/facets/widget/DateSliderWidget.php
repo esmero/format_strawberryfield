@@ -518,9 +518,19 @@ class DateSliderWidget extends WidgetPluginBase {
     }
     $dynamic_step = $this->getConfiguration()['dynamic_step'];
     // Check for explicit NULL bc $active_max Might be a 0.
-    if ($dynamic_step && $active_max!== NULL ) {
+    error_log('step '.$dynamic_step);
+    // NOTE for tomorrow (will remove later)
+    // Because we have to use Time Zone offsets on the query
+    // The buckets from the date range (not the ones from the normal dates)
+    // Are already offset. So what happens is if we take that value as the max and min
+    // And query again, we will YET again offset by time zone
+    // That has really NO effect when the dynamic step is large, but if it is
+    // One year, then we have a back and forth jump.
+    // Solution, the facets here need to have timezone yet again removed!
+    if ($dynamic_step && $dynamic_step > 1 && $active_max!== NULL  ) {
       // check if $max + step is IN active value, if any.
       $next_range = strtotime("+{$dynamic_step} years", $max);
+      error_log('step '.$dynamic_step);
       error_log('active '.gmdate(DATE_ATOM, $active_max));
       error_log('max_from results '.gmdate(DATE_ATOM, $max));
       error_log('Next range'. gmdate(DATE_ATOM, $next_range));
