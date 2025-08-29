@@ -46,6 +46,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
       $active_items = $this->facet->getActiveItems();
 
       if (count($active_items)) {
+        $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
         $filter = $query->createConditionGroup($operator, ['facet:' . $field_identifier]);
         // When set this will contain a 0, 1 with the real values and a min and max with the set values from the widget.
         $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
@@ -62,7 +63,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
             if (isset($options['search_api_facets'][$field_identifier])) {
               $min = (int) ($value[0] ?? 0);
               $max = (int) ($value[1] ?? time());
-              // Seconds in a year; 31556952
+              // Seconds in a year; 31556952. Just a nerdy comment.
               if ($min > $max) {
                 // IN case someone inverts the whole stuff
                 $orig_min = $min;
@@ -71,14 +72,24 @@ class SearchApiDateRange extends QueryTypePluginBase {
               }
 
               $min_count_for_facet = $this->facet->getHardLimit();
-              $min_count_for_facet = $min_count_for_facet > 0 ? $min_count_for_facet : 50;
+              $min_count_for_facet = $min_count_for_facet > 0 ? $min_count_for_facet : 100;
               // A min count of 0 is not useful. We will never really get all of them here
-              // So ... in that case we might decide on the actual gap by using an arbitrary that fits in a year?
+              // Also we can't divide by 0!
               try {
-                $diff_years = gmdate('Y', $max) - gmdate('Y', $min);
+                $base_gap = $widget_config['step'];
+                $diff_years = gmdate('Y', $max) - gmdate('Y', $min) + 1;
                 $gap = abs(ceil($diff_years / $min_count_for_facet));
                 $gap = $gap == 0 ? 1 : $gap;
+                $reminder = $diff_years % $min_count_for_facet;
+
+                // Reminder is unused for now, bc I can't request to solr that the last or first range covers more
+                // via the search API (i could via custom code)
                 $gap = (int) round($gap, 0);
+                $gap = $gap < $base_gap ? $base_gap : $gap;
+                  // Only way to communicate to the Widget itself. Setting it here only survives a single PHP call and does
+                  // not permanently override the defaults. Which is what we need!
+                $widget_config['dynamic_step'] = $gap;
+                $this->facet->getWidgetInstance()->setConfiguration($widget_config);
                 // Now, Solr Index might have dates offset. Bc Drupal will calculate a certain date based on its internal timezone
                 // during "index" but Solr will get then another based on UTC
                 // Basically If someone asks for 1911-1915 (and our date is 1911/1915) Solr will really have
@@ -93,7 +104,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $offset = $dt_max->getOffset() / 3600;
                 $offset = (int) $offset;
                 if ($offset < 0) {
-
                   $min_value = $dt_min->add(new DateInterval('PT' . abs($offset) . 'H'))
                     ->format('Y-m-d\TH:i:s\Z');
                   $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))
@@ -108,6 +118,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
 
                 $options['search_api_facets'][$field_identifier]['min_value'] = $min_value;
                 $options['search_api_facets'][$field_identifier]['max_value'] = $max_value;
+
                 $options['search_api_facets'][$field_identifier]['granularity'] = '+' . $gap . 'YEAR';
                 $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
               }
@@ -117,7 +128,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $max_value = $max;
               }
             }
-
             $value = [$min_value, $max_value];
             $filter->addCondition($field_identifier, $value, $exclude ? 'NOT BETWEEN' : 'BETWEEN');
           }

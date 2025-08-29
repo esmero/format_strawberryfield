@@ -194,31 +194,4 @@ class DateRangeSliderWidget extends DateSliderWidget {
     return 'date_range';
   }
 
-
-  protected function getRangeFromResults(array $results) {
-    /* @var \Drupal\facets\Result\ResultInterface[] $results */
-    $min = NULL;
-    $max = NULL;
-    foreach ($results as $result) {
-      if ($result->getRawValue() == 'summary_date_facet') {
-        continue;
-      }
-      // Warning. Depending on the "field" (normal data v/s date range) type RAW values might be UNIX Time stamps or actual
-      // ISO Dates. Normalize to unix.
-
-      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
-      $min = $min ?? $raw;
-      $max = $max ?? $raw;
-      $min = $min < $raw ? $min : $raw;
-      $max = $max > $raw ? $max : $raw;
-    }
-    // Should we yet again cast via timezone here
-    // date -r -4197038400
-    //Sat Dec 31 23:17:15 LMT 1836
-   //  but the input once transformed was properly 1837
-
-    return ['min' => $min, 'max' => $max];
-  }
-
-
 }

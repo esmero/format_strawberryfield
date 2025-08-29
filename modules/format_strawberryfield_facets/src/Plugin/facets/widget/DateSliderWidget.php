@@ -29,6 +29,9 @@ class DateSliderWidget extends WidgetPluginBase {
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
+    // Note. dynamic_step is only used
+    // to communicate dynamic step calculated
+    // during the query. Can't be set up by the user.
     return [
         'prefix' => '',
         'suffix' => '',
@@ -49,6 +52,7 @@ class DateSliderWidget extends WidgetPluginBase {
         'max_value' => gmdate('Y', time()),
         'step_variable_granularity' => TRUE,
         'step' => 1,
+        'dynamic_step' => NULL,
       ] + parent::defaultConfiguration();
   }
 
@@ -67,37 +71,43 @@ class DateSliderWidget extends WidgetPluginBase {
 
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
     // Range is Unixtime array after normalization.
-    $range = $this->getRangeFromResults($results);
+    $active = $facet->getActiveItems();
+    $active_min = reset($active)['min'] ?? NULL;
+    $active_max = reset($active)['max'] ?? NULL;
+    $range = $this->getRangeFromResults($results, $active_max);
     // Give $min a $max a default
     $min = $this->getConfiguration()['min_value'] ?? 0;
     $max = $this->getConfiguration()['max_value'] ?? date('Y');
     $min = strtotime($min.'-01-01');
-    $max= strtotime($max.'-12-31');
-
+    // add the last day bc we want to consider the complete year.
+    $max = strtotime($max.'-12-31');
     ksort($results);
-    // Should we cap active to results?
-    $active = $facet->getActiveItems();
+
     // UnixTime
     $real_min = $range['min'] ?? NULL;
     $real_max = $range['max'] ?? NULL;
 
+    // A gap override might have been set by \Drupal\format_strawberryfield_facets\Plugin\facets\query_type\SearchApiDateRange::execute
+    // (means us)
+    // Which is great bc it reflects the actual gap requested to the backend.
+    $gap_in_years = $this->getConfiguration()['dynamic_step'] ?? $this->getConfiguration()['step'] ?? 1;
     // UnixTime
-    $active_min = reset($active)['min'] ?? $real_min;
-    $active_max = reset($active)['max'] ?? $real_max;
+    $active_min = $active_min ?? $real_min;
+    $active_max = $active_max ?? $real_max;
     $active_min = (int) $active_min;
     $active_max = (int) $active_max;
-
     // Give some defaults
     $year_max = gmdate('Y', (int) $active_max);
     $year_min = gmdate('Y', (int) $active_min);
+
     // UnixTime
     $unix_max = $active_max;
     $unix_min = $active_min;
+
+
     // Chances are we will always a real_min being capped down (bc of Face Range queries)
     // So we only opt for $real_min IF $active and real compared by YEAR are different.
-
     if (is_numeric($real_min) && $this->getConfiguration()['min_type'] == 'search_result') {
-
       $min = (int)gmdate('Y', $active_min) < (int)gmdate('Y', $real_min) ? $real_min : $active_min;
     }
     if (is_numeric($real_max) && $this->getConfiguration()['max_type'] == 'search_result') {
@@ -114,8 +124,8 @@ class DateSliderWidget extends WidgetPluginBase {
       $year_max = gmdate('Y', (int) $max);
       $unix_max = $max;
       // But here we move to formatted
-      $max = gmdate('Y-m-d', (int) $max);
-      // But for $max we literally need the last day of the year.
+      $max = gmdate('Y-12-31', (int) $max);
+      // for $max we literally need the last day of the year.
     }
     $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
 
@@ -423,17 +433,17 @@ class DateSliderWidget extends WidgetPluginBase {
     $form['step'] = [
       '#type' => 'number',
       '#step' => 1,
-      '#title' => $this->t('Base slider step in years'),
+      '#title' => $this->t('Base slider Step and Date range Facet Query "gap" in years'),
       '#default_value' => $config['step'],
       '#size' => 2,
     ];
 
     $form['step_variable_granularity'] = [
       '#type'          => 'checkbox',
-      '#title'         => $this->t('Variable date Granularity based on results'),
+      '#title'         => $this->t('Variable date Granularity and Date range Facet Query "gap", based on results'),
       '#default_value' => $config['step_variable_granularity'],
       '#description'   => $this->t(
-        'When enabled, sliders steps will vary based on the min/max facet values. By default base slider "step" setting in years will be used.'
+        'When enabled, sliders steps will vary based on the min/max facet values (divided by the the hard limit of this facet). By default, e.g when no active values or no hard limit, base slider "step" setting in years will be used.'
       ),
     ];
     $form['allow_full_entry'] =  [
@@ -489,7 +499,7 @@ class DateSliderWidget extends WidgetPluginBase {
 
     return FALSE;
   }
-  protected function getRangeFromResults(array $results) {
+  protected function getRangeFromResults(array $results, $active_max) {
     /* @var \Drupal\facets\Result\ResultInterface[] $results */
     $min = NULL;
     $max = NULL;
@@ -505,6 +515,19 @@ class DateSliderWidget extends WidgetPluginBase {
       $max = $max ?? $raw;
       $min = $min < $raw ? $min : $raw;
       $max = $max > $raw ? $max : $raw;
+    }
+    $dynamic_step = $this->getConfiguration()['dynamic_step'];
+    // Check for explicit NULL bc $active_max Might be a 0.
+    if ($dynamic_step && $active_max!== NULL ) {
+      // check if $max + step is IN active value, if any.
+      $next_range = strtotime("+{$dynamic_step} years", $max);
+      error_log('active '.gmdate(DATE_ATOM, $active_max));
+      error_log('max_from results '.gmdate(DATE_ATOM, $max));
+      error_log('Next range'. gmdate(DATE_ATOM, $next_range));
+      if ($active_max < $next_range) {
+        $max = $active_max;
+        error_log('adjusting to active');
+      }
     }
 
 
