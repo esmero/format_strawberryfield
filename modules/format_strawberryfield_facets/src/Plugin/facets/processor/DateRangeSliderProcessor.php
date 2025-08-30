@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\processor;
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
 use Drupal\facets\Processor\BuildProcessorInterface;
 use Drupal\facets\Processor\PreQueryProcessorInterface;
@@ -127,6 +128,26 @@ class DateRangeSliderProcessor extends DateRangeProcessor implements PreQueryPro
       }
     }
     return $results;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state, FacetInterface $facet) {
+    $configuration = $this->getConfiguration();
+
+    $build['enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Use Format Strawberryfield Date Range Slider'),
+      '#default_value' => $configuration['enabled'],
+      '#states' => [
+        'required' => [
+          ':input[name="facet_settings[sbf_date_range_slider][status]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+
+    return $build;
   }
 
 }
