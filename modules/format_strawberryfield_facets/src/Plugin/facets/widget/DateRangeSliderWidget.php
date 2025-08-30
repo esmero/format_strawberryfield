@@ -4,6 +4,10 @@ namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
 use Drupal\Component\Utility\Html;
 use Drupal\facets\FacetInterface;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+use DateTime;
+use DateTimeZone;
+use DateInterval;
 
 /**
  * The range slider widget.
@@ -188,23 +192,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
   public function getQueryType() {
     //* See \Drupal\facets\Plugin\facets\facet_source\SearchApiDisplay::getQueryTypesForDataType
     return 'date_range';
-  }
-
-
-  protected function getRangeFromResults(array $results) {
-    /* @var \Drupal\facets\Result\ResultInterface[] $results */
-    $min = NULL;
-    $max = NULL;
-    foreach ($results as $result) {
-      if ($result->getRawValue() == 'summary_date_facet') {
-        continue;
-      }
-      $min = $min ?? $result->getRawValue();
-      $max = $max ?? $result->getRawValue();
-      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
-      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
-    }
-    return ['min' => $min, 'max' => $max];
   }
 
 }

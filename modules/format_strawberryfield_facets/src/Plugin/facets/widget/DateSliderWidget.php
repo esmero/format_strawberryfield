@@ -9,14 +9,17 @@ use Drupal\facets\Result\Result;
 use Drupal\facets\Widget\WidgetPluginBase;
 use DateTime;
 use DateTimeZone;
+use DateInterval;
 use Drupal\search_api_solr\Utility\Utility;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+
 
 /**
  * The slider widget.
  *
  * @FacetsWidget(
  *   id = "sbf_date_slider",
- *   label = @Translation("Format Strawberryfield Date slider"),
+ *   label = @Translation("Format Strawberryfield Date Slider"),
  *   description = @Translation("A widget that shows a slider for Dates."),
  * )
  */
@@ -26,6 +29,9 @@ class DateSliderWidget extends WidgetPluginBase {
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
+    // Note. dynamic_step is only used
+    // to communicate dynamic step calculated
+    // during the query. Can't be set up by the user.
     return [
         'prefix' => '',
         'suffix' => '',
@@ -46,6 +52,7 @@ class DateSliderWidget extends WidgetPluginBase {
         'max_value' => gmdate('Y', time()),
         'step_variable_granularity' => TRUE,
         'step' => 1,
+        'dynamic_step' => NULL,
       ] + parent::defaultConfiguration();
   }
 
@@ -63,39 +70,47 @@ class DateSliderWidget extends WidgetPluginBase {
     }
 
     $show_numbers = $facet->getWidgetInstance()->getConfiguration()['show_numbers'];
-    // Range is Unixtime array
-    $range = $this->getRangeFromResults($results);
+    // Range is Unixtime array after normalization.
+    $active = $facet->getActiveItems();
+    $active_min = reset($active)['min'] ?? NULL;
+    $active_max = reset($active)['max'] ?? NULL;
+    $range = $this->getRangeFromResults($results, $active_max);
     // Give $min a $max a default
     $min = $this->getConfiguration()['min_value'] ?? 0;
     $max = $this->getConfiguration()['max_value'] ?? date('Y');
     $min = strtotime($min.'-01-01');
-    $max= strtotime($max.'-12-31');
-
+    // add the last day bc we want to consider the complete year.
+    $max = strtotime($max.'-12-31');
     ksort($results);
-    // Should we cap active to results?
-    $active = $facet->getActiveItems();
+
     // UnixTime
     $real_min = $range['min'] ?? NULL;
     $real_max = $range['max'] ?? NULL;
 
+    // A gap override might have been set by \Drupal\format_strawberryfield_facets\Plugin\facets\query_type\SearchApiDateRange::execute
+    // (means us)
+    // Which is great bc it reflects the actual gap requested to the backend.
+    $gap_in_years = $this->getConfiguration()['dynamic_step'] ?? $this->getConfiguration()['step'] ?? 1;
     // UnixTime
-    $active_min = reset($active)['min'] ?? $real_min;
-    $active_max = reset($active)['max'] ?? $real_max;
-
+    $active_min = $active_min ?? $real_min;
+    $active_max = $active_max ?? $real_max;
+    $active_min = (int) $active_min;
+    $active_max = (int) $active_max;
     // Give some defaults
     $year_max = gmdate('Y', (int) $active_max);
     $year_min = gmdate('Y', (int) $active_min);
+
     // UnixTime
     $unix_max = $active_max;
     $unix_min = $active_min;
+
+
     // Chances are we will always a real_min being capped down (bc of Face Range queries)
     // So we only opt for $real_min IF $active and real compared by YEAR are different.
-
-    if ($real_min && $this->getConfiguration()['min_type'] == 'search_result') {
-
+    if (is_numeric($real_min) && $this->getConfiguration()['min_type'] == 'search_result') {
       $min = (int)gmdate('Y', $active_min) < (int)gmdate('Y', $real_min) ? $real_min : $active_min;
     }
-    if ($real_max && $this->getConfiguration()['max_type'] == 'search_result') {
+    if (is_numeric($real_max) && $this->getConfiguration()['max_type'] == 'search_result') {
       $max = (int)gmdate('Y', $active_max) > (int)gmdate('Y',$real_max) ? $real_max : $active_max;
     }
 
@@ -109,8 +124,8 @@ class DateSliderWidget extends WidgetPluginBase {
       $year_max = gmdate('Y', (int) $max);
       $unix_max = $max;
       // But here we move to formatted
-      $max = gmdate('Y-m-d', (int) $max);
-      // But for $max we literally need the last day of the year.
+      $max = gmdate('Y-12-31', (int) $max);
+      // for $max we literally need the last day of the year.
     }
     $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
 
@@ -121,9 +136,20 @@ class DateSliderWidget extends WidgetPluginBase {
     // Get the Timezone from Drupal or the Index.
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
-        $dt = new DateTime('@'.$result->getRawValue());
+        $dt = new DateTime();
+        $dt->setTimestamp(intval(DateRangeProcessor::DateToUnix($result->getRawValue())));
         $dt->setTimezone(new DateTimeZone($time_zone));
-        $js_year = $dt->format('Y');
+        $offset = $dt->getOffset() / 3600;
+        $offset = (int) $offset;
+        if ($offset < 0) {
+          $js_year = $dt->add(new DateInterval('PT' . abs($offset) . 'H'))
+            ->format('Y');
+        }
+        else {
+          $js_year = $dt->sub(new DateInterval('PT' . $offset . 'H'))
+            ->format('Y');
+        }
+
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
         $js_values[$js_year] = [
@@ -141,10 +167,12 @@ class DateSliderWidget extends WidgetPluginBase {
     foreach($js_values as $key => $js_value) {
       $labels[$key] = $js_value['label']. ($show_numbers ? ' (' . $js_value['count'] . ')' : '');
       if ($this->getConfiguration()['show_histogram']) {
-        $chart_data[] = $js_value['count'];
-        $chart_labels[] = $js_value['label'];
+        $chart_data[$key] = $js_value['count'];
+        $chart_labels[$key] = $js_value['label'];
       }
     }
+    $chart_data = array_values($chart_data);
+    $chart_labels = array_values($chart_labels);
 
     // Independently if the max/min are set from search or from fixed values
     // these here need to be min/max we have either from search/or fixed if no query yet
@@ -405,17 +433,17 @@ class DateSliderWidget extends WidgetPluginBase {
     $form['step'] = [
       '#type' => 'number',
       '#step' => 1,
-      '#title' => $this->t('Base slider step in years'),
+      '#title' => $this->t('Base slider Step and Date range Facet Query "gap" in years'),
       '#default_value' => $config['step'],
       '#size' => 2,
     ];
 
     $form['step_variable_granularity'] = [
       '#type'          => 'checkbox',
-      '#title'         => $this->t('Variable date Granularity based on results'),
+      '#title'         => $this->t('Variable date Granularity and Date range Facet Query "gap", based on results'),
       '#default_value' => $config['step_variable_granularity'],
       '#description'   => $this->t(
-        'When enabled, sliders steps will vary based on the min/max facet values. By default base slider "step" setting in years will be used.'
+        'When enabled, sliders steps will vary based on the min/max facet values (divided by the the hard limit of this facet). By default, e.g when no active values or no hard limit, base slider "step" setting in years will be used.'
       ),
     ];
     $form['allow_full_entry'] =  [
@@ -471,5 +499,50 @@ class DateSliderWidget extends WidgetPluginBase {
 
     return FALSE;
   }
+  protected function getRangeFromResults(array $results, $active_max) {
+    /* @var \Drupal\facets\Result\ResultInterface[] $results */
+    $min = NULL;
+    $max = NULL;
+    foreach ($results as $result) {
+      if ($result->getRawValue() == 'summary_date_facet') {
+        continue;
+      }
+      // Warning. Depending on the "field" (normal data v/s date range) type RAW values might be UNIX Time stamps or actual
+      // ISO Dates. Normalize to unix.
+
+      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
+      $min = $min ?? $raw;
+      $max = $max ?? $raw;
+      $min = $min < $raw ? $min : $raw;
+      $max = $max > $raw ? $max : $raw;
+    }
+    $dynamic_step = $this->getConfiguration()['dynamic_step'];
+    // Check for explicit NULL bc $active_max Might be a 0.
+    error_log('step '.$dynamic_step);
+    // NOTE for tomorrow (will remove later)
+    // Because we have to use Time Zone offsets on the query
+    // The buckets from the date range (not the ones from the normal dates)
+    // Are already offset. So what happens is if we take that value as the max and min
+    // And query again, we will YET again offset by time zone
+    // That has really NO effect when the dynamic step is large, but if it is
+    // One year, then we have a back and forth jump.
+    // Solution, the facets here need to have timezone yet again removed!
+    if ($dynamic_step && $dynamic_step > 1 && $active_max!== NULL  ) {
+      // check if $max + step is IN active value, if any.
+      $next_range = strtotime("+{$dynamic_step} years", $max);
+      error_log('step '.$dynamic_step);
+      error_log('active '.gmdate(DATE_ATOM, $active_max));
+      error_log('max_from results '.gmdate(DATE_ATOM, $max));
+      error_log('Next range'. gmdate(DATE_ATOM, $next_range));
+      if ($active_max < $next_range) {
+        $max = $active_max;
+        error_log('adjusting to active');
+      }
+    }
+
+
+    return ['min' => $min, 'max' => $max];
+  }
+
 
 }
