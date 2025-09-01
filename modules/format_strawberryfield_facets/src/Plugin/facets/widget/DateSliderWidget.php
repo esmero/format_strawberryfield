@@ -527,19 +527,54 @@ class DateSliderWidget extends WidgetPluginBase {
     // That has really NO effect when the dynamic step is large, but if it is
     // One year, then we have a back and forth jump.
     // Solution, the facets here need to have timezone yet again removed!
-    if ($dynamic_step && $dynamic_step > 1 && $active_max!== NULL  ) {
+    $original_max = $max;
+    if ($dynamic_step && $active_max!== NULL  ) {
       // check if $max + step is IN active value, if any.
       $next_range = strtotime("+{$dynamic_step} years", $max);
       error_log('step '.$dynamic_step);
-      error_log('active '.gmdate(DATE_ATOM, $active_max));
-      error_log('max_from results '.gmdate(DATE_ATOM, $max));
-      error_log('Next range'. gmdate(DATE_ATOM, $next_range));
+
       if ($active_max < $next_range) {
+        // If active is lower than the calculated next range
+        // We make max == active. There might be an error depending on the
+        // Gap itself. If the gap is very large (means low hard limit, large span)
         $max = $active_max;
-        error_log('adjusting to active');
+        error_log('-- adjusting to active');
+        error_log('-- Next range'. gmdate(DATE_ATOM, $next_range));
+      }
+      else {
+        // We make the Max the next range assuming the dynamic step here
+        // Note. Te dynamic step here is the MODULUS of the actual step, as set
+        // via a widget override by SearchApiDateRange. Means the "size" of the gap
+        // Of the last range. This is because in dates, exact "years" in gaps
+        // are counted from the first, means the last gap might be shorter.
+        $max = $next_range;
       }
     }
+    error_log('active '.gmdate(DATE_ATOM, $active_max));
+    error_log('max_from results '.gmdate(DATE_ATOM, $original_max));
 
+    error_log('max_used '.gmdate(DATE_ATOM, $max));
+    $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
+    // Now we need to reverse the Timezone offset generated during indexing.
+    // We do the inverse in SearchApiDateRange to fit the actual indexed values
+    $dt_min_utc = new DateTime('@' . $min);
+    $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+    $dt_max_utc = new DateTime('@' . $max);
+    $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+    // Offset can be retrieved from both min or max.
+    $offset = $dt_max->getOffset() / 3600;
+    $offset = (int) $offset;
+    error_log($offset);
+    if ($offset > 0) {
+      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))
+        ->format('Y-m-d\TH:i:s\Z');
+    }
+    else {
+      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))
+        ->format('Y-m-d\TH:i:s\Z');
+    }
+
+    error_log('max_used with timezoneoffset '.$max_value);
 
     return ['min' => $min, 'max' => $max];
   }

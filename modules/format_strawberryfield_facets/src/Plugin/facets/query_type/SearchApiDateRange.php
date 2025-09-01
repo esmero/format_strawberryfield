@@ -80,7 +80,9 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $diff_years = gmdate('Y', $max) - gmdate('Y', $min) + 1;
                 $gap = abs(ceil($diff_years / $min_count_for_facet));
                 $gap = $gap == 0 ? 1 : $gap;
-                $reminder = $diff_years % $min_count_for_facet;
+                $reminder = $diff_years % $gap;
+                error_log('all-gap-sizes:'.$gap);
+                error_log('last-gap-size:'.$reminder);
 
                 // Reminder is unused for now, bc I can't request to solr that the last or first range covers more
                 // via the search API (i could via custom code)
@@ -88,7 +90,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $gap = $gap < $base_gap ? $base_gap : $gap;
                   // Only way to communicate to the Widget itself. Setting it here only survives a single PHP call and does
                   // not permanently override the defaults. Which is what we need!
-                $widget_config['dynamic_step'] = $gap;
+                $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap;
                 $this->facet->getWidgetInstance()->setConfiguration($widget_config);
                 // Now, Solr Index might have dates offset. Bc Drupal will calculate a certain date based on its internal timezone
                 // during "index" but Solr will get then another based on UTC
@@ -110,9 +112,9 @@ class SearchApiDateRange extends QueryTypePluginBase {
                     ->format('Y-m-d\TH:i:s\Z');
                 }
                 else {
-                  $min_value = $dt_min->sub(new DateInterval('PT' . $offset . 'H'))
+                  $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset) . 'H'))
                     ->format('Y-m-d\TH:i:s\Z');
-                  $max_value = $dt_max->sub(new DateInterval('PT' . $offset . 'H'))
+                  $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))
                     ->format('Y-m-d\TH:i:s\Z');
                 }
 
