@@ -48,7 +48,7 @@
               fill: true,
               stepped: true,
               showLine: true,
-              tension: 0.5
+              tension: 0.4
             },
           ]
         },
@@ -84,7 +84,6 @@
                   family: 'Arial'
                 },
                 ticks: {
-                  // forces step size to be 50 units
                   stepSize: 10
                 },
                 color: 'black'
@@ -134,14 +133,11 @@
       function autoSubmit(widget) {
         const slider = widget.querySelector('.sbf-date-facet-slider')
         const url = slider.dataset.drupalUrl;
-        console.log(slider.dataset.min);
-        console.log(slider.dataset.max);
         return url.replace('__date_range_min__', slider.dataset.min).replace('__date_range_max__', slider.dataset.max);
       }
 
       // Click on link will call Facets JS API on widget element.
       var changeHandler = function (e) {
-        //e.preventDefault();
         var $widget = $(widget);
         $widget.trigger('facets_filter', [autoSubmit(widget)]);
       };
@@ -168,8 +164,6 @@
           labels: JSON.parse(slider_settings.labels)
         });
       var changeHandlerInput = function (e) {
-        //e.preventDefault();
-        let error = Drupal.t("Wrong date");
         const slider = widget.querySelector('.sbf-date-facet-slider')
         let min_timestamp =  slider.dataset.min;
         let max_timestamp =  slider.dataset.max;
@@ -189,7 +183,6 @@
           else {
             max = ui_max = parseInt(e.target.value);
             max_timestamp =  toTimestamp(max, 12, 31, 0, 0, 0, 0);
-            console.log(max_timestamp);
           }
         }
         else if (e.target.type == "date") {
