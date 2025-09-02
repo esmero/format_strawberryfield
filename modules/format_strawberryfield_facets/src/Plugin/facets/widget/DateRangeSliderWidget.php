@@ -31,6 +31,8 @@ class DateRangeSliderWidget extends DateSliderWidget {
     }
 
     $facet_settings = &$build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()];
+    $is_bce = $facet_settings['real_minmax'][0] ?? 0;
+    $is_bce = $is_bce < 0 ? TRUE : FALSE;
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id().'-manual-input');
     if ( $this->getConfiguration()['allow_full_entry'] || $this->getConfiguration()['allow_year_entry']) {
       $build['#items']['manual_input'] = [
@@ -43,7 +45,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
       ];
     }
 
-    if (($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE)) {
+    if (($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE) && !$is_bce) {
       $build['#items']['manual_input']['select_input'] = [
           '#type' => 'checkbox',
           '#title' => t('Full Date entry'),
@@ -54,7 +56,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
       ];
     }
 
-    if ($this->getConfiguration()['allow_full_entry']) {
+    if ($this->getConfiguration()['allow_full_entry'] && !$is_bce) {
       $build['#items']['manual_input']['manual_input_full'] = [
         '#type' => 'container',
         'min_full' => [
