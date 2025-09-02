@@ -35,8 +35,12 @@
       let ctx = element.getContext('2d');
       let chart_data  = JSON.parse(settings.chart_data);
       let chart_labels = JSON.parse(settings.chart_labels);
+      let chart_type = "line";
+      if (chart_data.length == 1) {
+        chart_type = "bar"
+      }
       let histogram = new Chart(ctx, {
-        type: 'line',
+        type: chart_type,
         data: {
           labels: chart_labels,
           datasets: [
