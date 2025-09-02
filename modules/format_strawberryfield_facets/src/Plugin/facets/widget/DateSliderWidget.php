@@ -519,7 +519,6 @@ class DateSliderWidget extends WidgetPluginBase {
     }
     $dynamic_step = $this->getConfiguration()['dynamic_step'];
     // Check for explicit NULL bc $active_max Might be a 0.
-    error_log('step '.$dynamic_step);
     // NOTE for tomorrow (will remove later)
     // Because we have to use Time Zone offsets on the query
     // The buckets from the date range (not the ones from the normal dates)
@@ -532,15 +531,11 @@ class DateSliderWidget extends WidgetPluginBase {
     if ($dynamic_step && $active_max!== NULL  ) {
       // check if $max + step is IN active value, if any.
       $next_range = strtotime("+{$dynamic_step} years", $max);
-      error_log('step '.$dynamic_step);
-
       if ($active_max < $next_range) {
         // If active is lower than the calculated next range
         // We make max == active. There might be an error depending on the
         // Gap itself. If the gap is very large (means low hard limit, large span)
         $max = $active_max;
-        error_log('-- adjusting to active');
-        error_log('-- Next range'. gmdate(DATE_ATOM, $next_range));
       }
       else {
         // We make the Max the next range assuming the dynamic step here
@@ -551,15 +546,13 @@ class DateSliderWidget extends WidgetPluginBase {
         $max = $next_range;
       }
     }
-    error_log('active '.gmdate(DATE_ATOM, $active_max));
-    error_log('max_from results '.gmdate(DATE_ATOM, $original_max));
-
-    error_log('max_used '.gmdate(DATE_ATOM, $max));
     $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
     // Now we need to reverse the Timezone offset generated during indexing.
     // We do the inverse in SearchApiDateRange to fit the actual indexed values
     $dt_min_utc = new DateTime('@' . $min);
     $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+    // So far we don't need min, bc it starts at 1-1. But we might in the future if the ranges
+    // end being inconsistent.
     $dt_max_utc = new DateTime('@' . $max);
     $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     // Offset can be retrieved from both min or max.
@@ -571,8 +564,6 @@ class DateSliderWidget extends WidgetPluginBase {
     else {
       $max = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
     }
-
-    error_log('max_used with timezoneoffset '.$max);
 
     return ['min' => $min, 'max' => $max];
   }
