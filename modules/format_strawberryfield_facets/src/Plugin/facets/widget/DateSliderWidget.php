@@ -394,13 +394,13 @@ class DateSliderWidget extends WidgetPluginBase {
     $form['restrict_to_fixed'] =  [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Cap result based max/min to Fixed Ranges.'),
-      '#description'        => $this->t('Even if max and min are "Based on search results", max and min will be capped to the Fixed values. This allows Outliers and wrong metadata to be never be taken in account.'),
+      '#description'   => $this->t('Even if max and min are "Based on search results", max and min will be capped to the Fixed values. This allows Outliers and wrong metadata to be never be taken in account.'),
       '#default_value' => $config['restrict_to_fixed'] ?? $this->defaultConfiguration()['restrict_to_fixed'],
     ];
     $form['restrict_frequency_to_range'] =  [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Use the real facet max/min instead of the User selected input'),
-      '#description'         => $this->t('When checked, the user input will not be used in the Widget, but the actual max/min from the facets'),
+      '#description'   => $this->t('When checked, the user input will not be used in the Widget, but the actual max/min from the facets'),
       '#default_value' => $config['restrict_frequency_to_range'] ?? $this->defaultConfiguration()['restrict_frequency_to_range'],
     ];
 
@@ -440,15 +440,16 @@ class DateSliderWidget extends WidgetPluginBase {
 
     $form['step_variable_granularity'] = [
       '#type'          => 'checkbox',
-      '#title'         => $this->t('Variable date Granularity and Date range Facet Query "gap", based on results'),
+      '#title'         => $this->t('Variable date Granularity and Date range Facet Query "gap" in the Slider UI, based on results'),
       '#default_value' => $config['step_variable_granularity'],
       '#description'   => $this->t(
-        'When enabled, sliders steps will vary based on the min/max facet values (divided by the the hard limit of this facet). By default, e.g when no active values or no hard limit, base slider "step" setting in years will be used.'
+        'Gaps are always calculated dynamically and will vary based on the min/max facet values (divided by the the hard limit of this facet). But when this is enabled, sliders steps (UI) will also use that GAP . If not, by default the base slider "step" setting in years will be used.'
       ),
     ];
     $form['allow_full_entry'] =  [
       '#type'          => 'checkbox',
       '#title'         => $this->t('Allow manual Full DD/MM/YYYY entry'),
+      '#description'         => $this->t('Because of Browser support limitations for BCE dates entry in FULL ISO8601 format, if the returned range contains a negative year this input will be hidden.'),
       '#default_value' => $config['allow_full_entry'],
     ];
     $form['allow_year_entry'] =  [
@@ -564,17 +565,14 @@ class DateSliderWidget extends WidgetPluginBase {
     // Offset can be retrieved from both min or max.
     $offset = $dt_max->getOffset() / 3600;
     $offset = (int) $offset;
-    error_log($offset);
     if ($offset > 0) {
-      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))
-        ->format('Y-m-d\TH:i:s\Z');
+      $max = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
     }
     else {
-      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))
-        ->format('Y-m-d\TH:i:s\Z');
+      $max = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
     }
 
-    error_log('max_used with timezoneoffset '.$max_value);
+    error_log('max_used with timezoneoffset '.$max);
 
     return ['min' => $min, 'max' => $max];
   }
