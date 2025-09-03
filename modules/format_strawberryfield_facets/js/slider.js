@@ -35,8 +35,12 @@
       let ctx = element.getContext('2d');
       let chart_data  = JSON.parse(settings.chart_data);
       let chart_labels = JSON.parse(settings.chart_labels);
+      let chart_type = "line";
+      if (chart_data.length == 1) {
+        chart_type = "bar"
+      }
       let histogram = new Chart(ctx, {
-        type: 'line',
+        type: chart_type,
         data: {
           labels: chart_labels,
           datasets: [
@@ -48,7 +52,7 @@
               fill: true,
               stepped: true,
               showLine: true,
-              tension: 0.5
+              tension: 0.4
             },
           ]
         },
@@ -84,7 +88,6 @@
                   family: 'Arial'
                 },
                 ticks: {
-                  // forces step size to be 50 units
                   stepSize: 10
                 },
                 color: 'black'
@@ -101,8 +104,9 @@
         stop: function (event, ui) {
           if (slider_settings.range) {
             const slider = widget.querySelector('.sbf-date-facet-slider')
-            const min = toTimestamp( ui.values[0]);
-            const max = toTimestamp( ui.values[1]);
+            const min = toTimestamp( ui.values[0], 1, 1);
+            // for max, we will add the last day of the year.
+            const max = toTimestamp(ui.values[1], 12, 31);
             slider.dataset.min = min;
             slider.dataset.max = max;
           }
@@ -115,13 +119,19 @@
 
 
 
-
-      function toTimestamp(strDate) {
-        var datum = Date.parse(strDate);
+      function toTimestamp(year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0) {
+        // Date.parse works only on safari for BCE!
+        // New approach. Date Constructor
+        let date_from_parts = new Date();
+        date_from_parts.setFullYear(parseInt(year));
+        date_from_parts.setMonth(parseInt(month)-1);
+        date_from_parts.setDate(parseInt(day));
+        date_from_parts.setHours(hour,minute,second,millisecond);
+        const datum = date_from_parts.getTime();
         if (Number.isNaN(datum)) {
-          return Date.now() / 1000;
+          return Math.round(Date.now() / 1000);
         }
-        return datum / 1000;
+        return Math.round(datum / 1000);
       }
 
       function autoSubmit(widget) {
@@ -132,7 +142,6 @@
 
       // Click on link will call Facets JS API on widget element.
       var changeHandler = function (e) {
-        //e.preventDefault();
         var $widget = $(widget);
         $widget.trigger('facets_filter', [autoSubmit(widget)]);
       };
@@ -159,8 +168,6 @@
           labels: JSON.parse(slider_settings.labels)
         });
       var changeHandlerInput = function (e) {
-        //e.preventDefault();
-        let error = Drupal.t("Wrong date");
         const slider = widget.querySelector('.sbf-date-facet-slider')
         let min_timestamp =  slider.dataset.min;
         let max_timestamp =  slider.dataset.max;
@@ -175,39 +182,40 @@
         if (e.target.type == "number") {
           if (e.target.dataset?.type == "date-range-min") {
             min = ui_min = parseInt(e.target.value);
-            min_timestamp =  toTimestamp(min);
+            min_timestamp =  toTimestamp(min, 1, 1, 0, 0);
           }
           else {
             max = ui_max = parseInt(e.target.value);
-            max = max + '-12-31T23:59:59Z';
-            max_timestamp =  toTimestamp(max);
+            max_timestamp =  toTimestamp(max, 12, 31, 0, 0, 0, 0);
           }
         }
         else if (e.target.type == "date") {
           if (e.target.dataset?.type == "date-range-min") {
-            min = ui_min =new Date(e.target.value).getFullYear();
-            min_timestamp = toTimestamp(e.target.value);
-          }
-          else {
-            max = ui_max = new Date(e.target.value).getFullYear();
-            max_timestamp = toTimestamp(e.target.value);
+            let date_from_input = new Date(e.target.value);
+            if (typeof date_from_input == Date) {
+              min = ui_min = date_from_input.getFullYear();
+              let month = date_from_input.getMonth();
+              let day = date_from_input.getDay();
+              min_timestamp = toTimestamp(min, month, day);
+            }
+          } else {
+            let date_from_input = new Date(e.target.value);
+            if (typeof date_from_input == Date) {
+              max = ui_max = date_from_input.getFullYear();
+              let month = date_from_input.getMonth();
+              let day = date_from_input.getDay();
+              max_timestamp = toTimestamp(min, month, day, 0, 0, 0, 0);
+            }
           }
         }
         if ($slider.slider('option').min > min || $slider.slider('option').max < max) {
           e.target.reportValidity()
         }
         else {
-
           $slider.slider('option', 'values', [ui_min, ui_max]).slider("pips", "refresh").slider("float", "refresh");
           slider.dataset.min = min_timestamp;
           slider.dataset.max = max_timestamp;
         }
-
-
-        //const min = toTimestamp( ui.values[0]);
-        //const max = toTimestamp( ui.values[1]);
-        //slider.dataset.min = min;
-        //slider.dataset.max = max;
       };
       $("input.facet-date-range.form-control", widget).on("change", changeHandlerInput);
     };

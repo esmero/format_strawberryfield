@@ -4,6 +4,10 @@ namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
 use Drupal\Component\Utility\Html;
 use Drupal\facets\FacetInterface;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+use DateTime;
+use DateTimeZone;
+use DateInterval;
 
 /**
  * The range slider widget.
@@ -27,6 +31,8 @@ class DateRangeSliderWidget extends DateSliderWidget {
     }
 
     $facet_settings = &$build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()];
+    $is_bce = $facet_settings['real_minmax'][0] ?? 0;
+    $is_bce = $is_bce < 0 ? TRUE : FALSE;
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id().'-manual-input');
     if ( $this->getConfiguration()['allow_full_entry'] || $this->getConfiguration()['allow_year_entry']) {
       $build['#items']['manual_input'] = [
@@ -39,7 +45,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
       ];
     }
 
-    if (($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE)) {
+    if (($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE) && !$is_bce) {
       $build['#items']['manual_input']['select_input'] = [
           '#type' => 'checkbox',
           '#title' => t('Full Date entry'),
@@ -50,7 +56,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
       ];
     }
 
-    if ($this->getConfiguration()['allow_full_entry']) {
+    if ($this->getConfiguration()['allow_full_entry'] && !$is_bce) {
       $build['#items']['manual_input']['manual_input_full'] = [
         '#type' => 'container',
         'min_full' => [
@@ -188,23 +194,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
   public function getQueryType() {
     //* See \Drupal\facets\Plugin\facets\facet_source\SearchApiDisplay::getQueryTypesForDataType
     return 'date_range';
-  }
-
-
-  protected function getRangeFromResults(array $results) {
-    /* @var \Drupal\facets\Result\ResultInterface[] $results */
-    $min = NULL;
-    $max = NULL;
-    foreach ($results as $result) {
-      if ($result->getRawValue() == 'summary_date_facet') {
-        continue;
-      }
-      $min = $min ?? $result->getRawValue();
-      $max = $max ?? $result->getRawValue();
-      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
-      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
-    }
-    return ['min' => $min, 'max' => $max];
   }
 
 }
