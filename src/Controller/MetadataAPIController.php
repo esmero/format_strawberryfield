@@ -311,7 +311,7 @@ class MetadataAPIController extends ControllerBase
       }
       catch (\Exception $exception) {
         $this->getLogger('format_strawberryfield')->error(
-          'Metadata API at @path using @metadatadisplay and/or @metadatadisplay_item have issues. Error message is @e',
+          'Metadata API at @path using Metadata Display for wrapper @metadatadisplay and/or Metadata Display for item @metadatadisplay_item have issues. Error message is @e',
           [
             '@metadatadisplay' => $metadatadisplay_wrapper_entity->label(),
             '@metadatadisplay_item' => $metadatadisplay_item_entity->label(),
@@ -695,7 +695,7 @@ class MetadataAPIController extends ControllerBase
             }
             else {
               $this->getLogger('format_strawberryfield')->error(
-                'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
+                'Metadata API with View Source ID @source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
                 [
                   '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
                   '@args' => json_encode($arguments),
@@ -708,7 +708,7 @@ class MetadataAPIController extends ControllerBase
           }
           else {
             $this->getLogger('format_strawberryfield')->error(
-              'Metadata API with View Source ID $source_id could not load the configured View/Display. Check your configuration',
+              'Metadata API with View Source ID @source_id could not load the configured View/Display. Check your configuration',
               [
                 '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
               ]
