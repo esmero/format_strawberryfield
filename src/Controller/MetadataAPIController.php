@@ -34,6 +34,7 @@ use cebe\openapi\spec\PathItem;
 use League\OpenAPIValidation\PSR7\ValidatorBuilder;
 use Drupal\views\Views;
 use Drupal\views\ViewExecutable;
+use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 
 /**
  * A Wrapper Controller to access Twig processed JSON on a URL.
@@ -187,12 +188,15 @@ class MetadataAPIController extends ControllerBase
     // does not match
     // Current format error_log($request->getPreferredFormat());
     // But it will always default to HTML
+    if (!$request) {
+      throw new AccessDeniedHttpException(
+        "Sorry, this API service is not available."
+      );
+    }
 
     $request->setRequestFormat('json');
+    $full_path = $request->getRequestUri();
 
-    if ($request) {
-      $full_path = $request->getRequestUri();
-    }
     // Now make the passed argument in the path one of the parameters if
     // any is Path (first only for now)
     // @TODO. If i don't use levels = 1 i could avoid the initial {} in path argument at all..
@@ -205,21 +209,25 @@ class MetadataAPIController extends ControllerBase
     // Check if we have a resumption token configured first
     $token_value = NULL;
     $cloned_request = NULL;
-    $token_value = NULL;
+
     $cloned_request = $request->duplicate();
     $resumption_token = $metadataapiconfig['resumption_token'] ?? '';
     if (strlen($resumption_token) > 0) {
       $token_value = $request->query->getString($resumption_token, '');
       if (strlen($token_value) > 0) {
         $token_value = base64_decode($token_value);
-        $query_str = parse_url($token_value, PHP_URL_QUERY);
-        parse_str($query_str, $query_params);
-        if (is_array($query_params) && !empty($query_params))
-          $cloned_request = $request->duplicate($query_params);
-        // Now now...
+        if ($token_value && is_string($token_value)) {
+          $query_str = parse_url($token_value, PHP_URL_QUERY);
+          if ($query_str && is_string($query_str)) {
+            parse_str($query_str, $query_params);
+            if (is_array($query_params) && !empty($query_params)) {
+              $cloned_request = $request->duplicate($query_params);
+            }
+            // Now now...
+          }
+        }
       }
     }
-
 
     foreach ($parameters as $param) {
       // @TODO For now we need to make sure there IS a single path argument
@@ -246,7 +254,7 @@ class MetadataAPIController extends ControllerBase
     // Will hold all arguments and will be passed to the twig templates.
     $context_parameters = [];
     try {
-      $match = $validator->validate($psrRequest);;
+      $match = $validator->validate($psrRequest);
       if ($match) {
         $context_parameters['path']
           = $clean_path_parameter_with_values = $match->parseParams($full_path);
@@ -287,8 +295,8 @@ class MetadataAPIController extends ControllerBase
         $responsetype = $responsetypefield->first()->getValue();
         $responsetype_item = $responsetypefield_item->first()->getValue();
         if ($responsetype_item !== $responsetype) {
-          $this->loggerFactory->get('format_strawberryfield')
-            ->error('Exposed Metadata API at $path: Output Format differs, item response type is @item and the API wrapper one is @wrapper ', [
+          $this->getLogger('format_strawberryfield')
+            ->error('Exposed Metadata API at @path: Output Format differs, item response type is @item and the API wrapper one is @wrapper ', [
               '@item' => $responsetype_item,
               '@wrapper' => $responsetype,
               '@path' => $path
@@ -302,8 +310,8 @@ class MetadataAPIController extends ControllerBase
         // classes, so better catch any.
       }
       catch (\Exception $exception) {
-        $this->loggerFactory->get('format_strawberryfield')->error(
-          'Metadata API at $path using @metadatadisplay and/or @metadatadisplay_item have issues. Error message is @e',
+        $this->getLogger('format_strawberryfield')->error(
+          'Metadata API at @path using Metadata Display for wrapper @metadatadisplay and/or Metadata Display for item @metadatadisplay_item have issues. Error message is @e',
           [
             '@metadatadisplay' => $metadatadisplay_wrapper_entity->label(),
             '@metadatadisplay_item' => $metadatadisplay_item_entity->label(),
@@ -357,16 +365,16 @@ class MetadataAPIController extends ControllerBase
       // We only need to load the VIEW(s) that are present in the called/matched arguments
       // No others. Why call others? Maybe there is a need WHEN USING A PLUGIN
       // OR we need to have a SINGLE VIEW? But not load all of them. when using the direct call.
-
+      $all_views_used = [];
       foreach ($views_with_values as $view_id => $display) {
         /** @var \Drupal\views\ViewExecutable $executable */
         $view = $this->entityTypeManager->getStorage('view')->load($view_id);
+        $all_views_used[] = $view;
         foreach ($display as $display_id => $arguments_with_values) {
           $display = $view->getDisplay($display_id);
           $executable = $view->getExecutable();
           if ($view && $display) {
             /** @var \Drupal\views\ViewExecutable $executable */
-
             $executable->setDisplay($display_id);
             $executable->initPager();
             $items_per_page = $executable->getItemsPerPage();
@@ -516,7 +524,7 @@ class MetadataAPIController extends ControllerBase
                 );
               }
               catch (\InvalidArgumentException $exception) {
-                $this->loggerFactory->get('format_strawberryfield')
+                $this->getLogger('format_strawberryfield')
                   ->error('Exposed Metadata API at @path: Views with id @id failed to render with error @error', [
                     '@id' => $view_id,
                     '@error' => $exception->getMessage(),
@@ -544,7 +552,7 @@ class MetadataAPIController extends ControllerBase
               );
               $cache_id = $cache_id . $cache_id_suffix;
               $cached = $this->cacheGet($cache_id);
-              // Here we go .. cache or not cache?
+              // Here we go ... cache or not cache?
               if ($cached && $metadataapiconfig_entity->isCache()) {
                 $processed_nodes_via_templates = $cached->data ?? [];
               }
@@ -558,11 +566,12 @@ class MetadataAPIController extends ControllerBase
                       foreach ($sbf_fields as $field_name) {
                         /* @var $field StrawberryFieldItem[] */
                         $field = $node->get($field_name);
+                        $jsondata = [];
                         foreach ($field as $offset => $fielditem) {
                           $jsondata = json_decode($fielditem->value, TRUE);
                           $json_error = json_last_error();
                           if ($json_error != JSON_ERROR_NONE) {
-                            $this->loggerFactory->get('format_strawberryfield')
+                            $this->getLogger('format_strawberryfield')
                               ->error(
                                 'We had an issue decoding as JSON your metadata for node @id, field @field while exposing API @api at @path',
                                 [
@@ -685,8 +694,8 @@ class MetadataAPIController extends ControllerBase
               $executable->destroy();
             }
             else {
-              $this->loggerFactory->get('format_strawberryfield')->error(
-                'Metadata API with View Source ID $source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
+              $this->getLogger('format_strawberryfield')->error(
+                'Metadata API with View Source ID @source_id could not validate the configured View/Display. Check your configuration and arguments <pre>@args</pre>',
                 [
                   '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
                   '@args' => json_encode($arguments),
@@ -698,8 +707,8 @@ class MetadataAPIController extends ControllerBase
             }
           }
           else {
-            $this->loggerFactory->get('format_strawberryfield')->error(
-              'Metadata API with View Source ID $source_id could not load the configured View/Display. Check your configuration',
+            $this->getLogger('format_strawberryfield')->error(
+              'Metadata API with View Source ID @source_id could not load the configured View/Display. Check your configuration',
               [
                 '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
               ]
@@ -807,13 +816,16 @@ class MetadataAPIController extends ControllerBase
           $response->addCacheableDependency(
             $metadatadisplay_wrapper_entity
           );
-          $response->addCacheableDependency($view);
           $response->getCacheableMetadata()->addCacheContexts(
             ['user.roles']
           );
-          $response->getCacheableMetadata()->addCacheTags(
-            $view->getCacheTags()
-          );
+          foreach ($all_views_used as $view_used) {
+            $response->addCacheableDependency($view_used);
+
+            $response->getCacheableMetadata()->addCacheTags(
+              $view_used->getCacheTags()
+            );
+          }
           $response->getCacheableMetadata()->addCacheContexts(
             ['url.path', 'url.query_args']
           );
@@ -859,7 +871,7 @@ class MetadataAPIController extends ControllerBase
       return $response;
     }
     else {
-      $this->loggerFactory->get('format_strawberryfield')->error(
+      $this->getLogger('format_strawberryfield')->error(
         'Metadata API at @path has missing metadata display entities for processing output.',
         [
           '@path' => $path,

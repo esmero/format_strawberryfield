@@ -196,7 +196,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#selection_handler' => 'default:metadatadisplay',
         '#selection_settings' => [
           'filter' => [
-            'mimetype' => 'application/xml'
+            'mimetype' => ['application/xml','application/json']
           ]
         ],
         '#validate_reference' => TRUE,
