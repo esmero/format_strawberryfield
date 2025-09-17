@@ -1211,108 +1211,112 @@ class IiifContentSearchController extends ControllerBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function metadatafromSolrIndex(string $term, array $node_ids = [], $node_uuids = [] ,$offset = 0, $limit = 100): array {
-
-    $indexes_enabled = [];
-    $indexes = $this->entityTypeManager()
-      ->getStorage('search_api_index')
-      ->loadMultiple();
-    // Add the indexes with matching server to $indexes_by_server
-    $indexes_enabled = [];
-    foreach ($indexes as $index) {
-      if ($index->isServerEnabled() && $index->isValidDatasource('entity:node')) {
-        $indexes_enabled[] = $index;
-      }
-    }
-
-    /* @var \Drupal\search_api\IndexInterface[] $indexes */
-
     $result_snippets = [];
     $search_result = [];
     $count = 0;
-    $full_text_fields_for_this_index = [];
-    $allfields_translated_to_solr = [];
-
-    foreach ($indexes_enabled as $search_api_index) {
-      $allfields_translated_to_solr = $search_api_index->getServerInstance()
-        ->getBackend()
-        ->getSolrFieldNames($search_api_index);
-      // Create the query.
-      $query = $search_api_index->query([
-        'limit' => $limit,
-        'offset' => $offset,
-      ]);
-      //$query->setSearchId('sbf_iiifcontentsearch_metadata_from_solr');
-
-      $parse_mode = $this->parseModeManager->createInstance('terms');
-      $query->setParseMode($parse_mode);
-      $query->keys($term);
-      foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_fulltext_fields') as $full_text_field) {
-        if (isset($allfields_translated_to_solr[$full_text_field])) {
-          $full_text_fields_for_this_index[] = $full_text_field;
+    // At least one character for metadata search. Because if not
+    // the conditions will end with all results.
+    if (strlen(trim($term)) >= 1) {
+      /* @var \Drupal\search_api\IndexInterface[] $indexes */
+      $indexes = $this->entityTypeManager()
+        ->getStorage('search_api_index')
+        ->loadMultiple();
+      // Add the indexes with matching server to $indexes_by_server
+      $indexes_enabled = [];
+      foreach ($indexes as $index) {
+        if ($index->isServerEnabled() && $index->isValidDatasource('entity:node')) {
+          $indexes_enabled[] = $index;
         }
       }
-      if (count($full_text_fields_for_this_index)) {
-        $query->setFulltextFields($full_text_fields_for_this_index);
-      }
-      else {
-        continue; // Means this index has none of the defined fields.
-      }
 
-      $query->addCondition('search_api_datasource', 'entity:node');
-      // @TODO research if we can do a single Query instead of multiple ones?
-      $node_conditions = $query->createConditionGroup('OR');
+      $full_text_fields_for_this_index = [];
+      $allfields_translated_to_solr = [];
 
-      // If Nodes are passed use them as conditionals
-      if (count($node_ids)) {
-        foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_parent_node_fields') ?? [] as $node_field) {
-          if (isset($allfields_translated_to_solr[$node_field])) {
-            $node_conditions->addCondition($node_field, $node_ids, 'IN');
-            $fields_to_retrieve[$node_field] = $allfields_translated_to_solr[$node_field];
+      foreach ($indexes_enabled as $search_api_index) {
+        $allfields_translated_to_solr = $search_api_index->getServerInstance()
+          ->getBackend()
+          ->getSolrFieldNames($search_api_index);
+        // Create the query.
+        $query = $search_api_index->query([
+          'limit' => $limit,
+          'offset' => $offset,
+        ]);
+        //$query->setSearchId('sbf_iiifcontentsearch_metadata_from_solr');
+
+        $parse_mode = $this->parseModeManager->createInstance('terms');
+        $query->setParseMode($parse_mode);
+        $query->keys($term);
+        foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_fulltext_fields') as $full_text_field) {
+          if (isset($allfields_translated_to_solr[$full_text_field])) {
+            $full_text_fields_for_this_index[] = $full_text_field;
           }
         }
-      }
+        if (count($full_text_fields_for_this_index)) {
+          $query->setFulltextFields($full_text_fields_for_this_index);
+        }
+        else {
+          continue; // Means this index has none of the defined fields.
+        }
 
-      if (isset($allfields_translated_to_solr['sequence_id'])) {
-        $fields_to_retrieve['sequence_id'] = $allfields_translated_to_solr['sequence_id'];
-        $query->sort('sequence_id', QueryInterface::SORT_ASC);
-      }
-
-      if (count($node_uuids)) {
-        //Note here. If we don't have any fields configured the response will contain basically ANYTHING
-        foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_uuid_fields') ?? [] as $uuid_field) {
-          if (isset($allfields_translated_to_solr[$uuid_field])) {
-            $node_conditions->addCondition($uuid_field, $node_uuids, 'IN');
-
-            $fields_to_retrieve[$uuid_field]
-              = $allfields_translated_to_solr[$uuid_field];
+        $query->addCondition('search_api_datasource', 'entity:node');
+        // @TODO research if we can do a single Query instead of multiple ones?
+        $node_conditions = $query->createConditionGroup('OR');
+        $fields_to_retrieve = [];
+        // If Nodes are passed use them as conditionals
+        if (count($node_ids)) {
+          foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_parent_node_fields') ?? [] as $node_field) {
+            if (isset($allfields_translated_to_solr[$node_field])) {
+              $node_conditions->addCondition($node_field, $node_ids, 'IN');
+              $fields_to_retrieve[$node_field] = $allfields_translated_to_solr[$node_field];
+            }
           }
         }
-      }
 
-      if (!count($node_conditions->getConditions())) {
-        // in case no IDs or UUIDs are passed to filter, simply limit all to less
-        $query->setOption('limit', 10);
-      }
-      else {
-        $query->addConditionGroup($node_conditions);
-      }
-      // This might/not/be/respected. (API v/s reality)
-      $query->setOption('search_api_retrieved_field_values', array_values($fields_to_retrieve));
-      $query->sort('search_api_relevance', 'DESC');
-      $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
-      $results = $query->execute();
+        if (isset($allfields_translated_to_solr['sequence_id'])) {
+          $fields_to_retrieve['sequence_id'] = $allfields_translated_to_solr['sequence_id'];
+          $query->sort('sequence_id', QueryInterface::SORT_ASC);
+        }
 
-      if ($results->getResultCount() >= 1) {
-        $count = $count + $results->getResultCount();
-        // This applies to all searches with hits.
-        foreach ($results as $result) {
-          $node_result = $result->getOriginalObject(TRUE);
-          if ($node_result) {
-            $node_uuid = $result->getOriginalObject(TRUE)->getValue()->uuid();
-            $result_snippets[$node_uuid]['boxes'] = [
-                'snippet' =>  $result->getExcerpt(),
-                'hit' => implode(' ', $result->getAllExtraData()['highlighted_keys'] ?? $term),
+        if (count($node_uuids)) {
+          //Note here. If we don't have any fields configured the response will contain basically ANYTHING
+          foreach ($this->iiifConfig->get('iiiif_content_search_api_metadata_node_uuid_fields') ?? [] as $uuid_field) {
+            if (isset($allfields_translated_to_solr[$uuid_field])) {
+              $node_conditions->addCondition($uuid_field, $node_uuids, 'IN');
+
+              $fields_to_retrieve[$uuid_field]
+                = $allfields_translated_to_solr[$uuid_field];
+            }
+          }
+        }
+
+        if (!count($node_conditions->getConditions())) {
+          // in case no IDs or UUIDs are passed to filter, simply limit all to less
+          $query->setOption('limit', 10);
+        }
+        else {
+          $query->addConditionGroup($node_conditions);
+        }
+        // This might/not/be/respected. (API v/s reality)
+        if (!empty($fields_to_retrieve)) {
+          $query->setOption('search_api_retrieved_field_values', array_values($fields_to_retrieve));
+        }
+        $query->sort('search_api_relevance', 'DESC');
+        $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
+        $results = $query->execute();
+
+        if ($results->getResultCount() >= 1) {
+          $count = $count + $results->getResultCount();
+          // This applies to all searches with hits.
+          foreach ($results as $result) {
+            $node_result = $result->getOriginalObject(TRUE);
+            if ($node_result) {
+              $node_uuid = $result->getOriginalObject(TRUE)->getValue()->uuid();
+              $highlight = $result->getAllExtraData()['highlighted_keys'] ?? [];
+              $result_snippets[$node_uuid]['boxes'] = [
+                'snippet' => $result->getExcerpt(),
+                'hit' => !empty($highlight) ? implode(' ', $highlight) : $term,
               ];
+            }
           }
         }
       }
