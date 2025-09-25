@@ -125,16 +125,15 @@ class MetadataDisplayDownloadForm extends FormBase {
       }
       else  {
         $twig = $metadatadisplay_entity->get('twig')->first()->getString();
-
         $body = [
           'data' => [
-            "type" => "metadatadisplay_entity--metadatadisplay_entity",
-            "id" => $metadatadisplay_entity->uuid(),
-            "attributes" => [
-              "name" => $metadatadisplay_entity->label(),
-              "twig" => $twig,
-              "langcode" => $metadatadisplay_entity->language()->getId(),
-              "mimetype" => $metadatadisplay_entity->get('mimetype')->first()->getString()
+            'type' => 'metadatadisplay_entity--metadatadisplay_entity',
+            'id' => $metadatadisplay_entity->uuid(),
+            'attributes' => [
+              'name' => $metadatadisplay_entity->label(),
+              'twig' => $twig,
+              'langcode' => $metadatadisplay_entity->language()->getId(),
+              'mimetype' => $metadatadisplay_entity->get('mimetype')->first()->getString()
             ]
           ]
         ];
