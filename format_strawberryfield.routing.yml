@@ -54,6 +54,21 @@ entity.metadatadisplay_entity.usage_form:
         type: 'entity:metadatadisplay_entity'
   _admin_route: TRUE
 
+entity.metadatadisplay_entity.download:
+  path: '/metadatadisplay/{metadatadisplay_entity}/download'
+  defaults:
+    _form: '\Drupal\format_strawberryfield\Form\MetadataDisplayDownloadForm'
+    _title: 'Download'
+  requirements:
+    _permission: 'administer metadatadisplay entity'
+    _entity_access: 'metadatadisplay_entity.edit'
+  options:
+    parameters:
+      metadatadisplay_entity:
+        type: 'entity:metadatadisplay_entity'
+  _admin_route: TRUE
+
+
 # Metadatadisplay settings route
 
 format_strawberryfield.metadatadisplay_settings:
