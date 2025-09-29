@@ -44,6 +44,34 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       'max_height' => 50,
       'audio_type' => 'mp3',
       'number_media' => 1,
+      'use_wavesurfer' => false,
+      'use_external_control' => false,
+      'external_control_selector' => '.sbf_media_control',
+      'viewer_overrides' => '{
+        "height": 128,
+        "width": 300,
+        "splitChannels": false,
+        "normalize": false,
+        "waveColor": "#ed719e",
+        "progressColor": "#dd5e98",
+        "cursorColor": "#ddd5e9",
+        "cursorWidth": 2,
+        "barWidth": null,
+        "barGap": null,
+        "barRadius": null,
+        "barHeight": null,
+        "barAlign": "",
+        "minPxPerSec": 1,
+        "fillParent": true,
+        "autoplay": false,
+        "interact": true,
+        "dragToSeek": false,
+        "hideScrollbar": false,
+        "audioRate": 1,
+        "autoScroll": true,
+        "autoCenter": true,
+        "sampleRate": 8000
+      }',
     ];
   }
 
@@ -85,6 +113,38 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           '#field_suffix' => $this->t('pixels'),
           '#min' => 0,
           '#required' => TRUE
+        ],
+        'use_wavesurfer' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Use The WaverSurfer JS library'),
+          '#description' => $this->t('Attaches https://wavesurfer.xyz to the Audio element.'),
+          '#default_value' => $this->getSetting('use_wavesurfer'),
+          '#required' => FALSE
+        ],
+        'viewer_overrides' => [
+          '#type' => 'textarea',
+          '#title' => $this->t('Advanced: a JSON with Wave Surfer Options.'),
+          '#description' => $this->t('See <a href="https://wavesurfer.xyz/examples/?all-options.js">https://wavesurfer.xyz/examples/?all-options.js</a>. Leave Empty to use defaults.
+   <em>media</em>, <em>#url</em> and <em>container</em>, can not be set and will be deleted if provided. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+            '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_audio_formatter"=> ["waveColor" => "#ff4e00"]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
+          ]),
+          '#default_value' => $this->getSetting('viewer_overrides'),
+          '#element_validate' => [[$this, 'validateJSON']],
+          '#required' => FALSE,
+        ],
+        'use_external_control' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Use external (user provided) HTML Controls for the Audio Element.'),
+          '#description' => $this->t('Please see Example for required CSS classes and element types.'),
+          '#default_value' => $this->getSetting('use_external_control'),
+          '#required' => FALSE
+        ],
+        'external_control_selector' => [
+          '#type' => 'textfield',
+          '#title' => $this->t('The Dom Query selector to be used to find the external HTML Control container in the Web Page.'),
+          '#description' => $this->t('A valid DOM Query Selector. If the selector yields no DOM elements, the default browser based controls will be used.'),
+          '#default_value' => $this->getSetting('external_control_selector'),
+          '#required' => FALSE
         ],
       ] + parent::settingsForm($form, $form_state);
   }
@@ -128,6 +188,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
+    $use_wavesurfer = $this->getSetting('use_wavesurfer');
     $embargo_context = [];
     $embargo_tags = [];
 
@@ -141,6 +202,17 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $max_height_css = empty($max_height) || $max_height == 0 ? 'auto' : $max_height .'px';
     // Basically min 90px height if using VTT
     $max_height_vtt_css = empty($max_height) || $max_height == 0 ? 'auto' : ($max_height <= 90 ? 90 : $max_height) .'px';
+
+    $viewer_overrides = $this->getSetting('viewer_overrides');
+    $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
+
+    $json_error = json_last_error();
+    if ($json_error == JSON_ERROR_NONE) {
+      $viewer_overrides = $viewer_overrides_json;
+    }
+    else {
+      $viewer_overrides = NULL;
+    }
 
 
     $current_language = $items->getEntity()->get('langcode')->value;
@@ -165,6 +237,12 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
             '@field' => $items->getName(),
           ]);
         return $elements[$delta] = ['#markup' => $this->t('ERROR')];
+      }
+      if (isset($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+        is_array($jsondata["ap:viewerhints"][$this->getPluginId()]) &&
+        !empty($jsondata["ap:viewerhints"][$this->getPluginId()])) {
+        // if we could decode it, it is already JSON.
+        $viewer_overrides = $jsondata["ap:viewerhints"][$this->getPluginId()];
       }
       /* Expected structure of an Audio items inside JSON
       @see https://www.w3.org/TR/webvtt1/#introduction-metadata for tracks
@@ -217,7 +295,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           $upload_keys, []);
         if (count($media)) {
           $conditions[] = [
-            'source'    => ['dr:mimetype'],
+            'source' => ['dr:mimetype'],
             'condition' => 'text/vtt',
           ];
           $vtt = $this->fetchMediaFromJsonWithFilter(
@@ -234,7 +312,6 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           if (count($vtt)) {
             // Yep, redundant but we have no longer these settings here
             // If $media is a single one, we will assume all VTTS belong to it, bypassing the dr:for grouping
-
             foreach ($media as $drforkey => $media_item) {
               if (isset($vtt[$drforkey]) || count($media) == 1) {
                 foreach ($media_item as $key => $media_entry) {
@@ -245,8 +322,8 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                     if (count($media) == 1 || $drforkey == $vtt_drforkey) {
                       foreach ($vtt_entries as $vtt_key => &$vtt_item) {
                         $route_parameters = [
-                          'node'   => $nodeid,
-                          'uuid'   => $vtt_item['file']->uuid(),
+                          'node' => $nodeid,
+                          'uuid' => $vtt_item['file']->uuid(),
                           'format' => 'default.' . pathinfo(
                               $vtt_item['file']->getFilename(),
                               PATHINFO_EXTENSION
@@ -263,15 +340,15 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                         . $key]['audio']['track'
                         . $vtt_key]
                           = [
-                          '#type'       => 'html_tag',
-                          '#tag'        => 'track',
+                          '#type' => 'html_tag',
+                          '#tag' => 'track',
                           '#attributes' => [
-                            'label'   => $this->t(
-                              'Transcript ' . $current_language ." ({$vtt_item['file_name']})"
+                            'label' => $this->t(
+                              'Transcript ' . $current_language . " ({$vtt_item['file_name']})"
                             ),
-                            'kind'    => 'subtitles',
+                            'kind' => 'subtitles',
                             'srclang' => $current_language,
-                            'src'     => $publicurl->toString(),
+                            'src' => $publicurl->toString(),
                             'default' => TRUE
                           ]
                         ];
@@ -280,6 +357,11 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                   }
                 }
               }
+            }
+          }
+          if ($use_wavesurfer && $viewer_overrides && isset($elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'])) {
+            foreach ($elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'] as $htmlid => &$properties) {
+              $properties['viewer_overrides'] = $viewer_overrides;
             }
           }
         }
@@ -323,6 +405,10 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $max_height = $this->getSetting('max_height');
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
+    $use_external_control = $this->getSetting('use_external_control');
+    $use_wavesurfer = $this->getSetting('use_wavesurfer');
+    $external_control_selector = $this->getSetting('external_control_selector');
+
 
 
     // We assume here file could not be accessible publicly
@@ -351,6 +437,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
 
     // We will use HTML5 Video tag because Audio Tag does not allow Tracks with Subtitles
     // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
+    $htmlid = 'audio_' . $uniqueid;
     $elements[$delta]['audio_hmtl5_' . $i] = [
       '#type' => 'html_tag',
       '#tag' => 'figure',
@@ -358,8 +445,8 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         '#type' => 'html_tag',
         '#tag' => 'video',
         '#attributes' => [
-          'class' => ['field-av', 'audio-av'],
-          'id' => 'audio_' . $uniqueid,
+          'class' => ['field-av', 'audio-av', 'strawberry-av-item', 'strawberry-audio-item'],
+          'id' => $htmlid,
           'controls' => TRUE,
           'style' => "width:{$max_width_css}; height:{$max_height}px",
         ],
@@ -381,8 +468,22 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         'tags' => $file->getCacheTags(),
       ]
     ];
+    // We need to add a container for the waver surfer plugin.
+    if ($use_wavesurfer) {
+      $elements[$delta]['audio_hmtl5_' . $i]['wavesurfer'] = [
+        '#type' => 'html_tag',
+        '#tag' => 'div',
+        '#attributes' => [
+          'class' => ['strawberry-av-item-waversurfer'],
+        ]
+      ];
+    }
 
+    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control'] = (bool) $use_external_control;
+    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_selector'] = $external_control_selector;
+    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_wavesurfer'] = $use_wavesurfer;
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
+    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_custom_control_strawberry';
   }
 
 }
