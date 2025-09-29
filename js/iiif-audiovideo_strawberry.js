@@ -53,6 +53,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   control = control_blueprint;
                   control_blueprint.hidden = false;
                 }
+                if (use_wavesurfer) {
+                  $waversurfer_container = control.querySelector('.wavesurferContainer');
+                }
+
 
                 const $pauseBtn = control.querySelector('.pauseBtn');
                 const $playBtn = control.querySelector('.playBtn');
@@ -60,10 +64,9 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 const $muteBtn = control.querySelector('.muteBtn');
                 const $unmuteBtn = control.querySelector('.unmuteBtn');
                 const $ccBtn = control.querySelector('.ccBtn');
-                // Ideally $progressSlider would be a range element so there is "input feedback"
-                // And accessibility.
-                const $progressSlider =  !use_wavesurfer ? control.querySelector(".progressSlider") : null;
-                const $progressStat =  !use_wavesurfer ? control.querySelector(".progressStat") : null;
+
+                const $progressSlider =  control.querySelector(".progressSlider");
+
 
                 const $volumeSlider = control.querySelector(".volumeSlider");
                 const $fullscreenBtn = control.querySelector('.fullscreenBtn');
@@ -123,6 +126,9 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.currentTime = pos * this.duration;
                   });
                 }
+
+
+
                 // ON enough data, update the Duration time.
                 this.addEventListener("loadeddata", () => {
                   if (this.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -150,9 +156,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   if ($progressSlider) {
                     $progressSlider.value = this.currentTime;
                   }
-                  if ($progressStat) {
-                    $progressStat.value = this.currentTime;
-                  }
+
                 });
                 this.addEventListener("ended", (event) => {
                   if (!$pauseBtn.hidden) {
