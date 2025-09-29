@@ -57,6 +57,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   $waversurfer_container = control.querySelector('.wavesurferContainer');
                 }
 
+                const $subtitleContainer = control.querySelector('.subtitleContainer');
 
                 const $pauseBtn = control.querySelector('.pauseBtn');
                 const $playBtn = control.querySelector('.playBtn');
@@ -189,6 +190,30 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     $volumeSlider.value = this.volume;
                   });
                 }
+
+
+                let $showing_subtitles = null;
+                if ($ccBtn && this.textTracks.length > 0) {
+                  $ccBtn.hidden = false;
+                  for (const track of this.textTracks) {
+                    if ($subtitleContainer) {
+                      // Listen for cue changes
+                      track.mode = "showing";
+                      track.addEventListener('cuechange', () => {
+                        $subtitleContainer.innerHTML = ''; // Clear previous subtitle
+                        // Display current cue text
+                        if (track.activeCues.length > 0) {
+                          const currentCue = track.activeCues[0];
+                          const subtitleText = document.createElement('p');
+                          subtitleText.textContent = currentCue.text;
+                          $subtitleContainer.appendChild(subtitleText);
+                        }
+                      });
+                    }
+                  }
+                  $ccBtn.addEventListener("click", (e) => {
+                  });
+                };
               }
             }
           }
@@ -201,8 +226,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               mediaControls: control == null ? true : false
             };
             if (typeof wavesurfer_overrides == 'object' &&
-            !Array.isArray(wavesurfer_overrides) &&
-            wavesurfer_overrides !== null) {
+              !Array.isArray(wavesurfer_overrides) &&
+              wavesurfer_overrides !== null) {
               delete wavesurfer_overrides?.url;
               delete wavesurfer_overrides?.media;
               delete wavesurfer_overrides?.container;
