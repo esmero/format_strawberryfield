@@ -46,6 +46,8 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       'number_media' => 1,
       'use_wavesurfer' => false,
       'use_external_control' => false,
+      'hide_native_control' => false,
+      'external_control_element_active_class' => '',
       'external_control_selector' => '.sbf_media_control',
       'viewer_overrides' => '{
         "height": 128,
@@ -119,31 +121,69 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           '#title' => $this->t('Use The WaverSurfer JS library'),
           '#description' => $this->t('Attaches https://wavesurfer.xyz to the Audio element.'),
           '#default_value' => $this->getSetting('use_wavesurfer'),
-          '#required' => FALSE
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-checkbox-selector' => 'use_wavesurfer',
+          ],
         ],
         'viewer_overrides' => [
           '#type' => 'textarea',
           '#title' => $this->t('Advanced: a JSON with Wave Surfer Options.'),
           '#description' => $this->t('See <a href="https://wavesurfer.xyz/examples/?all-options.js">https://wavesurfer.xyz/examples/?all-options.js</a>. Leave Empty to use defaults.
-   <em>media</em>, <em>#url</em> and <em>container</em>, can not be set and will be deleted if provided. Use with caution. An ADO can also override this formatters OSD settings by providing the following JSON key: @ado_override',[
+   <em>media</em>, <em>#url</em> and <em>container</em>, can not be set and will be deleted if provided. Use with caution. An ADO can also override this formatters OSD settings by providing (partial example) the following JSON key: @ado_override',[
             '@ado_override' => json_encode(["ap:viewerhints" => ["strawberry_audio_formatter"=> ["waveColor" => "#ff4e00"]]], JSON_FORCE_OBJECT|JSON_PRETTY_PRINT)
           ]),
           '#default_value' => $this->getSetting('viewer_overrides'),
           '#element_validate' => [[$this, 'validateJSON']],
           '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_wavesurfer"]' => ['checked' => TRUE],
+            ],
+          ],
         ],
         'use_external_control' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Use external (user provided) HTML Controls for the Audio Element.'),
           '#description' => $this->t('Please see Example for required CSS classes and element types.'),
           '#default_value' => $this->getSetting('use_external_control'),
-          '#required' => FALSE
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-checkbox-selector' => 'use_external_control',
+          ],
         ],
         'external_control_selector' => [
           '#type' => 'textfield',
           '#title' => $this->t('The Dom Query selector to be used to find the external HTML Control container in the Web Page.'),
           '#description' => $this->t('A valid DOM Query Selector. If the selector yields no DOM elements, the default browser based controls will be used.'),
           '#default_value' => $this->getSetting('external_control_selector'),
+          '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_external_control"]' => ['checked' => TRUE],
+            ],
+            'required' => [
+              ':checkbox[data-checkbox-selector="use_external_control"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
+        'external_control_element_active_class' => [
+          '#type' => 'textfield',
+          '#title' => $this->t('CSS Class(es) without a leading "." (dot) to be used to mark external control elements as "active".'),
+          '#description' =>  $this->t('Separate by a space. Provide these to aid in making some of the external HTML controls more interactive. These classes will be used by the supporting JS to highlight the following selected elements, Subtitle Track, Media Track, and CC'),
+          '#default_value' => $this->getSetting('external_control_element_active_class'),
+          '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_external_control"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
+        'hide_native_control' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Hide Browser\'s (Native HTML5) Provided Control'),
+          '#description' => $this->t('Only enable this if you provide external controls that cover all accessibility needs or you are using WaverSurfer and effectively want to block any UI interaction.'),
+          '#default_value' => $this->getSetting('hide_native_control'),
           '#required' => FALSE
         ],
       ] + parent::settingsForm($form, $form_state);
@@ -166,6 +206,19 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         '%number' => $this->getSetting('number_media'),
       ]);
     }
+    if ($this->getSetting('use_external_control')) {
+      $summary[] = $this->t('Using External HTML controls');
+      if ($this->getSetting('external_control_selector')) {
+        $summary[] = $this->t('External HTML controls matching <em>@selector</em> DOM Selector',
+          [
+            '@selector' => $this->getSetting('external_control_selector')
+          ]);
+      }
+    }
+    if ($this->getSetting('use_wavesurfer')) {
+      $summary[] = $this->t('Using The Wave Surfer Library');
+    }
+
     $summary[] = $this->t(
       'Maximum size: %max_width x %max_height',
       [
@@ -406,9 +459,11 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $use_external_control = $this->getSetting('use_external_control');
-    $use_wavesurfer = $this->getSetting('use_wavesurfer');
-    $external_control_selector = $this->getSetting('external_control_selector');
+    $hide_native_control = $this->getSetting('hide_native_control');
 
+    $use_wavesurfer = $this->getSetting('use_wavesurfer');
+    $external_control_selector = trim($this->getSetting('external_control_selector') ?? '');
+    $external_control_element_active_class = trim($this->getSetting('external_control_element_active_class') ?? '');
 
 
     // We assume here file could not be accessible publicly
@@ -468,18 +523,26 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         'tags' => $file->getCacheTags(),
       ]
     ];
+    // Pre hide if we enabled external control and provided a selector
+    if ($use_external_control && strlen($external_control_selector) > 0) {
+      $elements[$delta]['audio_hmtl5_' . $i]['audio']['#attributes']['hidden'] = TRUE;
+      // JS will undo this IF the selector/external control does not match the requirements.
+    }
+
     // We need to add a container for the waver surfer plugin.
     if ($use_wavesurfer) {
       $elements[$delta]['audio_hmtl5_' . $i]['wavesurfer'] = [
         '#type' => 'html_tag',
         '#tag' => 'div',
         '#attributes' => [
-          'class' => ['strawberry-av-item-waversurfer'],
+          'class' => ['strawberry-av-item-wavesurfer'],
         ]
       ];
     }
 
     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control'] = (bool) $use_external_control;
+    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_element_active_class'] = $external_control_element_active_class;
+    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['hide_native_control'] = (bool) $hide_native_control;
     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_selector'] = $external_control_selector;
     $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_wavesurfer'] = $use_wavesurfer;
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
