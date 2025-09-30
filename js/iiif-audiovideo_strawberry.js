@@ -36,8 +36,28 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             // So we start by checking from closest possible elements and going up until we reach the page
             // If the Control has already a media attached, then we will clone it.
             var control_blueprint = null;
-            control_blueprint = this.closest('.field').querySelector(control_query_selector);
-            control_blueprint = control_blueprint == null ? this.closest('.contextual-region').querySelector(control_query_selector) : control_blueprint;
+            const closest_field = this.closest('.field');
+            if  (closest_field) {
+              control_blueprint = closest_field.querySelector(control_query_selector);
+            }
+            if (!control_blueprint) {
+              const closest_view = this.closest('.view_content');
+              if (closest_view) {
+                control_blueprint = control_blueprint == null ? closest_view.querySelector(control_query_selector) : control_blueprint;
+              }
+            }
+            if (!control_blueprint) {
+              const closest_node = this.closest('.node');
+              if (closest_node) {
+                control_blueprint = control_blueprint == null ? closest_node.querySelector(control_query_selector) : control_blueprint;
+              }
+            }
+            if (!control_blueprint) {
+              const closest_block = this.closest('.block');
+              if (closest_block) {
+                control_blueprint = control_blueprint == null ? closest_block.querySelector(control_query_selector) : control_blueprint;
+              }
+            }
             control_blueprint = control_blueprint == null ? document.querySelector(control_query_selector) :control_blueprint;
             if (control_blueprint) {
               // Check for the minimal needed classes inside. Play/Pause/Mute/UnMute.
@@ -189,14 +209,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         $durationTime.innerText = new Date(this.duration * 1000).toISOString().substring(11, 16)
                       }
                     }
-                    // if native is visible and controls too then we need to sync buttons
-                    if (this.controls && this.hidden == false && $pauseBtn.hidden) {
-                      $playBtn.hidden = true;
-                      $pauseBtn.hidden = false;
-                      if ($stopBtn) {
-                        $stopBtn.hidden = false;
-                      }
-                    }
                   }
                 });
 
@@ -211,7 +223,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   if ($progressSlider) {
                     $progressSlider.value = this.currentTime;
                   }
-
+                  // if native is visible and controls too then we need to sync buttons
+                  if (this.controls && this.hidden == false && $pauseBtn.hidden) {
+                    $playBtn.hidden = true;
+                    $pauseBtn.hidden = false;
+                    if ($stopBtn) {
+                      $stopBtn.hidden = false;
+                    }
+                  }
                 });
                 https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/ended_event
                 this.addEventListener("ended", (event) => {
