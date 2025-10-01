@@ -310,14 +310,19 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   let $i = 0;
                   for (const track of this.textTracks) {
                     if ($subtitleContainer) {
-
+                      // Note. Some browsers allow multiple track.mode == showing
+                      // Some toggle.
+                      // We can't depend on the browser here, so we will toggle
+                      // @TODO. We can't signal right now if we have multiple types
+                      // Like description, subtitle and captions
+                      // But in the future we should have a way
                       if (track.default) {
                         track.mode = "showing";
                       }
                       // Listen for cue changes
                       // Clone the $subtitleTrack, add onclick logic to swap subtitle
                       if ($subtitleTrack) {
-                        const $subtitleTrackClone = $subtitleTrack.cloneNode(true);
+                        let $subtitleTrackClone = $subtitleTrack.cloneNode(true);
                         $subtitleTrackClone.hidden = false;
                         $subtitleTrackClone.classList.add('subtitleTrack-active');
                         $subtitleTrackClone.dataset.trackId = $i;
@@ -331,8 +336,13 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         }
                         $subtitleTrack.before($subtitleTrackClone);
                         $subtitleTrackClone.addEventListener("click", (e) => {
-                          if (track.mode != "disabled") {
+                          console.log(track);
+                          console.log(track.mode);
+                          console.log(e.currentTarget.dataset);
+
+                          if (track.mode == "showing" || track.mode == "hidden" ) {
                             track.mode = "disabled";
+                            $subtitleContainer.innerHTML = '';
                             if (active_classes) {
                               for (const $class of active_classes) {
                                 e.currentTarget.classList.toggle($class, false)
@@ -340,17 +350,22 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                             }
                           }
                           else {
+                            // First make all other not showing.
+                            for (const subtitleTrack of this.textTracks) {
+                              subtitleTrack.mode = "disabled"
+                            };
+
                             track.mode = "showing";
                             // Means I need to toggle any other one active
                             if (active_classes) {
-                            const trackId = e.currentTarget.dataset.trackId;
-                            const $allothertracks = control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="'+trackId+'"])');
+                              const trackId = e.currentTarget.dataset.trackId;
+                              const $allothertracks = control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="'+trackId+'"])');
 
-                            $allothertracks.forEach((subtitleTrackCloneElement) => {
-                              for (const $class of active_classes) {
-                                subtitleTrackCloneElement.classList.toggle($class, false)
-                              }
-                            });
+                              $allothertracks.forEach((subtitleTrackCloneElement) => {
+                                for (const $class of active_classes) {
+                                  subtitleTrackCloneElement.classList.toggle($class, false)
+                                }
+                              });
                               for (const $class of active_classes) {
                                 e.currentTarget.classList.toggle($class, true)
                               }
