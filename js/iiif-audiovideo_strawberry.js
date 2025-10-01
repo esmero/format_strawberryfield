@@ -37,6 +37,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             // If the Control has already a media attached, then we will clone it.
             var control_blueprint = null;
             const closest_field = this.closest('.field');
+            control_query_selector = control_query_selector + ':not([data-cloned])'
             if (closest_field) {
               control_blueprint = closest_field.querySelector(control_query_selector);
             }
@@ -64,6 +65,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               this.audiovideo_elements = [];
               this.audiovideo_elements.push(audiovideo_element);
               this.control = null;
+              this.control_blueprint = control_blueprint;
               // Check for the minimal needed classes inside. Play/Pause/Mute/UnMute.
               let $playBtn = control_blueprint.querySelector('.playBtn');
               let $pauseBtn = control_blueprint.querySelector('.pauseBtn');
@@ -77,8 +79,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // when external control is provided.
                 this.active_audiovideo_element.hidden = !use_wavesurfer || this.active_audiovideo_element.classList.contains('.video-av');
                 // Only here we can actually start doing things.
-                // If we have to move the element, then will clone deep, edit the ID (should not have one)
-                // and hide the original (if not hidden).
+                // We will clone deep.
+                // and hide the original (if not hidden already).
                 if (attach_control_to_media_pos !== 'none') {
                   control_blueprint.hidden = true;
                   this.control = control_blueprint.cloneNode(true);
@@ -97,6 +99,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   control_blueprint.after(this.control);
                   this.control.removeAttribute('id');
                 }
+                // Mark as used. So we don't clone the clone.
+                this.control.dataset.cloned = true;
                 if (use_wavesurfer) {
                   $waversurfer_container = this.control.querySelector('.wavesurferContainer');
                 }
