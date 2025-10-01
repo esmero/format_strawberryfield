@@ -101,63 +101,63 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   $waversurfer_container = this.control.querySelector('.wavesurferContainer');
                 }
 
-                const $subtitleContainer = this.control.querySelector('.subtitleContainer');
+                this.$subtitleContainer = this.control.querySelector('.subtitleContainer');
 
-                const $pauseBtn = this.control.querySelector('.pauseBtn');
-                const $playBtn = this.control.querySelector('.playBtn');
-                const $stopBtn = this.control.querySelector('.stopBtn');
-                const $muteBtn = this.control.querySelector('.muteBtn');
-                const $unmuteBtn = this.control.querySelector('.unmuteBtn');
-                const $ccBtn = this.control.querySelector('.ccBtn');
-                const $subtitleTrack = this.control.querySelector('.subtitleTrack');
+                this.$pauseBtn = this.control.querySelector('.pauseBtn');
+                this.$playBtn = this.control.querySelector('.playBtn');
+                this.$stopBtn = this.control.querySelector('.stopBtn');
+                this.$muteBtn = this.control.querySelector('.muteBtn');
+                this.$unmuteBtn = this.control.querySelector('.unmuteBtn');
+                this.$ccBtn = this.control.querySelector('.ccBtn');
+                this.$subtitleTrack = this.control.querySelector('.subtitleTrack');
 
-                const $progressSlider = this.control.querySelector(".progressSlider");
+                this.$progressSlider = this.control.querySelector(".progressSlider");
 
-                const $volumeSlider = this.control.querySelector(".volumeSlider");
-                const $fullscreenBtn = this.control.querySelector('.fullscreenBtn');
-                const $currentTime = this.control.querySelector('.currentTime');
-                const $durationTime = this.control.querySelector('.durationTime');
+                this.$volumeSlider = this.control.querySelector(".volumeSlider");
+                this.$fullscreenBtn = this.control.querySelector('.fullscreenBtn');
+                this.$currentTime = this.control.querySelector('.currentTime');
+                this.$durationTime = this.control.querySelector('.durationTime');
 
                 // Used to load next set of media, in case of a IIIF Manifest or multiple Audio/Videos.
-                const $nextBtn = this.control.querySelector('.nextBtn');
-                const $prevBtn = this.control.querySelector('.prevBtn');
+                this.$nextBtn = this.control.querySelector('.nextBtn');
+                this.$prevBtn = this.control.querySelector('.prevBtn');
 
                 // Hide Play and Stop button
-                $pauseBtn.hidden = true;
-                $unmuteBtn.hidden = true;
+                this.$pauseBtn.hidden = true;
+                this.$unmuteBtn.hidden = true;
 
-                if ($ccBtn) {
+                if (this.$ccBtn) {
                   // hide initially
-                  $ccBtn.hidden = true;
+                  this.$ccBtn.hidden = true;
                 }
 
-                if ($nextBtn) {
+                if (this.$nextBtn) {
                   // hide initially
-                  $nextBtn.hidden = true;
+                  this.$nextBtn.hidden = true;
                 }
 
-                if ($prevBtn) {
+                if (this.$prevBtn) {
                   // hide initially
-                  $prevBtn.hidden = true;
+                  this.$prevBtn.hidden = true;
                 }
 
-                if ($stopBtn) {
-                  $stopBtn.hidden = true;
+                if (this.$stopBtn) {
+                  this.$stopBtn.hidden = true;
                 }
 
-                if ($subtitleTrack) {
+                if (this.$subtitleTrack) {
                   // hide initially. We will need to clone this one for each track
                   // And allow it to enable/disable subtitles.
-                  $subtitleTrack.hidden = true;
+                  this.$subtitleTrack.hidden = true;
                 }
 
-                $playBtn.addEventListener("click", (e) => {
+                this.$playBtn.addEventListener("click", (e) => {
                   if (this.active_audiovideo_element.paused || this.active_audiovideo_element.ended) {
                     this.active_audiovideo_element.play();
                     e.currentTarget.hidden = true;
-                    $pauseBtn.hidden = false;
-                    if ($stopBtn) {
-                      $stopBtn.hidden = false;
+                    this.$pauseBtn.hidden = false;
+                    if (this.$stopBtn) {
+                      this.$stopBtn.hidden = false;
                     }
                   } else {
                     // Because we have separate buttons for each action
@@ -165,13 +165,13 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.active_audiovideo_element.pause();
                   }
                 });
-                $pauseBtn.addEventListener("click", (e) => {
+                this.$pauseBtn.addEventListener("click", (e) => {
                   if (!this.active_audiovideo_element.paused && !this.active_audiovideo_element.ended) {
                     this.active_audiovideo_element.pause();
                     e.currentTarget.hidden = true;
-                    $playBtn.hidden = false;
-                    if ($stopBtn) {
-                      $stopBtn.hidden = true;
+                    this.$playBtn.hidden = false;
+                    if (this.$stopBtn) {
+                      this.$stopBtn.hidden = true;
                     }
                   } else {
                     // Because we have separate buttons for each action
@@ -179,226 +179,156 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.active_audiovideo_element.play();
                   }
                 });
-                $muteBtn.addEventListener("click", (e) => {
+                this.$muteBtn.addEventListener("click", (e) => {
                   this.active_audiovideo_element.muted = !this.active_audiovideo_element.muted;
                   e.currentTarget.hidden = true;
-                  $unmuteBtn.hidden = false;
+                  this.$unmuteBtn.hidden = false;
                 });
-                $unmuteBtn.addEventListener("click", (e) => {
+                this.$unmuteBtn.addEventListener("click", (e) => {
                   this.active_audiovideo_element.muted = !this.active_audiovideo_element.muted;
                   e.currentTarget.hidden = true;
-                  $muteBtn.hidden = false;
+                  this.$muteBtn.hidden = false;
                 });
                 // We only attach $progressSlider if present AND waversurfer
                 // is not being used. Why? because Waversurfer Is a slider.
-                if ($progressSlider) {
-                  $progressSlider.removeAttribute("max")
-                  $progressSlider.addEventListener("click", (e) => {
+                if (this.$progressSlider) {
+                  this.$progressSlider.removeAttribute("max")
+                  this.$progressSlider.addEventListener("click", (e) => {
                     if (!Number.isFinite(this.active_audiovideo_element.duration)) return;
-                    const rect = $progressSlider.getBoundingClientRect();
-                    const pos = (e.pageX - rect.left) / $progressSlider.offsetWidth;
+                    const rect = this.$progressSlider.getBoundingClientRect();
+                    const pos = (e.pageX - rect.left) / this.$progressSlider.offsetWidth;
                     this.active_audiovideo_element.currentTime = pos * this.active_audiovideo_element.duration;
                   });
                 }
 
-                // ON enough data, update the Duration time.
-                this.active_audiovideo_element.addEventListener("loadeddata", () => {
-                  if (this.active_audiovideo_element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-                    if ($progressSlider) {
-                      $progressSlider.setAttribute("max", this.active_audiovideo_element.duration);
+                this.loadeddataEventFunction = function (e) {
+                  if (e.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                    if (this.$progressSlider) {
+                      this.$progressSlider.setAttribute("max", this.active_audiovideo_element.duration);
                     }
-                    if ($durationTime) {
-                      if (this.active_audiovideo_element.duration < 3600) {
-                        $durationTime.innerText = new Date(this.active_audiovideo_element.duration * 1000).toISOString().substring(14, 19)
+                    if (this.$durationTime) {
+                      if (e.currentTarget.duration < 3600) {
+                        this.$durationTime.innerText = new Date(e.currentTarget.duration * 1000).toISOString().substring(14, 19)
                       } else {
-                        $durationTime.innerText = new Date(this.active_audiovideo_element.duration * 1000).toISOString().substring(11, 16)
+                        this.$durationTime.innerText = new Date(e.currentTarget.duration * 1000).toISOString().substring(11, 16)
                       }
                     }
                   }
-                });
-
-                this.active_audiovideo_element.addEventListener("timeupdate", () => {
-                  if ($currentTime) {
-                    if (this.active_audiovideo_element.duration < 3600) {
-                      $currentTime.innerText = new Date(this.active_audiovideo_element.currentTime * 1000).toISOString().substring(14, 19)
+                };
+                this.timeupdateEventFunction = function (e) {
+                  if (this.$currentTime) {
+                    if (e.currentTarget.duration < 3600) {
+                      this.$currentTime.innerText = new Date(e.currentTarget.currentTime * 1000).toISOString().substring(14, 19)
                     } else {
-                      $currentTime.innerText = new Date(this.active_audiovideo_element.currentTime * 1000).toISOString().substring(11, 16)
+                      this.$currentTime.innerText = new Date(e.currentTarget.currentTime * 1000).toISOString().substring(11, 16)
                     }
                   }
-                  if ($progressSlider) {
-                    $progressSlider.value = this.active_audiovideo_element.currentTime;
+                  if (this.$progressSlider) {
+                    this.$progressSlider.value = e.currentTarget.currentTime;
                   }
                   // if native is visible and controls too then we need to sync buttons
-                  if (this.active_audiovideo_element.controls && this.active_audiovideo_element.hidden == false && $pauseBtn.hidden) {
-                    $playBtn.hidden = true;
-                    $pauseBtn.hidden = false;
-                    if ($stopBtn) {
-                      $stopBtn.hidden = false;
+                  if (e.currentTarget.controls && !e.currentTarget.hidden && this.$pauseBtn.hidden) {
+                    this.$playBtn.hidden = true;
+                    this.$pauseBtn.hidden = false;
+                    if (this.$stopBtn) {
+                      this.$stopBtn.hidden = false;
                     }
                   }
-                });
-                // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/ended_event
-                this.active_audiovideo_element.addEventListener("ended", (event) => {
-                  if (!$pauseBtn.hidden) {
-                    $playBtn.hidden = false;
-                    $pauseBtn.hidden = true;
+                };
+                this.endedEventFunction = function (e) {
+                  if (!this.$pauseBtn.hidden) {
+                    this.$playBtn.hidden = false;
+                    this.$pauseBtn.hidden = true;
                   }
-                  if ($stopBtn) {
-                    if (!$stopBtn.hidden) {
-                      $stopBtn.hidden = true;
+                  if (this.$stopBtn) {
+                    if (!this.$stopBtn.hidden) {
+                      this.$stopBtn.hidden = true;
                     }
                   }
-                });
+                };
+                this.pauseEventFunction = function (e) {
+                  if (!this.$pauseBtn.hidden) {
+                    this.$playBtn.hidden = false;
+                    this.$pauseBtn.hidden = true;
+                  }
+                  if (this.$stopBtn) {
+                    if (!this.$stopBtn.hidden) {
+                      this.$stopBtn.hidden = true;
+                    }
+                  }
+                }
+                this.playEventFunction = function (e) {
+                  if (!this.$playBtn.hidden) {
+                    this.$playBtn.hidden = true;
+                    this.$pauseBtn.hidden = false;
+                  }
+                  if (this.$stopBtn) {
+                    if (this.$stopBtn.hidden) {
+                      this.$stopBtn.hidden = false;
+                    }
+                  }
+                }
+                this.volumechangeEventFunction = function (e) {
+                  if (this.$volumeSlider) {
+                    this.$volumeSlider.value = e.currentTarget.volume;
+                  }
+                }
+                this.loadeddataEventFunctionBound = this.loadeddataEventFunction.bind(this);
+                this.timeupdateEventFunctionBound = this.timeupdateEventFunction.bind(this);
+                this.endedEventFunctionBound  =  this.endedEventFunction.bind(this);
+                this.pauseEventFunctionBound   =  this.pauseEventFunction.bind(this);
+                this.playEventFunctionBound  =  this.playEventFunction.bind(this);
+                this.volumechangeEventFunctionBound  =  this.volumechangeEventFunction.bind(this);
 
-                this.active_audiovideo_element.addEventListener("pause", (event) => {
-                  if (!$pauseBtn.hidden) {
-                    $playBtn.hidden = false;
-                    $pauseBtn.hidden = true;
-                  }
-                  if ($stopBtn) {
-                    if (!$stopBtn.hidden) {
-                      $stopBtn.hidden = true;
-                    }
-                  }
-                });
-                // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
-                this.active_audiovideo_element.addEventListener("play", (event) => {
-                  if (!$playBtn.hidden) {
-                    $playBtn.hidden = true;
-                    $pauseBtn.hidden = false;
-                  }
-                  if ($stopBtn) {
-                    if ($stopBtn.hidden) {
-                      $stopBtn.hidden = false;
-                    }
-                  }
-                });
+                this.mediaEventInitialize = function() {
+                  this.active_audiovideo_element.addEventListener("loadeddata", this.loadeddataEventFunctionBound );
+                  this.active_audiovideo_element.addEventListener("timeupdate", this.timeupdateEventFunctionBound );
+                  this.active_audiovideo_element.addEventListener("ended", this.endedEventFunctionBound );
+                  this.active_audiovideo_element.addEventListener("pause", this.pauseEventFunctionBound );
+                  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
+                  this.active_audiovideo_element.addEventListener("play", this.playEventFunctionBound );
+                  this.active_audiovideo_element.addEventListener("volumechange", this.volumechangeEventFunctionBound);
+                }
+                this.mediaEventRemove = function() {
+                  this.active_audiovideo_element.removeEventListener("loadeddata", this.loadeddataEventFunctionBound );
+                  this.active_audiovideo_element.removeEventListener("timeupdate", this.timeupdateEventFunctionBound );
+                  this.active_audiovideo_element.removeEventListener("ended", this.endedEventFunctionBound );
+                  this.active_audiovideo_element.removeEventListener("pause", this.pauseEventFunctionBound );
+                  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
+                  this.active_audiovideo_element.removeEventListener("play", this.playEventFunction);
+                  this.active_audiovideo_element.removeEventListener("volumechange", this.volumechangeEventFunctionBound );
+                }
+                this.mediaEventInitialize();
 
-                if ($volumeSlider) {
-                  $volumeSlider.setAttribute("max", 1);
-                  $volumeSlider.setAttribute("min", 0);
+                if (this.$volumeSlider) {
+                  this.$volumeSlider.setAttribute("max", 1);
+                  this.$volumeSlider.setAttribute("min", 0);
                   const currentVolume = Math.floor(this.active_audiovideo_element.volume * 10) / 10;
-                  $volumeSlider.value = currentVolume;
-                  $volumeSlider.addEventListener("click", (e) => {
+                  this.$volumeSlider.value = currentVolume;
+                  this.$volumeSlider.addEventListener("click", (e) => {
                     const currentVolume = Math.floor(this.active_audiovideo_element.volume * 10) / 10;
                     if (!Number.isFinite(currentVolume)) return;
-                    const rect = $volumeSlider.getBoundingClientRect();
+                    const rect = this.$volumeSlider.getBoundingClientRect();
                     const writing_mode = window.getComputedStyle($volumeSlider).getPropertyValue('writing-mode');
                     let pos = 0;
                     if (writing_mode.includes('vertical')) {
-                      const direction = window.getComputedStyle($volumeSlider).getPropertyValue('direction');
+                      const direction = window.getComputedStyle(this.$volumeSlider).getPropertyValue('direction');
                       if (direction == 'rtl') {
                         //means 0 is at the bottom
-                        pos = (($volumeSlider.offsetHeight - (e.clientY - rect.top)) / $volumeSlider.offsetHeight).toFixed(1);
+                        pos = ((this.$volumeSlider.offsetHeight - (e.clientY - rect.top)) / this.$volumeSlider.offsetHeight).toFixed(1);
                       } else {
                         // Means normal, 0 is at the top
-                        pos = (($volumeSlider.offsetHeight - (rect.bottom - e.clientY)) / $volumeSlider.offsetHeight).toFixed(1);
+                        pos = ((this.$volumeSlider.offsetHeight - (rect.bottom - e.clientY)) / this.$volumeSlider.offsetHeight).toFixed(1);
                       }
                     } else {
-                      pos = (e.pageX - rect.left) / $volumeSlider.offsetWidth;
+                      pos = (e.pageX - rect.left) / this.$volumeSlider.offsetWidth;
                     }
                     if (pos <= 1 && pos >= 0) {
                       this.active_audiovideo_element.volume = pos;
                     }
                   });
-                  this.active_audiovideo_element.addEventListener("volumechange", (event) => {
-                    $volumeSlider.value = this.active_audiovideo_element.volume;
-                  });
                 }
-
-                let $showing_subtitles = null;
-                if (this.active_audiovideo_element.textTracks.length > 0) {
-                  $ccBtn.hidden = false;
-                  let $i = 0;
-                  for (const track of this.active_audiovideo_element.textTracks) {
-                    if ($subtitleContainer) {
-                      // Note. Some browsers allow multiple track.mode == showing
-                      // Some toggle.
-                      // We can't depend on the browser here, so we will toggle
-                      // @TODO. We can't signal right now if we have multiple types
-                      // Like description, subtitle and captions
-                      // But in the future we should have a way
-                      if (track.default) {
-                        track.mode = "showing";
-                      }
-                      // Listen for cue changes
-                      // Clone the $subtitleTrack, add onclick logic to swap subtitle
-                      if ($subtitleTrack) {
-                        let $subtitleTrackClone = $subtitleTrack.cloneNode(true);
-                        $subtitleTrackClone.hidden = false;
-                        $subtitleTrackClone.classList.add('subtitleTrack-active');
-                        $subtitleTrackClone.dataset.trackId = $i;
-                        $subtitleTrackClone.innerText = track.label;
-                        if (track.mode == "showing") {
-                          if (active_classes) {
-                            for (const $class of active_classes) {
-                              $subtitleTrackClone.classList.toggle($class)
-                            }
-                          }
-                        }
-                        $subtitleTrack.before($subtitleTrackClone);
-                        $subtitleTrackClone.addEventListener("click", (e) => {
-                          console.log(track);
-                          console.log(track.mode);
-                          console.log(e.currentTarget.dataset);
-
-                          if (track.mode == "showing" || track.mode == "hidden") {
-                            track.mode = "disabled";
-                            $subtitleContainer.innerHTML = '';
-                            if (active_classes) {
-                              for (const $class of active_classes) {
-                                e.currentTarget.classList.toggle($class, false)
-                              }
-                            }
-                          } else {
-                            // First make all other not showing.
-                            for (const subtitleTrack of this.active_audiovideo_element.textTracks) {
-                              subtitleTrack.mode = "disabled"
-                            }
-                            ;
-
-                            track.mode = "showing";
-                            // Means I need to toggle any other one active
-                            if (active_classes) {
-                              const trackId = e.currentTarget.dataset.trackId;
-                              const $allothertracks = control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="' + trackId + '"])');
-
-                              $allothertracks.forEach((subtitleTrackCloneElement) => {
-                                for (const $class of active_classes) {
-                                  subtitleTrackCloneElement.classList.toggle($class, false)
-                                }
-                              });
-                              for (const $class of active_classes) {
-                                e.currentTarget.classList.toggle($class, true)
-                              }
-                            }
-                          }
-                        });
-                      }
-
-                      track.addEventListener('cuechange', () => {
-                        $subtitleContainer.innerHTML = ''; // Clear previous subtitle
-                        // Display current cue text
-                        if (track.activeCues.length > 0) {
-                          const currentCue = track.activeCues[0];
-                          const subtitleText = document.createElement('em');
-                          subtitleText.textContent = currentCue.text;
-                          // We need per track containers here. Because the user could enable multiple Tracks at the same time?
-                          $subtitleContainer.appendChild(subtitleText);
-                        }
-                      });
-                      $i++;
-                    }
-                  }
-                  $ccBtn.addEventListener("click", (e) => {
-                    if (active_classes) {
-                      for (const $class of active_classes) {
-                        $ccBtn.classList.toggle($class)
-                      }
-                    }
-                  });
-                }
-                ;
+                this.initializeTextTracks();
               } else {
                 // If no Play/Pause mute and unmute/default to not hidden
                 // and show controls
@@ -407,10 +337,105 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               }
             }
 
-              if (control_blueprint)  {
-                const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
-              }
+            customMediaController.prototype.initializeTextTracks = function() {
+              // In case we are swapping media after initialization. We will remove all existing tracks first
+              this.control.querySelectorAll('.subtitleTrack-active[data-track-id]').forEach(e => e.remove());
+              let $showing_subtitles = null;
+              if (this.active_audiovideo_element.textTracks.length > 0) {
+                this.$ccBtn.hidden = false;
+                let $i = 0;
+                for (const track of this.active_audiovideo_element.textTracks) {
+                  if (this.$subtitleContainer) {
+                    // Note. Some browsers allow multiple track.mode == showing
+                    // Some toggle.
+                    // We can't depend on the browser here, so we will toggle
+                    // @TODO. We can't signal right now if we have multiple types
+                    // Like description, subtitle and captions
+                    // But in the future we should have a way
+                    if (track.default) {
+                      track.mode = "showing";
+                    }
+                    // Listen for cue changes
+                    // Clone the $subtitleTrack, add onclick logic to swap subtitle
+                    if (this.$subtitleTrack) {
+                      let $subtitleTrackClone = this.$subtitleTrack.cloneNode(true);
+                      $subtitleTrackClone.hidden = false;
+                      $subtitleTrackClone.classList.add('subtitleTrack-active');
+                      $subtitleTrackClone.dataset.trackId = $i;
+                      $subtitleTrackClone.innerText = track.label;
+                      if (track.mode == "showing") {
+                        if (active_classes) {
+                          for (const $class of active_classes) {
+                            $subtitleTrackClone.classList.toggle($class)
+                          }
+                        }
+                      }
+                      this.$subtitleTrack.before($subtitleTrackClone);
+                      $subtitleTrackClone.addEventListener("click", (e) => {
+                        console.log(track);
+                        console.log(track.mode);
+                        console.log(e.currentTarget.dataset);
 
+                        if (track.mode == "showing" || track.mode == "hidden") {
+                          track.mode = "disabled";
+                          this.$subtitleContainer.innerHTML = '';
+                          if (active_classes) {
+                            for (const $class of active_classes) {
+                              e.currentTarget.classList.toggle($class, false)
+                            }
+                          }
+                        } else {
+                          // First make all other not showing.
+                          for (const subtitleTrack of this.active_audiovideo_element.textTracks) {
+                            subtitleTrack.mode = "disabled"
+                          }
+
+                          track.mode = "showing";
+                          // Means I need to toggle any other one active
+                          if (active_classes) {
+                            const trackId = e.currentTarget.dataset.trackId;
+                            const $allothertracks = this.control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="' + trackId + '"])');
+
+                            $allothertracks.forEach((subtitleTrackCloneElement) => {
+                              for (const $class of active_classes) {
+                                subtitleTrackCloneElement.classList.toggle($class, false)
+                              }
+                            });
+                            for (const $class of active_classes) {
+                              e.currentTarget.classList.toggle($class, true)
+                            }
+                          }
+                        }
+                      });
+                    }
+
+                    track.addEventListener('cuechange', () => {
+                      this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
+                      // Display current cue text
+                      if (track.activeCues.length > 0) {
+                        const currentCue = track.activeCues[0];
+                        const subtitleText = document.createElement('em');
+                        subtitleText.textContent = currentCue.text;
+                        // We need per track containers here. Because the user could enable multiple Tracks at the same time?
+                        this.$subtitleContainer.appendChild(subtitleText);
+                      }
+                    });
+                    $i++;
+                  }
+                }
+                this.$ccBtn.addEventListener("click", (e) => {
+                  if (active_classes) {
+                    for (const $class of active_classes) {
+                      this.$ccBtn.classList.toggle($class)
+                    }
+                  }
+                });
+              }
+            }
+
+            if (control_blueprint)  {
+              const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
+            }
             else {
               // Control Selector lead to no UI.
               this.hidden = false;
