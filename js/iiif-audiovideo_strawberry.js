@@ -9,7 +9,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
   Drupal.behaviors.format_strawberryfield_audiovideo = {
     attach: function (context, settings) {
       var groupsid =  {};
-      const elementsToAttach = once('attache_audio_video', '.strawberry-av-item', context);
+      const elementsToAttach = once('attache_audio_video', '.strawberry-av-item-js', context);
       $(elementsToAttach).each(function (index, value) {
         // Get the node uuid for this element
         var element_id = $(this).attr("id");
@@ -232,7 +232,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     }
                   }
                 });
-                https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/ended_event
+                // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/ended_event
                 this.addEventListener("ended", (event) => {
                   if (!$pauseBtn.hidden) {
                     $playBtn.hidden = false;
@@ -256,7 +256,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     }
                   }
                 });
-                https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
+                // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
                 this.addEventListener("play", (event) => {
                   if (!$playBtn.hidden) {
                     $playBtn.hidden = true;
@@ -307,25 +307,52 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 let $showing_subtitles = null;
                 if (this.textTracks.length > 0) {
                   $ccBtn.hidden = false;
+                  let $i = 0;
                   for (const track of this.textTracks) {
                     if ($subtitleContainer) {
-                      track.mode = "showing";
+
+                      if (track.default) {
+                        track.mode = "showing";
+                      }
                       // Listen for cue changes
                       // Clone the $subtitleTrack, add onclick logic to swap subtitle
                       if ($subtitleTrack) {
                         const $subtitleTrackClone = $subtitleTrack.cloneNode(true);
                         $subtitleTrackClone.hidden = false;
+                        $subtitleTrackClone.classList.add('subtitleTrack-active');
+                        $subtitleTrackClone.dataset.trackId = $i;
                         $subtitleTrackClone.innerText = track.label;
+                        if (track.mode == "showing") {
+                          if (active_classes) {
+                            for (const $class of active_classes) {
+                              $subtitleTrackClone.classList.toggle($class)
+                            }
+                          }
+                        }
                         $subtitleTrack.before($subtitleTrackClone);
                         $subtitleTrackClone.addEventListener("click", (e) => {
                           if (track.mode != "disabled") {
                             track.mode = "disabled";
+                            if (active_classes) {
+                              for (const $class of active_classes) {
+                                e.currentTarget.classList.toggle($class, false)
+                              }
+                            }
                           }
                           else {
                             track.mode = "showing";
+                            // Means I need to toggle any other one active
                             if (active_classes) {
+                            const trackId = e.currentTarget.dataset.trackId;
+                            const $allothertracks = control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="'+trackId+'"])');
+
+                            $allothertracks.forEach((subtitleTrackCloneElement) => {
                               for (const $class of active_classes) {
-                                $subtitleTrackClone.classList.toggle($class)
+                                subtitleTrackCloneElement.classList.toggle($class, false)
+                              }
+                            });
+                              for (const $class of active_classes) {
+                                e.currentTarget.classList.toggle($class, true)
                               }
                             }
                           }
@@ -343,6 +370,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                           $subtitleContainer.appendChild(subtitleText);
                         }
                       });
+                      $i++;
                     }
                   }
                   $ccBtn.addEventListener("click", (e) => {
