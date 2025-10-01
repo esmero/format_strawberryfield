@@ -231,7 +231,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.$progressSlider.value = e.currentTarget.currentTime;
                   }
                   // if native is visible and controls too then we need to sync buttons
-                  if (e.currentTarget.controls && !e.currentTarget.hidden && this.$pauseBtn.hidden) {
+                  if (e.currentTarget.controls && !e.currentTarget.hidden && this.$pauseBtn.hidden && !e.currentTarget.paused) {
                     this.$playBtn.hidden = true;
                     this.$pauseBtn.hidden = false;
                     if (this.$stopBtn) {
