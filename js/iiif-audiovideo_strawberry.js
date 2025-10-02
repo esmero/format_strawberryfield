@@ -19,7 +19,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
         if  (typeof drupalSettings?.format_strawberryfield?.audiovideo[element_id] !== "undefined") {
           var external_control = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_external_control'];
           var control_query_selector = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_selector'];
-          var external_control_shared = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_selector_shared'];
+          var external_control_shared = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_external_control_shared'];
           var use_wavesurfer = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_wavesurfer'];
           var hide_controls = drupalSettings.format_strawberryfield.audiovideo[element_id]['hide_native_controls'];
           var active_classes = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_element_active_class'];
@@ -308,6 +308,28 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.playEventFunctionBound  =  this.playEventFunction.bind(this);
                 this.volumechangeEventFunctionBound  =  this.volumechangeEventFunction.bind(this);
 
+                this.addMediaElement = function (audiovideo_element) {
+                  this.audiovideo_elements.push(audiovideo_element);
+                  this.$prevBtn.hidden = false;
+                  this.$nextBtn.hidden = false;
+                }
+
+                this.nextMediaElement = function () {
+                  this.mediaEventRemove();
+                  const first = this.audiovideo_elements.shift();
+                  this.active_audiovideo_element = this.audiovideo_elements[0];
+                  this.audiovideo_elements.push(first);
+                  this.mediaEventInitialize();
+                }
+                this.prevMediaElement = function () {
+                  this.mediaEventRemove();
+                  const last = this.audiovideo_elements.pop();
+                  this.active_audiovideo_element = last;
+                  this.audiovideo_elements.unshift(last);
+                  this.mediaEventInitialize();
+                }
+
+
                 this.mediaEventInitialize = function() {
                   this.active_audiovideo_element.addEventListener("loadeddata", this.loadeddataEventFunctionBound );
                   this.active_audiovideo_element.addEventListener("timeupdate", this.timeupdateEventFunctionBound );
@@ -463,12 +485,19 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
             if (control_blueprint)  {
               // Now how we decide? new instance? Clone?
-
+              let attached_to_existing = false
               // In that case we match the IDs.
-
-              const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
-              if (Controllerinstance.valid) {
-                ActiveControllers.set(Controllerinstance.control_blueprint.id, Controllerinstance);
+              if (external_control_shared) {
+                if (typeof ActiveControllers.get(control_blueprint.id) !== "undefined" ) {
+                  ActiveControllers.get(control_blueprint.id).addMediaElement(this);
+                  attached_to_existing = true;
+                }
+              }
+              if (!attached_to_existing) {
+                const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
+                if (Controllerinstance.valid && external_control_shared) {
+                  ActiveControllers.set(Controllerinstance.control_blueprint.id, Controllerinstance);
+                }
               }
             }
             else {

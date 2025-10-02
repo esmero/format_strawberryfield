@@ -47,8 +47,11 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       'use_wavesurfer' => false,
       'use_external_control' => false,
       'hide_native_control' => false,
+      'use_external_control_shared' => false,
       'external_control_element_active_class' => '',
       'external_control_selector' => '.sbf_media_control',
+      'reposition_element' => false,
+      'reposition_element_selector' => '',
       'viewer_overrides' => '{
         "height": 128,
         "width": 300,
@@ -116,6 +119,31 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           '#min' => 0,
           '#required' => TRUE
         ],
+        'reposition_element' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Reposition this element to a different Part of the Page'),
+          '#description' => $this->t('When enabled, and a DOM Selector is provided, this formatter will be moved out of its normal layout defined by the View mode/Block and inside the Dom Selector, if found, which might be any part you decide to output it, e.g via a Twig template.'),
+          '#default_value' => $this->getSetting('reposition_element'),
+          '#required' => FALSE,
+          '#attributes' => [
+            'data-checkbox-selector' => 'reposition_element',
+          ],
+        ],
+        'reposition_element_selector' => [
+          '#type' => 'textfield',
+          '#title' => $this->t('The Dom Query selector to be used to find where this Formatter should be rendered into (inside it), instead of its View Mode/Layout normal flow.'),
+          '#description' => $this->t('If no element matching the selector is found in the page this formatter is rendered, the original location will be preserved'),
+          '#default_value' => $this->getSetting('reposition_element_selector'),
+          '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="reposition_element"]' => ['checked' => TRUE],
+            ],
+            'required' => [
+              ':checkbox[data-checkbox-selector="reposition_element"]' => ['checked' => TRUE],
+            ],
+          ],
+        ],
         'use_wavesurfer' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Use The WaverSurfer JS library'),
@@ -154,8 +182,8 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         ],
         'external_control_selector' => [
           '#type' => 'textfield',
-          '#title' => $this->t('The Dom Query selector to be used to find the external HTML Control container in the Web Page.'),
-          '#description' => $this->t('A valid DOM Query Selector. If the selector yields no DOM elements, the default browser based controls will be used.'),
+          '#title' => $this->t('The Dom Query selector to be used to find the external HTML Control container <em>blueprint</em> in the Web Page.'),
+          '#description' => $this->t('A valid DOM Query Selector. If the selector yields no DOM elements, the default browser based controls will be used. If found, it will be cloned and repositioned.'),
           '#default_value' => $this->getSetting('external_control_selector'),
           '#required' => FALSE,
           '#states' => [
@@ -178,6 +206,18 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
               ':checkbox[data-checkbox-selector="use_external_control"]' => ['checked' => TRUE],
             ],
           ],
+        ],
+        'use_external_control_shared' => [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Allow multiple media to share the same External Controller.'),
+          '#description' => $this->t('When checked, if another Initialized External Controller that matches the same Dom Query selector as setup in this formatter and has the required next/prev element classes set (needed to allow moving between multiple media), instead of creating a separate controller, the existing one will be able to selectively control this formatter\'s media too. This is only effective if that Existing Controller was also created from the exactly same <em>blueprint</em>'),
+          '#default_value' => $this->getSetting('use_external_control_shared'),
+          '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_external_control"]' => ['checked' => TRUE],
+            ],
+          ]
         ],
         'hide_native_control' => [
           '#type' => 'checkbox',
@@ -459,8 +499,11 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $nodeuuid = $items->getEntity()->uuid();
     $nodeid = $items->getEntity()->id();
     $use_external_control = $this->getSetting('use_external_control');
+    $use_external_control_shared = $this->getSetting('use_external_control_shared');
     $hide_native_control = $this->getSetting('hide_native_control');
-
+    // The 1.6.0 reposition feature via JS
+    $reposition_element = $this->getSetting('reposition_element');
+    $reposition_element_selector = trim($this->getSetting('reposition_element_selector') ?? '');
     $use_wavesurfer = $this->getSetting('use_wavesurfer');
     $external_control_selector = trim($this->getSetting('external_control_selector') ?? '');
     $external_control_element_active_class = trim($this->getSetting('external_control_element_active_class') ?? '');
@@ -539,14 +582,21 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         ]
       ];
     }
-
-    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control'] = (bool) $use_external_control;
-    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_element_active_class'] = $external_control_element_active_class;
-    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['hide_native_control'] = (bool) $hide_native_control;
-    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_selector'] = $external_control_selector;
-    $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_wavesurfer'] = $use_wavesurfer;
+    // Only send settings and
+    if ($reposition_element || $use_external_control || $use_wavesurfer) {
+      $elements[$delta]['audio_hmtl5_' . $i]['audio']['#attributes']['class'][] = 'strawberry-av-item-js';
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['reposition_element'] = (bool) $reposition_element;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['reposition_element'] = (bool) $reposition_element_selector;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control'] = (bool) $use_external_control;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control_shared'] = (bool) $use_external_control_shared;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_element_active_class'] = $external_control_element_active_class;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['hide_native_control'] = (bool) $hide_native_control;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_selector'] = $external_control_selector;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_wavesurfer'] = $use_wavesurfer;
+      $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_custom_control_strawberry';
+    }
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
-    $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_custom_control_strawberry';
+
   }
 
 }
