@@ -187,6 +187,17 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.active_audiovideo_element.play();
                   }
                 });
+                if (this.$stopBtn) {
+                  this.$stopBtn.addEventListener("click", (e) => {
+                    this.active_audiovideo_element.pause();
+                    this.active_audiovideo_element.currentTime = 0;
+                    e.currentTarget.hidden = true;
+                    this.$playBtn.hidden = false;
+                    if (this.$progressSlider) {
+                      this.$progressSlider.value = 0;
+                    }
+                  });
+                }
                 this.$muteBtn.addEventListener("click", (e) => {
                   this.active_audiovideo_element.muted = !this.active_audiovideo_element.muted;
                   e.currentTarget.hidden = true;
@@ -197,8 +208,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   e.currentTarget.hidden = true;
                   this.$muteBtn.hidden = false;
                 });
-                // We only attach $progressSlider if present AND waversurfer
-                // is not being used. Why? because Waversurfer Is a slider.
+
                 if (this.$progressSlider) {
                   this.$progressSlider.removeAttribute("max")
                   this.$progressSlider.addEventListener("click", (e) => {
