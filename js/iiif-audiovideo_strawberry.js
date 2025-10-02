@@ -139,6 +139,24 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // Used to load next set of media, in case of a IIIF Manifest or multiple Audio/Videos.
                 this.$nextBtn = this.control.querySelector('.nextBtn');
                 this.$prevBtn = this.control.querySelector('.prevBtn');
+                this.multipleMediaCapable = function () {
+                  if (this.$nextBtn && this.$prevBtn) {
+                    return true;
+                  }
+                  return false;
+                }
+
+                if (this.$nextBtn) {
+                  this.$nextBtn.addEventListener("click", (e) => {
+                    this.nextMediaElement();
+                  });
+                }
+
+                if (this.$prevBtn) {
+                  this.$prevBtn.addEventListener("click", (e) => {
+                    this.prevMediaElement();
+                  });
+                }
 
                 // Hide Play and Stop button
                 this.$pauseBtn.hidden = true;
@@ -219,15 +237,18 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.$muteBtn.hidden = false;
                 });
 
-                if (this.$progressSlider) {
-                  this.$progressSlider.removeAttribute("max")
-                  this.$progressSlider.addEventListener("click", (e) => {
-                    if (!Number.isFinite(this.active_audiovideo_element.duration)) return;
-                    const rect = this.$progressSlider.getBoundingClientRect();
-                    const pos = (e.pageX - rect.left) / this.$progressSlider.offsetWidth;
-                    this.active_audiovideo_element.currentTime = pos * this.active_audiovideo_element.duration;
-                  });
+                this.updateProgress = function() {
+                  if (this.$progressSlider) {
+                    this.$progressSlider.removeAttribute("max")
+                    this.$progressSlider.addEventListener("click", (e) => {
+                      if (!Number.isFinite(this.active_audiovideo_element.duration)) return;
+                      const rect = this.$progressSlider.getBoundingClientRect();
+                      const pos = (e.pageX - rect.left) / this.$progressSlider.offsetWidth;
+                      this.active_audiovideo_element.currentTime = pos * this.active_audiovideo_element.duration;
+                    });
+                  }
                 }
+                this.updateProgress();
 
                 this.loadeddataEventFunction = function (e) {
                   if (e.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -309,24 +330,50 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.volumechangeEventFunctionBound  =  this.volumechangeEventFunction.bind(this);
 
                 this.addMediaElement = function (audiovideo_element) {
-                  this.audiovideo_elements.push(audiovideo_element);
-                  this.$prevBtn.hidden = false;
-                  this.$nextBtn.hidden = false;
+                  if (this.multipleMediaCapable()) {
+                    this.audiovideo_elements.push(audiovideo_element);
+                    this.$prevBtn.hidden = false;
+                    this.$nextBtn.hidden = false;
+                    return true;
+                  }
+                  return false;
+                }
+
+                this.stopAndResetUI = function() {
+                  // We won't reset the muted. BC if muted, we want to remember that.
+                  this.active_audiovideo_element.pause();
+                  this.active_audiovideo_element.currentTime = 0;
+                  if (this.$stopBtn) {
+                    this.$stopBtn.hidden = true;
+                  }
+                  this.$playBtn.hidden = false;
+                  this.$pauseBtn.hidden = true;
+                  if (this.$progressSlider) {
+                    this.$progressSlider.value = 0;
+                  }
                 }
 
                 this.nextMediaElement = function () {
+                  this.stopAndResetUI();
+                  const muted = this.active_audiovideo_element.muted;
                   this.mediaEventRemove();
                   const first = this.audiovideo_elements.shift();
                   this.active_audiovideo_element = this.audiovideo_elements[0];
+                  this.active_audiovideo_element.muted = muted;
                   this.audiovideo_elements.push(first);
                   this.mediaEventInitialize();
+                  this.initializeTextTracks();
                 }
                 this.prevMediaElement = function () {
+                  this.stopAndResetUI();
+                  const muted = this.active_audiovideo_element.muted;
                   this.mediaEventRemove();
                   const last = this.audiovideo_elements.pop();
                   this.active_audiovideo_element = last;
+                  this.active_audiovideo_element.muted = muted;
                   this.audiovideo_elements.unshift(last);
                   this.mediaEventInitialize();
+                  this.initializeTextTracks();
                 }
 
 
@@ -489,13 +536,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               // In that case we match the IDs.
               if (external_control_shared) {
                 if (typeof ActiveControllers.get(control_blueprint.id) !== "undefined" ) {
-                  ActiveControllers.get(control_blueprint.id).addMediaElement(this);
-                  attached_to_existing = true;
+                  // returns false if the Controller Blueprint has no  next/prev buttons, And also does not add more media.
+                  if (ActiveControllers.get(control_blueprint.id).addMediaElement(this)) {
+                    attached_to_existing = true;
+                  }
                 }
               }
               if (!attached_to_existing) {
                 const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
-                if (Controllerinstance.valid && external_control_shared) {
+                if (Controllerinstance.valid && Controllerinstance.multipleMediaCapable && external_control_shared) {
                   ActiveControllers.set(Controllerinstance.control_blueprint.id, Controllerinstance);
                 }
               }
