@@ -6,9 +6,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
   'use strict';
   var viewers = [];
 
-  function FormatStrawberryfieldMediaControllers(customMediaControllerInstance) {
-    this.controllerInstances = customMediaControllerInstance;
-  }
+  const ActiveControllers = new Map();
+
 
   Drupal.behaviors.format_strawberryfield_audiovideo = {
     attach: function (context, settings) {
@@ -20,6 +19,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
         if  (typeof drupalSettings?.format_strawberryfield?.audiovideo[element_id] !== "undefined") {
           var external_control = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_external_control'];
           var control_query_selector = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_selector'];
+          var external_control_shared = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_selector_shared'];
           var use_wavesurfer = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_wavesurfer'];
           var hide_controls = drupalSettings.format_strawberryfield.audiovideo[element_id]['hide_native_controls'];
           var active_classes = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_element_active_class'];
@@ -41,6 +41,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             // If the Control has already a media attached, then we will clone it.
             var control_blueprint = null;
             const closest_field = this.closest('.field');
+            // Avoid pre-cloned controllers (already attached to another one)
             control_query_selector = control_query_selector + ':not([data-cloned])'
             if (closest_field) {
               control_blueprint = closest_field.querySelector(control_query_selector);
@@ -69,7 +70,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               this.audiovideo_elements = [];
               this.audiovideo_elements.push(audiovideo_element);
               this.control = null;
+              // If the control_blueprint lacks an ID (recommended people add one, specially if they want to target a specific selector
+              // Then we need to add one we can track the provenance of a cloned controller
+              if (control_blueprint.id == "") {
+                control_blueprint.id = element_id + '-controller-blueprint';
+              }
+              // Sets
               this.control_blueprint = control_blueprint;
+              this.valid = false;
               // Check for the minimal needed classes inside. Play/Pause/Mute/UnMute.
               let $playBtn = control_blueprint.querySelector('.playBtn');
               let $pauseBtn = control_blueprint.querySelector('.pauseBtn');
@@ -78,6 +86,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               if ($playBtn && $pauseBtn && $muteBtn && $unmuteBtn) {
                 // Hide original Media Controls.
                 this.active_audiovideo_element.controls = !hide_controls;
+                this.valid = true;
+
                 // If Video we can't hide.
                 // Might be hidden already by the Formatter to avoid Popping up
                 // when external control is provided.
@@ -452,7 +462,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             }
 
             if (control_blueprint)  {
+              // Now how we decide? new instance? Clone?
+
+              // In that case we match the IDs.
+
               const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
+              if (Controllerinstance.valid) {
+                ActiveControllers.set(Controllerinstance.control_blueprint.id, Controllerinstance);
+              }
             }
             else {
               // Control Selector lead to no UI.
@@ -490,24 +507,5 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
       });
     }
   };
-
-  /**
-   * Extend the FormatStrawberryfieldPanoramas.
-   */
-  $.extend(
-    FormatStrawberryfieldMediaControllers,
-    /** @lends Drupal.FormatStrawberryfieldMediaControllers */ {
-      /**
-       * Store all created Panorama Viewer Instances.
-       *
-       * @type {Array.<Drupal.FormatStrawberryfieldMediaControllers>}
-       */
-      controllerInstances: new Map(),
-    },
-  );
-
-  // Make the FormatStrawberryfieldPanoramas object available in the Drupal namespace.
-  Drupal.FormatStrawberryfieldMediaControllers = FormatStrawberryfieldMediaControllers;
-
 
 })(jQuery, Drupal, WaveSurfer, once, drupalSettings);
