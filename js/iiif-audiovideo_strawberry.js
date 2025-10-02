@@ -6,6 +6,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
   'use strict';
   var viewers = [];
 
+  function FormatStrawberryfieldMediaControllers(customMediaControllerInstance) {
+    this.controllerInstances = customMediaControllerInstance;
+  }
+
   Drupal.behaviors.format_strawberryfield_audiovideo = {
     attach: function (context, settings) {
       var groupsid =  {};
@@ -312,20 +316,20 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.$volumeSlider.addEventListener("click", (e) => {
                     const currentVolume = Math.floor(this.active_audiovideo_element.volume * 10) / 10;
                     if (!Number.isFinite(currentVolume)) return;
-                    const rect = this.$volumeSlider.getBoundingClientRect();
-                    const writing_mode = window.getComputedStyle($volumeSlider).getPropertyValue('writing-mode');
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const writing_mode = window.getComputedStyle(e.currentTarget).getPropertyValue('writing-mode');
                     let pos = 0;
                     if (writing_mode.includes('vertical')) {
-                      const direction = window.getComputedStyle(this.$volumeSlider).getPropertyValue('direction');
+                      const direction = window.getComputedStyle(e.currentTarget).getPropertyValue('direction');
                       if (direction == 'rtl') {
                         //means 0 is at the bottom
-                        pos = ((this.$volumeSlider.offsetHeight - (e.clientY - rect.top)) / this.$volumeSlider.offsetHeight).toFixed(1);
+                        pos = ((e.currentTarget.offsetHeight - (e.clientY - rect.top)) /  e.currentTarget.offsetHeight).toFixed(1);
                       } else {
                         // Means normal, 0 is at the top
-                        pos = ((this.$volumeSlider.offsetHeight - (rect.bottom - e.clientY)) / this.$volumeSlider.offsetHeight).toFixed(1);
+                        pos = (( e.currentTarget.offsetHeight - (rect.bottom - e.clientY)) /  e.currentTarget.offsetHeight).toFixed(1);
                       }
                     } else {
-                      pos = (e.pageX - rect.left) / this.$volumeSlider.offsetWidth;
+                      pos = (e.pageX - rect.left) / e.currentTarget.offsetWidth;
                     }
                     if (pos <= 1 && pos >= 0) {
                       this.active_audiovideo_element.volume = pos;
@@ -476,4 +480,24 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
       });
     }
   };
+
+  /**
+   * Extend the FormatStrawberryfieldPanoramas.
+   */
+  $.extend(
+    FormatStrawberryfieldMediaControllers,
+    /** @lends Drupal.FormatStrawberryfieldMediaControllers */ {
+      /**
+       * Store all created Panorama Viewer Instances.
+       *
+       * @type {Array.<Drupal.FormatStrawberryfieldMediaControllers>}
+       */
+      controllerInstances: new Map(),
+    },
+  );
+
+  // Make the FormatStrawberryfieldPanoramas object available in the Drupal namespace.
+  Drupal.FormatStrawberryfieldMediaControllers = FormatStrawberryfieldMediaControllers;
+
+
 })(jQuery, Drupal, WaveSurfer, once, drupalSettings);
