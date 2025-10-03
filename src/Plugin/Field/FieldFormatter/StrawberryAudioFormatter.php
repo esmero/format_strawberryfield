@@ -413,6 +413,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                     = "width:{$max_width_css}; height:{$max_height_vtt_css}";
                   foreach ($vtt as $vtt_drforkey => $vtt_entries) {
                     if (count($media) == 1 || $drforkey == $vtt_drforkey) {
+                      $i = 0;
                       foreach ($vtt_entries as $vtt_key => &$vtt_item) {
                         $route_parameters = [
                           'node' => $nodeid,
@@ -442,9 +443,10 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                             'kind' => 'subtitles',
                             'srclang' => $current_language,
                             'src' => $publicurl->toString(),
-                            'default' => TRUE
+                            'default' => $i == 0 ? TRUE : FALSE
                           ]
                         ];
+                        $i++;
                       }
                     }
                   }
