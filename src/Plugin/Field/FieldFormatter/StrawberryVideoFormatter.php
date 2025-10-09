@@ -374,7 +374,8 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
       'user.permissions'
     ];
 
-    // We will use HTML5 Video tag because Audio Tag does not allow Tracks with Subtitles
+    // We will use HTML5 Video Tag on all audio/video because Audio Tag does not
+    // consistently allow Tracks with Subtitles
     // @see https://www.iandevlin.com/blog/2015/12/html5/webvtt-and-audio/
     $elements[$delta]['video_hmtl5_' . $i] = [
       '#type' => 'html_tag',
@@ -383,13 +384,13 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
         '#type' => 'html_tag',
         '#tag' => 'video',
         '#attributes' => [
-          'class' => ['field-av', 'video-av'],
+          'class' => ['field-av', 'video-av', 'strawberry-av-item', 'strawberry-video-item'],
           'id' => 'video_' . $uniqueid,
           'controls' => TRUE,
           'style' => "width:{$max_width_css}; height:{$max_height_css}",
         ],
         '#alt' => $this->t(
-          'Audio for @label',
+          'Video for @label',
           ['@label' => $items->getEntity()->label()]
         ),
         'source' => [
