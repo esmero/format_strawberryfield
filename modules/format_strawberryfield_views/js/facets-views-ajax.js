@@ -50,8 +50,8 @@
         all_dom_ids_need_refresh = Array.from(new Set(all_dom_ids_need_refresh));
         // Update view on summary block click.
         if (Drupal.AjaxFacetsView.updateFacetsSummaryBlock() && (facetId === 'facets_summary_ajax')) {
-            const elementsToAttach = once('summaryblock_attache', '[data-drupal-facets-summary-id=' + facetSettings.facets_summary_id + ']', context);
-            $(elementsToAttach).children('ul').children('li').click(function (e) {
+          const elementsToAttach = once('summaryblock_attache', '[data-drupal-facets-summary-id=' + facetSettings.facets_summary_id + ']', context);
+          $(elementsToAttach).children('ul').children('li').click(function (e) {
             e.preventDefault();
             var facetLink = $(this).find('a');
             // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
@@ -59,9 +59,9 @@
             // This is needed since Facet URL generator will (for good reasons) remove the ?page=argument.
             // And also is absolutely unaware of pagers with different names!
             Drupal.AjaxFacetsView.UpdateView(facetLink.attr('href'), current_dom_id, view_path);
-              all_dom_ids_need_refresh.forEach((other_dom_id) => {
-                // Check if we need to update this ones too for 1.6? Same as we do for paged views?
-              });
+            all_dom_ids_need_refresh.forEach((other_dom_id) => {
+              // Check if we need to update this ones too for 1.6? Same as we do for paged views?
+            });
 
           });
         }
@@ -95,8 +95,8 @@
   Drupal.AjaxFacetsView.UpdateView = function (href, current_dom_id, view_path) {
     // Refresh view.
     var atLeastone = false;
-      if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
-        atLeastone = true;
+    if (typeof(Drupal.views.instances['views_dom_id:' + current_dom_id]) !== 'undefined') {
+      atLeastone = true;
       var views_parameters = Drupal.Views.parseQueryString(href);
       let views_path = 'search';
       if (Drupal.views.instances['views_dom_id:' + current_dom_id].settings.view_base_path !== 'undefined') {
@@ -115,7 +115,17 @@
       views_ajax_settings.submit = views_settings;
       // Used to be the way in Drupal 9.x to 10.0 ... views_ajax_settings.url = view_path + '?q=' + href;
       views_ajax_settings.url = view_path;
+      // New to 1.6.0: Calculate the Size of views_ajax_settings.submit to avoid hitting GET limits
+      // This is aprox.
 
+      function lengthInUtf8Bytes(str) {
+        var m = encodeURIComponent(str).match(/%[89ABab]/g);
+        return str.length + (m ? m.length : 0);
+      }
+      const $payloadSize = lengthInUtf8Bytes(JSON.stringify(views_ajax_settings.submit))/1024;
+      if ($payloadSize >= 8) {
+        views_ajax_settings.httpMethod = "POST";
+      }
       const viewRefreshAjaxObject = Drupal.ajax(views_ajax_settings);
       const success = viewRefreshAjaxObject.success();
 

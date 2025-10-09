@@ -739,7 +739,7 @@ class WebAnnotationController extends ControllerBase {
   }
 
   /**
-   * Fetchs OCR from the backend and converts them to Annotations
+   * Fetches Flavors from the backend and converts them to Annotations
    *
    * Very similar to \Drupal\strawberryfield\Controller\StrawberryfieldFlavorDatasourceSearchController::originalocrfromSolrIndex
    * but with more moving parts (and checks)
