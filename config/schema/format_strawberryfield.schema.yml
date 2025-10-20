@@ -138,6 +138,25 @@ field.formatter.settings.strawberry_audio_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+    use_wavesurfer:
+      type: boolean
+      label: 'Enable Wavesurfer plugin'
+    use_external_control:
+      type: boolean
+      label: 'Use External (HTML, user provided) control'
+    hide_native_control:
+      type: boolean
+      label: 'Hide the Native HTML5 control'
+    use_external_control_shared:
+      type: boolean
+      label: 'Allow to attach to a shared, by other formatters external, external Control'
+    external_control_element_active_class:
+      type: string
+      label: 'CSS Class to be toggled, when using by an external control, to visually mark an active item. e.g Subtitles'
+    external_control_selector:
+      type: string
+      label: 'A DOM Query selector to be used to find, via JS, an external Control if that option is enabled'
+      default: '.sbf_media_control'
 field.formatter.settings.strawberry_image_formatter:
   type: mapping
   label: 'Specific Config for strawberry_image_formatter'
