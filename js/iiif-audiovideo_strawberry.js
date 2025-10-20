@@ -36,7 +36,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             // The selector might be a class. If multiple Viewers are in the same Screen
             // We might want to assign a control to each.
             // Sharing a single control Might be a future use case, but focusing on the most common one
-            // So we start by checking from closest possible elements and going up until we reach the page
+            // So we start by checking from the closest possible elements and going up until we reach the page
             // If the Control has already a media attached, then we will clone it.
             var control_blueprint = null;
             const closest_field = this.closest('.field');
@@ -45,18 +45,21 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             if (closest_field) {
               control_blueprint = closest_field.querySelector(control_query_selector);
             }
+            // Deals with Views
             if (!control_blueprint) {
               const closest_view = this.closest('.view_content');
               if (closest_view) {
                 control_blueprint = control_blueprint == null ? closest_view.querySelector(control_query_selector) : control_blueprint;
               }
             }
+            // Deals with ADOs/Nodes
             if (!control_blueprint) {
               const closest_node = this.closest('.node');
               if (closest_node) {
                 control_blueprint = control_blueprint == null ? closest_node.querySelector(control_query_selector) : control_blueprint;
               }
             }
+            // Deals with Block output (could be a view too)
             if (!control_blueprint) {
               const closest_block = this.closest('.block');
               if (closest_block) {
@@ -544,7 +547,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
                                 $allothertracks.forEach((subtitleTrackCloneElement) => {
                                   for (const $class of active_classes) {
-                                    e.currentTarget.classList.toggle($class, false)
+                                    subtitleTrackCloneElement.classList.toggle($class, false)
                                   }
                                 });
                                 for (const $class of active_classes) {
