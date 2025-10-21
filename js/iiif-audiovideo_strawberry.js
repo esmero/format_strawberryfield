@@ -29,14 +29,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
           else {
             active_classes = null;
           }
+          // @TODO. Future. This is a bit complex since we could also be asking
+          // the Original element to be positioned somewhere else?
           var attach_control_to_media_pos = 'none';
           // Pick the control/if any.
           let $waversurfer_container = null
           if (external_control) {
             // The selector might be a class. If multiple Viewers are in the same Screen
-            // We might want to assign a control to each.
-            // Sharing a single control Might be a future use case, but focusing on the most common one
-            // So we start by checking from the closest possible elements and going up until we reach the page
+            // We might want to assign a control to each or share.
+            // We start by checking from the closest possible elements and going up until we reach the page
             // If the Control has already a media attached, then we will clone it.
             var control_blueprint = null;
             const closest_field = this.closest('.field');
@@ -630,7 +631,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               }
             }
 
-
+            // and this is where we actually attach to existing (adding media to it)
+            // Or create a new instance from scratch.
             if (control_blueprint)  {
               // Now how we decide? new instance? Clone?
               let attached_to_existing = false
