@@ -94,7 +94,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
                 // If Video we can't hide.
                 // Might be hidden already by the Formatter to avoid Popping up
-                // when external control is provided.
+                // when external control is provided. We don't hide Video.
                 this.active_audiovideo_element.hidden = !use_wavesurfer || this.active_audiovideo_element.classList.contains('.video-av');
                 // Only here we can actually start doing things.
                 // We will clone deep.
@@ -140,7 +140,12 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                           ...wavesurfer_overrides,
                         };
                       }
-                      this.wavesurfer = WaveSurfer.create(default_waversurfer_settings)
+                      try {
+                        this.wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+                      }
+                      catch (error) {
+                        console.error("Waversurfer could not initialize for this media soruce" + error);
+                      };
                     }
                   }
                 }
@@ -478,86 +483,90 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   // In case we are swapping media after initialization. We will remove all existing tracks first
                   this.control.querySelectorAll('.subtitleTrack-active[data-track-id]').forEach(e => e.remove());
                   let $showing_subtitles = null;
-                  console.log(this.active_audiovideo_element.textTracks.length);
-                  console.log(this.active_audiovideo_element.id);
                   const textTracks = this.active_audiovideo_element.textTracks;
                   textTracks.addEventListener("change", this.captionStatus, false);
                   if (textTracks.length > 0) {
 
                     let $i = 0;
                     for (const track of textTracks) {
-                      track.addEventListener('cuechange', (e) => {
-                        let cues = e.target.activeCues;
-                        this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
-                        // Display current cue text
-                        if ( e.target.activeCues.length > 0) {
-                          const currentCue =  e.target.activeCues[0];
-                          const subtitleText = document.createElement('em');
-                          subtitleText.textContent = currentCue.text;
-                          // We need per track containers here. Because the user could enable multiple Tracks at the same time?
-                          this.$subtitleContainer.appendChild(subtitleText);
-                        }
-                      });
-
-                      if (this.$subtitleContainer) {
-                        // Note. Some browsers allow multiple track.mode == showing
-                        // Some toggle.
-                        // We can't depend on the browser here, so we will toggle
-                        // @TODO. We can't signal right now if we have multiple types
-                        // Like description, subtitle and captions
-                        // But in the future we should have a way
-                        // Listen for cue changes
-                        // Clone the $subtitleTrack, add onclick logic to swap subtitle
-                        if (this.$subtitleTrack) {
-                          const $subtitleTrackClone = this.$subtitleTrack.cloneNode(true);
-                          $subtitleTrackClone.hidden = false;
-                          $subtitleTrackClone.classList.add('subtitleTrack-active');
-                          $subtitleTrackClone.dataset.trackId = $i;
-                          $subtitleTrackClone.innerText = track.label;
-                          if (track.mode == "showing") {
-                            if (active_classes) {
-                              for (const $class of active_classes) {
-                                $subtitleTrackClone.classList.toggle($class)
-                              }
-                            }
+                      if (track.kind !== "metadata") {
+                        track.addEventListener('cuechange', (e) => {
+                          let cues = e.target.activeCues;
+                          this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
+                          // Display current cue text
+                          if (e.target.activeCues.length > 0) {
+                            const currentCue = e.target.activeCues[0];
+                            const subtitleText = document.createElement('em');
+                            subtitleText.textContent = currentCue.text;
+                            // We need per track containers here. Because the user could enable multiple Tracks at the same time?
+                            this.$subtitleContainer.appendChild(subtitleText);
                           }
-                          this.$subtitleTrack.before($subtitleTrackClone);
-                          $subtitleTrackClone.addEventListener("click", (e) => {
-                            console.log(e.currentTarget);
+                        });
 
-                            if (track.mode == "showing" || track.mode == "hidden") {
-                              track.mode = "disabled";
-                              this.$subtitleContainer.innerHTML = '';
+                        if (this.$subtitleContainer) {
+                          // Note. Some browsers allow multiple track.mode == showing
+                          // Some toggle.
+                          // We can't depend on the browser here, so we will toggle
+                          // @TODO. We can't signal right now if we have multiple types
+                          // Like description, subtitle and captions
+                          // But in the future we should have a way
+                          // Listen for cue changes
+                          // Clone the $subtitleTrack, add onclick logic to swap subtitle
+                          if (this.$subtitleTrack) {
+                            const $subtitleTrackClone = this.$subtitleTrack.cloneNode(true);
+                            $subtitleTrackClone.hidden = false;
+                            $subtitleTrackClone.classList.add('subtitleTrack-active');
+                            $subtitleTrackClone.dataset.trackId = $i;
+                            const track_label = track.label;
+                            if (track.label == '') {
+                              track.label = track.kind + " " + $i;
+                            }
+                            $subtitleTrackClone.innerText = track_label
+                            if (track.mode == "showing") {
                               if (active_classes) {
                                 for (const $class of active_classes) {
-                                  e.currentTarget.classList.toggle($class, false)
-                                }
-                              }
-                            } else {
-                              // First make all other not showing.
-                              for (const subtitleTrack of textTracks) {
-                                subtitleTrack.mode = "disabled"
-                              }
-
-                              track.mode = "showing";
-                              // Means I need to toggle any other one active
-                              if (active_classes) {
-                                const trackId = e.currentTarget.dataset.trackId;
-                                const $allothertracks = this.control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="' + trackId + '"])');
-
-                                $allothertracks.forEach((subtitleTrackCloneElement) => {
-                                  for (const $class of active_classes) {
-                                    subtitleTrackCloneElement.classList.toggle($class, false)
-                                  }
-                                });
-                                for (const $class of active_classes) {
-                                  e.currentTarget.classList.toggle($class, true)
+                                  $subtitleTrackClone.classList.toggle($class)
                                 }
                               }
                             }
-                          });
+                            this.$subtitleTrack.before($subtitleTrackClone);
+                            $subtitleTrackClone.addEventListener("click", (e) => {
+                              console.log(e.currentTarget);
+
+                              if (track.mode == "showing" || track.mode == "hidden") {
+                                track.mode = "disabled";
+                                this.$subtitleContainer.innerHTML = '';
+                                if (active_classes) {
+                                  for (const $class of active_classes) {
+                                    e.currentTarget.classList.toggle($class, false)
+                                  }
+                                }
+                              } else {
+                                // First make all other not showing.
+                                for (const subtitleTrack of textTracks) {
+                                  subtitleTrack.mode = "disabled"
+                                }
+
+                                track.mode = "showing";
+                                // Means I need to toggle any other one active
+                                if (active_classes) {
+                                  const trackId = e.currentTarget.dataset.trackId;
+                                  const $allothertracks = this.control.querySelectorAll('.subtitleTrack-active[data-track-id]:not([data-track-id="' + trackId + '"])');
+
+                                  $allothertracks.forEach((subtitleTrackCloneElement) => {
+                                    for (const $class of active_classes) {
+                                      subtitleTrackCloneElement.classList.toggle($class, false)
+                                    }
+                                  });
+                                  for (const $class of active_classes) {
+                                    e.currentTarget.classList.toggle($class, true)
+                                  }
+                                }
+                              }
+                            });
+                          }
+                          $i++;
                         }
-                        $i++;
                       }
                     }
                   }
@@ -671,7 +680,12 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 ...wavesurfer_overrides,
               };
             }
-            const wavesurfer = WaveSurfer.create(default_waversurfer_settings)
+            try {
+              const wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+            }
+            catch (error) {
+              console.error("Waversurfer could not initialize for this media soruce" + error);
+            };
           }
         }
       });
