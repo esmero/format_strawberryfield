@@ -21,7 +21,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
           var control_query_selector = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_selector'];
           var external_control_shared = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_external_control_shared'];
           var use_wavesurfer = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_wavesurfer'];
-          var hide_controls = drupalSettings.format_strawberryfield.audiovideo[element_id]['hide_native_controls'];
+          var hide_control = drupalSettings.format_strawberryfield.audiovideo[element_id]['hide_native_control'];
           var active_classes = drupalSettings.format_strawberryfield.audiovideo[element_id]['external_control_element_active_class'];
           if (active_classes.length > 0) {
             active_classes = active_classes.split(" ").filter(Boolean);
@@ -68,7 +68,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               }
             }
             control_blueprint = control_blueprint == null ? document.querySelector(control_query_selector) : control_blueprint;
-            function customMediaController(control_blueprint, audiovideo_element, use_wavesurfer, attach_control_to_media_pos) {
+            function customMediaController(control_blueprint, audiovideo_element, use_wavesurfer, attach_control_to_media_pos, hide_control) {
               this.active_audiovideo_element = audiovideo_element;
               this.audiovideo_elements = [];
               this.audiovideo_elements.push(audiovideo_element);
@@ -90,12 +90,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               let $unmuteBtn = control_blueprint.querySelector('.unmuteBtn');
               if ($playBtn && $pauseBtn && $muteBtn && $unmuteBtn) {
                 // Hide original Media Controls.
-                this.active_audiovideo_element.controls = !hide_controls;
+                this.active_audiovideo_element.controls = !hide_control;
                 this.valid = true;
 
                 // If Video we can't hide.
                 // Might be hidden already by the Formatter to avoid Popping up
                 // when external control is provided. We don't hide Video.
+                // But we could reposition It inside the player if there is a
+                // Media Container? New option just driven by HTML?
                 this.active_audiovideo_element.hidden = !use_wavesurfer || this.active_audiovideo_element.classList.contains('.video-av');
                 // Only here we can actually start doing things.
                 // We will clone deep.
@@ -162,6 +164,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$progressSlider = this.control.querySelector(".progressSlider");
                 this.$volumeSlider = this.control.querySelector(".volumeSlider");
                 this.$fullscreenBtn = this.control.querySelector('.fullscreenBtn');
+                // If Fullscreen API is not available, dont't show the button.
+                if (!document?.fullscreenEnabled && this.$fullscreenBtn !== null ) {
+                  this.$fullscreenBtn.style.display = "none";
+                }
                 this.$currentTime = this.control.querySelector('.currentTime');
                 this.$durationTime = this.control.querySelector('.durationTime');
 
@@ -393,7 +399,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
                 this.addMediaElement = function (audiovideo_element) {
                   if (this.multipleMediaCapable()) {
-                    // hide so we don't have multiple elements al around
+                    // hide so we don't have multiple elements all around
                     // visible.
                     audiovideo_element.hidden = true;
                     this.audiovideo_elements.push(audiovideo_element);
@@ -478,7 +484,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.captionStatus = function(e) {
                   console.log(e);
                 }
-
 
                 this.initializeTextTracks = function() {
                   // In case we are swapping media after initialization. We will remove all existing tracks first
@@ -646,7 +651,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
               }
               if (!attached_to_existing) {
-                const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos);
+                const Controllerinstance = new customMediaController(control_blueprint, this, use_wavesurfer, attach_control_to_media_pos, hide_control);
                 if (Controllerinstance.valid && Controllerinstance.multipleMediaCapable && external_control_shared) {
                   ActiveControllers.set(Controllerinstance.control_blueprint.id, Controllerinstance);
                 }
@@ -669,7 +674,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             let default_waversurfer_settings = {
               container: $waversurfer_container,
               media: this,
-              mediaControls: !hide_controls
+              mediaControls: !hide_control
             };
             if (typeof wavesurfer_overrides == 'object' &&
               !Array.isArray(wavesurfer_overrides) &&
