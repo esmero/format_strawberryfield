@@ -145,22 +145,22 @@ class DateRangeSliderWidget extends DateSliderWidget {
     if (isset($build['#items']['manual_input']['manual_input_full']) &&  ($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE)) {
       $build['#items']['manual_input']['manual_input_full']['min_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_full']['max_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['min_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['max_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
     }
