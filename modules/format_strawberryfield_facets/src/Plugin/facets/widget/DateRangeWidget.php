@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
 use Drupal\facets\Result\Result;
@@ -67,14 +68,18 @@ class DateRangeWidget extends WidgetPluginBase {
       $max = gmdate('Y-m-d', (int) $max);
     }
 
+    // Generate unique IDs for form elements (AJAX-safe)
+    $id = Html::getUniqueId('facet-sbf-date-range-'.$facet->id());
+
     $build['#items'] = [
       'min' => [
         '#type' => 'date',
         '#title' => $this->t('Date from'),
+        '#id' => $id . '-min',
         '#value' => $min,
         '#attributes' => [
           'class' => ['facet-date-range'],
-          'id' => $facet->id() . '_min',
+          'id' => $id . '-min',
           'name' => $facet->id() . '_min',
           'min' => $min,
           'max' => $max,
@@ -84,10 +89,11 @@ class DateRangeWidget extends WidgetPluginBase {
       'max' => [
         '#type' => 'date',
         '#title' => $this->t('Date to'),
+        '#id' => $id . '_max',
         '#value' => $max,
         '#attributes' => [
           'class' => ['facet-date-range'],
-          'id' => $facet->id() . '_max',
+          'id' => $id . '_max',
           'name' => $facet->id() . '_max',
           'min' => $min,
           'max' => $max,

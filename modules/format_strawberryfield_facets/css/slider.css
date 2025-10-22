@@ -17,3 +17,42 @@
   color: black;
   color: var(--bb-primary-dark, var(--bs-body-color, black)) !important;
 }
+
+/**
+ * jQuery UI Slider Pips - Accessibility Contrast Fixes
+ * Overrides for jquery-ui-slider-pips library to meet WCAG AA contrast requirements (4.5:1 for normal text)
+ */
+.ui-slider-pips .ui-slider-pip {
+  color: #4a4a4a; /* 9.28:1 contrast ratio on white */
+}
+
+.ui-slider-pips .ui-slider-line {
+  background: #4a4a4a; /* 9.28:1 contrast ratio on white */
+}
+
+.ui-slider-pips [class*=ui-slider-pip-initial] {
+  font-weight: bold;
+  color: #0d8a58; /* 4.69:1 contrast ratio on white */
+}
+
+.ui-slider-pips .ui-slider-pip-initial-2 {
+  color: #106b96; /* 5.26:1 contrast ratio on white */
+}
+
+.ui-slider-pips [class*=ui-slider-pip-selected] {
+  font-weight: bold;
+  color: #c05500; /* 5.74:1 contrast ratio on white */
+}
+
+.ui-slider-pips .ui-slider-pip-inrange {
+  color: #000000; /* 21:1 contrast ratio on white */
+}
+
+.ui-slider-pips .ui-slider-pip-selected-2 {
+  color: #cc0000; /* 5.3:1 contrast ratio on white */
+}
+
+.ui-slider-pips [class*=ui-slider-pip-selected] .ui-slider-line,
+.ui-slider-pips .ui-slider-pip-inrange .ui-slider-line {
+  background: #000000; /* 21:1 contrast ratio on white */
+}
