@@ -204,7 +204,7 @@
               max = ui_max = date_from_input.getFullYear();
               let month = date_from_input.getMonth();
               let day = date_from_input.getDay();
-              max_timestamp = toTimestamp(min, month, day, 0, 0, 0, 0);
+              max_timestamp = toTimestamp(max, month, day, 0, 0, 0, 0);
             }
           }
         }
