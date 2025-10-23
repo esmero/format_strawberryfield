@@ -192,7 +192,7 @@
         else if (e.target.type == "date") {
           if (e.target.dataset?.type == "date-range-min") {
             let date_from_input = new Date(e.target.value);
-            if (typeof date_from_input == Date) {
+            if (date_from_input instanceof Date) {
               min = ui_min = date_from_input.getFullYear();
               let month = date_from_input.getMonth();
               let day = date_from_input.getDay();
@@ -200,11 +200,11 @@
             }
           } else {
             let date_from_input = new Date(e.target.value);
-            if (typeof date_from_input == Date) {
+            if (date_from_input instanceof Date) {
               max = ui_max = date_from_input.getFullYear();
               let month = date_from_input.getMonth();
               let day = date_from_input.getDay();
-              max_timestamp = toTimestamp(min, month, day, 0, 0, 0, 0);
+              max_timestamp = toTimestamp(max, month, day, 0, 0, 0, 0);
             }
           }
         }
