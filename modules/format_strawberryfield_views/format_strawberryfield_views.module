@@ -164,7 +164,7 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
     try {
       $key = 'search_api_index_' . $index->id();
       $table = &$data[$key];
-      $advanced_fulltext_field = _search_api_views_find_field_alias('sbf_advanced_search_api_fulltext', $table);
+      $advanced_fulltext_field = format_strawberryfield_findFieldAlias('sbf_advanced_search_api_fulltext', $table);
       $table[$advanced_fulltext_field] = [
         'title'  => t('Advanced Fulltext search'),
         'group' => t('Search'),
@@ -179,7 +179,7 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
         $table[$advanced_fulltext_field]['real field'] = 'sbf_advanced_search_api_fulltext';
       }
 
-      $sbf_join_field = _search_api_views_find_field_alias('sbf_flavors_join', $table);
+      $sbf_join_field = format_strawberryfield_findFieldAlias('sbf_flavors_join', $table);
       $table[$sbf_join_field] = [
         'title'  => t('Strawberry Flavor to Node Join'),
         'group' => t('Search'),
@@ -198,7 +198,7 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
       // $table[$advanced_fulltext_field]['argument']['id'] = 'sbf_advanced_search_api_fulltext';
       // Requires a special Argument Plugin. Not needed right now.
 
-      $ado_filter = _search_api_views_find_field_alias('sbf_ado_filter', $table);
+      $ado_filter = format_strawberryfield_findFieldAlias('sbf_ado_filter', $table);
       $table[$ado_filter] = [
         'title'  => t('Similar ADO Filter (Experimental)'),
         'group' => t('Search'),
@@ -213,7 +213,7 @@ function format_strawberryfield_views_views_data_alter(array &$data) {
         $table[$ado_filter]['real field'] = 'sbf_ado_filter';
       }
 
-      $sbf_ado_join_field = _search_api_views_find_field_alias('sbf_ado_join', $table);
+      $sbf_ado_join_field = format_strawberryfield_findFieldAlias('sbf_ado_join', $table);
       $table[$sbf_ado_join_field] = [
         'title'  => t('ADO(node) to ADO(node) Join'),
         'group' => t('Search'),
@@ -290,5 +290,26 @@ function format_strawberryfield_views_views_pre_render(ViewExecutable $view) {
 
 function format_strawberryfield_views_page_attachments(array &$page) {
   $page['#attached']['library'][] = "format_strawberryfield_views/views-ajax-dynamic";
+}
+
+
+/**
+ * Finds an unused field alias for a field in a Views table definition.
+ *
+ * @param string $field_id
+ *   The original ID of the Search API field.
+ * @param array $table
+ *   The Views table definition.
+ *
+ * @return string
+ *   The field alias to use.
+ */
+function format_strawberryfield_findFieldAlias(string $field_id, array $table): string {
+  $base = $field_alias = preg_replace('/[^a-zA-Z0-9]+/S', '_', $field_id);
+  $i = 0;
+  while (isset($table[$field_alias])) {
+    $field_alias = $base . '_' . ++$i;
+  }
+  return $field_alias;
 }
 
