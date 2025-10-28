@@ -13,7 +13,7 @@
         }
     ],
     "require": {
-        "strawberryfield/strawberryfield":"1.5.0.x-dev",
+        "strawberryfield/strawberryfield":"1.6.0.x-dev",
         "league/html-to-markdown":"^5.0",
         "erusev/parsedown": "^1.7",
         "drupal/webform": "^6.2",
