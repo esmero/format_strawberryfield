@@ -105,13 +105,13 @@ class TwigExtension extends AbstractExtension {
   public function getFunctions() {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
-        [$this, 'entityIdsByLabel']),
+        $this->entityIdsByLabel(...)),
       new TwigFunction('clipboard_copy',
-        [$this, 'clipboardCopy']),
+        $this->clipboardCopy(...)),
       new TwigFunction('sbf_search_api',
-        [$this, 'searchApiQuery']),
-      new TwigFunction('sbf_file_content', [$this, 'sbfFileContent'], ['is_safe' => ['all']]),
-      new TwigFunction('sbf_drupal_view_paged',[$this, 'sbfDrupalView'])
+        $this->searchApiQuery(...)),
+      new TwigFunction('sbf_file_content', $this->sbfFileContent(...), ['is_safe' => ['all']]),
+      new TwigFunction('sbf_drupal_view_paged',$this->sbfDrupalView(...))
     ];
   }
 
@@ -120,18 +120,18 @@ class TwigExtension extends AbstractExtension {
    */
   public function getFilters() {
     return [
-      new TwigFilter('sbf_json_decode', [$this, 'sbfJsonDecode']),
-      new TwigFilter('markdown_2_html', [$this, 'markdownToHtml'],
+      new TwigFilter('sbf_json_decode', $this->sbfJsonDecode(...)),
+      new TwigFilter('markdown_2_html', $this->markdownToHtml(...),
         ['is_safe' => ['all']]),
-      new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
+      new TwigFilter('html_2_markdown', $this->htmlToMarkdown(...),
         ['is_safe' => ['all']]),
-      new TwigFilter('bibliography', [$this, 'bibliography'], ['is_safe' => ['all']]),
-      new TwigFilter('edtf_2_human_date', [$this, 'edtfToHumanDate'],
+      new TwigFilter('bibliography', $this->bibliography(...), ['is_safe' => ['all']]),
+      new TwigFilter('edtf_2_human_date', $this->edtfToHumanDate(...),
         ['is_safe' => ['all']]),
-      new TwigFilter('edtf_2_iso_date', [$this, 'edtfToIsoDate'],
+      new TwigFilter('edtf_2_iso_date', $this->edtfToIsoDate(...),
         ['is_safe' => ['all']]),
       // Replace Drupal core's twig escape filter, that throws exception on invalid render array with our own.
-      new TwigFilter('format_strawberry_safe_escape', [$this, 'escapeFilter'], ['needs_environment' => TRUE, 'is_safe_callback' => 'twig_escape_filter_is_safe']),
+      new TwigFilter('format_strawberry_safe_escape', $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => 'twig_escape_filter_is_safe']),
     ];
   }
 

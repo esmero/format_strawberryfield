@@ -80,7 +80,6 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/npm/jquery-colorbox@1.6.4/jquery.colorbox.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/jquery.mmenu.all.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/jquery.mmenu@7.3.3/dist/addons/navbars/jquery.mmenu.navbars.js: { external: true, minified: true, preprocess: false}
-    https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/jquery-ui-1.12.0.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/dragscrollable-br.js: { external: true, minified: false, preprocess: false}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/BookReader.js: { external: true, minified: false, preprocess: false,  weight: -9}
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.url.js: { external: true, minified: false, preprocess: false, weight: -8}
@@ -91,13 +90,14 @@ iiif_iabookreader:
     https://cdn.jsdelivr.net/gh/internetarchive/bookreader@4.40.3/BookReader/plugins/plugin.text_selection.js: { external: true, minified: false, preprocess: false, weight: -8}
   dependencies:
     - core/jquery
+    - jquery_ui/core
     - jquery_ui_slider/slider
     - jquery_ui_effects/core
     - core/drupal
     - core/drupalSettings
 
 iiif_iabookreader_strawberry:
-  version: 1.0
+  version: 2.0
   js:
     js/iiif-iabookreader_strawberry.js: {minified: false, weight: -6}
     js/plugin.iiif-iabookreader_strawberry.js: {minified: false, weight: -8}
@@ -109,7 +109,6 @@ iiif_iabookreader_strawberry:
     - core/drupal.form
     - core/drupalSettings
     - core/drupal.debounce
-    - core/modernizr
     - format_strawberryfield/iiif_openseadragon
     - format_strawberryfield/iiif_iabookreader
     - format_strawberryfield/iiif_formatstrawberryfield_utils

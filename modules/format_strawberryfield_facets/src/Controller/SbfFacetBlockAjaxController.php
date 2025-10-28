@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_facets\Controller;
 
+use Drupal\block\BlockViewBuilder;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\InvokeCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
@@ -89,9 +90,9 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
       if ($block_entity) {
         // We only pre-render the lazyBuilder so deeper settings/libraries can be "seen"
         // But the ReplaceCommmand internal Attachment extractor.
-        $render_array = \Drupal\block\BlockViewBuilder::lazyBuilder($block_id, 'full');
+        $render_array = BlockViewBuilder::lazyBuilder($block_id, 'full');
         if (isset($render_array['#block'])) {
-          $render_array = \Drupal\block\BlockViewBuilder::preRender($render_array);
+          $render_array = BlockViewBuilder::preRender($render_array);
           // #block will be used by the preRender
           // But we need to also remove the pre_render callbacks so renderInIsolate
           // Does not try again to call it making it fail/ or forcing us to pass

@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
+use Drupal\core\Url;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
@@ -166,7 +167,7 @@ class DateRangeWidget extends WidgetPluginBase {
       if (!$url_for_js) {
         $url_for_js = $url;
       }
-      if ($url_for_js && $url_for_js instanceof \Drupal\core\Url) {
+      if ($url_for_js && $url_for_js instanceof Url) {
         $url = $url_for_js->toString();
         $build['#items']['min']['#attributes']['data-drupal-url'] = $url;
         $build['#attached']['library'][]

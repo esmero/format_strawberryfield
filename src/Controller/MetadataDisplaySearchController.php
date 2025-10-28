@@ -28,7 +28,7 @@ class MetadataDisplaySearchController extends
   /**
    * Mime type guesser service.
    *
-   * @var \Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesserInterface
+   * @var \Symfony\Component\Mime\MimeTypesInterface
    */
   protected $mimeTypeGuesser;
 

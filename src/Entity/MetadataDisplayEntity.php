@@ -2,6 +2,8 @@
 
 namespace Drupal\format_strawberryfield\Entity;
 
+use Twig\Node\Expression\FunctionExpression;
+use Twig\Error\SyntaxError;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
@@ -710,7 +712,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
   private function generateCacheTagsFromRelated(Node $node) {
     // Process nodes that are function expressions
     $tags = [];
-    if ($node instanceof \Twig\Node\Expression\FunctionExpression) {
+    if ($node instanceof FunctionExpression) {
       // Check the function name
       if ($node->getAttribute('name') == 'drupal_view') {
         // Grab the argument
@@ -770,7 +772,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
 
     // Recursively loop through the sub nodes.
     foreach ($node as $child) {
-      if ($child instanceof \Twig\Node\Node) {
+      if ($child instanceof Node) {
         $tags = array_merge($this->generateCacheTagsFromRelated($child), $tags);
       }
     }
@@ -821,7 +823,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
       // @NOTE: never compile. It will get stuck in the internal cache
       $this->twigEnvironment()->parse($this->twigEnvironment()->tokenize($source));
     }
-    catch (\Twig\Error\SyntaxError $e) {
+    catch (SyntaxError $e) {
       unset($source);
       $this->cacheSet($cache_id, $e->getMessage(), Cache::PERMANENT, $this->getCacheTags());
       return $e->getMessage();

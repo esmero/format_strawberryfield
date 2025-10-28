@@ -75,7 +75,7 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
 
     // @TODO check event priority and adapt to future D9 needs.
     $events[StrawberryfieldEventType::SAVE][] = ['onEntitySave', static::$priority];

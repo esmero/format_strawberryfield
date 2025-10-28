@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Entity\Controller;
 
+use cebe\openapi\Writer;
 use cebe\openapi\spec\OpenApi;
 use cebe\openapi\spec\PathItem;
 use Drupal\Core\Url;
@@ -129,7 +130,7 @@ class MetadataAPIConfigEntityListBuilder extends ConfigEntityListBuilder {
 
     $openAPI->paths->addPath($path, $PathItem);
 
-    $json = \cebe\openapi\Writer::writeToJson($openAPI, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
+    $json = Writer::writeToJson($openAPI, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
     return $json;
   }
 

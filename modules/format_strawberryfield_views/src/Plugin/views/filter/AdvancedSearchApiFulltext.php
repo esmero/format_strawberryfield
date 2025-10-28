@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 
+use Drupal\search_api_solr\SolrBackendInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
@@ -344,7 +345,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $backend = $query->getIndex()->getServerInstance()->getBackend();
     $index_fields = $query->getIndex()->getFields();
 
-    if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
+    if ($backend instanceof SolrBackendInterface) {
       $solr_field_names = $query->getIndex()
         ->getServerInstance()
         ->getBackend()
@@ -481,7 +482,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       }
       // @TODO: Check that manual_keys is an array;, that $query_able_datum_internal['real_solr_fields'] exists.
       // if not abort the query.
-      $flat_key = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+      $flat_key = Utility::flattenKeys(
         $manual_keys, $query_able_datum_internal['real_solr_fields'],
         $parse_mode->getPluginId()
       );
@@ -490,7 +491,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       if (!empty($query_able_datum_internal['aggregated']) && is_array($query_able_datum_internal['aggregated'])) {
         // These little babies are always OR bc it is a highlight.. no need to go
         // Boolean here folks.
-        $flat_key_sbf_highlight[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+        $flat_key_sbf_highlight[] = Utility::flattenKeys(
           $manual_keys, $query_able_datum_internal['aggregated'],
           $parse_mode->getPluginId()
         );
