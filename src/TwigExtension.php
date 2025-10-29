@@ -121,6 +121,7 @@ class TwigExtension extends AbstractExtension {
   public function getFilters() {
     return [
       new TwigFilter('sbf_json_decode', $this->sbfJsonDecode(...)),
+      new TwigFilter('sbf_render', $this->sbfRenderVar(...)),
       new TwigFilter('markdown_2_html', $this->markdownToHtml(...),
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', $this->htmlToMarkdown(...),
@@ -748,9 +749,17 @@ class TwigExtension extends AbstractExtension {
 
     $this->bubbleArgMetadata($arg);
 
+    // Immediately cast and return MarkupInterface objects to a string to ensure
+    // that when Twig renders via yield, later manipulations to the object will
+    // not affect rendering.
+    if ($autoescape && ($arg instanceof MarkupInterface)) {
+      return (string) $arg;
+    }
+
+
 
     // Keep \Twig\Markup objects intact to support autoescaping.
-    if ($autoescape && ($arg instanceof TwigMarkup || $arg instanceof MarkupInterface)) {
+    if ($autoescape && $arg instanceof TwigMarkup) {
       return $arg;
     }
 
@@ -842,4 +851,75 @@ class TwigExtension extends AbstractExtension {
 
     $this->renderer->render($arg_bubbleable);
   }
+
+  /**
+   * Own implementation of D11's \Drupal\Core\Template\TwigExtension::renderVar.
+   *
+   * If an object is passed which does not implement __toString(),
+   * RenderableInterface or toString() then an exception is thrown;
+   * All Other objects are casted to string. Core |render filter
+   * in Drupal 11 leaves \Drupal\Component\Render\MarkupInterface
+   * untouched, requiring (as of 11.2) to variable|drupal_escape|render to archieve
+   * what was just |render
+   *
+   * If an array is passed it is rendered via render() and scalar values are
+   * returned directly.
+   *
+   * @param mixed $arg
+   *   String, Object or Render Array.
+   *
+   * @throws \Exception
+   *   When $arg is passed as an object which does not implement __toString(),
+   *   RenderableInterface or toString().
+   *
+   * @return mixed
+   *   The rendered output
+   * @see \Drupal\Core\Template\TwigExtension::renderVar
+   */
+  public function sbfRenderVar($arg) {
+    // Check for a numeric zero int or float.
+    if ($arg === 0 || $arg === 0.0) {
+      return 0;
+    }
+
+    // Return early for NULL, empty arrays, empty strings and FALSE booleans.
+    // @todo https://www.drupal.org/project/drupal/issues/3240093 Determine if
+    //   this behavior is correct or should be deprecated.
+    if ($arg == NULL) {
+      return '';
+    }
+
+    // Optimize for scalars as it is likely they come from the escape filter.
+    if (is_scalar($arg)) {
+      return $arg;
+    }
+
+    if (is_object($arg)) {
+      $this->bubbleArgMetadata($arg);
+      if ($arg instanceof RenderableInterface) {
+        $arg = $arg->toRenderable();
+      }
+      elseif (method_exists($arg, '__toString')) {
+        return (string) $arg;
+      }
+      // You can't throw exceptions in the magic PHP __toString() methods, see
+      // http://php.net/manual/language.oop5.magic.php#object.tostring so
+      // we also support a toString method.
+      elseif (method_exists($arg, 'toString')) {
+        return $arg->toString();
+      }
+      else {
+        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+      }
+    }
+
+    // This is a render array, with special simple cases already handled.
+    // Early return if this element was pre-rendered (no need to re-render).
+    if (isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0) {
+      return $arg['#markup'];
+    }
+    $arg['#printed'] = FALSE;
+    return $this->renderer->render($arg);
+  }
+
 }
