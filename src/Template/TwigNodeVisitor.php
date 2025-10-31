@@ -38,10 +38,14 @@ class TwigNodeVisitor implements NodeVisitorInterface {
   public function leaveNode(Node $node, Environment $env): ?Node {
     // Change the 'drupal_escape' filter to our own 'format_strawberry_safe_escape' filter.
     if ($node instanceof FilterExpression) {
-      $name = $node->getNode('filter')->getAttribute('value');
-      $internal_name = $node->getAttribute('twig_callable')->getName();
-      if ('drupal_escape' == $name || $internal_name == 'drupal_escape') {
-        $node->getNode('filter')->setAttribute('value', 'format_strawberry_safe_escape');
+      $callable = $node->getAttribute('twig_callable');
+      if (method_exists($callable, 'getName')) {
+        $internal_name = $node->getAttribute('twig_callable')->getName();
+        if ('drupal_escape' == $internal_name) {
+          // @TODO.  $env->getFilter is internal now. Drupal 11 is still useing it though;
+          $node->setAttribute('twig_callable', $env->getFilter('format_strawberry_safe_escape'));
+          // Deprecated in Twig 3.12 $node->getNode('filter'). $name could be public/
+        }
       }
     }
     return $node;
