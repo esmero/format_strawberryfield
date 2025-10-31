@@ -18,7 +18,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Twig\Environment;
 use Twig\Extension\AbstractExtension;
-use Twig\Markup;
 use Twig\Markup as TwigMarkup;
 use Twig\Runtime\EscaperRuntime;
 use Twig\TwigTest;
@@ -258,7 +257,7 @@ class TwigExtension extends AbstractExtension {
    *    - An array
    */
   public function sbfJsonDecode($value, $htmlentitydecode = FALSE) {
-    if ($value instanceof Markup) {
+    if ($value instanceof TwigMarkup) {
       $value = (string) $value;
     }
     elseif (\is_iterable($value)) {
@@ -756,12 +755,11 @@ class TwigExtension extends AbstractExtension {
       return (string) $arg;
     }
 
-
-
     // Keep \Twig\Markup objects intact to support autoescaping.
-    if ($autoescape && $arg instanceof TwigMarkup) {
+    if ($autoescape && ($arg instanceof TwigMarkup)) {
       return $arg;
     }
+
 
     $return = NULL;
 
@@ -796,7 +794,7 @@ class TwigExtension extends AbstractExtension {
       if ($strategy == 'html') {
         return Html::escape($return);
       }
-      return $env->getRuntime(EscaperRuntime::class)->escape($return, $strategy, $charset, $autoescape);
+      return $env->getRuntime(EscaperRuntime::class)->escape($arg, $strategy, $charset, $autoescape);
     }
 
     // This could be a normal render array, which is no longer safe by definition bc renderer is too strict on render arrays
