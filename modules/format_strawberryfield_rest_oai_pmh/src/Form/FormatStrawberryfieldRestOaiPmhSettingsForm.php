@@ -91,7 +91,7 @@ class FormatStrawberryfieldRestOaiPmhSettingsForm extends ConfigFormBase {
       $container->get('path.validator'),
       $container->get('cache.discovery'),
       $container->get('router.builder'),
-      $container->get('config.typed'),
+      $container->get('config.typed')
     );
   }
 
