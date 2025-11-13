@@ -9,16 +9,16 @@ use Symfony\Component\HttpFoundation\Request;
 
 class RangedRemoteFileRespone extends BinaryFileResponse {
 
-  protected static $trustXSendfileTypeHeader = false;
+  protected static bool $trustXSendfileTypeHeader = false;
 
   /**
    * @var File
    */
-  protected $file;
-  protected $offset = 0;
-  protected $end = 0;
-  protected $maxlen = -1;
-  protected $deleteFileAfterSend = false;
+  protected File $file;
+  protected int $offset = 0;
+  protected int $end = 0;
+  protected int $maxlen = -1;
+  protected bool $deleteFileAfterSend = false;
 
   /**
    * {@inheritdoc}
