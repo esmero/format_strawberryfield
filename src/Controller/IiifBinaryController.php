@@ -175,10 +175,6 @@ class IiifBinaryController extends ControllerBase {
         );
       }
 
-      // Only get the RAW JSON and evaluate embargo if enabled
-
-
-
       $stream = $request->query->get('stream');
       $uri = $found->getFileUri(); // The source URL
       $filename = $found->getFilename(); // The filename...
@@ -218,6 +214,7 @@ class IiifBinaryController extends ControllerBase {
         $response->headers->set('Last-Modified', gmdate("D, d M Y H:i:s", $createdtime)." GMT");
         $response->headers->set('Content-Length', $size);
         $response->setETag($etag, TRUE);
+        $response->setPrivate();
         return $response;
       }
       /** @var \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface $stream_wrapper_manager */
@@ -233,7 +230,7 @@ class IiifBinaryController extends ControllerBase {
         $response = new StreamedResponse();
         $response->headers->set("Content-Type", $mime);
         $response->headers->set("Last-Modified", gmdate("D, d M Y H:i:s", $createdtime)." GMT");
-        // Let's set this as a weak ETAG. Why? If e.g NGINX is delivering via GZIP
+        // Let's set this as a weak ETAG. Why? If e.g. NGINX is delivering via GZIP
         // Firefox and others will assume its weak and will in response request
         // it as weak not matching afterwards.
         $response->setETag($etag, TRUE);
@@ -264,7 +261,7 @@ class IiifBinaryController extends ControllerBase {
           // Be sure to close the stream resource when you're done with it
           fclose($stream);
         });
-
+        $response->setPrivate();
         return $response;
       }
       else {
@@ -316,6 +313,7 @@ class IiifBinaryController extends ControllerBase {
           ResponseHeaderBag::DISPOSITION_INLINE,
           $filename
         );
+        $response->setPrivate();
         return $response;
       }
     }
