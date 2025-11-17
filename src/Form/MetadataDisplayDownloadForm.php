@@ -75,6 +75,7 @@ class MetadataDisplayDownloadForm extends FormBase {
     ];
 
     $response = new Response($body, 200, $headers);
+    $response->setPrivate();
     $form_state->setResponse($response);
   }
 
