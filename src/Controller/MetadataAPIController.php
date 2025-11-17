@@ -868,6 +868,7 @@ class MetadataAPIController extends ControllerBase
             );
         }
       }
+      $response->setPrivate();
       return $response;
     }
     else {
