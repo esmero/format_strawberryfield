@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
+use Drupal\core\Url;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
@@ -250,7 +251,7 @@ class DateSliderWidget extends WidgetPluginBase {
     if (!$url_for_js) {
       $url_for_js = $url;
     }
-    if ($url_for_js && $url_for_js instanceof \Drupal\core\Url) {
+    if ($url_for_js && $url_for_js instanceof Url) {
       $url = $url_for_js->toString();
       // We need to add the #theme key to avoid having \template_preprocess_item_list()
       // Assume the theme from the main facet needs to be inherited

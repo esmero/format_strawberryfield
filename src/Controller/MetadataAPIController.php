@@ -2,6 +2,8 @@
 
 namespace Drupal\format_strawberryfield\Controller;
 
+use cebe\openapi\Writer;
+use Drupal\search_api\Plugin\views\ResultRow;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Uuid\Uuid;
@@ -242,7 +244,7 @@ class MetadataAPIController extends ControllerBase
 
     $openAPI->paths->addPath($path, $PathItem);
 
-    $json = \cebe\openapi\Writer::writeToJson($openAPI);
+    $json = Writer::writeToJson($openAPI);
 
     $validator = (new ValidatorBuilder)->fromSchema($openAPI)
       ->getRequestValidator();
@@ -559,7 +561,7 @@ class MetadataAPIController extends ControllerBase
               else {
                 // NOT CACHED, regenerate
                 foreach ($executable->result as $resultRow) {
-                  if ($resultRow instanceof \Drupal\search_api\Plugin\views\ResultRow) {
+                  if ($resultRow instanceof ResultRow) {
                     //@TODO move to its own method\
                     $node = $resultRow->_object->getValue() ?? NULL;
                     if ($node && $sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield($node)) {

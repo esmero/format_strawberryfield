@@ -209,7 +209,7 @@ class IiifBinaryController extends ControllerBase {
       $size = $found->getSize(); // Bytes
       $createdtime = $found->getCreatedTime(); // last modified makes little sense?
       if ($request->getMethod() == 'HEAD') {
-        $response = new \Symfony\Component\HttpFoundation\Response;
+        $response = new Response;
         $response->headers->set('Content-Type', $mime);
         $response->headers->set('Last-Modified', gmdate("D, d M Y H:i:s", $createdtime)." GMT");
         $response->headers->set('Content-Length', $size);

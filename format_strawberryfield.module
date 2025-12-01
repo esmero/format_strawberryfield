@@ -3,7 +3,7 @@
  * @file
  * Contains formater_strawberryfield.module.
  */
-
+use Drupal\node\Plugin\views\argument\Nid;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\node\NodeInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -95,7 +95,7 @@ function format_strawberryfield_form_node_form_alter(&$form, FormStateInterface 
 /**
  * Implements hook_entity_view_mode_alter().
  */
-function format_strawberryfield_entity_view_mode_alter(&$view_mode, Drupal\Core\Entity\EntityInterface $entity, $context) {
+function format_strawberryfield_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
   if ($entity->getEntityTypeId() != 'node') {
     return;
   }
@@ -360,14 +360,14 @@ function format_strawberryfield_cron() {
   $now = \Drupal::requestStack()->getCurrentRequest()->server->get('REQUEST_TIME');
   $timesincerun = $now - \Drupal::state()->get('system.cron_last');
   if ($timesincerun/60/60/24 > 7) {
-    \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:all_embargo']);
+    Cache::invalidateTags(['format_strawberryfield:all_embargo']);
   }
   else {
     $dayssince = ceil($timesincerun/60/60/24);
     $current_time = time();
     for ($i = 0; $i < $dayssince; $i++) {
       $date_to_invalidate =  date('Y-m-d', $current_time - 60 * 60 * 24 * $i);
-      \Drupal\Core\Cache\Cache::invalidateTags(['format_strawberryfield:embargo:'.$date_to_invalidate]);
+      Cache::invalidateTags(['format_strawberryfield:embargo:'.$date_to_invalidate]);
     }
   }
 
@@ -403,9 +403,13 @@ function _format_strawberryfield_metadata_preview_error_handler($error_level, $m
     {
       case E_USER_WARNING:
       case E_USER_ERROR:
+        // error_log(var_export($message,true));
+      // We should drupal_set_message all these errors? Or log.
         _drupal_error_handler($error_level, $message, $filename, $line, $context);
         throw new ErrorException($message, $error_level, 0, $filename, $line);
       default:
+        // error_log(var_export($message,true));
+        // We should drupal_set_message all these errors? Or log.
         _drupal_error_handler($error_level, $message, $filename, $line, $context);
         break;
     }
@@ -424,7 +428,7 @@ function _format_strawberryfield_metadata_preview_error_handler($error_level, $m
  */
 function format_strawberryfield_views_pre_build(ViewExecutable $view) {
   foreach ($view->argument ?? [] as $argument) {
-    if ($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
+    if ($argument instanceof Nid) {
       if ($argument->options['specify_validation'] ?? FALSE) {
         if (($argument->options['validate']['type'] ?? NULL) == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
           // We have to kill the cache if we are evaluating ADO & Embargo accesss arguments
@@ -462,7 +466,7 @@ function format_strawberryfield_views_pre_build(ViewExecutable $view) {
 function format_strawberryfield_views_post_render(ViewExecutable $view, &$output, CachePluginBase $cache) {
   $view =  $view;
   foreach ($view->argument ?? [] as $argument) {
-    if($argument instanceof Drupal\node\Plugin\views\argument\Nid) {
+    if($argument instanceof Nid) {
       if ($argument->options['specify_validation'] ?? FALSE) {
         if (($argument->options['validate']['type'] ?? NULL) == 'ado_access' && ($argument->options['validate_options']['operation'] ?? NULL) == "view_embargoed") {
           $embargo_tags = [];

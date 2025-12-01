@@ -4,7 +4,7 @@
 
  **/
 
-(function ($, Modernizr, Drupal, debounce) {
+(function ($, Drupal, debounce) {
     function CollapsibleDetails(node) {
         this.$node = $(node);
         this.$node.data('details', this);
@@ -50,6 +50,7 @@
             e.preventDefault();
         },
         onSummaryUpdated: function onSummaryUpdated() {
+            $.trim = text => String(text ?? "").trim();
             var text = $.trim(this.$node.drupalGetSummary());
             this.$summary.html(text ? ' (' + text + ')' : '');
         },
@@ -72,10 +73,7 @@
 
     Drupal.behaviors.collapse = {
         attach: function attach(context) {
-            if (Modernizr.details) {
-                return;
-            }
-            var $collapsibleDetails = $(context).find('details').once('collapse').addClass('collapse-processed');
+            const $collapsibleDetails = once('attach_iab_collapse', 'details', context);
             if ($collapsibleDetails.length) {
                 for (var i = 0; i < $collapsibleDetails.length; i++) {
                     CollapsibleDetails.instances.push(new CollapsibleDetails($collapsibleDetails[i]));
@@ -130,4 +128,4 @@
 
 
     Drupal.CollapsibleDetails = CollapsibleDetails;
-})(jQuery, Modernizr, Drupal, Drupal.debounce);
+})(jQuery, Drupal, Drupal.debounce, once);

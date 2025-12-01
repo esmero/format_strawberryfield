@@ -1,4 +1,5 @@
 <?php
+use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Config\Entity\ConfigEntityType;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -374,7 +375,7 @@ function format_strawberryfield_update_9002() {
   $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
   $field_storage_definition = $definition_update_manager->getFieldStorageDefinition('mimetype', 'metadatadisplay_entity');
   $settings = $field_storage_definition->getSettings();
-  $settings['allowed_values'] = \Drupal\format_strawberryfield\Entity\MetadataDisplayEntity::ALLOWED_MIMETYPES;
+  $settings['allowed_values'] = MetadataDisplayEntity::ALLOWED_MIMETYPES;
   $field_storage_definition->setSettings($settings);
   $definition_update_manager->updateFieldStorageDefinition($field_storage_definition);
 }

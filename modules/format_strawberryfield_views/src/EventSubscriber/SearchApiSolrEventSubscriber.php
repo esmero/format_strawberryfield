@@ -13,7 +13,7 @@ class SearchApiSolrEventSubscriber implements EventSubscriberInterface {
   /**
    * @inheritDoc
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     return [
       SearchApiSolrEvents::POST_CONVERT_QUERY => 'convertedQuery'
     ];

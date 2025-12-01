@@ -58,7 +58,7 @@ class FormatStrawberryfieldLayoutBuilderRoutes implements EventSubscriberInterfa
   /**
    * {@inheritdoc}
    */
-  public static function getSubscribedEvents() {
+  public static function getSubscribedEvents(): array {
     // Run after \Drupal\layout_builder\Routing\LayoutBuilderRoutes.
     $events[RoutingEvents::ALTER] = ['onAlterRoutes', -120];
     return $events;

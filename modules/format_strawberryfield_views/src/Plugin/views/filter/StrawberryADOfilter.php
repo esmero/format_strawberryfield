@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 
+use Drupal\search_api\Plugin\views\ResultRow;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Entity\TypedData\EntityDataDefinitionInterface;
@@ -1011,7 +1012,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
 
             foreach ($executable->result as $resultRow) {
               if ($resultRow instanceof
-                \Drupal\search_api\Plugin\views\ResultRow
+                ResultRow
               ) {
                 //@TODO move to its own method\
                 if ($resultRow->_item) {

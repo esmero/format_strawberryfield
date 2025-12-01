@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Render\Markup;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -370,7 +371,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           ];
           $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/citations_strawberry';
           $elements[$delta]['bibliography'] = [
-            '#markup' => \Drupal\Core\Render\Markup::create($bibliography),
+            '#markup' => Markup::create($bibliography),
           ];
         }
       }

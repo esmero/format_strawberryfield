@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_rest_oai_pmh\Form;
 
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\format_strawberryfield_rest_oai_pmh\Plugin\OaiMetadataMap\MetadatadisplayTemplateMapDc;
 use Drupal\format_strawberryfield_rest_oai_pmh\Plugin\OaiMetadataMap\MetadatadisplayTemplateMapMods;
 use Drupal\format_strawberryfield_rest_oai_pmh\Utilities\Utilities as FSROPUtilities;
@@ -62,9 +63,15 @@ class FormatStrawberryfieldRestOaiPmhSettingsForm extends ConfigFormBase {
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
+   * @param \Drupal\Core\Path\PathValidatorInterface $path_validator
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache_discovery
+   * @param \Drupal\Core\ProxyClass\Routing\RouteBuilder $router_builder
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typed_config_manager
    */
-  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler, PathValidatorInterface $path_validator, CacheBackendInterface $cache_discovery, RouteBuilder $router_builder) {
-    parent::__construct($config_factory);
+  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entity_type_manager, ModuleHandlerInterface $module_handler, PathValidatorInterface $path_validator, CacheBackendInterface $cache_discovery, RouteBuilder $router_builder, TypedConfigManagerInterface $typed_config_manager) {
+    parent::__construct($config_factory, $typed_config_manager);
 
     $this->entityTypeManager = $entity_type_manager;
     $this->moduleHandler = $module_handler;
@@ -78,13 +85,14 @@ class FormatStrawberryfieldRestOaiPmhSettingsForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-          $container->get('config.factory'),
-          $container->get('entity_type.manager'),
-          $container->get('module_handler'),
-          $container->get('path.validator'),
-          $container->get('cache.discovery'),
-          $container->get('router.builder')
-      );
+      $container->get('config.factory'),
+      $container->get('entity_type.manager'),
+      $container->get('module_handler'),
+      $container->get('path.validator'),
+      $container->get('cache.discovery'),
+      $container->get('router.builder'),
+      $container->get('config.typed')
+    );
   }
 
   /**

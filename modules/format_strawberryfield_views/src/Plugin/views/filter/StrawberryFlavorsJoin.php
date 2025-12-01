@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 
+use Drupal\search_api_solr\SolrBackendInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\search_api\Entity\Index;
@@ -144,7 +145,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     $full_text = NULL;
     $type = NULL;
     // We only know how to join on Solr. All rest is bad poetry
-    if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
+    if ($backend instanceof SolrBackendInterface) {
       $index_fields = $query->getIndex()->getFields(TRUE);
       $solr_field_names = $backend
         ->getSolrFieldNames($query->getIndex());
@@ -314,7 +315,7 @@ class StrawberryFlavorsJoin extends FilterPluginBase {
     }
 
     if (count($names)) {
-      $flat_keys[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+      $flat_keys[] = Utility::flattenKeys(
         $keys, $names,
         $parse_mode->getPluginId()
       );

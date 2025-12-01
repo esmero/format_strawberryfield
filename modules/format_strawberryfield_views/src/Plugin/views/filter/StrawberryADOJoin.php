@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield_views\Plugin\views\filter;
 
+use Drupal\search_api_solr\SolrBackendInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\search_api\Entity\Index;
@@ -164,7 +165,7 @@ class StrawberryADOJoin extends FilterPluginBase {
     $full_text = NULL;
     $type = NULL;
     // We only know how to join on Solr. All rest is terribly bad poetry
-    if ($backend instanceof \Drupal\search_api_solr\SolrBackendInterface) {
+    if ($backend instanceof SolrBackendInterface) {
       $index_fields = $query->getIndex()->getFields(TRUE);
       $solr_field_names = $backend
         ->getSolrFieldNames($query->getIndex());
@@ -365,7 +366,7 @@ class StrawberryADOJoin extends FilterPluginBase {
             if (count($ado_type_names_solr)) {
               // Here we force terms. WE are trying to mimic a filter query even if we can't do one via a JOIN
               // (or I can't!)
-              $flat_keys_type[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+              $flat_keys_type[] = Utility::flattenKeys(
                 $ado_type_keys, $ado_type_names_solr,
                 'terms'
               );
@@ -375,7 +376,7 @@ class StrawberryADOJoin extends FilterPluginBase {
           }
         }
 
-      $flat_keys[] = \Drupal\search_api_solr\Utility\Utility::flattenKeys(
+      $flat_keys[] = Utility::flattenKeys(
         $keys, $names,
         $parse_mode->getPluginId()
       );
