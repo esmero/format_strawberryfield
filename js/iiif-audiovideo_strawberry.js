@@ -131,6 +131,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         container: $waversurfer_container,
                         media: this.active_audiovideo_element,
                         mediaControls: false,
+                        backend: "MediaElement"
                       };
                       if (typeof wavesurfer_overrides == 'object' &&
                         !Array.isArray(wavesurfer_overrides) &&
@@ -145,9 +146,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       }
                       try {
                         this.wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+                        this.wavesurfer.on('loading', (percent) => {
+                          console.log('Wavesurfer Loading current track', percent + '%');
+                        });
+                        this.wavesurfer.on('decode', () => {
+                          console.log("Wavesurfer Peaks decoded");
+                        })
                       }
                       catch (error) {
-                        console.error("Waversurfer could not initialize for this media soruce" + error);
+                        console.error("Waversurfer could not initialize for this media source" + error);
                       };
                     }
                   }
@@ -161,10 +168,11 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$ccBtn = this.control.querySelector('.ccBtn');
                 this.$subtitleTrack = this.control.querySelector('.subtitleTrack');
                 this.$subtitleContainer = this.control.querySelector('.subtitleContainer');
+                this.$mediaContainer = this.control.querySelector('.mediaContainer');
                 this.$progressSlider = this.control.querySelector(".progressSlider");
                 this.$volumeSlider = this.control.querySelector(".volumeSlider");
                 this.$fullscreenBtn = this.control.querySelector('.fullscreenBtn');
-                // If Fullscreen API is not available, dont't show the button.
+                // If Fullscreen API is not available, don't show the button.
                 if (!document?.fullscreenEnabled && this.$fullscreenBtn !== null ) {
                   this.$fullscreenBtn.style.display = "none";
                 }
@@ -174,6 +182,11 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // Used to load next set of media, in case of a IIIF Manifest or multiple Audio/Videos.
                 this.$nextBtn = this.control.querySelector('.nextBtn');
                 this.$prevBtn = this.control.querySelector('.prevBtn');
+
+                if (this.$mediaContainer) {
+                  this.$mediaContainer.appendChild(this.active_audiovideo_element)
+                }
+
                 this.multipleMediaCapable = function () {
                   if (this.$nextBtn && this.$prevBtn) {
                     return true;
@@ -192,6 +205,18 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.prevMediaElement();
                   });
                 }
+
+                if (this.$fullscreenBtn && document?.fullscreenEnabled) {
+                  this.$fullscreenBtn.addEventListener("click", (e) => {
+                    if (document.fullscreenElement !== null) {
+                      // The document is in fullscreen mode
+                      document.exitFullscreen();
+                    } else {
+                      // The document is not in fullscreen mode
+                      this.control.requestFullscreen();
+                    }
+                  })
+                };
 
                 // Hide Play and Stop button
                 this.$pauseBtn.hidden = true;
@@ -286,9 +311,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.updateProgress();
 
                 this.loadeddataEventFunction = function (e) {
-                  console.log('loaded data event fired');
                   // Might not fire when swapping between multiple element sources.
-                  console.log(e.currentTarget.readyState);
                   if (e.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
                     console.log('Calling initializeTextTracks');
                     this.initializeTextTracks()
@@ -467,18 +490,18 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.trackCueEvent = function(e) {
-                    console.log('cue changed');
-                    if (this.$subtitleContainer) {
-                      this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
-                      // Display current cue text
-                      if (e.currentTarget.activeCues.length > 0) {
-                        const currentCue = e.currentTarget.activeCues[0];
-                        const subtitleText = document.createElement('em');
-                        subtitleText.textContent = currentCue.text;
-                        // We need per track containers here. Because the user could enable multiple Tracks at the same time?
-                        this.$subtitleContainer.appendChild(subtitleText);
-                      }
+                  console.log('cue changed');
+                  if (this.$subtitleContainer) {
+                    this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
+                    // Display current cue text
+                    if (e.currentTarget.activeCues.length > 0) {
+                      const currentCue = e.currentTarget.activeCues[0];
+                      const subtitleText = document.createElement('em');
+                      subtitleText.textContent = currentCue.text;
+                      // We need per track containers here. Because the user could enable multiple Tracks at the same time?
+                      this.$subtitleContainer.appendChild(subtitleText);
                     }
+                  }
                 }
 
                 this.captionStatus = function(e) {
