@@ -53,8 +53,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
         'use_external_control_shared' => false,
         'external_control_element_active_class' => '',
         'external_control_selector' => '.sbf_media_control',
-        'reposition_element' => false,
-        'reposition_element_selector' => '',
         'viewer_overrides' => '{
         "height": 128,
         "width": 300,
@@ -145,31 +143,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
           '#states' => [
             'visible' => [
               ':input[data-formatter-selector="posterframe"]' => ['value' => 'json_key'],
-            ],
-          ],
-        ],
-        'reposition_element' => [
-          '#type' => 'checkbox',
-          '#title' => $this->t('Reposition this element to a different Part of the Page'),
-          '#description' => $this->t('When enabled, and a DOM Selector is provided, this formatter will be moved out of its normal layout defined by the View mode/Block and inside the Dom Selector, if found, which might be any part you decide to output it, e.g via a Twig template.'),
-          '#default_value' => $this->getSetting('reposition_element'),
-          '#required' => FALSE,
-          '#attributes' => [
-            'data-checkbox-selector' => 'reposition_element',
-          ],
-        ],
-        'reposition_element_selector' => [
-          '#type' => 'textfield',
-          '#title' => $this->t('The Dom Query selector to be used to find where this Formatter should be rendered into (inside it), instead of its View Mode/Layout normal flow.'),
-          '#description' => $this->t('If no element matching the selector is found in the page this formatter is rendered, the original location will be preserved'),
-          '#default_value' => $this->getSetting('reposition_element_selector'),
-          '#required' => FALSE,
-          '#states' => [
-            'visible' => [
-              ':checkbox[data-checkbox-selector="reposition_element"]' => ['checked' => TRUE],
-            ],
-            'required' => [
-              ':checkbox[data-checkbox-selector="reposition_element"]' => ['checked' => TRUE],
             ],
           ],
         ],
@@ -524,8 +497,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $use_external_control_shared = $this->getSetting('use_external_control_shared');
     $hide_native_control = $this->getSetting('hide_native_control');
     // The 1.6.0 reposition feature via JS
-    $reposition_element = $this->getSetting('reposition_element');
-    $reposition_element_selector = trim($this->getSetting('reposition_element_selector') ?? '');
     $use_wavesurfer = $this->getSetting('use_wavesurfer');
     $external_control_selector = trim($this->getSetting('external_control_selector') ?? '');
     $external_control_element_active_class = trim($this->getSetting('external_control_element_active_class') ?? '');
@@ -604,10 +575,8 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
       ];
     }
     // Only send settings and
-    if ($reposition_element || $use_external_control || $use_wavesurfer) {
+    if ($use_external_control || $use_wavesurfer) {
       $elements[$delta]['video_hmtl5_' . $i]['video']['#attributes']['class'][] = 'strawberry-av-item-js';
-      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['reposition_element'] = (bool) $reposition_element;
-      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['reposition_element'] = (bool) $reposition_element_selector;
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control'] = (bool) $use_external_control;
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_external_control_shared'] = (bool) $use_external_control_shared;
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_element_active_class'] = $external_control_element_active_class;
