@@ -21,4 +21,13 @@ video.audio-av::-webkit-media-text-track-display {
     top: -100% !important;
 }
 
+progress[value].sliderProgress {
+  /* Reset the default appearance */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* Get rid of default border in Firefox. */
+  border: none;
+}
 
