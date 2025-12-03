@@ -71,7 +71,11 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             function customMediaController(control_blueprint, audiovideo_element, use_wavesurfer, attach_control_to_media_pos, hide_control) {
               this.active_audiovideo_element = audiovideo_element;
               this.audiovideo_elements = [];
-              this.audiovideo_elements.push(audiovideo_element);
+              this.audiovideo_elements_map = new Map();
+              if (!this.audiovideo_elements_map.has(audiovideo_element.id)) {
+                this.audiovideo_elements_map.set(audiovideo_element.id, audiovideo_element);
+                this.audiovideo_elements.push(audiovideo_element.id);
+              }
               this.control = null;
               // If the control_blueprint lacks an ID (recommended people add one, specially if they want to target a specific selector
               // Then we need to add one we can track the provenance of a cloned controller
@@ -98,7 +102,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // when external control is provided. We don't hide Video.
                 // But we could reposition It inside the player if there is a
                 // Media Container? New option just driven by HTML?
-                this.active_audiovideo_element.hidden = !use_wavesurfer || this.active_audiovideo_element.classList.contains('.video-av');
+                this.active_audiovideo_element.hidden = !use_wavesurfer || !this.active_audiovideo_element.classList.contains('video-av');
                 // Only here we can actually start doing things.
                 // We will clone deep.
                 // and hide the original (if not hidden already).
@@ -172,6 +176,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$progressSlider = this.control.querySelector(".progressSlider");
                 this.$volumeSlider = this.control.querySelector(".volumeSlider");
                 this.$fullscreenBtn = this.control.querySelector('.fullscreenBtn');
+                this.$mediaTitle = this.control.querySelector('.mediaFileName');
                 // If Fullscreen API is not available, don't show the button.
                 if (!document?.fullscreenEnabled && this.$fullscreenBtn !== null ) {
                   this.$fullscreenBtn.style.display = "none";
@@ -182,10 +187,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // Used to load next set of media, in case of a IIIF Manifest or multiple Audio/Videos.
                 this.$nextBtn = this.control.querySelector('.nextBtn');
                 this.$prevBtn = this.control.querySelector('.prevBtn');
-
-                if (this.$mediaContainer) {
-                  this.$mediaContainer.appendChild(this.active_audiovideo_element)
-                }
 
                 this.multipleMediaCapable = function () {
                   if (this.$nextBtn && this.$prevBtn) {
@@ -425,7 +426,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     // hide so we don't have multiple elements all around
                     // visible.
                     audiovideo_element.hidden = true;
-                    this.audiovideo_elements.push(audiovideo_element);
+                    if (!this.audiovideo_elements_map.has(audiovideo_element.id)) {
+                      this.audiovideo_elements_map.set(audiovideo_element.id, audiovideo_element);
+                      this.audiovideo_elements.push(audiovideo_element.id);
+                    }
                     this.$prevBtn.hidden = false;
                     this.$nextBtn.hidden = false;
                     return true;
@@ -454,7 +458,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.active_audiovideo_element.hidden = true;
                   this.mediaEventRemove();
                   const first = this.audiovideo_elements.shift();
-                  this.active_audiovideo_element = this.audiovideo_elements[0];
+                  this.active_audiovideo_element = this.audiovideo_elements_map.get(this.audiovideo_elements[0]);
                   this.active_audiovideo_element.load();
                   this.active_audiovideo_element.muted = muted;
                   this.audiovideo_elements.push(first);
@@ -474,7 +478,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   const paused = this.active_audiovideo_element.paused;
                   this.mediaEventRemove();
                   const last = this.audiovideo_elements.pop();
-                  this.active_audiovideo_element = last;
+                  this.active_audiovideo_element = this.audiovideo_elements_map.get(last);
                   this.active_audiovideo_element.muted = muted;
                   this.active_audiovideo_element.load();
                   this.audiovideo_elements.unshift(last);
@@ -602,7 +606,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.mediaEventInitialize = function() {
-                  this.active_audiovideo_element.hidden = false;
+                  this.active_audiovideo_element.hidden = (use_wavesurfer && !this.active_audiovideo_element.classList.contains('video-av'));
                   this.active_audiovideo_element.addEventListener("loadeddata", this.loadeddataEventFunctionBound );
                   this.active_audiovideo_element.addEventListener("timeupdate", this.timeupdateEventFunctionBound );
                   this.active_audiovideo_element.addEventListener("ended", this.endedEventFunctionBound );
@@ -610,6 +614,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   // https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play_event
                   this.active_audiovideo_element.addEventListener("play", this.playEventFunctionBound );
                   this.active_audiovideo_element.addEventListener("volumechange", this.volumechangeEventFunctionBound);
+                  if (this.$mediaContainer && !this.active_audiovideo_element.dataset.repositioned) {
+                    this.$mediaContainer.appendChild(this.active_audiovideo_element)
+                    this.active_audiovideo_element.dataset.repositioned = true;
+                  }
+                  if (this.$mediaTitle) {
+                    if (this.active_audiovideo_element.ariaLabel) {
+                      this.$mediaTitle.innerText = this.active_audiovideo_element.ariaLabel;
+                    }
+                  }
                 }
                 this.mediaEventRemove = function() {
                   this.active_audiovideo_element.removeEventListener("loadeddata", this.loadeddataEventFunctionBound );
