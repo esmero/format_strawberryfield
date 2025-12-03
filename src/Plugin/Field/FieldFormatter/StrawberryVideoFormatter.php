@@ -566,6 +566,16 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
     $elements[$delta]['video_hmtl5_' . $i] = [
       '#type' => 'html_tag',
       '#tag' => 'figure',
+      'caption' => [
+        '#type' => 'html_tag',
+        '#tag' => 'figurecaption',
+        '#value' => $this->t(
+          'Video for @label',
+          ['@label' => $items->getEntity()->label()]),
+        '#attributes' => [
+          'class' => ['strawberry-av-item-caption','visually-hidden'],
+        ]
+      ],
       'video' => [
         '#type' => 'html_tag',
         '#tag' => 'video',
@@ -576,10 +586,6 @@ class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
           'style' => "width:{$max_width_css}; height:{$max_height_css}",
           'aria-label' => $media_label,
         ],
-        '#alt' => $this->t(
-          'Video for @label',
-          ['@label' => $items->getEntity()->label()]
-        ),
         'source' => [
           '#type' => 'html_tag',
           '#tag' => 'source',

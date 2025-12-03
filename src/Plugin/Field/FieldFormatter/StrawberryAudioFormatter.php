@@ -540,6 +540,16 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $elements[$delta]['audio_hmtl5_' . $i] = [
       '#type' => 'html_tag',
       '#tag' => 'figure',
+      'caption' => [
+        '#type' => 'html_tag',
+        '#tag' => 'figurecaption',
+        '#value' => $this->t(
+          'Audio for @label',
+          ['@label' => $items->getEntity()->label()]),
+        '#attributes' => [
+          'class' => ['strawberry-av-item-caption','visually-hidden'],
+        ]
+      ],
       'audio' => [
         '#type' => 'html_tag',
         '#tag' => 'video',
@@ -550,10 +560,6 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           'style' => "width:{$max_width_css}; height:{$max_height}px",
           'aria-label' => $media_label,
         ],
-        '#alt' => $this->t(
-          'Audio for @label',
-          ['@label' => $items->getEntity()->label()]
-        ),
         'source' => [
           '#type' => 'html_tag',
           '#tag' => 'source',
