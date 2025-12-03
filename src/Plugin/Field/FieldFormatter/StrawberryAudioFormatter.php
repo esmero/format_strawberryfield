@@ -8,6 +8,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Component\Utility\Bytes;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -45,6 +46,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       'audio_type' => 'mp3',
       'number_media' => 1,
       'use_wavesurfer' => false,
+      'wavesurfer_filesize_limit' => '1 GB',
       'use_external_control' => false,
       'hide_native_control' => false,
       'use_external_control_shared' => false,
@@ -120,12 +122,28 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         'use_wavesurfer' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Use The WaverSurfer JS library'),
-          '#description' => $this->t('Attaches https://wavesurfer.xyz to the Audio element. WaveSurfer Currently has issues (memory) loading and rendering very large Files.'),
+          '#description' => $this->t('Attaches https://wavesurfer.xyz to the Audio element. Note: WaveSurfer Currently has issues (memory) loading and rendering large Files.'),
           '#default_value' => $this->getSetting('use_wavesurfer'),
           '#required' => FALSE,
           '#attributes' => [
             'data-checkbox-selector' => 'use_wavesurfer',
           ],
+        ],
+        'wavesurfer_filesize_limit' => [
+          '#type' => 'textfield',
+          '#title' => $this->t('Disable WaverSurfer for files larger than this size'),
+          '#description' => $this->t('You can use a valid FileSize String in bytes or using human readable representation like 1 GB, 250 MB, etc. If unset the value will be 1 GB'),
+          '#default_value' => $this->getSetting('wavesurfer_filesize_limit'),
+          '#required' => FALSE,
+          '#element_validate' => [[$this, 'validateByteString']],
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_wavesurfer"]' => ['checked' => TRUE],
+            ],
+            'required' => [
+              ':checkbox[data-checkbox-selector="use_wavesurfer"]' => ['checked' => TRUE],
+            ],
+          ]
         ],
         'viewer_overrides' => [
           '#type' => 'textarea',
@@ -228,8 +246,12 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           ]);
       }
     }
+
     if ($this->getSetting('use_wavesurfer')) {
       $summary[] = $this->t('Using The Wave Surfer Library');
+      $summary[] = $this->t('Wave Surfer will be disabled for Files larger than @value', [
+        '@value' => $this->getSetting('wavesurfer_filesize_limit')
+      ]);
     }
 
     $summary[] = $this->t(
@@ -480,7 +502,13 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
     $use_wavesurfer = $this->getSetting('use_wavesurfer');
     $external_control_selector = trim($this->getSetting('external_control_selector') ?? '');
     $external_control_element_active_class = trim($this->getSetting('external_control_element_active_class') ?? '');
-
+    $media_label = $file->label();
+    if (isset($mediaitem['flv:exif']['Title'])) {
+      $media_label = $mediaitem['flv:exif']['Title'];
+    }
+    elseif (isset($mediaitem['flv:mediainfo']['general']['title'])) {
+      $media_label = $mediaitem['flv:mediainfo']['general']['title'];
+    }
 
     // We assume here file could not be accessible publicly
     $route_parameters = [
@@ -520,6 +548,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           'id' => $htmlid,
           'controls' => TRUE,
           'style' => "width:{$max_width_css}; height:{$max_height}px",
+          'aria-label' => $media_label,
         ],
         '#alt' => $this->t(
           'Audio for @label',
@@ -547,6 +576,15 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
 
     // We need to add a container for the waver surfer plugin.
     if ($use_wavesurfer) {
+      // Disable based on file size
+      $wavesurfer_filesize_limit = $this->getSetting('wavesurfer_filesize_limit') ?? '1 GB';
+      $wavesurfer_filesize_limit = Bytes::validate($wavesurfer_filesize_limit) ? $wavesurfer_filesize_limit : '1 GB';
+      $wavesurfer_filesize_limit = Bytes::toNumber($wavesurfer_filesize_limit);
+      if ($file->getSize() >= $wavesurfer_filesize_limit) {
+        $use_wavesurfer = FALSE;
+      }
+
+
       $elements[$delta]['audio_hmtl5_' . $i]['wavesurfer'] = [
         '#type' => 'html_tag',
         '#tag' => 'div',
