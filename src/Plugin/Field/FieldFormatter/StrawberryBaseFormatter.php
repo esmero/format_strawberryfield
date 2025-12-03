@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Component\Utility\Bytes;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
@@ -534,4 +535,15 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     }
   }
 
+  /**
+   * Validation handler for 'Byte Sizes in Human readable representation'.
+   */
+  public function validateByteString(array &$element, FormStateInterface $form_state) {
+    $value = $element['#value'];
+    if (!empty($value)) {
+      if (!Bytes::validate($value)) {
+        $form_state->setError($element, $this->t('@value is not a properly formatted Byte Size Representation.', ['@value' => $value]));
+      }
+    }
+  }
 }
