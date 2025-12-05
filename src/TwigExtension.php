@@ -292,7 +292,7 @@ class TwigExtension extends AbstractExtension {
     if (empty($body)) {
       return '';
     }
-    if (!is_string($body)) {
+    if (!is_scalar($body)) {
       return '';
     }
 
@@ -306,7 +306,7 @@ class TwigExtension extends AbstractExtension {
       $converters[$key] = new HtmlConverter($options);
     }
 
-    return $converters[$key]->convert($body);
+    return $converters[$key]->convert((string)$body);
   }
 
   /**
@@ -323,13 +323,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($body)) {
       return '';
     }
-    if (!is_string($body)) {
+    if (!is_scalar($body)) {
       return '';
     }
 
     $Parsedown = new \Parsedown();
     $Parsedown->setSafeMode(TRUE);
-    return $Parsedown->text($body);
+    return $Parsedown->text((string)$body);
   }
 
   /**
@@ -471,13 +471,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($edtfString)) {
       return '';
     }
-    if (!is_string($edtfString)) {
+    if (!is_scalar($edtfString)) {
       return '';
     }
 
     $lang = $lang ?? 'en';
     $parser = EdtfFactory::newParser();
-    $parsed = $parser->parse($edtfString);
+    $parsed = $parser->parse((string)$edtfString);
     if ($parsed->isValid()) {
       $edtfValue = $parsed->getEdtfValue();
       try {
@@ -503,13 +503,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($edtfString)) {
       return [];
     }
-    if (!is_string($edtfString)) {
+    if (!is_scalar($edtfString)) {
       return [];
     }
     $values_parsed = [];
     $parser = EdtfFactory::newParser();
     try {
-      $parsed = $parser->parse($edtfString);
+      $parsed = $parser->parse((string)$edtfString);
       if ($parsed->isValid()) {
         $edtfValue = $parsed->getEdtfValue();
         // @todo remove once EDTF fixes their invalid Constructor for EDTF\Model\Interval that should per interface never allow NULL for start nor end date
