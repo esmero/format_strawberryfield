@@ -80,7 +80,7 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
   public function getRenderableUsage(MetadataDisplayInterface $metadatadisplay_entity):array {
     $used_metadataexpose_entity = [];
     $used_entity_view_display = [];
-    $how_text = ['@direct' => 'Directly', '@view_mode' => 'Via Entity View Mode: @view_mode', '@metadataexposeentity' => 'Via Exposed Metadata Display Entity: @metadataexposeentity' ];
+    $how_text = ['@direct' => 'Directly @direct', '@view_mode' => 'Via Entity View Mode: @view_mode', '@metadataexposeentity' => 'Via Exposed Metadata Display Entity: @metadataexposeentity' ];
     if ($metadatadisplay_entity) {
       // Start with Exposed Metadata display entities
       $form['metadatadisplay_usage']['metadataexpose_entity'] = [
@@ -163,12 +163,11 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
         // simply no output
       }
 
-
       // Now Entity view display configs for nodes.
 
-      $form['metadatadisplay_usage']['entity_view'] = [
+      $form['metadatadisplay_usage']['amiset_entity_view'] = [
         '#type' => 'fieldset',
-        '#title' => $this->t('Entity View Modes using @label', [
+        '#title' => $this->t('AMI Set View Modes using @label', [
           '@label' => $metadatadisplay_entity->label()
         ]),
         'table' => ['#type' => 'table',
@@ -182,9 +181,9 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
         ]
       ];
 
-      // We need to get first all view modes
-      $view_modes = $this->entityDisplayRepository->getViewModes('node');
-      foreach ($this->configFactory->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
+      //Get all view modes for AMI sets.
+      $view_modes = $this->entityDisplayRepository->getViewModes('ami_set_entity');
+      foreach ($this->configFactory->listAll('core.entity_view_display.ami_set_entity.') as $entity_view_display_config) {
         $entity_view = $this->configFactory->get($entity_view_display_config);
         $in_use = FALSE;
         // metadataexposeentity_source & metadataexposeentity_overlaysource
@@ -195,7 +194,7 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
             foreach ($data['third_party_settings']['ds']['fields'] as $field) {
               if (($field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                 $in_use = TRUE;
-                $how = $how + ['@direct' => 'direct'];
+                $how = $how + ['@direct' => 'in a Field formatter'];
               }
               if (isset($field['settings']['formatter']['metadataexposeentity_source']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                 $in_use = TRUE;
@@ -211,7 +210,93 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
             foreach ($data['content'] as $realfield) {
               if (($realfield['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                 $in_use = TRUE;
-                $how = $how + ['@direct' => 'direct'];
+                $how = $how + ['@direct' => 'in a Field formatter'];
+              }
+              if (!empty($realfield['settings']['metadataexposeentity_source']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$realfield['settings']['metadataexposeentity_source']]];
+              }
+              if (!empty($realfield['settings']['metadataexposeentity_overlaysource']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$realfield['settings']['metadataexposeentity_source']]];
+              }
+            }
+          }
+          if ($in_use) {
+            $entity_view_display_storage = $this->entityTypeManager->getStorage('entity_view_display');
+            /** @var EntityViewDisplay $entity_view_display */
+            $entity_view_display = $entity_view_display_storage->load($entity_view->get('id'));
+
+            $bundle = $entity_view_display->getTargetBundle();
+            // Default has no label... just named default
+            $label = $view_modes[$entity_view_display->getMode()]['label'] ?? 'Default';
+            $entity_view_display_link = Link::createFromRoute($this->t('Edit @entity_view_display_label',['@entity_view_display_label' => $label]), "entity.entity_view_display.ami_set_entity.view_mode", [
+              'entity_type_id' => 'ami_set_entity',
+              'bundle' => 'ami_set_entity',
+              'view_mode_name' => $entity_view_display->getMode()
+            ]);
+            $used_entity_view_display[$bundle][$entity_view_display->getMode()] = $label;
+            // Special parameter used to easily recognize all Field UI routes.
+            $form['metadatadisplay_usage']['amiset_entity_view']['table'][$entity_view_display->id()]['label'] = $entity_view_display_link->toRenderable();
+            $how_present_text = array_intersect_key($how_text, array_filter($how));
+            $form['metadatadisplay_usage']['amiset_entity_view']['table'][$entity_view_display->id()]['how']['#markup'] =  $this->t(implode(' and ', $how_present_text), $how);
+          }
+        }
+      }
+
+
+
+
+
+
+      // Now Entity view display configs for nodes.
+
+      $form['metadatadisplay_usage']['entity_view'] = [
+        '#type' => 'fieldset',
+        '#title' => $this->t('Node View Modes using @label', [
+          '@label' => $metadatadisplay_entity->label()
+        ]),
+        'table' => ['#type' => 'table',
+          '#prefix' => '<div id="table-fieldset-wrapper">',
+          '#suffix' => '</div>',
+          '#header' => [
+            $this->t('Label'),
+            $this->t('How'),
+          ],
+          '#empty' => $this->t('No usage.'),
+        ]
+      ];
+
+      // We need to get first all view modes for Nodes.
+      $view_modes = $this->entityDisplayRepository->getViewModes('node');
+      foreach ($this->configFactory->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
+        $entity_view = $this->configFactory->get($entity_view_display_config);
+        $in_use = FALSE;
+        // metadataexposeentity_source & metadataexposeentity_overlaysource
+        if ($entity_view) {
+          $how = [];
+          $data = $entity_view->getRawData();
+          if (isset($data['third_party_settings']['ds']['fields'])) {
+            foreach ($data['third_party_settings']['ds']['fields'] as $field) {
+              if (($field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                $in_use = TRUE;
+                $how = $how + ['@direct' => 'in a Field formatter'];
+              }
+              if (isset($field['settings']['formatter']['metadataexposeentity_source']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['formatter']['metadataexposeentity_source']]];
+              }
+              if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                $in_use = TRUE;
+                $how = $how + ['@metadataexposeentity' => $used_metadataexpose_entity[$field['settings']['formatter']['metadataexposeentity_source']]];
+              }
+            }
+          }
+          if (isset($data['content'])) {
+            foreach ($data['content'] as $realfield) {
+              if (($realfield['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                $in_use = TRUE;
+                $how = $how + ['@direct' => 'in a Field formatter'];
               }
               if (!empty($realfield['settings']['metadataexposeentity_source']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
                 $in_use = TRUE;
@@ -279,7 +364,7 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
               foreach ($display['display_options']['fields'] as $field) {
                 if (($field['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
                   $in_use = TRUE;
-                  $how = $how + ['@direct' => 'direct'];
+                  $how = $how + ['@direct' => 'in a Views Field formatter'];
                 }
                 if (isset($field['settings']['metadataexposeentity_source']) && array_key_exists($field['settings']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
                   $in_use = TRUE;
@@ -313,6 +398,57 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
         }
       }
     }
+
+    // Let's get Metadata APIs now.
+
+    $form['metadatadisplay_usage']['metadataapi_entity'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Metadata Exposed APIs using @label', [
+        '@label' => $metadatadisplay_entity->label()
+      ]),
+      'table' => ['#type' => 'table',
+        '#prefix' => '<div id="table-fieldset-wrapper">',
+        '#suffix' => '</div>',
+        '#header' => [
+          $this->t('Label'),
+          $this->t('How'),
+        ],
+        '#empty' => $this->t('No usage.'),
+      ]
+    ];
+
+
+    // We want all of them , even if disabled.
+    $entity_ids = $this->entityTypeManager->getStorage('metadataapi_entity')->getQuery('AND')
+      ->execute();
+
+    foreach ($this->entityTypeManager->getStorage('metadataapi_entity')->loadMultiple($entity_ids) as $metadataapi_entity) {
+      $how_wrapper = [];
+      $how_item = [];
+      $how = [];
+      $in_use = FALSE;
+      if ($wrapper = $metadataapi_entity->getWrapperMetadataDisplayEntity(0)) {
+        if ($wrapper->uuid() == $metadatadisplay_entity->uuid()) {
+          $in_use = TRUE;
+          $how_wrapper = ['@direct' => 'as wrapper level Template'];
+        }
+      }
+      if ($item = $metadataapi_entity->getItemMetadataDisplayEntity(0)) {
+        if ($item->uuid() == $metadatadisplay_entity->uuid()) {
+          $in_use = TRUE;
+          $how_item = ['@direct' => 'as item level Template'];
+        }
+      }
+      if ($in_use) {
+        $metadataapi_entity_link = Link::fromTextAndUrl($this->t('Edit @metadataapi_entity_label', ['@metadataapi_entity_label' => $metadataapi_entity->label()]), $metadataapi_entity->toUrl('edit-form'));
+        $form['metadatadisplay_usage']['metadataapi_entity']['table'][$metadataapi_entity->id()]['label'] = $metadataapi_entity_link->toRenderable();
+        $how['@direct'] = implode('and', array_values($how_wrapper) + array_values($how_item));
+        $how_present_text = array_values(array_intersect_key($how_text, array_filter($how)));
+        $form['metadatadisplay_usage']['metadataapi_entity']['table'][$metadataapi_entity->id()]['how']['#markup'] =  $this->t(implode(' and ', $how_present_text), $how);
+      }
+    }
+
+
     $form['metadatadisplay_usage']['#markup'] = $this->t('Direct and indirect usage of <em>@label</em> across your whole system.', [
       '@label' => $metadatadisplay_entity->label()
     ]);
@@ -363,6 +499,44 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
         // Means AMI module is not installed, the AMI type entity does not exist. That is Ok.
         // simply no output
       }
+      try {
+        //Get all view modes for AMI sets.
+        foreach ($this->configFactory->listAll('core.entity_view_display.ami_set_entity.') as $entity_view_display_config) {
+          $entity_view = $this->configFactory->get($entity_view_display_config);
+          if ($entity_view) {
+            $data = $entity_view->getRawData();
+            if (isset($data['third_party_settings']['ds']['fields'])) {
+              foreach ($data['third_party_settings']['ds']['fields'] as $field) {
+                if (($field['settings']['formatter']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                  return TRUE;
+                }
+                if (isset($field['settings']['formatter']['metadataexposeentity_source']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                  return TRUE;
+                }
+                if (isset($field['settings']['formatter']['metadataexposeentity_overlaysource']) && array_key_exists($field['settings']['formatter']['metadataexposeentity_source'] ?? '', $used_metadataexpose_entity)) {
+                  return TRUE;
+                }
+              }
+            }
+            if (isset($data['content'])) {
+              foreach ($data['content'] as $realfield) {
+                if (($realfield['settings']['metadatadisplayentity_uuid'] ?? NULL) == $metadatadisplay_entity->uuid()) {
+                  return TRUE;
+                }
+                if (!empty($realfield['settings']['metadataexposeentity_source']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
+                  return TRUE;
+                }
+                if (!empty($realfield['settings']['metadataexposeentity_overlaysource']) && $realfield['settings']['metadataexposeentity_source']!= '' && array_key_exists($realfield['settings']['metadataexposeentity_source'] ?? NULL, $used_metadataexpose_entity)) {
+                  return TRUE;
+                }
+              }
+            }
+          }
+        }
+      } catch (PluginException) {
+        // Means AMI module is not installed, the AMI type entity does not exist. That is Ok.
+        // simply no output
+      }
 
       foreach ($this->configFactory->listAll('core.entity_view_display.node.') as $entity_view_display_config) {
         $entity_view = $this->configFactory->get($entity_view_display_config);
@@ -398,7 +572,7 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
         }
       }
 
-      // We want all of them , even if disabled.
+      // We want all views , even if disabled.
       $entity_ids = $this->entityTypeManager->getStorage('view')->getQuery('AND')
         ->execute();
 
@@ -421,6 +595,23 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
                 }
               }
             }
+          }
+        }
+      }
+
+      // We want all metadataapi_entity , even if disabled.
+      $entity_ids = $this->entityTypeManager->getStorage('metadataapi_entity')->getQuery('AND')
+        ->execute();
+
+      foreach ($this->entityTypeManager->getStorage('metadataapi_entity')->loadMultiple($entity_ids) as $metadataapi_entity) {
+        if ($wrapper = $metadataapi_entity->getWrapperMetadataDisplayEntity(0)) {
+          if ($wrapper->uuid() == $metadatadisplay_entity->uuid()) {
+            return TRUE;
+          }
+        }
+        if ($item = $metadataapi_entity->getItemMetadataDisplayEntity(0)) {
+          if ($item->uuid() == $metadatadisplay_entity->uuid()) {
+            return TRUE;
           }
         }
       }
