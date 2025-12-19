@@ -125,6 +125,7 @@ use Twig\Source;
  *     "revision-revert-form" = "/metadatadisplay/{metadatadisplay_entity}/revision/{metadatadisplay_entity_revision}/revert",
  *     "version-history" = "/metadatadisplay/{metadatadisplay_entity}/revisions",
  *     "usage-form" = "/metadatadisplay/{metadatadisplay_entity}/usage",
+ *     "download-form" = "/metadatadisplay/{metadatadisplay_entity}/download",
  *   },
  *   field_ui_base_route = "format_strawberryfield.metadatadisplay_settings",
  * )

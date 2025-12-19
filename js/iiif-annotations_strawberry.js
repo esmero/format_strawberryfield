@@ -55,8 +55,25 @@
       }
       var annotorious_annotations = [];
       var groupssettings = {};
+      // Only attach to <a> that have an ID and not data-sbf-annotations-nodeuuid
+      const vectorURLsToAttach = once('attache_mlvectors', 'a[data-sbf-vector][data-sbf-vector-processor]', context);
+      $(vectorURLsToAttach).each(function (index, value) {
+        // Get the node uuid for this element
+        let element_id = $(this).attr("id");
+        let processor = $(this).data("sbf-vector-processor");
+        let vector = $(this).data("sbf-vector");
+        this.addEventListener("click", (e) => {
+            const vector_data = {
+              "vectors": {
+                [processor] : vector
+              }
+            }
+            Drupal.FormatStrawberryfieldIiifUtils.dispatchImageViewChange( e.currentTarget, btoa(pako.gzip(JSON.stringify(vector_data))));
+          });
+        });
       // Only attach to images that have an ID and a not empty data-sbf-annotations-nodeuuid property
       const elementsToAttach = once('attache_annotations', 'img[data-sbf-annotations-nodeuuid][id]:not([data-sbf-annotations-nodeuuid=""])', context);
+
       $(elementsToAttach).each(function (index, value) {
         // Get the node uuid for this element
         let element_id = $(this).attr("id");

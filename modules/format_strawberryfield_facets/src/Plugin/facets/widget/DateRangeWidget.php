@@ -4,11 +4,16 @@ declare(strict_types = 1);
 
 namespace Drupal\format_strawberryfield_facets\Plugin\facets\widget;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\facets\FacetInterface;
 use Drupal\facets\Result\Result;
-use Drupal\facets\Result\ResultInterface;
 use Drupal\facets\Widget\WidgetPluginBase;
+use Drupal\format_strawberryfield_facets\Plugin\facets\processor\DateRangeProcessor;
+use DateTime;
+use DateTimeZone;
+use DateInterval;
+
 
 /**
  * The Date Range widget.
@@ -63,14 +68,18 @@ class DateRangeWidget extends WidgetPluginBase {
       $max = gmdate('Y-m-d', (int) $max);
     }
 
+    // Generate unique IDs for form elements (AJAX-safe)
+    $id = Html::getUniqueId('facet-sbf-date-range-'.$facet->id());
+
     $build['#items'] = [
       'min' => [
         '#type' => 'date',
         '#title' => $this->t('Date from'),
+        '#id' => $id . '-min',
         '#value' => $min,
         '#attributes' => [
           'class' => ['facet-date-range'],
-          'id' => $facet->id() . '_min',
+          'id' => $id . '-min',
           'name' => $facet->id() . '_min',
           'min' => $min,
           'max' => $max,
@@ -80,10 +89,11 @@ class DateRangeWidget extends WidgetPluginBase {
       'max' => [
         '#type' => 'date',
         '#title' => $this->t('Date to'),
+        '#id' => $id . '_max',
         '#value' => $max,
         '#attributes' => [
           'class' => ['facet-date-range'],
-          'id' => $facet->id() . '_max',
+          'id' => $id . '_max',
           'name' => $facet->id() . '_max',
           'min' => $min,
           'max' => $max,
@@ -241,11 +251,20 @@ class DateRangeWidget extends WidgetPluginBase {
       if ($result->getRawValue() == 'summary_date_facet') {
         continue;
       }
-      $min = $min ?? $result->getRawValue();
-      $max = $max ?? $result->getRawValue();
-      $min = $min < $result->getRawValue() ? $min : $result->getRawValue();
-      $max = $max > $result->getRawValue() ? $max : $result->getRawValue();
+      // Warning. Depending on the "field" (normal data v/s date range) type RAW values might be UNIX Time stamps or actual
+      // ISO Dates. Normalize to unix.
+
+      $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
+      $min = $min ?? $raw;
+      $max = $max ?? $raw;
+      $min = $min < $raw ? $min : $raw;
+      $max = $max > $raw ? $max : $raw;
     }
+    // Should we yet again cast via timezone here
+    // date -r -4197038400
+    //Sat Dec 31 23:17:15 LMT 1836
+    //  but the input once transformed was properly 1837
+
     return ['min' => $min, 'max' => $max];
   }
 

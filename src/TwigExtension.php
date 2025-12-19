@@ -18,7 +18,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Twig\Environment;
 use Twig\Extension\AbstractExtension;
-use Twig\Markup;
 use Twig\Markup as TwigMarkup;
 use Twig\Runtime\EscaperRuntime;
 use Twig\TwigTest;
@@ -120,8 +119,9 @@ class TwigExtension extends AbstractExtension {
    */
   public function getFilters() {
     return [
-      new TwigFilter('sbf_json_decode', [$this, 'sbfJsonDecode']),
-      new TwigFilter('markdown_2_html', [$this, 'markdownToHtml'],
+      new TwigFilter('sbf_json_decode', $this->sbfJsonDecode(...)),
+      new TwigFilter('sbf_render', $this->sbfRenderVar(...)),
+      new TwigFilter('markdown_2_html', $this->markdownToHtml(...),
         ['is_safe' => ['all']]),
       new TwigFilter('html_2_markdown', [$this, 'htmlToMarkdown'],
         ['is_safe' => ['all']]),
@@ -257,7 +257,7 @@ class TwigExtension extends AbstractExtension {
    *    - An array
    */
   public function sbfJsonDecode($value, $htmlentitydecode = FALSE) {
-    if ($value instanceof Markup) {
+    if ($value instanceof TwigMarkup) {
       $value = (string) $value;
     }
     elseif (\is_iterable($value)) {
@@ -292,7 +292,7 @@ class TwigExtension extends AbstractExtension {
     if (empty($body)) {
       return '';
     }
-    if (!is_string($body)) {
+    if (!is_scalar($body)) {
       return '';
     }
 
@@ -306,7 +306,7 @@ class TwigExtension extends AbstractExtension {
       $converters[$key] = new HtmlConverter($options);
     }
 
-    return $converters[$key]->convert($body);
+    return $converters[$key]->convert((string)$body);
   }
 
   /**
@@ -323,13 +323,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($body)) {
       return '';
     }
-    if (!is_string($body)) {
+    if (!is_scalar($body)) {
       return '';
     }
 
     $Parsedown = new \Parsedown();
     $Parsedown->setSafeMode(TRUE);
-    return $Parsedown->text($body);
+    return $Parsedown->text((string)$body);
   }
 
   /**
@@ -471,13 +471,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($edtfString)) {
       return '';
     }
-    if (!is_string($edtfString)) {
+    if (!is_scalar($edtfString)) {
       return '';
     }
 
     $lang = $lang ?? 'en';
     $parser = EdtfFactory::newParser();
-    $parsed = $parser->parse($edtfString);
+    $parsed = $parser->parse((string)$edtfString);
     if ($parsed->isValid()) {
       $edtfValue = $parsed->getEdtfValue();
       try {
@@ -503,13 +503,13 @@ class TwigExtension extends AbstractExtension {
     if (empty($edtfString)) {
       return [];
     }
-    if (!is_string($edtfString)) {
+    if (!is_scalar($edtfString)) {
       return [];
     }
     $values_parsed = [];
     $parser = EdtfFactory::newParser();
     try {
-      $parsed = $parser->parse($edtfString);
+      $parsed = $parser->parse((string)$edtfString);
       if ($parsed->isValid()) {
         $edtfValue = $parsed->getEdtfValue();
         // @todo remove once EDTF fixes their invalid Constructor for EDTF\Model\Interval that should per interface never allow NULL for start nor end date
@@ -748,11 +748,18 @@ class TwigExtension extends AbstractExtension {
 
     $this->bubbleArgMetadata($arg);
 
+    // Immediately cast and return MarkupInterface objects to a string to ensure
+    // that when Twig renders via yield, later manipulations to the object will
+    // not affect rendering.
+    if ($autoescape && ($arg instanceof MarkupInterface)) {
+      return (string) $arg;
+    }
 
     // Keep \Twig\Markup objects intact to support autoescaping.
-    if ($autoescape && ($arg instanceof TwigMarkup || $arg instanceof MarkupInterface)) {
+    if ($autoescape && ($arg instanceof TwigMarkup)) {
       return $arg;
     }
+
 
     $return = NULL;
 
@@ -787,7 +794,7 @@ class TwigExtension extends AbstractExtension {
       if ($strategy == 'html') {
         return Html::escape($return);
       }
-      return $env->getRuntime(EscaperRuntime::class)->escape($return, $strategy, $charset, $autoescape);
+      return $env->getRuntime(EscaperRuntime::class)->escape($arg, $strategy, $charset, $autoescape);
     }
 
     // This could be a normal render array, which is no longer safe by definition bc renderer is too strict on render arrays
@@ -842,4 +849,75 @@ class TwigExtension extends AbstractExtension {
 
     $this->renderer->render($arg_bubbleable);
   }
+
+  /**
+   * Own implementation of D11's \Drupal\Core\Template\TwigExtension::renderVar.
+   *
+   * If an object is passed which does not implement __toString(),
+   * RenderableInterface or toString() then an exception is thrown;
+   * All Other objects are casted to string. Core |render filter
+   * in Drupal 11 leaves \Drupal\Component\Render\MarkupInterface
+   * untouched, requiring (as of 11.2) to variable|drupal_escape|render to archieve
+   * what was just |render
+   *
+   * If an array is passed it is rendered via render() and scalar values are
+   * returned directly.
+   *
+   * @param mixed $arg
+   *   String, Object or Render Array.
+   *
+   * @throws \Exception
+   *   When $arg is passed as an object which does not implement __toString(),
+   *   RenderableInterface or toString().
+   *
+   * @return mixed
+   *   The rendered output
+   * @see \Drupal\Core\Template\TwigExtension::renderVar
+   */
+  public function sbfRenderVar($arg) {
+    // Check for a numeric zero int or float.
+    if ($arg === 0 || $arg === 0.0) {
+      return 0;
+    }
+
+    // Return early for NULL, empty arrays, empty strings and FALSE booleans.
+    // @todo https://www.drupal.org/project/drupal/issues/3240093 Determine if
+    //   this behavior is correct or should be deprecated.
+    if ($arg == NULL) {
+      return '';
+    }
+
+    // Optimize for scalars as it is likely they come from the escape filter.
+    if (is_scalar($arg)) {
+      return $arg;
+    }
+
+    if (is_object($arg)) {
+      $this->bubbleArgMetadata($arg);
+      if ($arg instanceof RenderableInterface) {
+        $arg = $arg->toRenderable();
+      }
+      elseif (method_exists($arg, '__toString')) {
+        return (string) $arg;
+      }
+      // You can't throw exceptions in the magic PHP __toString() methods, see
+      // http://php.net/manual/language.oop5.magic.php#object.tostring so
+      // we also support a toString method.
+      elseif (method_exists($arg, 'toString')) {
+        return $arg->toString();
+      }
+      else {
+        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+      }
+    }
+
+    // This is a render array, with special simple cases already handled.
+    // Early return if this element was pre-rendered (no need to re-render).
+    if (isset($arg['#printed']) && $arg['#printed'] == TRUE && isset($arg['#markup']) && strlen($arg['#markup']) > 0) {
+      return $arg['#markup'];
+    }
+    $arg['#printed'] = FALSE;
+    return $this->renderer->render($arg);
+  }
+
 }

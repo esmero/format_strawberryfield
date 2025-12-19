@@ -16,6 +16,12 @@ metadatadisplay.page_edit:
   base_route: entity.metadatadisplay_entity.canonical
   title: Edit
 
+
+metadatadisplay.page_download:
+  route_name: entity.metadatadisplay_entity.download
+  base_route: entity.metadatadisplay_entity.canonical
+  title: Download
+
 metadatadisplay.delete_confirm:
   route_name:  entity.metadatadisplay_entity.delete_form
   base_route:  entity.metadatadisplay_entity.canonical

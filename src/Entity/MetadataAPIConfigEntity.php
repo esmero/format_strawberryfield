@@ -148,7 +148,9 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements ConfigEntityIn
   /**
    * Gets a Metadata Display Entity for a given condition
    *
-   * @param string $condition
+   * @param string|int $condition
+   *    if 'default', we will get index 0
+   *    Or you can pass the index.
    *
    * @return \Drupal\format_strawberryfield\MetadataDisplayInterface|Null
    *   Either a Metadata Display entity or missing reference.
@@ -157,8 +159,11 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements ConfigEntityIn
    */
   public function getItemMetadataDisplayEntity($condition = 'default') {
     //@TODO process condition into a machinable key
+    if ($condition == 'default') {
+      $condition = 0;
+    }
     if (empty($this->metadataItemDisplayEntity)) {
-      if ($this->configuration['metadataItemDisplayentity'][$condition]) {
+      if (isset($this->configuration['metadataItemDisplayentity'][$condition]) && $this->configuration['metadataItemDisplayentity'][$condition]) {
         $metadatadisplayentities = $this->entityTypeManager()
           ->getStorage('metadatadisplay_entity')
           ->loadByProperties(['uuid' => $this->configuration['metadataItemDisplayentity'][$condition]]);
@@ -172,15 +177,20 @@ class MetadataAPIConfigEntity extends ConfigEntityBase implements ConfigEntityIn
   }
 
   /**
-   * @param string $condition
+   * @param string|int $condition
+   *     if 'default', we will get index 0
+   *     Or you can pass the index.
    *
    * @return \Drupal\format_strawberryfield\MetadataDisplayInterface
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function getWrapperMetadataDisplayEntity($condition = 'default') {
+    if ($condition == 'default') {
+      $condition = 0;
+    }
     if (empty($this->metadataWrapperDisplayEntity)) {
-      if ($this->configuration['metadataWrapperDisplayentity'][$condition])  {
+      if (isset($this->configuration['metadataWrapperDisplayentity'][$condition]) && $this->configuration['metadataWrapperDisplayentity'][$condition])  {
         $metadatadisplayentities = $this->entityTypeManager()
           ->getStorage('metadatadisplay_entity')
           ->loadByProperties(['uuid' => $this->configuration['metadataWrapperDisplayentity'][$condition]]);

@@ -146,6 +146,17 @@ av_strawberry:
     component:
       css/htmlaudiovideo.css: {}
 
+av_custom_control_strawberry:
+  version: 1.0
+  js:
+    js/iiif-audiovideo_strawberry.js: {minified: false, attributes: { type: module }}
+  dependencies:
+    - core/jquery
+    - core/once
+    - core/drupal
+    - core/drupalSettings
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
 jsm_modeler:
   version: 0.45
   js:
