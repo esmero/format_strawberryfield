@@ -47,6 +47,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       'number_media' => 1,
       'use_wavesurfer' => false,
       'wavesurfer_filesize_limit' => '1 GB',
+      'audiowaveform_json_key_source' => NULL,
       'use_external_control' => false,
       'hide_native_control' => false,
       'use_external_control_shared' => false,
@@ -144,6 +145,18 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
               ':checkbox[data-checkbox-selector="use_wavesurfer"]' => ['checked' => TRUE],
             ],
           ]
+        ],
+        'audiowaveform_json_key_source' => [
+          '#type' => 'textfield',
+          '#title' => t('JSON Key (upload key) from where to attempt to fetch a preprocessed AudioWaveform (JSON file) attached to this ADO.'),
+          '#description' => t('Instead of real time processing of audio waveforms, a JSON file attached to this ADO and produced by the audiowaveform binary can be used. Ideally this would be generated via a Strawberry Runners Processor'),
+          '#default_value' => $this->getSetting('audiowaveform_json_key_source'),
+          '#required' => FALSE,
+          '#states' => [
+            'visible' => [
+              ':checkbox[data-checkbox-selector="use_wavesurfer"]' => ['checked' => TRUE],
+            ],
+          ],
         ],
         'viewer_overrides' => [
           '#type' => 'textarea',
@@ -252,6 +265,11 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       $summary[] = $this->t('Wave Surfer will be disabled for Files larger than @value', [
         '@value' => $this->getSetting('wavesurfer_filesize_limit')
       ]);
+      if ($this->getSetting('audiowaveform_json_key_source')) {
+        $summary[] = $this->t('Wave Surfer will try to load, if present, an attached/pre-processed audio waveform file in JSON format uploaded to the @value JSON key', [
+          '@value' => $this->getSetting('audiowaveform_json_key_source')
+        ]);
+      }
     }
 
     $summary[] = $this->t(
@@ -305,6 +323,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
 
     $current_language = $items->getEntity()->get('langcode')->value;
     $nodeid = $items->getEntity()->id();
+    $nodeuuid = $items->getEntity()->uuid();
     $number_media = $this->getSetting('number_media') ?? 0;
     $key = $this->getSetting('json_key_source');
 
@@ -336,25 +355,25 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       @see https://www.w3.org/TR/webvtt1/#introduction-metadata for tracks
       @see http://events.linkeddata.org/ldow2014/papers/ldow2014_paper_11.pdf for LoD
       {"as:audio": {
-		    "urn:uuid:someuuid": {
-			  "dr:fid": 32, // Drupal's FID
-			  "dr:for": "some_audio_files",  // The webform element key that generated this one
-			  "url": "s3://f23/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.mp3",
-			  "name": "My Super Audio",
-		  	"type": "Audio",
-		  	"duration": "T0M15S", //https://en.wikipedia.org/wiki/ISO_8601
-			  "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b",
-			  "tracks": [
-			  	{
-				  	"subtitleLanguage": "es",
-				  	"url": "s3://f11/subtitle-58455d91acf7290275c1cab77531b7f561a11a84.vtt",
+            "urn:uuid:someuuid": {
+              "dr:fid": 32, // Drupal's FID
+              "dr:for": "some_audio_files",  // The webform element key that generated this one
+              "url": "s3://f23/new-metadata-en-image-58455d91acf7290275c1cab77531b7f561a11a84.mp3",
+              "name": "My Super Audio",
+              "type": "Audio",
+              "duration": "T0M15S", //https://en.wikipedia.org/wiki/ISO_8601
+              "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b",
+              "tracks": [
+                  {
+                      "subtitleLanguage": "es",
+                      "url": "s3://f11/subtitle-58455d91acf7290275c1cab77531b7f561a11a84.vtt",
             "dr:fid": 33, // Drupal's FID
-				  	"type": "subtitles|captions|descriptions|chapters|metadata",
+                      "type": "subtitles|captions|descriptions|chapters|metadata",
             "dr:for": "some_track_files", // The webform element key that generated this one
             "checksum": "f231aed5ae8c2e02ef0c5df6fe38a99b"
-				  }
-			  ]
-		   }}}
+                  }
+              ]
+           }}}
       */
 
       $embargo_info = $this->embargoResolver->embargoInfo($items->getEntity(), $jsondata);
@@ -411,7 +430,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                       $i = 0;
                       foreach ($vtt_entries as $vtt_key => &$vtt_item) {
                         $route_parameters = [
-                          'node' => $nodeid,
+                          'node' => $nodeuuid,
                           'uuid' => $vtt_item['file']->uuid(),
                           'format' => 'default.' . pathinfo(
                               $vtt_item['file']->getFilename(),
@@ -419,7 +438,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                             )
                         ];
                         $publicurl = Url::fromRoute(
-                          'format_strawberryfield.iiifbinary',
+                          'format_strawberryfield.binary',
                           $route_parameters
                         );
                         //<track label="English" kind="subtitles" srclang="en" src="captions/vtt/sintel-en.vtt" default>//
@@ -491,15 +510,35 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
 
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width . 'px';
-    $max_width = empty($max_width) || $max_width == 0 ? NULL : $max_width;
     $max_height = $this->getSetting('max_height');
     $nodeuuid = $items->getEntity()->uuid();
-    $nodeid = $items->getEntity()->id();
     $use_external_control = $this->getSetting('use_external_control');
     $use_external_control_shared = $this->getSetting('use_external_control_shared');
     $hide_native_control = $this->getSetting('hide_native_control');
     // The 1.6.0 reposition feature via JS
     $use_wavesurfer = $this->getSetting('use_wavesurfer');
+    $json_audio_webform_url = NULL;
+    if ($use_wavesurfer) {
+      // @TODO challenge. This works for one audio/one JSON encoded waveform. What if the ADO holds multiple audios?
+      // Same as with VTT, how do we connected -> relate one to another?
+      $waveform_upload_keys_string = strlen(trim($this->getSetting('audiowaveform_json_key_source') ?? '')) > 0 ? trim($this->getSetting('audiowaveform_json_key_source')) : '';
+      if ($waveform_upload_keys_string !== '') {
+        $json_audio_waveform = $this->fetchMediaFromJsonWithFilter(
+          $delta, $items,
+          $elements,
+          FALSE, $jsondata, 'Document', 'as:document', 'sequence', 1,
+          [$waveform_upload_keys_string],  ['source' => ['dr:mimetype'],'condition' => 'application/json']);
+        if (isset($json_audio_waveform[$waveform_upload_keys_string]) && count($json_audio_waveform[$waveform_upload_keys_string]) ) {
+          $route_parameters = [
+            'node' => $nodeuuid,
+            'uuid' => $json_audio_waveform[$waveform_upload_keys_string][0]['file']->uuid(),
+            'format' =>$json_audio_waveform[$waveform_upload_keys_string][0]['file_name'],
+          ];
+          $json_audio_webform_url = Url::fromRoute('format_strawberryfield.binary',
+            $route_parameters)->toString();
+        }
+      }
+    }
     $external_control_selector = trim($this->getSetting('external_control_selector') ?? '');
     $external_control_element_active_class = trim($this->getSetting('external_control_element_active_class') ?? '');
     $media_label = $file->label();
@@ -512,12 +551,12 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
 
     // We assume here file could not be accessible publicly
     $route_parameters = [
-      'node' => $nodeid,
+      'node' => $nodeuuid,
       'uuid' => $file->uuid(),
       'format' => 'default.' . pathinfo($file->getFilename(),
           PATHINFO_EXTENSION)
     ];
-    $publicurl = Url::fromRoute('format_strawberryfield.iiifbinary',
+    $publicurl = Url::fromRoute('format_strawberryfield.binary',
       $route_parameters);
 
     $filecachetags = $file->getCacheTags();
@@ -586,7 +625,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       $wavesurfer_filesize_limit = $this->getSetting('wavesurfer_filesize_limit') ?? '1 GB';
       $wavesurfer_filesize_limit = Bytes::validate($wavesurfer_filesize_limit) ? $wavesurfer_filesize_limit : '1 GB';
       $wavesurfer_filesize_limit = Bytes::toNumber($wavesurfer_filesize_limit);
-      if ($file->getSize() >= $wavesurfer_filesize_limit) {
+      if ($file->getSize() >= $wavesurfer_filesize_limit && $json_audio_webform_url === NULL) {
         $use_wavesurfer = FALSE;
       }
 
@@ -608,6 +647,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['hide_native_control'] = (bool) $hide_native_control;
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['external_control_selector'] = $external_control_selector;
       $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['use_wavesurfer'] = $use_wavesurfer;
+      $elements[$delta]['#attached']['drupalSettings']['format_strawberryfield']['audiovideo'][$htmlid]['waveform_url'] = $json_audio_webform_url;
       $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_custom_control_strawberry';
     }
     $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/av_strawberry';
