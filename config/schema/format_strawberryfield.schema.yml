@@ -141,6 +141,9 @@ field.formatter.settings.strawberry_audio_formatter:
     use_wavesurfer:
       type: boolean
       label: 'Enable Wavesurfer plugin'
+    audiowaveform_json_key_source:
+      type: string
+      label: 'Strawberryfield/JSON key possibly containing an pre-processed audio waveform JSON produced via the audiowaveform binary'
     wavesurfer_filesize_limit:
       type: string
       label: 'Disable Wavesurfer for files larger than this'
