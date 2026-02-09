@@ -36,7 +36,7 @@ class IiifContentSearchController extends ControllerBase {
   /**
    * A JMESPATH to fetch Canvas Size, Images and their targets IIIF Presentation 3.x
    */
-  CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting' && body.type == 'Image'][body.not_null(id, \"@id\"), not_null(target)][]}][]";
+  CONST IIIF_V3_JMESPATH = "items[?not_null(type, \"@type\") == 'Canvas'].[{width:width,height:height,img_canvas_pairs:items[?type == 'AnnotationPage'][].items[?motivation == 'painting' && (body.type == 'Image' || body.type == 'Video' || body.type == 'Audio')][body.not_null(id, \"@id\"), not_null(target), body.not_null(type)][]}][]";
 
   CONST IIIF_V3_JMESPATH_VTT ="items[?not_null(type, \"@type\") == 'Canvas'].[{duration:duration, width:width, height:height, vtt_canvas_annotation_triad:annotations[].items[?motivation=='supplementing' && body.format == 'text/vtt'][body.not_null(id, \"@id\"), not_null(target),not_null(id, \"@id\")][]}][]";
 
@@ -736,13 +736,18 @@ class IiifContentSearchController extends ControllerBase {
   protected function cleanImageJmesPathResult(array $jmespath_searchresult): array {
     $image_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
-      foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
-        $image_id = $this->destinationScheme."://".IiifHelper::extract_iiif_id($image_canvas_pair[0]);
-        // The $image_canvas_pair[1] is the Canvas targeted by the Image.
-        $image_parts = explode(";",$image_id);
-        $sequence = count($image_parts) > 1 ? end($image_parts) : 1 ;
-        $image_hash[$image_parts[0]][$sequence][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
-      }
+        foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
+            if (is_string($image_canvas_pair[2] ?? '') && strtolower($image_canvas_pair[2]) == "image") {
+                $image_id = $this->destinationScheme . "://" . IiifHelper::extract_iiif_id($image_canvas_pair[0]);
+                // The $image_canvas_pair[1] is the Canvas targeted by the Image.
+                $image_parts = explode(";", $image_id);
+                $sequence = count($image_parts) > 1 ? end($image_parts) : 1;
+                $image_hash[$image_parts[0]][$sequence][$image_canvas_pair[1]] = [
+                    $entries_percanvas["width"] ?? NULL,
+                    $entries_percanvas["height"] ?? NULL
+                ];
+            }
+        }
     }
     unset($jmespath_searchresult);
     return $image_hash;
@@ -770,7 +775,7 @@ class IiifContentSearchController extends ControllerBase {
           }
         }
         if (!$node_uuid) {
-          // just skip if we have no File uuid.
+          // just skip if we have no Node uuid.
           continue;
         }
         $ado_hash[$node_uuid][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
