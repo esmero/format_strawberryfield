@@ -149,7 +149,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
         'audiowaveform_json_key_source' => [
           '#type' => 'textfield',
           '#title' => t('JSON Key (upload key) from where to attempt to fetch a preprocessed AudioWaveform (JSON file) attached to this ADO.'),
-          '#description' => t('Instead of real time processing of audio waveforms, a JSON file attached to this ADO and produced by the audiowaveform binary can be used. Ideally this would be generated via a Strawberry Runners Processor'),
+          '#description' => t('Instead of real time processing of audio waveforms, a JSON file attached to this ADO and produced by the audiowaveform binary can be used. Ideally this would be generated via a Strawberry Runners Processor. If found, the WaverSurfer File size limit is skipped.'),
           '#default_value' => $this->getSetting('audiowaveform_json_key_source'),
           '#required' => FALSE,
           '#states' => [
