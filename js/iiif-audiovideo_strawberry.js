@@ -149,16 +149,50 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         };
                       }
                       try {
-                        this.wavesurfer = WaveSurfer.create(default_waversurfer_settings);
-                        this.wavesurfer.on('loading', (percent) => {
-                          console.log('Wavesurfer Loading current track', percent + '%');
-                        });
-                        this.wavesurfer.on('decode', () => {
-                          console.log("Wavesurfer Peaks decoded");
-                        })
+                        if (drupalSettings.format_strawberryfield.audiovideo[this.active_audiovideo_element.id]['waveform_url']) {
+                          fetch(drupalSettings.format_strawberryfield.audiovideo[this.active_audiovideo_element.id]['waveform_url'],
+                          {
+                            credentials: "include"
+                          }
+                          )
+                            .then(response => {
+                              if (!response.ok) {
+                                throw new Error("HTTP error " + response.status);
+                              }
+                              return response.json();
+                            })
+                            .then(peaks => {
+                              if (peaks.hasOwnProperty('data') &&
+                                peaks.hasOwnProperty('length') &&
+                              peaks.hasOwnProperty('samples_per_pixel') &&
+                              peaks.hasOwnProperty('sample_rate')) {
+                                default_waversurfer_settings.peaks = peaks.data;
+                                // duration = length * samples_per_pixel / sample_rate
+                                default_waversurfer_settings.duration = (peaks.length * peaks.samples_per_pixel) / peaks.sample_rate;
+                                default_waversurfer_settings.normalize = true;
+                                console.log('loaded peaks from JSON at sample_rate: ' + peaks.sample_rate);
+                                this.wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+                              }
+                              else {
+                                throw new Error("Decoded Waveform data is not properly encoded");
+                              }
+                            })
+                            .catch((e) => {
+                              console.error('error', e);
+                            });
+                        }
+                        else {
+                          this.wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+                          this.wavesurfer.on('loading', (percent) => {
+                            console.log('Wavesurfer Loading current track', percent + '%');
+                          });
+                          this.wavesurfer.on('decode', () => {
+                            console.log("Wavesurfer Peaks decoded");
+                          })
+                        }
                       }
                       catch (error) {
-                        console.error("Waversurfer could not initialize for this media source" + error);
+                        console.error("Waversurfer could not initialize for this media source " + error);
                       };
                     }
                   }
@@ -724,10 +758,43 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               };
             }
             try {
-              const wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+              if (drupalSettings.format_strawberryfield.audiovideo[element_id]['waveform_url']) {
+                fetch(drupalSettings.format_strawberryfield.audiovideo[element_id]['waveform_url'],
+                  {
+                    credentials: "include"
+                  }
+                )
+                  .then(response => {
+                    if (!response.ok) {
+                      throw new Error("HTTP error " + response.status);
+                    }
+                    return response.json();
+                  })
+                  .then(peaks => {
+                    if (peaks.hasOwnProperty('data') &&
+                      peaks.hasOwnProperty('length') &&
+                      peaks.hasOwnProperty('samples_per_pixel') &&
+                      peaks.hasOwnProperty('sample_rate')) {
+                      default_waversurfer_settings.peaks = peaks.data;
+                      // duration = length * samples_per_pixel / sample_rate
+                      default_waversurfer_settings.duration = (peaks.length * peaks.samples_per_pixel) / peaks.sample_rate;
+                      default_waversurfer_settings.normalize = true;
+                      console.log('loaded peaks from JSON at sample_rate: ' + peaks.sample_rate);
+                      const wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+                    } else {
+                      throw new Error("Decoded Waveform data is not properly encoded");
+                    }
+                  })
+                  .catch((e) => {
+                    console.error('error', e);
+                  });
+              }
+              else {
+                const wavesurfer = WaveSurfer.create(default_waversurfer_settings);
+              }
             }
             catch (error) {
-              console.error("Waversurfer could not initialize for this media soruce" + error);
+              console.error("Waversurfer could not initialize for this media soruce " + error);
             };
           }
         }
