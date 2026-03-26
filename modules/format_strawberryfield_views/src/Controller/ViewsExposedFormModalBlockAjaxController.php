@@ -125,28 +125,30 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     if (empty($path) || empty($modalviews_blocks)) {
       throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
     }
+    $params = [];
+    $queryString = parse_url($path, PHP_URL_QUERY);
 
+
+    parse_str($queryString, $params);
     // Now Dear Diego. the page argument is permeating on a POST
     // Making a new query that was on page 100 fail bc it might not a page 100 for that query
     // Drupal is hard
-    $path_expanded = UrlHelper::parse($path);
-    $filtered = UrlHelper::filterQueryParameters(
-      $path_expanded['query'], ['page']
-    );
-    $path_expanded['query'] = $filtered;
-    UrlHelper::buildQuery($path_expanded['query']);
-    $path_object = \Drupal::pathValidator()->getUrlIfValid($path_expanded['path']);
-    if (!$path_object) {
-      // Stay on the same page if the redirect was invalid.
-      throw new NotFoundHttpException('No Modal Exposed Views Form links or blocks found.');
-    }
-    $path_object->setOptions($path_expanded);
-    $path = $path_object->toString();
+    unset($params['page']);
 
+    $actual_path = explode('?', $path);
+    $path = $actual_path[0];
+    if (is_string($path)) {
+      $path = trim($path);
+    }
     // Make sure we are not updating blocks multiple times.
     $modalviews_blocks = array_unique($modalviews_blocks);
 
     $new_request = Request::create($path);
+    if (is_array($params)) {
+      foreach ($params as $key => $param) {
+        $new_request->query->set($key, $param);
+      }
+    }
     $new_request->setSession($request->getSession());
     // Add ajax_page_state to the new request if set.
     if ($request->request->has('ajax_page_state')) {
