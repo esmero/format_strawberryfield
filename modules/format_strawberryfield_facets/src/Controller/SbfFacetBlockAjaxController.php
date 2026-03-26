@@ -54,8 +54,23 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
     if (empty($path) || empty($facets_blocks)) {
       throw new NotFoundHttpException('No facet link or facet blocks found.');
     }
-
+    // Symfony No longer accepts Spaces or Control characters on a $path
+    // Since the Facets/Sorts and search are inside the $path from the facet_link argument,
+    // we need to move them out and into query parameters for the $new_request
+    $params = [];
+    $queryString = parse_url($path, PHP_URL_QUERY);
+    parse_str($queryString, $params);
+    $actual_path = explode('?', $path);
+    $path = $actual_path[0];
+    if (is_string($path)) {
+      $path = trim($path);
+    }
     $new_request = Request::create($path);
+    if (is_array($params)) {
+      foreach ($params as $key => $param) {
+        $new_request->query->set($key, $param);
+      }
+    }
     if ($session = $request->getSession()) {
       $new_request->setSession($session);
     }
