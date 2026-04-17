@@ -107,12 +107,19 @@
             geojsonLayer.on('data:loaded', function () {
               if (!cluster_added) {
                 markers.addLayer(geojsonLayer);
-                if (geojsonLayer.getLayers().length > 1) {
-                  map.addLayer(markers).fitBounds(markers.getBounds());
-                } else {
-                  map.addLayer(markers).setView(markers.getBounds().getCenter(), $initialzoom);
+                map.addLayer(markers);
+                if (geojsonLayer.getBounds().isValid()) {
+                  var bounds = geojsonLayer.getBounds();
+                  if (geojsonLayer.getLayers().length === 1
+                    && bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                    // If there is just one point, keep that initial zoom
+                    map.setView(bounds.getCenter(), $initialzoom);
+                  } else {
+                    // Otherwise, use fitbounds so that polygons, multipolygons, and lines are also included
+                    map.fitBounds(bounds);
+                  }
                 }
-              cluster_added = true;
+                cluster_added = true;
               }
             });
 
