@@ -156,7 +156,9 @@ class TwigExtension extends AbstractExtension {
     if (!$view || !$view->access($display_id)) {
       return NULL;
     }
-    $view->setCurrentPage($page);
+    if (is_int($page) && $page >= 0) {
+      $view->setCurrentPage($page);
+    }
     if (!empty($exposed_filters)) {
       // @TODO see if URL arguments from the request query
       // could end permeating here generating a mess. Leaving this snippet
@@ -167,9 +169,25 @@ class TwigExtension extends AbstractExtension {
       ); */
       $view->setExposedInput($exposed_filters);
     }
+    // Note: REST API Views will return $output['#markup'] but
+    // BLOCKS and other rendering ones will return $output['#rows']
+    // and a #theme and cache to be rendered after wards.
+    // Because a view could have also exposed forms
+    // No results messages, in that case
+    // we return the whole render array.
+    $views_args = array_values($args ?? []);
+    $output = $view->executeDisplay($display_id, $views_args);
+    // Blocks will not pre-render
+    if (is_array($output)) {
+      if (isset($output['#markup'])) {
+        return $output['#markup'];
+      }
+      else {
+        return $output;
+      }
+    }
 
-    $output = $view->executeDisplay($display_id, $args);
-    return is_array($output) && isset($output['#markup']) ? $output['#markup'] : NULL;
+    return NULL;
   }
 
 
