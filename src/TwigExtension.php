@@ -763,7 +763,9 @@ class TwigExtension extends AbstractExtension {
         }
       }
     }
-
+    // Maybe not bubble before we are using we can return?
+    // Logic exception might have bubble and then the error bubles again
+    // See https://git.drupalcode.org/project/canvas/-/blob/0510ea5562e0fea77c8641f77fe0a9d882882c4d/src/Element/RenderSafeComponentContainer.php
     $this->bubbleArgMetadata($arg);
 
     // Immediately cast and return MarkupInterface objects to a string to ensure
@@ -833,6 +835,17 @@ class TwigExtension extends AbstractExtension {
       // I have no solution yet.
       // But will work on Template previews and full page renders.
       \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
+      $rendered_value = $env->getRuntime(EscaperRuntime::class)->escape('Sorry, error', $strategy, $charset, $autoescape);
+
+    }
+    catch (\RuntimeException $e) {
+      // We can't just catch any exception. The Ajax responder from the FormBuilder will throw exceptions
+      // Just to close the response! Drupal gosh. So hard!
+      // This Might fail on an AjaxResponse or anything that is using RenderRoot?
+      // I have no solution yet.
+      // But will work on Template previews and full page renders.
+      \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
+      $rendered_value = $env->getRuntime(EscaperRuntime::class)->escape('Sorry, error', $strategy, $charset, $autoescape);
     }
     return $rendered_value;
   }
@@ -873,7 +886,7 @@ class TwigExtension extends AbstractExtension {
    *
    * If an object is passed which does not implement __toString(),
    * RenderableInterface or toString() then an exception is thrown;
-   * All Other objects are casted to string. Core |render filter
+   * All Other objects are cast to string. Core |render filter
    * in Drupal 11 leaves \Drupal\Component\Render\MarkupInterface
    * untouched, requiring (as of 11.2) to variable|drupal_escape|render to archieve
    * what was just |render
