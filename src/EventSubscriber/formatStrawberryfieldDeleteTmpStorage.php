@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\EventSubscriber;
 
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\strawberryfield\Event\StrawberryfieldCrudEvent;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -52,6 +53,11 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
   private $loggerFactory;
 
   /**
+   * The current user.
+   */
+  protected AccountProxyInterface $account;
+
+  /**
    * StrawberryfieldEventInsertSubscriberDepositDO constructor.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
@@ -63,12 +69,15 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
     TranslationInterface $string_translation,
     MessengerInterface $messenger,
     LoggerChannelFactoryInterface $logger_factory,
-    PrivateTempStoreFactory $temp_store_factory
+    PrivateTempStoreFactory $temp_store_factory,
+    AccountProxyInterface $account
   ) {
     $this->stringTranslation = $string_translation;
     $this->messenger = $messenger;
     $this->loggerFactory = $logger_factory;
     $this->tempStoreFactory = $temp_store_factory;
+    $this->account =  $account;
+
 
   }
 
@@ -95,6 +104,16 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
 
     // Means an existing Entity
     // Our storage key will be less generic, using the actual uuid.
+    // NOTE: Since this is a logged-in user specific event
+    // And might trigger if, e.g. an SBR runners updates a NODe
+    // AND it is run via cron instead of hydroponics
+    // (Breaking sessions via - Symfony warning)
+    // And it makes no sense to generate a key from
+    // anonymous keystore because we do not write on it any ways,
+    // we will skip it if the user is anonymous
+    if ($this->account->isAnonymous()) {
+      return;
+    }
 
     $current_class = get_called_class();
     $entity = $event->getEntity();
