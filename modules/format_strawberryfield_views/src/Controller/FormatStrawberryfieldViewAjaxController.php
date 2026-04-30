@@ -49,14 +49,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
     MainContentViewSubscriber::WRAPPER_FORMAT,
   ];
 
-
-  /**
-   * The entity storage for views.
-   *
-   * @var \Drupal\Core\Entity\EntityStorageInterface
-   */
-  protected $storage;
-
   /**
    * The factory to load a view executable with.
    *
