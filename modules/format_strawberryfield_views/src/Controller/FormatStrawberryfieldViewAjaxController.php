@@ -48,35 +48,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
     FormBuilderInterface::AJAX_FORM_REQUEST,
     MainContentViewSubscriber::WRAPPER_FORMAT,
   ];
-
-  /**
-   * The factory to load a view executable with.
-   *
-   * @var \Drupal\views\ViewExecutableFactory
-   */
-  protected $executableFactory;
-
-  /**
-   * The renderer.
-   *
-   * @var \Drupal\Core\Render\RendererInterface
-   */
-  protected $renderer;
-
-  /**
-   * The current path.
-   *
-   * @var \Drupal\Core\Path\CurrentPathStack
-   */
-  protected $currentPath;
-
-  /**
-   * The redirect destination.
-   *
-   * @var \Drupal\Core\Routing\RedirectDestinationInterface
-   */
-  protected $redirectDestination;
-
+  
   /**
    * @var \Drupal\Core\Path\PathValidatorInterface
    */
