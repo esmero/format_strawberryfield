@@ -82,6 +82,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('JSON key present in your metadata that contains an allowed to bypass embargo through a visitor IP or IP range that will be used to Embargo Metadata and Media.'),
       '#default_value' => $config->get('ip_json_key') ?? '',
+      '#description' => $this->t('The presence of this key with a value on an ADO implies automatically that the Object is only visible from allowed IP addresses. Other permissions might apply too. Note: If a user\'s Client IP matches an allowed IP/IP Range, but the ADO is also Date embargoed, it will not be accessible for that user.'),
       '#required' => FALSE
     ];
 
@@ -101,7 +102,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
     $form['global_ip_bypass_enabled'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable Global IP Range Bypass Settings'),
-      '#description' => $this->t('To allow global IP embargo bypass settings to act on an ADO, you must enable this option AND add the defined (above on this configuration form) JSON key to impacted ADOs with a value of boolean "true". For example, an ADO would have this set in the raw JSON data: <code>{ "ip_embargo_bypass": true }</code> '),
+      '#description' => $this->t('To allow global IP embargo bypass settings to act on an ADO, you must enable this option AND add the defined (above on this configuration form) JSON key to impacted ADOs with a value of boolean <em>true</em> or the numeric value <em>1</em>. For example, an ADO would have this set in the raw JSON data: <code>{ "ip_embargo_bypass": true }</code> '),
       '#return_value' => TRUE,
       '#default_value' => $config->get('global_ip_bypass_enabled') ?? FALSE,
     ];
@@ -132,7 +133,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
 
     $form['global_ip_bypass_addresses'] = [
       '#type' => 'textarea',
-      '#title' => $this->t('Global IP addresses and ranges embargo bypass'),
+      '#title' => $this->t('Global IPv4 or IPv6 addresses and ranges embargo bypass'),
       '#cols' => '80',
       '#rows' => '10',
       '#description' => $this->t("Specify IP addresses in CDIR format. Enter one IP/IP Range per line."),

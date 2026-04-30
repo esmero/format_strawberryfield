@@ -20,6 +20,14 @@ use DateTime;
 class EmbargoResolver implements EmbargoResolverInterface {
   use UseCacheBackendTrait;
 
+  const OTHER_VALID_GLOBAL_IP_BYPASS_VALUES = [
+    "1",
+    1,
+    "true",
+    "TRUE"
+  ];
+
+
   /**
    * The config factory service.
    *
@@ -110,29 +118,39 @@ class EmbargoResolver implements EmbargoResolverInterface {
     if (isset($cache[$cache_id])) {
       return $cache[$cache_id];
     }
-
+    // Strange name. $noembargo == TRUE, means basically ADO can be seen by the
+    // current user
     $noembargo = TRUE;
-    // If embargo by IP is enforced
-    $ip_embargo = FALSE;
+    $date = FALSE;
+    // If embargo by IP is enforced/was evaluated.
+    $ip_evaluated = FALSE;
+    // If $ip_embargo_bypass is possible, also connected to
+    // Cache-ability and cache tags.
+    $ip_embargo_bypass = NULL;
     // If embargo by date is enforced
     $date_embargo = FALSE;
+    // Only IP embargo triggers a complete uncacheable response;
     $cacheable = TRUE;
 
+    /*  $embargo_info = [
+     !$noembargo => If the ADO is embargoed (bool) (combined evaluation of Date and IP OR permissions),
+     $date_embargo ? $date : FALSE If the ADO is embargoed by Date (FALSE|STRING) the actual Date if embargoed (TRUE) OR FALSE if user can see it,
+     !$ip_embargo_bypass If the ADO is embargoed by IP (bool). TRUE if either local/global IPs do not match the current Client's IP. FALSE if not,
+     $cacheable (bool). The computed Cache-ability. Anything that went through IP embargo evaluation can't be cached
+     ]
+    */
+
     if (!$this->embargoConfig->get('enabled')) {
-      $embargo_info = [!$noembargo, FALSE, FALSE, $cacheable];
+      $embargo_info = [FALSE, FALSE, FALSE, TRUE];
     }
     else {
       $user_roles = $this->currentUser->getRoles();
-      if (in_array('administrator', $user_roles)) {
-        $embargo_info = [!$noembargo, FALSE, FALSE, $cacheable];
-      }
-      elseif ($this->currentUser->hasPermission('see strawberryfield embargoed ados')) {
-        $embargo_info = [!$noembargo, FALSE, FALSE, $cacheable];
+      if (in_array('administrator', $user_roles) || $this->currentUser->hasPermission('see strawberryfield embargoed ados')) {
+        $embargo_info = [FALSE, FALSE, FALSE, TRUE];
       }
       else {
         if ($this->currentUser->hasPermission('see strawberryfield time embargoed ados')) {
-          $noembargo = TRUE;
-          $date_embargo = FALSE;
+          $noembargo = TRUE; // Redundant, i know. But easier to read.
         }
         else {
           // Check the actual embargo options
@@ -145,13 +163,14 @@ class EmbargoResolver implements EmbargoResolverInterface {
               }
               else {
                 $noembargo = FALSE;
+                // When true, the actual date is added to the $info.
                 $date_embargo = TRUE;
               }
             }
           }
         }
         if ($this->currentUser->hasPermission('see strawberryfield IP embargoed ados')) {
-          $ip_embargo = FALSE;
+          $ip_embargo_bypass = TRUE;
         }
         else {
           $ip_embargo_key = $this->embargoConfig->get('ip_json_key') ?? '';
@@ -167,64 +186,88 @@ class EmbargoResolver implements EmbargoResolverInterface {
               }
             }
             // Why would the current IP not be present? Should we deny all if that
-            // exception happens?
+            // exception happens? Internal calls/ops might not have an IP.
             if ($current_ip) {
               $ip_evaluated = FALSE;
+              // We copy temporarily the previous $noembargo value
+              $noembargo_from_ip = $noembargo;
               if (is_array($jsondata[$ip_embargo_key])) {
                 foreach ($jsondata[$ip_embargo_key] as $ip_embargo_value) {
                   if (is_string($ip_embargo_value)) {
-                    $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
+                    // Global IP embargo values @see \Drupal\format_strawberryfield\EmbargoResolver::OTHER_VALID_GLOBAL_IP_BYPASS_VALUES
+                    // CAN not be MIXED with real IPs. IF both present in array, the value will be considered
+                    // AN IP and fail bc it is not an IP. In that case this is OK, Since a SINGLE Positive evaluation will suffice
+                    // Because of the OR
+                    $ip_embargo_bypass = IpUtils::checkIp($current_ip, trim($ip_embargo_value)) || $ip_embargo_bypass;
                     // Here we need to do it differently. We will || all the $ip_embargo
                     // and then check the $noembargo variable outside of this loop
                     $ip_evaluated = TRUE;
                   }
                 }
-                $noembargo = $noembargo && $ip_embargo;
+                $noembargo_from_ip = $noembargo_from_ip && $ip_embargo_bypass;
               }
               elseif (is_string($jsondata[$ip_embargo_key])) {
-                $ip_embargo = IpUtils::checkIp4($current_ip, trim($jsondata[$ip_embargo_key]));
-                $noembargo = $noembargo && $ip_embargo;
+                $ip_embargo_bypass = IpUtils::checkIp($current_ip, trim($jsondata[$ip_embargo_key]));
+                $noembargo_from_ip = $noembargo_from_ip && $ip_embargo_bypass;
                 $ip_evaluated = TRUE;
               }
 
               if ($this->embargoConfig->get('global_ip_bypass_enabled')) {
-                // If the key is there and set to TRUE. Replace/Additive/Local does not apply here
+                // If the key is there and the only value is set to TRUE. Replace/Additive/Local does not apply here
                 // Variations of TRUE.
-                $global_ip_embargo = $jsondata[$ip_embargo_key] ?? FALSE;
-                $global_ip_embargo = ((is_bool($global_ip_embargo) && $global_ip_embargo == TRUE) || $global_ip_embargo == "1" || $global_ip_embargo == 1);
+                $global_ip_embargo = $jsondata[$ip_embargo_key];
+                $global_ip_embargo = ((is_bool($global_ip_embargo) && $global_ip_embargo === TRUE) || in_array($global_ip_embargo, static::OTHER_VALID_GLOBAL_IP_BYPASS_VALUES, TRUE));
                 if ($global_ip_embargo) {
-                  $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
-                  $noembargo = $noembargo && $ip_embargo;
+                  // Here we have a problem. If this (using a variation of TRUE) was also evaluated as a string on line 211
+                  // then it would have failed. So Even if we pass here, $noembargo && $ip_embargo_bypass = FALSE.
+                  $ip_embargo_bypass = $this->evaluateGlobalIPembargo($current_ip);
+                  // Here we use the original $noembargo since $noembargo_from_ip might be tainted
+                  // by having a valid "true" being evaluated as a string before.
+                  // Question for Allison. WE still AND against Time based Embargo?
+                  $noembargo = $noembargo && $ip_embargo_bypass;
                 }
                 // Only makes sense to check the modes IF the ADO already had IP data and was evaluated.
+                // In other words, if it was evaluated, it means that Global Embargo
+                // Also applies even without a specific TRUE variation in the values.
                 elseif ($ip_evaluated) {
+                  // $ip_evaluated means $noembargo_from_ip is set.
+                  // and $ip_embargo_bypass too.
                   $mode = $this->embargoConfig->get('global_ip_bypass_mode');
-                  // Replace means global ip bypass wins. So any other evaluation that e.g would allow
+                  // Replace means global ip bypass wins. So any other evaluation that e.g. would allow
                   // a user to bypass is invalidated, and we need to re-evaluate.
                   if ($mode == "replace") {
-                    $ip_embargo = $this->evaluateGlobalIPembargo($current_ip);
-                    $noembargo = $noembargo && $ip_embargo;
+                    $ip_embargo_bypass = $this->evaluateGlobalIPembargo($current_ip);
+                    // WE still AND against Time based Embargo?
+                    // Question for Allison.
+                    $noembargo = $noembargo && $ip_embargo_bypass;
                   }
                   if ($mode == "additive") {
-                    $ip_embargo = $this->evaluateGlobalIPembargo($current_ip) || $ip_embargo;
-                    $noembargo = $noembargo && $ip_embargo;
+                    $ip_embargo_bypass = $this->evaluateGlobalIPembargo($current_ip) || $ip_embargo_bypass;
+                    $noembargo = $noembargo && $ip_embargo_bypass;
                   }
                   if ($mode == "local") {
-                    // Do nothing really.
-                    $ip_embargo = $ip_embargo;
+                    $noembargo = $noembargo_from_ip && $noembargo;
                   }
                 }
+              }
+              elseif ($ip_evaluated) {
+                // If global embargo is not enabled, we move back $noembargo_from_ip to $noembargo
+                $noembargo = $noembargo_from_ip;
               }
             }
           }
         }
+        // $ip_embargo is used as backup for no cache.
+        // Do we need it to be 1 based on !$ip_embargo_bypass ?
+        // $ip_embargo_bypass == NULL means it was not enabled.
+        $ip_embargo = $ip_embargo_bypass == NULL ? FALSE : !$ip_embargo_bypass;
+        $embargo_info = [
+          !$noembargo,
+          $date_embargo ? $date : FALSE,
+          $ip_embargo,
+          $cacheable
+        ];
       }
-      $embargo_info = [
-        !$noembargo,
-        $date_embargo ? $date : FALSE,
-        $ip_embargo,
-        $cacheable
-      ];
     }
     $this->resolvedEmbargos[$uuid] = $this->resolvedEmbargosNID[$nid] = $embargo_info;
     $cache[$cache_id] = $embargo_info;
@@ -232,15 +275,15 @@ class EmbargoResolver implements EmbargoResolverInterface {
   }
 
 
-  public function evaluateGlobalIPembargo($current_ip) {
-    $ip_embargo = FALSE;
+  public function evaluateGlobalIPembargo($current_ip): bool {
+    $ip_embargo_bypass = FALSE;
     $global_ips = $this->embargoConfig->get('global_ip_bypass_addresses') ?? [];
     foreach ($global_ips as $ip_embargo_value) {
       if (is_string($ip_embargo_value)) {
-        $ip_embargo = IpUtils::checkIp4($current_ip, trim($ip_embargo_value)) || $ip_embargo;
+        $ip_embargo_bypass = IpUtils::checkIp($current_ip, trim($ip_embargo_value)) || $ip_embargo_bypass;
       }
     }
-    return $ip_embargo;
+    return $ip_embargo_bypass;
   }
 
   /**
@@ -255,12 +298,11 @@ class EmbargoResolver implements EmbargoResolverInterface {
     return $this->resolvedEmbargos[$uuid] ?? [];
   }
 
-
   /**
    * Getter for the resolved Static embargo Cache
    *
-   * @param string $uuid
-   *    The UUID of a node for which an embargo might/not have been resolved
+   * @param int $nid
+   *
    * @return array
    *    The embargo info in [!$noembargo, $date_embargo ? $date: FALSE , $ip_embargo, $cacheable];
    */
@@ -268,50 +310,6 @@ class EmbargoResolver implements EmbargoResolverInterface {
     return $this->resolvedEmbargosNID[$nid] ?? [];
   }
 
-
-  /**
-   * Get a list of ADO types based on the SBF.
-   *
-   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
-   *   The content entity.
-   *
-   * @return array
-   *   Array of ado types.
-   *
-   * @throws \Exception
-   */
-  protected function getAdoTypes(ContentEntityInterface $entity) {
-    $cache_id = 'format_strawberry:view_mode_adotypes:' . $entity->id();
-    $cached = $this->cacheGet($cache_id);
-    if ($cached) {
-      return $cached->data;
-    }
-
-    $ado_types = [];
-    if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield($entity)) {
-      foreach ($sbf_fields as $field_name) {
-        /* @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $field */
-        $field = $entity->get($field_name);
-        if (!$field->isEmpty()) {
-          foreach ($field->getIterator() as $delta => $itemfield) {
-            /** @var \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $itemfield */
-            $flat_values = (array) $itemfield->provideFlatten();
-            if (isset($flat_values['type'])) {
-              $ado_types = array_merge($ado_types, (array) $flat_values['type']);
-            }
-          }
-        }
-      }
-    }
-
-    // Cache tags need to depend on the entity itself, the new $cache_id but
-    // also the ones from config.
-    // @TODO: Change this for Drupal 9 as mergeTags will accept more arguments.
-    // @see https://www.drupal.org/node/3125498
-    $config = $this->configFactory->get('format_strawberryfield.viewmodemapping_settings');
-    $this->cacheSet($cache_id, $ado_types, CacheBackendInterface::CACHE_PERMANENT, Cache::mergeTags(Cache::mergeTags($entity->getCacheTags(), $config->getCacheTags()), [$cache_id]));
-    return $ado_types;
-  }
   /**
    * Will try to parse an unknown string to an ISO8601 date.
    *
@@ -325,7 +323,7 @@ class EmbargoResolver implements EmbargoResolverInterface {
     // Start by using a full ISO8601 date in case time zone is included
     $d = DateTime::createFromFormat('c', $date);
     if (!$d) {
-      // If not check if its not a timestamp
+      // If not, check if it isn't a timestamp
       if (!is_numeric($date)) {
         $date = strtotime($date);
       }
