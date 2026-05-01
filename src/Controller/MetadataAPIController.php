@@ -732,7 +732,7 @@ class MetadataAPIController extends ControllerBase
         ]
       ];
       $context_wrapper['data_api'] = $context_parameters;
-      // We will only have a resuption token IF there are move values to come
+      // We will only have a resumption token IF there are move values to come
       // And we have a pager.
       $resumption_token_base64 = NULL;
       if (!empty($views_pager_argument_names) && $resumption_token != '') {
