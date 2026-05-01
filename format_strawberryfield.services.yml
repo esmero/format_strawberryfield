@@ -8,7 +8,7 @@ services:
     class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldDeleteTmpStorage
     tags:
       - {name: event_subscriber}
-    arguments: ['@string_translation', '@messenger', '@logger.factory', '@tempstore.private']
+    arguments: ['@string_translation', '@messenger', '@logger.factory', '@tempstore.private', '@current_user']
   format_strawberryfield.invalidatemetadatacache_subscriber:
     class: Drupal\format_strawberryfield\EventSubscriber\formatStrawberryfieldInvalidateMetadataCaches
     tags:
