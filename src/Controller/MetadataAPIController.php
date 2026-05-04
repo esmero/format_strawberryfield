@@ -332,9 +332,17 @@ class MetadataAPIController extends ControllerBase
       $processed_nodes_via_templates = [];
 
       foreach (($matched_parameters_views_pairing['in_request'] ?? []) as $views_with_argument_and_values) {
-        [$view_id, $display_id, $argument, $value, $param_name] = explode(
-          ':', $views_with_argument_and_values, 5
+        [$view_id, $display_id, $argument, $value_param_name_combined] = explode(
+          ':', $views_with_argument_and_values, 4
         );
+
+        $value_param_name_combined_split = explode(
+          ':', $value_param_name_combined
+        );
+        $param_name = array_pop($value_param_name_combined_split);
+        // Needed because the value itself can have ":" inside. E.g ISO 8601 date.
+        $value = implode(":", $value_param_name_combined_split);
+
         // Pager is a weird one. The argument itself has an extra "@" so we don't confuse it with a user exposed argument named pager.
         // Exposed arguments/filters in Drupal don't allow that value.
         if (in_array($view_id.':'.$display_id, $used_views)){
@@ -409,9 +417,9 @@ class MetadataAPIController extends ControllerBase
             $arguments = [];
             //@ TODO maybe allow to cast into ANY entity? well...
             foreach ($executable->display_handler->getOption('arguments') ?? [] as $argument_key => $filter) {
-              // The order here matters. So we pre-set them all as Exception values/or as Empty
+              // The order here matters. So we pre-set them all as Exception values/or as Empties
               // Empty/NULL might fail validation of course, and we end with Zero RESULTS.
-              // Up to the API builder to either Enforce a Value OR make the Contextual Filtes flexible.
+              // Up to the API builder to either Enforce a Value OR make the Contextual Filters flexible.
               $exception_value = $filter['exception']['value'] ?? NULL;
               $arguments[$argument_key] = $exception_value;
               foreach ($arguments_with_values as $param_name => $value) {
@@ -473,7 +481,7 @@ class MetadataAPIController extends ControllerBase
                   if ($filter_key == $param_name && !isset($arguments[$param_name])) {
                     $exposed_filter_id = $filter['expose']['identifier'] ?? NULL;
                     // avoid setting Filters for values we already set as $contextual ones.
-                    // The only one we know for sure without crazy code to be a nod is nid
+                    // The only one we know for sure without crazy code to be a node is nid
                     if ($exposed_filter_id) {
                       $filters[$exposed_filter_id] = $value;
                       if ($filter_key == "nid") {
@@ -726,7 +734,7 @@ class MetadataAPIController extends ControllerBase
       )->get('pub_server_url');
       $context_parameters['request_date'] = [
         '#type' => 'markup',
-        '#markup' => date("H:i:s"),
+        '#markup' => date('Y-m-d\TH:i:s\Z'),
         '#cache' => [
           'disabled' => TRUE,
         ]
