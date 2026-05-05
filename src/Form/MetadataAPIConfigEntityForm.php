@@ -167,7 +167,6 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           '#limit_validation_errors' => [['views_source_id']],
           '#submit' => ['::submitAjaxAPIConfigFormAdd'],
           '#ajax' => [
-            //'trigger_as' => ['name' => 'metadata_api_configure'],
             'callback' => '::buildAjaxAPIViewsConfigForm',
             'wrapper' => 'api-argument-config',
           ],
@@ -178,8 +177,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#attributes' => [
           'id' => 'api-source-config-form',
         ],
-        '#title' => $this->t('Exposed filters and arguments for the selected source View'),
-        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter. NOTE: A View will only be invoked/executed if an API argument is mapped to one of these. Please make sure you map at least one.'),
+        '#title' => $this->t('Exposed filters and arguments for the selected source View(s)'),
+        '#description' => $this->t('These can be mapped to receive -transformed- values from any configured API parameter. <strong>IMPORTANT NOTE</strong>: A Drupal View will only be invoked/executed <em>if</em> an API argument is mapped to one of these and the API is called with that argument. Please make sure you map at least one. You can also use the <em>NULL</em> contextual filter in a view to simply discard the input but still trigger the view.'),
         '#tree' => TRUE
       ],
       'api_parameters_list' => [
@@ -191,7 +190,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ],
       'processor_wrapper_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
-        '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data for the API wrapper response.'),
+        '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data for the API Wrapper response.'),
+        '#description' => $this->t('This template will get the <em>data</em> context with the Complete Views results with each row processed through the next (Item) template (if any) and a <em>data_api</em> context with the called/validated arguments of the API.<br>Also a <em>data_api_context</em> context with value "wrapper"'),
         '#target_type' => 'metadatadisplay_entity',
         '#selection_handler' => 'default:metadatadisplay',
         '#selection_settings' => [
@@ -206,7 +206,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
       ],
       'processor_item_level_entity_id' => [
         '#type' => 'sbf_entity_autocomplete_uuid',
-        '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate data at this endpoint.'),
+        '#title' => $this->t('The Metadata display Entity (Twig) to be used to generate Item data at this endpoint.'),
+        '#description' => $this->t('This template will get the <em>data</em> context with the RAW JSON (from an ADO) from a single row, a <em>data_sbf</em> holding a complete Strawberry Flavor datasource if that is the return/result type of the Views and also a <em>data_api</em> context with the called/validated arguments of the API.<br>Also a <em>data_api_context</em> context with value "item"'),
         '#target_type' => 'metadatadisplay_entity',
         '#selection_handler' => 'default:metadatadisplay',
         '#validate_reference' => TRUE,
@@ -550,7 +551,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
   public function buildAPIConfigForm(array &$form, FormStateInterface $form_state) {
     $selected_views = $form_state->getValue('views_source_ids') ?? $form_state->get('views_source_ids_tmp');
     if ($selected_views) {
-      // We need to reset this bc on every View change this might be new/non existing
+      // We need to reset this bc on every View change this might be new/non-existing
       $views_argument_options  = [];
       foreach ($selected_views as $selected_view) {
         [$view_id, $display_id] = explode(':', $selected_view);
@@ -583,8 +584,8 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           $form['api_source_configs'][$selected_view.':'.$filter['id']]['#attributes']
             = ['class' => ['format-strawberryfield-api-source-config-wrapper']];
 
-          $form['api_source_configs'][$filter['id']]['#title'] = $this->t(
-            'Argument id: @id for field @field found in <em>@table</em> @admin_label',
+          $form['api_source_configs'][$selected_view.':'.$filter['id']]['#title'] = $this->t(
+            'Argument id (Contextual filter): @id for field @field found in <em>@table</em> @admin_label',
             [
               '@id'          => $filter['id'],
               '@field'       => $filter['field'],
@@ -648,7 +649,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#type'          => 'checkboxes',
         '#title'         => $this->t('Views source(s)'),
         '#description'   => $this->t(
-          'The Views that will provide data for this API. Only View Displays that return machinable responses like REST, Entity References or FEED can serve as source. To can add multiple ones to serve different API results.'
+          'The Views that will provide data for this API. Only View Displays that return machinable responses like REST, Entity References or FEED can serve as source. Only ADO and/or Strawberry Flavor results will be processed. To can add multiple ones to serve different API results. <br><br><strong>NOTE</strong>To avoid issues when resolving the API arguments against Views arguments, DO NOT expose the same field(s) as both a query filter and a Contextually Exposed filter.<br> The later do not have aliases (so will be named internally the same as the field itself) and can clash with the query filter.<br> If you really need to do so, then please give the <em>Exposed query filter<em> an alias named differently than the field itself, or a <em>Default</em> value that does not end limiting your results when not present.'
         ),
         '#options'       => $views ?? [],
         '#default_value' => $selected_views ?? [],
@@ -882,7 +883,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#type'          => 'textfield',
         '#title'         => $this->t('Enumeration'),
         '#description'   => $this->t(
-          'A controlled list of elegible options for this paramater. Use comma separated list of strings or leave empty'
+          'A controlled list of eligible options for this parameter. Use comma separated list of strings or leave empty'
         ),
         '#default_value' =>  $enum,
         '#required'      => FALSE,
