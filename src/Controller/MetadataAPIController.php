@@ -2,6 +2,9 @@
 
 namespace Drupal\format_strawberryfield\Controller;
 
+use cebe\openapi\Writer;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\search_api\Plugin\views\ResultRow;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Uuid\Uuid;
@@ -13,6 +16,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\format_strawberryfield\Entity\MetadataAPIConfigEntity;
+use Drupal\strawberryfield\TypedData\StrawberryfieldFlavorDataDefinition;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
@@ -85,6 +89,12 @@ class MetadataAPIController extends ControllerBase
    */
   protected $embargoResolver;
 
+  /**
+   * The typed data manager.
+   *
+   * @var \Drupal\Core\TypedData\TypedDataManagerInterface
+   */
+  protected TypedDataManagerInterface $typedDataManager;
 
   /**
    * MetadataAPIcontroller constructor.
@@ -102,6 +112,7 @@ class MetadataAPIController extends ControllerBase
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    * @param \Drupal\Component\Datetime\TimeInterface $time
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache_backend
+   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typed_data_manager
    */
   public function __construct(
     RequestStack                  $request_stack,
@@ -111,7 +122,8 @@ class MetadataAPIController extends ControllerBase
     MimeTypeGuesserInterface      $mime_type_guesser,
     EmbargoResolverInterface      $embargo_resolver,
     TimeInterface                 $time,
-    CacheBackendInterface         $cache_backend
+    CacheBackendInterface         $cache_backend,
+    TypedDataManagerInterface     $typed_data_manager
   )
   {
     $this->requestStack = $request_stack;
@@ -123,6 +135,7 @@ class MetadataAPIController extends ControllerBase
     $this->time = $time;
     $this->cacheBackend = $cache_backend;
     $this->useCaches = TRUE;
+    $this->typedDataManager = $typed_data_manager;
   }
 
   /**
@@ -138,7 +151,8 @@ class MetadataAPIController extends ControllerBase
       $container->get('strawberryfield.mime_type.guesser.mime'),
       $container->get('format_strawberryfield.embargo_resolver'),
       $container->get('datetime.time'),
-      $container->get('cache.default')
+      $container->get('cache.default'),
+      $container->get('typed_data_manager')
     );
   }
 
@@ -155,7 +169,7 @@ class MetadataAPIController extends ControllerBase
    */
   public function castViaView(
     MetadataAPIConfigEntity $metadataapiconfig_entity,
-                            $pathargument = 'some_parameter_argument'
+    $pathargument = 'some_parameter_argument'
   )
   {
     // Check if Config entity is actually enabled.
@@ -277,7 +291,6 @@ class MetadataAPIController extends ControllerBase
       );
     }
 
-    $context = [];
     $embargo_context = [];
     $embargo_tags = [];
     // Keeps the actual names of the argument holding a pager.
@@ -418,7 +431,7 @@ class MetadataAPIController extends ControllerBase
             //@ TODO maybe allow to cast into ANY entity? well...
             foreach ($executable->display_handler->getOption('arguments') ?? [] as $argument_key => $filter) {
               // The order here matters. So we pre-set them all as Exception values/or as Empties
-              // Empty/NULL might fail validation of course, and we end with Zero RESULTS.
+              // /NULL might fail validation of course, and we end with Zero RESULTS.
               // Up to the API builder to either Enforce a Value OR make the Contextual Filters flexible.
               $exception_value = $filter['exception']['value'] ?? NULL;
               $arguments[$argument_key] = $exception_value;
@@ -569,8 +582,58 @@ class MetadataAPIController extends ControllerBase
                 foreach ($executable->result as $resultRow) {
                   if ($resultRow instanceof \Drupal\search_api\Plugin\views\ResultRow) {
                     //@TODO move to its own method\
-                    $node = $resultRow->_object->getValue() ?? NULL;
-                    if ($node && $sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield($node)) {
+                    $resultNative = $resultRow->_object->getValue() ?? NULL;
+                    $node = NULL;
+                    if ($resultNative instanceof ContentEntityInterface) {
+                      // Just because it is easier to read.
+                      $node = $resultNative;
+                      // Reset context
+                      $context = [];
+                      $context['data_sbf'] = [];
+                    }
+                    elseif (is_array($resultNative) && ($resultRow->_item->getDataSourceId() == "strawberryfield_flavor_datasource")) {
+                      // It is a Strawberry Flavor?
+                      // We kinda want to allow a flavor to be formatted?
+                      // But we will pass to the template the NODE (using the parent)
+                      // And an extra context data_flavor.
+                      $flavor_id = $resultRow->_item->getId();
+                      $context = [];
+                      try {
+                        $sbfflavordata_definition = StrawberryfieldFlavorDataDefinition::create(
+                          'strawberryfield_flavor_data'
+                        );
+                        $flavor_datatype = $this->typedDataManager->create(
+                          $sbfflavordata_definition
+                        );
+                        $flavor_datatype->setValue($resultNative);
+                        $node = $flavor_datatype->getParentNode();
+                        // Check access
+                        if ($node instanceof ContentEntityInterface) {
+                          if ($node->access('view')) {
+                            // adds context with the flavor data for the Twig template
+                            $context['data_sbf'] = $resultNative;
+                          }
+                          else {
+                            // Unset if no access.
+                            $node = NULL;
+                          }
+                        }
+                      }
+                      catch (\Throwable $e) {
+                        // The flavor did not match the data type? Skipping but not
+                        // bailing out.
+                        $this->getLogger('format_strawberryfield')->warning(
+                          'Metadata API with View Source ID @source_id is outputting a wrongly formed Strawberry Flavor with ID @flavor_id. Please Check Drupal View configuration and arguments but also your Solr for externally generated Flavors. Skipping this Result row. <pre>@args</pre>',
+                          [
+                            '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
+                            '@flavor_id' => $flavor_id ?? 'Unknown',
+                            '@args' => json_encode($arguments),
+                          ]
+                        );
+                      }
+                    }
+                    if ($node instanceof ContentEntityInterface) {
+                      $sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield($node);
                       foreach ($sbf_fields as $field_name) {
                         /* @var $field StrawberryFieldItem[] */
                         $field = $node->get($field_name);
@@ -606,7 +669,7 @@ class MetadataAPIController extends ControllerBase
                             $context['data'][$offset] = $jsondata;
                           }
                         }
-                        // @TODO make embargo its own method.
+
                         $embargo_info = $this->embargoResolver->embargoInfo(
                           $node, $jsondata
                         );
@@ -615,25 +678,22 @@ class MetadataAPIController extends ControllerBase
                         $context_embargo = [
                           'data_embargo' => [
                             'embargoed' => FALSE,
-                            'until' => NULL,
-                          ],
+                            'until' => NULL
+                          ]
                         ];
+
                         if (is_array($embargo_info)) {
                           $embargoed = $embargo_info[0];
-                          $context_embargo['data_embargo']['embargoed']
-                            = $embargoed;
+                          $context_embargo['data_embargo']['embargoed'] = $embargoed;
                           $embargo_tags[] = 'format_strawberryfield:all_embargo';
                           if ($embargo_info[1]) {
                             $embargo_tags[] = 'format_strawberryfield:embargo:'
                               . $embargo_info[1];
-                            $context_embargo['data_embargo']['until']
-                              = $embargo_info[1];
+                            $context_embargo['data_embargo']['until'] = $embargo_info[1];
                           }
                           if ($embargo_info[2] || ($embargo_info[3] == FALSE)) {
                             $embargo_context[] = 'ip';
                           }
-                        } else {
-                          $embargoed = $embargo_info;
                         }
 
                         $context['node'] = $node;
@@ -667,28 +727,42 @@ class MetadataAPIController extends ControllerBase
                         }
                       }
                     }
+                    else {
+                      // Not something we can process via the API and a template.
+                      $this->getLogger('format_strawberryfield')->error(
+                        'Metadata API with View Source ID @source_id is neither an ADO or Strawberry Flavors. Please Check Drupal View configuration and arguments <pre>@args</pre>. Skipping Row',
+                        [
+                          '@source_id' => $metadataapiconfig_entity->getViewsSourceId(),
+                          '@args' => json_encode($arguments),
+                        ]
+                      );
+                    }
                   }
                 }
                 // Set the cache
                 // EXPIRE?
-                $cache_expire = $metadataapiconfig_entity->getConfiguration()['cache']['expire'] ?? 120;
-                if ($cache_expire !== Cache::PERMANENT) {
-                  $cache_expire += (int)$this->time->getRequestTime();
-                }
 
-                $tags = CacheableMetadata::createFromObject(
-                  $metadataapiconfig_entity
-                )->getCacheTags();
-                $tags += CacheableMetadata::createFromObject($view)->getCacheTags();
-                $tags += CacheableMetadata::createFromObject(
-                  $metadatadisplay_wrapper_entity
-                )->getCacheTags();
-                $tags += CacheableMetadata::createFromObject(
-                  $metadatadisplay_item_entity
-                )->getCacheTags();
-                $this->cacheSet(
-                  $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
-                );
+                // But if we have an IP context on one of the results. We can't cache at all.
+                if (!in_array('ip', $embargo_context ?? [])) {
+                  $cache_expire = $metadataapiconfig_entity->getConfiguration()['cache']['expire'] ?? 120;
+                  if ($cache_expire !== Cache::PERMANENT) {
+                    $cache_expire += (int)$this->time->getRequestTime();
+                  }
+                  $tags = CacheableMetadata::createFromObject(
+                    $metadataapiconfig_entity
+                  )->getCacheTags();
+                  $tags += CacheableMetadata::createFromObject($view)
+                    ->getCacheTags();
+                  $tags += CacheableMetadata::createFromObject(
+                    $metadatadisplay_wrapper_entity
+                  )->getCacheTags();
+                  $tags += CacheableMetadata::createFromObject(
+                    $metadatadisplay_item_entity
+                  )->getCacheTags();
+                  $this->cacheSet(
+                    $cache_id, $processed_nodes_via_templates, $cache_expire, $tags
+                  );
+                }
               }
 
               // Now. If we got fewer results than the limit we will remove the resumption token if existing at all
@@ -827,6 +901,13 @@ class MetadataAPIController extends ControllerBase
           $response->getCacheableMetadata()->addCacheContexts(
             ['user.roles']
           );
+
+          $response->getCacheableMetadata()->addCacheContexts(array_unique($embargo_context ?? []));
+          $response->getCacheableMetadata()->addCacheTags(array_unique($embargo_tags ?? []));
+          if (in_array('ip', $embargo_context ?? [])) {
+            $response->getCacheableMetadata()->setCacheMaxAge(0);
+          }
+
           foreach ($all_views_used as $view_used) {
             $response->addCacheableDependency($view_used);
 
@@ -876,6 +957,7 @@ class MetadataAPIController extends ControllerBase
             );
         }
       }
+      // Needed so we don't end cached by a CDN.
       $response->setPrivate();
       return $response;
     }
