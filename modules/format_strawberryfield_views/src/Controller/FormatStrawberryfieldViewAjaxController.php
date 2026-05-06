@@ -106,10 +106,10 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
    *   Thrown when the view was not found.
    */
   public function ajaxView(Request $request) {
-    $name = $request->get('view_name');
-    $display_id = $request->get('view_display_id');
+    $name = $request->query->get('view_name', $request->request->get('view_name'));
+    $display_id = $request->query->get('view_display_id', $request->request->get('view_display_id'));
     if (isset($name) && isset($display_id)) {
-      $args = $request->get('view_args', '');
+      $args = $request->query->get('view_args', $request->request->get('view_args', ''));
       $args = $args !== '' ? explode('/', Html::decodeEntities($args)) : [];
 
       // Arguments can be empty, make sure they are passed on as NULL so that
@@ -118,19 +118,23 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         return ($arg == '' ? NULL : $arg);
       }, $args);
 
-      $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
+      $path = $request->query->get('view_path', $request->request->get('view_path')) ?? Html::escape($this->currentPath->getPath());
       // If a view has an invalid Path (e.g. you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
-      $dom_id = $request->get('view_dom_id');
+      $dom_id = $request->query->get('view_dom_id', $request->request->get('view_dom_id'));
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
-      $pager_element = $request->get('pager_element');
+      $pager_element = $request->query->get('pager_element', $request->request->get('pager_element'));
       $pager_element = isset($pager_element) ? intval($pager_element) : NULL;
       // Assume its there if not told otherwise
-      $exposed_form_display = (bool) $request->get('exposed_form_display', TRUE);
+      $exposed_form_display = (bool) $request->query->get('exposed_form_display', $request->request->get('exposed_form_display', TRUE));
 
       $response = new ViewAjaxResponse();
-
-      $existing_page_state = $request->get('ajax_page_state');
+      // @TODO. Revisit in Drupal 11.4+. They moved this into attributes and removed completely from this controlled.
+      // (but not released yet as of May 6th 2026)
+      // See also \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView
+      $existing_page_state = $request->query->all('ajax_page_state') ?? NULL;
+      $existing_page_state = $existing_page_state ?? $request->attributes->get('ajax_page_state');
+      $existing_page_state = $existing_page_state ?? $request->request->get('ajax_page_state');
       foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
