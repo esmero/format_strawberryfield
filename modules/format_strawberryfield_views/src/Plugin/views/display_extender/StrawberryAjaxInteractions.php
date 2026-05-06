@@ -27,8 +27,19 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       $form['sbf_ajax_dont_seturl'] = [
         '#title'         => $this->t('Do not set the Browser URL with arguments on Ajax driven Views.'),
         '#type'          => 'checkbox',
-        '#description'   => $this->t('Archipelago will set on every Ajax View loaded the URL.If you have multiple Views on a single Page you might want to check this box to only have one driving the Bookmarkable URL.'),
+        '#description'   => $this->t('Archipelago will set on every Ajax View loaded the URL.If you have multiple Views on a single Page you might want to check this box to only have one driving the Bookmark-able URL.'),
         '#default_value' => $this->options['sbf_ajax_dont_seturl'] ?? 0,
+        '#states'        => [
+          'enabled' => [
+            ':input[name="use_ajax"]' => ['checked' => TRUE],
+          ],
+        ],
+      ];
+      $form['sbf_ajax_dont_scrolltop'] = [
+        '#title'         => $this->t('Do not send an Ajax Scroll Top Command (a default only for Paged views) on Ajax driven Views.'),
+        '#type'          => 'checkbox',
+        '#description'   => $this->t('Archipelago will send, on every Ajax View that has a Pager, a Scroll Top Command on refresh. Enabling this setting will disable that feature for those specific views. Useful when rendering dynamically loading Views (e.g via Twig/data arguments) to avoid scroll to top on data changes triggered by Viewers/interaction'),
+        '#default_value' => $this->options['sbf_ajax_dont_scrolltop'] ?? 0,
         '#states'        => [
           'enabled' => [
             ':input[name="use_ajax"]' => ['checked' => TRUE],
@@ -40,8 +51,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
         '#title'         => $this->t('Strawberryfield ADO to ADO Interactions'),
         '#type'          => 'checkbox',
         '#description'   => $this->t('Allow this view to get Contextual filter values from other Strawberryfield formatters'),
-        '#default_value' => isset($this->options['sbf_ajax_interactions'])
-          ? $this->options['sbf_ajax_interactions'] : 0,
+        '#default_value' => $this->options['sbf_ajax_interactions'] ?? 0,
         '#states'        => [
           'enabled' => [
             ':input[name="use_ajax"]' => ['checked' => TRUE],
@@ -75,6 +85,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
   public function submitOptionsForm(&$form, FormStateInterface $form_state) {
     if ($form_state->get('section') == 'use_ajax') {
       $this->options['sbf_ajax_interactions'] = $form_state->cleanValues()->getValue('sbf_ajax_interactions');
+      $this->options['sbf_ajax_dont_scrolltop'] = $form_state->cleanValues()->getValue('sbf_ajax_dont_scrolltop');
       $this->options['sbf_ajax_dont_seturl'] = $form_state->cleanValues()->getValue('sbf_ajax_dont_seturl');
       if ($this->options['sbf_ajax_interactions']) {
         $this->options['sbf_ajax_interactions_arguments']
@@ -85,6 +96,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       else {
         unset($this->options['sbf_ajax_interactions_arguments']);
         unset($this->options['sbf_ajax_interactions']);
+        unset($this->options['sbf_ajax_dont_scrolltop']);
       }
     }
   }
@@ -113,6 +125,7 @@ class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
       $form_state->setValue('sbf_ajax_interactions', FALSE);
       $form_state->setValue('sbf_ajax_interactions_arguments', NULL);
       $form_state->setValue('sbf_ajax_dont_seturl', FALSE);
+      $form_state->setValue('sbf_ajax_dont_scrolltop', FALSE);
     }
   }
   /**
