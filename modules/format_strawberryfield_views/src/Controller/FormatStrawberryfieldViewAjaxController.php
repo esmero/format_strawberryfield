@@ -266,7 +266,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         if ($seturl && $target_url) {
           $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
         }
-        if ($pager_element && $setscrollup) {
+        if (isset($pager_element) && $setscrollup) {
           // By default, scroll up will only happen IF AJAX and there is a pager.
           $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
         }
