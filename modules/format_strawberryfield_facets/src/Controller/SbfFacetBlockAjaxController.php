@@ -78,6 +78,7 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
     $request_stack = new RequestStack();
 
     // Add ajax_page_state to the new request if set.
+    // @TODO. Revisit in Drupal 11.4+. ajax_page_state was moved into $request->attributes
     if ($request->request->has('ajax_page_state')) {
       $new_request->request->set('ajax_page_state', $request->request->all('ajax_page_state'));
     }

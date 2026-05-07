@@ -106,10 +106,10 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
    *   Thrown when the view was not found.
    */
   public function ajaxView(Request $request) {
-    $name = $request->get('view_name');
-    $display_id = $request->get('view_display_id');
+    $name = $request->query->get('view_name', $request->request->get('view_name'));
+    $display_id = $request->query->get('view_display_id', $request->request->get('view_display_id'));
     if (isset($name) && isset($display_id)) {
-      $args = $request->get('view_args', '');
+      $args = $request->query->get('view_args', $request->request->get('view_args', ''));
       $args = $args !== '' ? explode('/', Html::decodeEntities($args)) : [];
 
       // Arguments can be empty, make sure they are passed on as NULL so that
@@ -118,19 +118,23 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         return ($arg == '' ? NULL : $arg);
       }, $args);
 
-      $path = $request->get('view_path') ?? Html::escape($this->currentPath->getPath());
+      $path = $request->query->get('view_path', $request->request->get('view_path')) ?? Html::escape($this->currentPath->getPath());
       // If a view has an invalid Path (e.g. you added some % somewhere) this will be null.
       $target_url = $this->pathValidator->getUrlIfValid($path ?? '/');
-      $dom_id = $request->get('view_dom_id');
+      $dom_id = $request->query->get('view_dom_id', $request->request->get('view_dom_id'));
       $dom_id = isset($dom_id) ? preg_replace('/[^a-zA-Z0-9_-]+/', '-', $dom_id) : NULL;
-      $pager_element = $request->get('pager_element');
+      $pager_element = $request->query->get('pager_element', $request->request->get('pager_element'));
       $pager_element = isset($pager_element) ? intval($pager_element) : NULL;
       // Assume its there if not told otherwise
-      $exposed_form_display = (bool) $request->get('exposed_form_display', TRUE);
+      $exposed_form_display = (bool) $request->query->get('exposed_form_display', $request->request->get('exposed_form_display', TRUE));
 
       $response = new ViewAjaxResponse();
-
-      $existing_page_state = $request->get('ajax_page_state');
+      // @TODO. Revisit in Drupal 11.4+. They moved this into attributes and removed completely from this controlled.
+      // (but not released yet as of May 6th 2026)
+      // See also \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView
+      $existing_page_state = $request->query->all('ajax_page_state') ?? NULL;
+      $existing_page_state = $existing_page_state ?? $request->attributes->get('ajax_page_state');
+      $existing_page_state = $existing_page_state ?? $request->request->get('ajax_page_state');
       foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
@@ -158,7 +162,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             unset($views_post[$filter['expose']['identifier']]);
             unset($views_get[$filter['expose']['identifier']]);
           }
-            /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+          /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
           elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
             && $filter['exposed'] == TRUE
           ) {
@@ -215,7 +219,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
         // Override the display's pager_element with the one actually used.
         if (isset($pager_element)) {
-          $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
           $view->displayHandlers->get($display_id)->setOption('pager_element', $pager_element);
         }
         // Reuse the same DOM id, so it matches that in drupalSettings.
@@ -250,19 +253,26 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $response->setAttachments($preview['#attached']);
         }
 
-        //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
-        if ($target_url) {
-          $seturl = TRUE;
-          $extenders = $view->display_handler->getExtenders();
-          foreach ($extenders as $extender) {
-            if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
-              $seturl = FALSE;
-            }
+        $seturl = TRUE;
+        $setscrollup = TRUE;
+        $extenders = $view->display_handler->getExtenders();
+        foreach ($extenders as $extender) {
+          if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
+            $seturl = FALSE;
           }
-          if ($seturl) {
-            $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          if (($extender->getPluginId() == "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_scrolltop'] ?? FALSE)) {
+            // Disable scrollup if extender option sbf_ajax_dont_scrolltop == TRUE
+            $setscrollup = FALSE;
           }
+        }
+
+        if ($seturl && $target_url) {
+          $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+        }
+        if (isset($pager_element) && $setscrollup) {
+          // By default, scroll up will only happen IF AJAX and there is a pager.
+          $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
         }
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
