@@ -158,7 +158,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
             unset($views_post[$filter['expose']['identifier']]);
             unset($views_get[$filter['expose']['identifier']]);
           }
-            /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
+          /* @var \Drupal\views\Plugin\views\ViewsHandlerInterface $filter */
           elseif ($filter['plugin_id'] == 'sbf_advanced_search_api_fulltext'
             && $filter['exposed'] == TRUE
           ) {
@@ -215,7 +215,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
         // Override the display's pager_element with the one actually used.
         if (isset($pager_element)) {
-          $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
           $view->displayHandlers->get($display_id)->setOption('pager_element', $pager_element);
         }
         // Reuse the same DOM id, so it matches that in drupalSettings.
@@ -250,19 +249,26 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $response->setAttachments($preview['#attached']);
         }
 
-        //@TODO revisit in Drupal 10
         //@See https://www.drupal.org/project/drupal/issues/343535
-        if ($target_url) {
-          $seturl = TRUE;
-          $extenders = $view->display_handler->getExtenders();
-          foreach ($extenders as $extender) {
-            if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
-              $seturl = FALSE;
-            }
+        $seturl = TRUE;
+        $setscrollup = TRUE;
+        $extenders = $view->display_handler->getExtenders();
+        foreach ($extenders as $extender) {
+          if (($extender->getPluginId()== "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_seturl'] ?? FALSE)) {
+            $seturl = FALSE;
           }
-          if ($seturl) {
-            $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+          if (($extender->getPluginId() == "sbf_ajax_interactions") &&  ($extender->options['sbf_ajax_dont_scrolltop'] ?? FALSE)) {
+            // Disable scrollup if extender option sbf_ajax_dont_scrolltop == TRUE
+            $setscrollup = FALSE;
           }
+        }
+
+        if ($seturl && $target_url) {
+          $response->addCommand(new SbfSetBrowserUrl($target_url->toString()));
+        }
+        if (isset($pager_element) && $setscrollup) {
+          // By default, scroll up will only happen IF AJAX and there is a pager.
+          $response->addCommand(new ScrollTopCommand(".js-view-dom-id-$dom_id"));
         }
 
         // Views with ajax enabled aren't refreshing filters placed in blocks.
