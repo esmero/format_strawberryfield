@@ -128,8 +128,9 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
     $params = [];
     $queryString = parse_url($path, PHP_URL_QUERY);
 
-
-    parse_str($queryString, $params);
+    if ($queryString) {
+      parse_str($queryString, $params);
+    }
     // Now Dear Diego. the page argument is permeating on a POST
     // Making a new query that was on page 100 fail bc it might not a page 100 for that query
     // Drupal is hard

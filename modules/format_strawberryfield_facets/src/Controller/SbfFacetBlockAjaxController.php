@@ -59,7 +59,9 @@ class SbfFacetBlockAjaxController extends FacetBlockAjaxController {
     // we need to move them out and into query parameters for the $new_request
     $params = [];
     $queryString = parse_url($path, PHP_URL_QUERY);
-    parse_str($queryString, $params);
+    if ($queryString) {
+      parse_str($queryString, $params);
+    }
     $actual_path = explode('?', $path);
     $path = $actual_path[0];
     if (is_string($path)) {
