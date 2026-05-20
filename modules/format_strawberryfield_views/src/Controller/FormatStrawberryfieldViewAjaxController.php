@@ -300,7 +300,9 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           // or B), parse the form, find any texts and add the attribute here.
           // Also, this is adding the CSS Classes twice. They are already set on the Block wrapper.
           // We have to replace via #ID bc we might have other blocks that use the same selector?
-          $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
+          if ($exposed_form){
+            $response->addCommand(new ReplaceCommand("#views-exposed-form-" . $view_id, $this->renderer->render($exposed_form)));
+          }
         }
         $request->query->set('ajax_page_state', $existing_page_state);
         return $response;
