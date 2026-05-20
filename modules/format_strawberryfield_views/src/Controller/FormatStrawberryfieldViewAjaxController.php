@@ -236,7 +236,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
           return $view->preview($display_id, $args);
         });
-        if (!$context->isEmpty()) {
+        if (!$context->isEmpty() && $preview) {
           $bubbleable_metadata = $context->pop();
           BubbleableMetadata::createFromRenderArray($preview)
             ->merge($bubbleable_metadata)
