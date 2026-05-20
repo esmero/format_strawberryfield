@@ -239,7 +239,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
           return $view->preview($display_id, $args);
         });
-        if (!$context->isEmpty()) {
+        if (!$context->isEmpty() && $preview) {
           $bubbleable_metadata = $context->pop();
           BubbleableMetadata::createFromRenderArray($preview)
             ->merge($bubbleable_metadata)
@@ -284,7 +284,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
           $exposed_form = $this->renderer->executeInRenderContext($context, function () use ($view) {
             return $view->display_handler->viewExposedFormBlocks();
           });
-          if (!$context->isEmpty()) {
+          if (!$context->isEmpty() && $exposed_form) {
             $bubbleable_metadata = $context->pop();
             BubbleableMetadata::createFromRenderArray($exposed_form)
               ->merge($bubbleable_metadata)
