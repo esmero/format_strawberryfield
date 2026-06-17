@@ -383,6 +383,7 @@ format_strawberryfield.iiif_content_search_exposed:
         - simple
         - advanced
       version:
+        - v0
         - v1
         - v2
       node:
