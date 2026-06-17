@@ -166,7 +166,7 @@ class IiifContentSearchController extends ControllerBase {
       $data = [
         'error' => [
           'errors' => [
-            'message' => 'IIIF Content Search API V1 and V2 are disabled on this Server'
+            'message' => 'IIIF Content Search API V0, V1 and V2 are disabled on this Server'
           ]
         ],
         'code' => 503,
@@ -174,6 +174,11 @@ class IiifContentSearchController extends ControllerBase {
       return new JsonResponse($data, 503);
     }
 
+    // V0 is V1 really, but Universal viewer uses that one
+    // So we convert v0 to v1 here
+    if ($version == "v0") {
+      $version = "v1";
+    }
     $entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
     $iiif_response = [];
     if ($entity) {
@@ -437,6 +442,7 @@ class IiifContentSearchController extends ControllerBase {
                         $canvas_position = "#xywh=" . implode(
                             ",", $canvas_position
                           );
+
                         // V1
                         // Generate the entry
                         if ($version == "v1") {
