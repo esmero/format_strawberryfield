@@ -151,9 +151,9 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       try {
                         if (drupalSettings.format_strawberryfield.audiovideo[this.active_audiovideo_element.id]['waveform_url']) {
                           fetch(drupalSettings.format_strawberryfield.audiovideo[this.active_audiovideo_element.id]['waveform_url'],
-                          {
-                            credentials: "include"
-                          }
+                            {
+                              credentials: "include"
+                            }
                           )
                             .then(response => {
                               if (!response.ok) {
@@ -164,8 +164,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                             .then(peaks => {
                               if (peaks.hasOwnProperty('data') &&
                                 peaks.hasOwnProperty('length') &&
-                              peaks.hasOwnProperty('samples_per_pixel') &&
-                              peaks.hasOwnProperty('sample_rate')) {
+                                peaks.hasOwnProperty('samples_per_pixel') &&
+                                peaks.hasOwnProperty('sample_rate')) {
                                 default_waversurfer_settings.peaks = peaks.data;
                                 // duration = length * samples_per_pixel / sample_rate
                                 default_waversurfer_settings.duration = (peaks.length * peaks.samples_per_pixel) / peaks.sample_rate;
@@ -206,6 +206,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$ccBtn = this.control.querySelector('.ccBtn');
                 this.$subtitleTrack = this.control.querySelector('.subtitleTrack');
                 this.$subtitleContainer = this.control.querySelector('.subtitleContainer');
+                // A scrollable VTT container.
+                this.$subtitleScrollableContainer = this.control.querySelector('.subtitleScrollableContainer');
                 this.$mediaContainer = this.control.querySelector('.mediaContainer');
                 this.$progressSlider = this.control.querySelector(".progressSlider");
                 this.$volumeSlider = this.control.querySelector(".volumeSlider");
@@ -375,6 +377,35 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   if (this.$progressSlider) {
                     this.$progressSlider.value = e.currentTarget.currentTime;
                   }
+                  // Allows
+                  if (this.$subtitleScrollableContainer) {
+                    const current_id = this.$subtitleScrollableContainer.dataset.vttLoaded;
+                    const activeCues =  this.active_audiovideo_element.textTracks[current_id]?.activeCues;
+                    if (typeof activeCues !== "undefined" && activeCues && activeCues.length > 0) {
+                      const activeTime = activeCues[0].startTime;
+                      // Update highlight classes in DOM
+                      const htmlcues = this.$subtitleScrollableContainer.querySelectorAll('div');
+                      htmlcues.forEach(cuediv => {
+                        if (parseFloat(cuediv.dataset.cueTime) === activeTime) {
+                          if (active_classes) {
+                            for (const $class of active_classes) {
+                              cuediv.classList.add(active_classes);
+                            }
+                          }
+                          if (!this.$subtitleScrollableContainer.matches(':hover')) {
+                            cuediv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        } else {
+                          if (active_classes) {
+                            for (const $class of active_classes) {
+                              cuediv.classList.remove(active_classes);
+                            }
+                          }
+                        }
+                      });
+                    }
+                  }
+
                   // if native is visible and controls too then we need to sync buttons
                   if (e.currentTarget.controls && !e.currentTarget.hidden && this.$pauseBtn.hidden && !e.currentTarget.paused) {
                     this.$playBtn.hidden = true;
@@ -528,7 +559,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.trackCueEvent = function(e) {
-                  console.log('cue changed');
                   if (this.$subtitleContainer) {
                     this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
                     // Display current cue text
@@ -543,7 +573,34 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.captionStatus = function(e) {
-                  console.log(e);
+                  if (this.$subtitleScrollableContainer) {
+                    this.$subtitleScrollableContainer.replaceChildren();
+                    let $index = 0;
+                    for (const track of e.currentTarget) {
+                      this.populateScrollingTextTrack(track, $index)
+                      $index++;
+                    }
+                  }
+                }
+
+                this.jumpToCueTime = function(startTime, e) {
+                  this.active_audiovideo_element.currentTime = startTime;
+                  this.updateTimeIndicators();
+                }
+
+                this.populateScrollingTextTrack = function(track, $i) {
+                  if (track.kind !== "metadata" && (track.mode == "showing" || track.mode == "hidden") && this.$subtitleScrollableContainer ) {
+                    this.$subtitleScrollableContainer.style.overflowY = 'auto';
+                    for (const cue of track.cues) {
+                      const cueHTML = document.createElement("div");
+                      cueHTML.dataset.cueTime = cue.startTime;
+                      cueHTML.style.cursor = 'pointer';
+                      cueHTML.addEventListener('click', this.jumpToCueTime.bind(this, cue.startTime), false);
+                      cueHTML.append(cue.getCueAsHTML())
+                      this.$subtitleScrollableContainer.append(cueHTML)
+                    }
+                    this.$subtitleScrollableContainer.dataset.vttLoaded = $i;
+                  }
                 }
 
                 this.initializeTextTracks = function() {
@@ -551,26 +608,29 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.control.querySelectorAll('.subtitleTrack-active[data-track-id]').forEach(e => e.remove());
                   let $showing_subtitles = null;
                   const textTracks = this.active_audiovideo_element.textTracks;
-                  textTracks.addEventListener("change", this.captionStatus, false);
+                  textTracks.addEventListener("change", this.captionStatus.bind(this), false);
                   if (textTracks.length > 0) {
-
                     let $i = 0;
                     for (const track of textTracks) {
                       if (track.kind !== "metadata") {
+                        // Fill the scrollable container if set
                         track.addEventListener('cuechange', (e) => {
+                          console.log('Cue changed');
                           let cues = e.target.activeCues;
-                          this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
-                          // Display current cue text
-                          if (e.target.activeCues.length > 0) {
-                            const currentCue = e.target.activeCues[0];
-                            const subtitleText = document.createElement('em');
-                            subtitleText.textContent = currentCue.text;
-                            // We need per track containers here. Because the user could enable multiple Tracks at the same time?
-                            this.$subtitleContainer.appendChild(subtitleText);
+                          if (this.$subtitleContainer) {
+                            this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
+                            // Display current cue text
+                            if (e.target.activeCues.length > 0) {
+                              const currentCue = e.target.activeCues[0];
+                              const subtitleText = document.createElement('em');
+                              subtitleText.textContent = currentCue.text;
+                              // We need per track containers here. Because the user could enable multiple Tracks at the same time?
+                              this.$subtitleContainer.appendChild(subtitleText);
+                            }
                           }
                         });
 
-                        if (this.$subtitleContainer) {
+                        if (this.$subtitleContainer || this.$subtitleScrollableContainer) {
                           // Note. Some browsers allow multiple track.mode == showing
                           // Some toggle.
                           // We can't depend on the browser here, so we will toggle
@@ -598,11 +658,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                             }
                             this.$subtitleTrack.before($subtitleTrackClone);
                             $subtitleTrackClone.addEventListener("click", (e) => {
-                              console.log(e.currentTarget);
-
                               if (track.mode == "showing" || track.mode == "hidden") {
                                 track.mode = "disabled";
-                                this.$subtitleContainer.innerHTML = '';
+                                if (this.$subtitleContainer) {
+                                  this.$subtitleContainer.innerHTML = '';
+                                }
+                                if (this.$subtitleScrollableContainer) {
+                                  this.$subtitleScrollableContainer.replaceChildren();
+                                }
                                 if (active_classes) {
                                   for (const $class of active_classes) {
                                     e.currentTarget.classList.toggle($class, false)
@@ -632,8 +695,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                               }
                             });
                           }
+                          this.populateScrollingTextTrack(track, $i);
                           $i++;
                         }
+
                       }
                     }
                   }
