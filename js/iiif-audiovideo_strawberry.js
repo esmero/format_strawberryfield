@@ -393,7 +393,11 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                             }
                           }
                           if (!this.$subtitleScrollableContainer.matches(':hover')) {
-                            cuediv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // ScrollIntoView makes the whole page navigation/scrolling impossible
+                            // This instead manually just scrolls the container. Does not trigger if you are inside it
+                            const totalOffset = cuediv.offsetTop - this.$subtitleScrollableContainer.offsetTop;
+                            const centerOffset = (this.$subtitleScrollableContainer.clientHeight / 2) - (cuediv.clientHeight / 2);
+                            this.$subtitleScrollableContainer.scrollTop = totalOffset - centerOffset;
                           }
                         } else {
                           if (active_classes) {
@@ -591,15 +595,26 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.populateScrollingTextTrack = function(track, $i) {
                   if (track.kind !== "metadata" && (track.mode == "showing" || track.mode == "hidden") && this.$subtitleScrollableContainer ) {
                     this.$subtitleScrollableContainer.style.overflowY = 'auto';
-                    for (const cue of track.cues) {
-                      const cueHTML = document.createElement("div");
-                      cueHTML.dataset.cueTime = cue.startTime;
-                      cueHTML.style.cursor = 'pointer';
-                      cueHTML.addEventListener('click', this.jumpToCueTime.bind(this, cue.startTime), false);
-                      cueHTML.append(cue.getCueAsHTML())
-                      this.$subtitleScrollableContainer.append(cueHTML)
+                    async function processCues(track, parent) {
+                      // 1. Wait for cues to exist
+                      while (track.cues.length == 0) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                      }
+                      // On VTT swap, we have to wait for them to be available
+                      // Safari does not expose an onload event for tracks
+                      // so an async promise is the only way.
+                      for (let i = 0; i < track.cues.length; i++) {
+                        let cue = track.cues[i];
+                        const cueHTML = document.createElement("div");
+                        cueHTML.dataset.cueTime = cue.startTime;
+                        cueHTML.style.cursor = 'pointer';
+                        cueHTML.addEventListener('click', parent.jumpToCueTime.bind(parent, cue.startTime), false);
+                        cueHTML.append(cue.getCueAsHTML())
+                        parent.$subtitleScrollableContainer.append(cueHTML)
+                      }
+                      parent.$subtitleScrollableContainer.dataset.vttLoaded = $i;
                     }
-                    this.$subtitleScrollableContainer.dataset.vttLoaded = $i;
+                    processCues(track, this);
                   }
                 }
 
