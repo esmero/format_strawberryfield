@@ -271,12 +271,12 @@ class IiifContentSearchController extends ControllerBase {
             if ($this->iiifConfig->get('iiif_content_search_validate_exposed')) {
               $valid = FALSE;
               foreach($jsonArray['service'] ?? [] as $service) {
-                if (isset($service['type']) && in_array($service['type'], ["SearchService2", "SearchService1"])) {
+                if (isset($service['type']) && in_array($service['type'] ?? '', ["SearchService2", "SearchService1"])) {
                   if (strtok($service['id'] ?? '', '?') == $current_url_clean_no_page.'/0') {
                     $valid = TRUE;
                   }
                 }
-                if (isset($service['profile']) && in_array($service['profile'], ["http://iiif.io/api/search/1/search", "https://iiif.io/api/search/1/search"])) {
+                if (isset($service['profile']) && in_array($service['profile'] ?? '', ["http://iiif.io/api/search/1/search", "https://iiif.io/api/search/1/search", "http://iiif.io/api/search/0/search", "https://iiif.io/api/search/0/search"])) {
                   if (strtok($service['@id'] ?? '', '?') == $current_url_clean_no_page.'/0') {
                     $valid = TRUE;
                   }
