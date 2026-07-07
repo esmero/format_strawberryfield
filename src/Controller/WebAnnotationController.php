@@ -498,11 +498,12 @@ class WebAnnotationController extends ControllerBase {
         "Wrong request"
       );
     }
-    // Processors or a $flavor_id are required. The latter wins and on a mistmatch will really just give you 0 results.
+    // Processors or a $flavor_id are required. The latter wins and on a mismatch will really just give you 0 results.
     // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
     // as individual annotations or not at all.
     $processors = $this->requestStack->getCurrentRequest()->query->get('processors', NULL);
     $flavor_id = $this->requestStack->getCurrentRequest()->query->get('flavor_id', NULL);
+    $term = $this->requestStack->getCurrentRequest()->query->get('q', NULL);
 
     if ($processors || $flavor_id) {
       if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
@@ -518,18 +519,18 @@ class WebAnnotationController extends ControllerBase {
         $targets = [];
         $file_uris = [];
 
-        $file = $this->entityTypeManager()
+        $files = $this->entityTypeManager()
           ->getStorage('file')
           ->loadByProperties(['uuid' => $target]);
-        if (count($file) == 0 ) {
+        if (count($files) == 0 ) {
           throw new BadRequestHttpException(
             "Wrong request"
           );
         }
-
-        $file = reset($file);
-        $file_uris = [$file->getFileUri()];
-        $targets = [$target];
+        foreach($files as $file) {
+          $file_uris[] = $file->getFileUri();
+        }
+        $targets = is_array($target) ? $target : [$target];
         if ($flavor_id) {
           $flavor_ids = [$flavor_id];
         }
@@ -537,14 +538,14 @@ class WebAnnotationController extends ControllerBase {
           $flavor_ids = [];
         }
         if ($processors) {
-          $processors_list = [$processors];
+          $processors_list = is_array($processors) ? $processors : [$processors];
         }
         else {
           $processors_list = [];
         }
 
         // This allows really for multiple targets. Also, we need more caching here.
-        $existingannotations[$target] = $this->flavorfromSolrIndex($processors_list, $file_uris, $targets , [$node->uuid()],  $flavor_ids);
+        $existingannotations[$target] = $this->flavorfromSolrIndex($term, $processors_list, $file_uris, $targets , [$node->uuid()],  $flavor_ids);
         $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
       }
       catch (\Exception $exception) {
@@ -758,7 +759,7 @@ class WebAnnotationController extends ControllerBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\search_api\SearchApiException
    */
-  protected function flavorfromSolrIndex(array $processors, array $file_uris, array $file_uuids, array $node_ids = [], array $flavor_ids = [], $offset = 0, $limit = 100, $ocr = FALSE): array {
+  protected function flavorfromSolrIndex(?string $term, array $processors, array $file_uris, array $file_uuids, array $node_ids = [], array $flavor_ids = [], $offset = 0, $limit = 100, $ocr = FALSE): array {
 
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
@@ -780,8 +781,18 @@ class WebAnnotationController extends ControllerBase {
       // @NOTE: New to me Diego. See \Drupal\facets\EventSubscriber\SearchApiSubscriber::queryAlter
       $query->setSearchId('sbf_webannotation_from_solr');
 
-      $parse_mode = $this->parseModeManager->createInstance('direct');
-      $query->setParseMode($parse_mode);
+
+      if ($term) {
+        $parse_mode = $this->parseModeManager->createInstance('terms');
+        $query->setParseMode($parse_mode);
+        $query->keys($term);
+      }
+      else {
+        $parse_mode = $this->parseModeManager->createInstance('direct');
+        $query->setParseMode($parse_mode);
+      }
+
+
       // No key set here, this is a filters query only
       $allfields_translated_to_solr = $search_api_index->getServerInstance()
         ->getBackend()

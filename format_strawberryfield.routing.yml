@@ -288,7 +288,7 @@ format_strawberryfield.deletetmp_webannotations:
     _entity_access: 'node.update'
     _permission: 'add strawberryfield webannotation'
 
-# Persist in a SBF any generated Webannotations.
+# Search/retrieve from SBF any generated Webannotations.
 format_strawberryfield.get_webannotations_fromflavor:
   path: '/do/{node}/webannon/readsbf'
   methods: [GET]
