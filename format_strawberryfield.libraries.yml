@@ -146,7 +146,7 @@ av_strawberry:
       css/htmlaudiovideo.css: {}
 
 av_custom_control_strawberry:
-  version: 1.0
+  version: 2.1
   js:
     js/iiif-audiovideo_strawberry.js: {minified: false, attributes: { type: module }}
   dependencies:

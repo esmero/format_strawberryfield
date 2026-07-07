@@ -203,6 +203,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$stopBtn = this.control.querySelector('.stopBtn');
                 this.$muteBtn = this.control.querySelector('.muteBtn');
                 this.$unmuteBtn = this.control.querySelector('.unmuteBtn');
+                this.$searchBtn = this.control.querySelector('.searchBtn');
+                this.$closeSearchBtn = this.control.querySelector('.closeSearchBtn');
                 this.$ccBtn = this.control.querySelector('.ccBtn');
                 this.$subtitleTrack = this.control.querySelector('.subtitleTrack');
                 this.$subtitleContainer = this.control.querySelector('.subtitleContainer');
@@ -334,6 +336,31 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.$muteBtn.hidden = false;
                 });
 
+                // For now, search requires the $subtitleScrollableContainer
+                // to be present. TODO: allow another container if user wants for the search results
+                // in the future? Makes the whole logic more complex though
+
+                if (this.$subtitleScrollableContainer) {
+                  if (this.$searchBtn) {
+                    this.$searchBtn.addEventListener("click", (e) => {
+                      e.currentTarget.hidden = true;
+                      if (this.$closeSearchBtn) {
+                        this.$closeSearchBtn.hidden = false;
+                      }
+                      this.showSearch();
+                    });
+                  }
+                  if (this.$closeSearchBtn) {
+                    this.$closeSearchBtn.hidden = true;
+                    this.$closeSearchBtn.addEventListener("click", (e) => {
+                      e.currentTarget.hidden = true;
+                      if (this.$searchBtn) {
+                        this.$searchBtn.hidden = false;
+                      }
+                    });
+                  }
+                }
+
                 this.updateProgress = function() {
                   if (this.$progressSlider) {
                     this.$progressSlider.removeAttribute("max")
@@ -345,14 +372,55 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     });
                   }
                 }
+
+                this.showSearch = function() {
+                  if (this.$subtitleScrollableContainer) {
+                    this.control .style.position = 'relative';
+                    // get relative offset
+                    const childRect = this.$subtitleScrollableContainer.getBoundingClientRect();
+                    const parentRect = this.control.getBoundingClientRect();
+
+                    const searchInput = document.createElement('input');
+                    const searchInputWrapper = document.createElement('div');
+                    const searchButton = document.createElement('button');
+                    const searchButtonClose = document.createElement('button');
+                    searchButton.style.width = '1rem';
+                    searchButton.className = 'btn-primary';
+                    searchButtonClose.className = 'btn-secondary';
+
+                    searchButtonClose.style.width = '1rem';
+                    searchInputWrapper.className = "input-group";
+                    searchInputWrapper.style.position = 'absolute';
+                    searchInputWrapper.style.top = parseInt(childRect.top - parentRect.top);
+                    searchInputWrapper.style.left = '0';
+                    searchInputWrapper.style.width = '100%';
+                    searchInputWrapper.style.height = '3rem';
+                    searchInput.type = 'text';
+                    searchInput.placeholder = 'Enter Search';
+                    searchInput.ariaLabel = 'Subtitle or Transcript search input';
+                    searchInput.className = 'form-control';
+                    searchInputWrapper.appendChild(searchInput);
+                    searchInputWrapper.appendChild(searchButton);
+                    searchInputWrapper.appendChild(searchButtonClose);
+                    this.$subtitleScrollableContainer.insertAdjacentElement('beforebegin', searchInputWrapper);
+                  }
+                }
+
+                this.SearchVtts = function() {
+                  if (this.$subtitleScrollableContainer) {
+
+                  }
+                };
+
+
+
+
                 this.updateProgress();
 
                 this.loadeddataEventFunction = function (e) {
                   // Might not fire when swapping between multiple element sources.
                   if (e.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-                    console.log('Calling initializeTextTracks');
                     this.initializeTextTracks()
-
                     if (this.$progressSlider) {
                       this.$progressSlider.setAttribute("max", e.currentTarget.duration);
                     }
@@ -630,7 +698,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       if (track.kind !== "metadata") {
                         // Fill the scrollable container if set
                         track.addEventListener('cuechange', (e) => {
-                          console.log('Cue changed');
                           let cues = e.target.activeCues;
                           if (this.$subtitleContainer) {
                             this.$subtitleContainer.innerHTML = ''; // Clear previous subtitle
