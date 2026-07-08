@@ -357,6 +357,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       if (this.$searchBtn) {
                         this.$searchBtn.hidden = false;
                       }
+                      this.hideSearch();
                     });
                   }
                 }
@@ -372,10 +373,22 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     });
                   }
                 }
+                this.hideSearch = function () {
+                  const searchUI = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch');
+                  if (searchUI) {
+                    searchUI.hidden = true;
+                    return;
+                  }
+                }
 
                 this.showSearch = function() {
                   if (this.$subtitleScrollableContainer) {
-                    this.control .style.position = 'relative';
+                    const searchUI = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch')
+                    if (searchUI) {
+                      searchUI.hidden = false;
+                      return;
+                    }
+                    this.control.style.position = 'relative';
                     // get relative offset
                     const childRect = this.$subtitleScrollableContainer.getBoundingClientRect();
                     const parentRect = this.control.getBoundingClientRect();
@@ -387,14 +400,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     searchButton.style.width = '1rem';
                     searchButton.className = 'btn-primary';
                     searchButtonClose.className = 'btn-secondary';
-
                     searchButtonClose.style.width = '1rem';
                     searchInputWrapper.className = "input-group";
+                    searchInputWrapper.classList.add('subtitleSearch');
                     searchInputWrapper.style.position = 'absolute';
-                    searchInputWrapper.style.top = parseInt(childRect.top - parentRect.top);
+                    searchInputWrapper.style.top = parseInt(childRect.top) - parseInt(parentRect.top);
                     searchInputWrapper.style.left = '0';
                     searchInputWrapper.style.width = '100%';
                     searchInputWrapper.style.height = '3rem';
+                    searchInputWrapper.id = (this.control_blueprint.id+'-subtitleSearch');
                     searchInput.type = 'text';
                     searchInput.placeholder = 'Enter Search';
                     searchInput.ariaLabel = 'Subtitle or Transcript search input';
@@ -420,7 +434,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.loadeddataEventFunction = function (e) {
                   // Might not fire when swapping between multiple element sources.
                   if (e.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-                    this.initializeTextTracks()
+                    this.initializeTextTracks();
                     if (this.$progressSlider) {
                       this.$progressSlider.setAttribute("max", e.currentTarget.duration);
                     }
@@ -644,24 +658,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   }
                 }
 
-                this.captionStatus = function(e) {
-                  if (this.$subtitleScrollableContainer) {
-                    this.$subtitleScrollableContainer.replaceChildren();
-                    let $index = 0;
-                    for (const track of e.currentTarget) {
-                      this.populateScrollingTextTrack(track, $index)
-                      $index++;
-                    }
-                  }
-                }
-
                 this.jumpToCueTime = function(startTime, e) {
+                  console.log('calling jumpToCueTimew with startTime ' + startTime)
                   this.active_audiovideo_element.currentTime = startTime;
                   this.updateTimeIndicators();
                 }
 
                 this.populateScrollingTextTrack = function(track, $i) {
                   if (track.kind !== "metadata" && (track.mode == "showing" || track.mode == "hidden") && this.$subtitleScrollableContainer ) {
+                    console.log('starting to process cues for track' + $i);
                     this.$subtitleScrollableContainer.style.overflowY = 'auto';
                     async function processCues(track, parent) {
                       // 1. Wait for cues to exist
@@ -679,6 +684,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         cueHTML.addEventListener('click', parent.jumpToCueTime.bind(parent, cue.startTime), false);
                         cueHTML.append(cue.getCueAsHTML())
                         parent.$subtitleScrollableContainer.append(cueHTML)
+                        console.log('Appending cues ' + i + 'for track ' + $i);
                       }
                       parent.$subtitleScrollableContainer.dataset.vttLoaded = $i;
                     }
@@ -691,7 +697,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   this.control.querySelectorAll('.subtitleTrack-active[data-track-id]').forEach(e => e.remove());
                   let $showing_subtitles = null;
                   const textTracks = this.active_audiovideo_element.textTracks;
-                  textTracks.addEventListener("change", this.captionStatus.bind(this), false);
+                  console.log('initializing tracks');
+
                   if (textTracks.length > 0) {
                     let $i = 0;
                     for (const track of textTracks) {
@@ -704,8 +711,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                             // Display current cue text
                             if (e.target.activeCues.length > 0) {
                               const currentCue = e.target.activeCues[0];
-                              const subtitleText = document.createElement('em');
-                              subtitleText.textContent = currentCue.text;
+                              const subtitleText = document.createElement('div');
+                              const cueFragment = currentCue.getCueAsHTML();
+                              const cueFragmentClone = cueFragment.cloneNode(true);
+                              subtitleText.replaceChildren(cueFragmentClone);
                               // We need per track containers here. Because the user could enable multiple Tracks at the same time?
                               this.$subtitleContainer.appendChild(subtitleText);
                             }
@@ -760,6 +769,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                                 }
 
                                 track.mode = "showing";
+                                if (this.$subtitleScrollableContainer) {
+                                  this.$subtitleScrollableContainer.replaceChildren();
+                                  this.populateScrollingTextTrack(track, e.currentTarget.dataset.trackId)
+                                }
                                 // Means I need to toggle any other one active
                                 if (active_classes) {
                                   const trackId = e.currentTarget.dataset.trackId;
