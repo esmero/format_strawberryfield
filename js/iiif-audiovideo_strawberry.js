@@ -14,7 +14,6 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
       var groupsid =  {};
       const elementsToAttach = once('attache_audio_video', '.strawberry-av-item-js', context);
       $(elementsToAttach).each(function (index, value) {
-        // Get the node uuid for this element
         var element_id = $(this).attr("id");
         if  (typeof drupalSettings?.format_strawberryfield?.audiovideo[element_id] !== "undefined") {
           var external_control = drupalSettings.format_strawberryfield.audiovideo[element_id]['use_external_control'];
@@ -70,6 +69,9 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
             control_blueprint = control_blueprint == null ? document.querySelector(control_query_selector) : control_blueprint;
             function customMediaController(control_blueprint, audiovideo_element, use_wavesurfer, attach_control_to_media_pos, hide_control) {
               this.active_audiovideo_element = audiovideo_element;
+              // Get the node uuid for this element
+              this.node_uuid =  audiovideo_element.dataset.sbfNodeuuid;
+
               this.audiovideo_elements = [];
               this.audiovideo_elements_map = new Map();
               if (!this.audiovideo_elements_map.has(audiovideo_element.id)) {
@@ -92,6 +94,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
               let $pauseBtn = control_blueprint.querySelector('.pauseBtn');
               let $muteBtn = control_blueprint.querySelector('.muteBtn');
               let $unmuteBtn = control_blueprint.querySelector('.unmuteBtn');
+              // Needed elements, if not we do not generate anything.
               if ($playBtn && $pauseBtn && $muteBtn && $unmuteBtn) {
                 // Hide original Media Controls.
                 this.active_audiovideo_element.controls = !hide_control;
@@ -210,6 +213,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$subtitleContainer = this.control.querySelector('.subtitleContainer');
                 // A scrollable VTT container.
                 this.$subtitleScrollableContainer = this.control.querySelector('.subtitleScrollableContainer');
+
                 this.$mediaContainer = this.control.querySelector('.mediaContainer');
                 this.$progressSlider = this.control.querySelector(".progressSlider");
                 this.$volumeSlider = this.control.querySelector(".volumeSlider");
@@ -225,6 +229,58 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // Used to load next set of media, in case of a IIIF Manifest or multiple Audio/Videos.
                 this.$nextBtn = this.control.querySelector('.nextBtn');
                 this.$prevBtn = this.control.querySelector('.prevBtn');
+
+
+
+                this.searchSubtitles = function (file_uuids) {
+                  const input = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch input');
+                  const term = input.value;
+                  let data = [];
+                  const parent = this;
+                  try {
+                    let $url =  '/do/' + this.node_uuid + '/webannon/readsbf';
+                    //
+                    const parameters =
+                    {
+                      'target_resource_uuid': file_uuids,
+                      'processors': 'subtitle',
+                      'q': term,
+                      'highlights': true
+                    };
+                    const GETParams = new URLSearchParams();
+                    for (const key in parameters) {
+                      if (Array.isArray(parameters[key])) {
+                        parameters[key].forEach(val => GETParams.append(`${key}[]`, val));
+                      } else if (typeof parameters[key] === 'object' && parameters[key] !== null) {
+                        for (const subKey in parameters[key]) {
+                          GETParams.append(`${key}[${subKey}]`, parameters[key][subKey]);
+                        }
+                      } else {
+                        GETParams.append(key, parameters[key]);
+                      }
+                    }
+
+                    $url = $url + '?' + GETParams.toString();
+                    const response =  fetch($url)
+                      .then(response => {
+                      if (!response.ok) {
+                        throw new Error("HTTP error " + response.status);
+                        return [];
+                      }
+                      else {
+                        return response.json();
+                      }
+                    }).then(data => {
+                        parent.populateSearchResults(data);
+
+                  })}
+                  catch (e) {
+                    console.error('Fetch failed:', e);
+                  }
+
+                }
+
+
 
                 this.multipleMediaCapable = function () {
                   if (this.$nextBtn && this.$prevBtn) {
@@ -341,6 +397,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // in the future? Makes the whole logic more complex though
 
                 if (this.$subtitleScrollableContainer) {
+                  this.$subtitleScrollableContainer.style.paddingY = '2rem';
                   if (this.$searchBtn) {
                     this.$searchBtn.addEventListener("click", (e) => {
                       e.currentTarget.hidden = true;
@@ -377,6 +434,26 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   const searchUI = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch');
                   if (searchUI) {
                     searchUI.hidden = true;
+                    this.$subtitleScrollableContainer.querySelectorAll('.cue-item').forEach(cueItem => {
+                      cueItem.hidden = false;
+                    });
+                    this.$subtitleScrollableContainer.querySelectorAll('.search-result').forEach(cueItem => {
+                      cueItem.hidden = true;
+                    });
+                    return;
+                  }
+                }
+
+                this.clearSearch = function () {
+                  const input = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch input');
+                  if (input) {
+                    input.value = '';
+                    this.$subtitleScrollableContainer.querySelectorAll('.cue-item').forEach(cueItem => {
+                      cueItem.hidden = false;
+                    });
+                    this.$subtitleScrollableContainer.querySelectorAll('.search-result').forEach(cueItem => {
+                      cueItem.hidden = true;
+                    });
                     return;
                   }
                 }
@@ -397,37 +474,44 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     const searchInputWrapper = document.createElement('div');
                     const searchButton = document.createElement('button');
                     const searchButtonClose = document.createElement('button');
-                    searchButton.style.width = '1rem';
-                    searchButton.className = 'btn-primary';
-                    searchButtonClose.className = 'btn-secondary';
-                    searchButtonClose.style.width = '1rem';
+                    searchButton.classList.add('btn-outline-primary');
+                    searchButton.classList.add('btn');
+                    searchButton.innerHTML = 'Search';
+                    const textTracksElements = this.active_audiovideo_element.querySelectorAll('track');
+                    let file_uuids = [];
+                    if (textTracksElements.length > 0) {
+                      let $i = 0;
+                      for (const trackElement of textTracksElements) {
+                        if (trackElement.dataset.sbfUuid) {
+                          file_uuids.push(trackElement.dataset.sbfUuid);
+                        }
+                      }
+                    }
+
+                    searchButton.addEventListener('click', this.searchSubtitles.bind(this,file_uuids), false);
+                    searchButtonClose.classList.add('btn-outline-secondary');
+                    searchButtonClose.classList.add('btn');
+                    searchButtonClose.innerHTML = 'Clear';
+                    searchButtonClose.addEventListener('click', this.clearSearch.bind(this), false);
                     searchInputWrapper.className = "input-group";
                     searchInputWrapper.classList.add('subtitleSearch');
                     searchInputWrapper.style.position = 'absolute';
-                    searchInputWrapper.style.top = parseInt(childRect.top) - parseInt(parentRect.top);
+                    searchInputWrapper.style.top = parseInt(childRect.top) - parseInt(parentRect.top) - 25;
                     searchInputWrapper.style.left = '0';
                     searchInputWrapper.style.width = '100%';
-                    searchInputWrapper.style.height = '3rem';
+                    searchInputWrapper.style.height = '2.5rem';
                     searchInputWrapper.id = (this.control_blueprint.id+'-subtitleSearch');
                     searchInput.type = 'text';
                     searchInput.placeholder = 'Enter Search';
                     searchInput.ariaLabel = 'Subtitle or Transcript search input';
-                    searchInput.className = 'form-control';
+                    searchInput.classList.add('form-control')
+
                     searchInputWrapper.appendChild(searchInput);
                     searchInputWrapper.appendChild(searchButton);
                     searchInputWrapper.appendChild(searchButtonClose);
                     this.$subtitleScrollableContainer.insertAdjacentElement('beforebegin', searchInputWrapper);
                   }
                 }
-
-                this.SearchVtts = function() {
-                  if (this.$subtitleScrollableContainer) {
-
-                  }
-                };
-
-
-
 
                 this.updateProgress();
 
@@ -659,9 +743,67 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.jumpToCueTime = function(startTime, e) {
-                  console.log('calling jumpToCueTimew with startTime ' + startTime)
+                  console.log('calling jumpToCueTime with startTime ' + startTime)
                   this.active_audiovideo_element.currentTime = startTime;
                   this.updateTimeIndicators();
+                }
+
+                this.populateSearchResults = function (results) {
+                  // Remove existing results.
+                  this.$subtitleScrollableContainer.querySelectorAll('.search-result').forEach(cueItem => {
+                    cueItem.remove();
+                  });
+                  this.$subtitleScrollableContainer.querySelectorAll('.cue-item').forEach(cueItem => {
+                    cueItem.hidden = true;
+                  });
+                  if (results.length > 0) {
+                    // Get the track UUIDs. So we can add a hover label
+                    const textTracksElements = this.active_audiovideo_element.querySelectorAll('track');
+                    let file_uuids = { };
+                    if (textTracksElements.length > 0) {
+                      let $i = 0;
+                      for (const trackElement of textTracksElements) {
+                        if (trackElement.dataset.sbfUuid) {
+                          file_uuids["urn:uuid:"+ trackElement.dataset.sbfUuid]= trackElement.label;
+                        }
+                      }
+                    }
+
+                    let annotations = [];
+                    // Because he API won't sort by time, we will sort by time here.
+                    for (let i = 0; i < results.length; i++) {
+                      const cueHTML = document.createElement("div");
+                      let resulttime = results[i]?.target?.selector.value.split("=");
+                      resulttime = resulttime[1].split(',');
+                      resulttime = resulttime[0];
+                      annotations.push({
+                        cueTime: resulttime,
+                        text: results[i]?.body?.value,
+                        hover: file_uuids[results[i]?.body?.sbf_file_uuid] ?? 'Unnamed Subtitle',
+                      });
+                    }
+                    annotations.sort((a, b) => a.cueTime - b.cueTime);
+                    for (let i = 0; i < annotations.length; i++) {
+                      const cueHTML = document.createElement("div");
+                      cueHTML.dataset.cueTime = annotations[i].cueTime;
+                      cueHTML.title = annotations[i].hover;
+                      cueHTML.style.cursor = 'pointer';
+                      cueHTML.style.marginTop = '0.5rem';
+                      cueHTML.style.marginBottom = '0.5rem';
+                      cueHTML.className = 'search-result';
+                      cueHTML.addEventListener('click', this.jumpToCueTime.bind(this, annotations[i].cueTime), false);
+                      cueHTML.innerHTML = '<span>...'+annotations[i].text+'...<em> - <span></span>' + new Date(parseFloat(annotations[i].cueTime) * 1000).toISOString().substring(11, 19)+'</span>';
+                      this.$subtitleScrollableContainer.append(cueHTML);
+                    }
+                  }
+                  else {
+                    const cueHTMLNoresults = document.createElement("div");
+                    cueHTMLNoresults.innerText = 'Sorry, your query produced no results. Try a different term.';
+                    cueHTMLNoresults.style.marginTop = '0.5rem';
+                    cueHTMLNoresults.style.marginBottom = '0.5rem';
+                    cueHTMLNoresults.className = 'search-result';
+                    this.$subtitleScrollableContainer.append(cueHTMLNoresults);
+                  }
                 }
 
                 this.populateScrollingTextTrack = function(track, $i) {
@@ -681,10 +823,12 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         const cueHTML = document.createElement("div");
                         cueHTML.dataset.cueTime = cue.startTime;
                         cueHTML.style.cursor = 'pointer';
+                        cueHTML.style.marginTop = '0.5rem';
+                        cueHTML.style.marginBottom = '0.5rem';
+                        cueHTML.className = 'cue-item';
                         cueHTML.addEventListener('click', parent.jumpToCueTime.bind(parent, cue.startTime), false);
                         cueHTML.append(cue.getCueAsHTML())
                         parent.$subtitleScrollableContainer.append(cueHTML)
-                        console.log('Appending cues ' + i + 'for track ' + $i);
                       }
                       parent.$subtitleScrollableContainer.dataset.vttLoaded = $i;
                     }
