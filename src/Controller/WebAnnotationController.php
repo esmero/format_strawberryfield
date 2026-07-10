@@ -9,6 +9,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\TempStore\TempStoreException;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
@@ -171,7 +172,7 @@ class WebAnnotationController extends ControllerBase {
           $existingannotations[$target] = $annotations;
           $this->tempStore->set($keystoreid, $existingannotations);
         }
-        catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+        catch (TempStoreException $exception) {
           $data = [
             'success' => FALSE
           ];
@@ -243,7 +244,7 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+      catch (TempStoreException $exception) {
         $data = [
           'success' => FALSE
         ];
@@ -309,7 +310,7 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+      catch (TempStoreException $exception) {
         $data = [
           'success' => FALSE
         ];
@@ -355,7 +356,7 @@ class WebAnnotationController extends ControllerBase {
           try {
             $this->tempStore->delete(trim($keystoreid));
           }
-          catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+          catch (TempStoreException $exception) {
             $response->addCommand(
               new ReplaceCommand(
                 '#edit-webannotations > div',
@@ -438,7 +439,7 @@ class WebAnnotationController extends ControllerBase {
         }
         $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
       }
-      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+      catch (TempStoreException $exception) {
         throw new ServiceUnavailableHttpException(
           "Temporary Storage for WebAnnotations is not working. Contact your admin."
         );
@@ -647,7 +648,7 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+      catch (TempStoreException $exception) {
         $data = [
           'success' => FALSE
         ];
@@ -693,7 +694,7 @@ class WebAnnotationController extends ControllerBase {
               // Do NOT SET stored settings back.
               // BECAUSE WE HAVE NOT RELOADED OUR NODE from storage yet OK?
             }
-            catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+            catch (TempStoreException $exception) {
               $response->addCommand(
                 new ReplaceCommand(
                   '#edit-webannotations > div',
