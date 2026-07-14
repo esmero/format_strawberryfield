@@ -183,6 +183,7 @@ class IiifContentSearchController extends ControllerBase {
     $iiif_response = [];
     if ($entity) {
       $per_page = $this->iiifConfig->get('iiif_content_search_api_results_per_page');
+      $query_length = $this->iiifConfig->get('iiif_content_search_api_query_length') ?? 64;
 
       $current_url = $request->getRequestUri();
       $current_url_clean = strtok($current_url, '?');
@@ -193,6 +194,7 @@ class IiifContentSearchController extends ControllerBase {
       $current_url_clean_no_page = implode("/", $current_url_clean_no_page);
 
       $the_query_string = $request->get('q','');
+      $the_query_string = substr(trim($the_query_string), 0, $query_length);
       /// I have to modify the request URL so the Template does not render
       /// with the Search API as <current> or worst, skips caches.
       $cacheabledata = $this->renderer->executeInRenderContext(
@@ -1084,8 +1086,8 @@ class IiifContentSearchController extends ControllerBase {
             if (isset($field[$allfields_translated_to_solr['ocr_text']]['snippets']) &&
               is_array($field[$allfields_translated_to_solr['ocr_text']]['snippets'])) {
               foreach ($field[$allfields_translated_to_solr['ocr_text']]['snippets'] as $snippet) {
-                $page_width = (float)$snippet['pages'][0]['width'];
-                $page_height = (float)$snippet['pages'][0]['height'];
+                $page_width = (float)($snippet['pages'][0]['width'] ?? 1);
+                $page_height = (float)($snippet['pages'][0]['height'] ?? 1);
                 $is_time = str_starts_with($snippet['pages'][0]['id'], 'timesequence_');
                 if ($is_time) {
                   $result_snippets_base = [
@@ -1104,14 +1106,40 @@ class IiifContentSearchController extends ControllerBase {
                   // This allows us to offset the before and after when we are re-using a snippet for multiple hits
                   $region_text = $snippet['regions'][$parent_region]['text'] ?? $term;
                   $hit = $highlight[0]['text'] ?? $term;
-
-                  $before_and_after = explode("{$hit}", strip_tags($region_text ?? $term));
+                  if (strlen($hit) > ($this->iiifConfig->get('iiif_content_search_api_query_length') ?? 64)) {
+                    // means our hit is larger than the actual query?\
+                    $highlighted_keys = static::getHighlightedKeysOCR($region_text);
+                    // We might have multiple ones, so lets pick the first.
+                    $splitter = ($highlighted_keys[0] ?? $term);
+                    $regex_split = "/\s*{$splitter}/i";
+                    $before_and_after = preg_split($regex_split, strip_tags($region_text ?? $term));
+                    $hit = $highlighted_keys[0];
+                  }
+                  else {
+                    $before_and_after = explode("{$hit}", strip_tags($region_text ?? $term));
+                  }
                   // Check if (int) coordinates lrx >1 (ALTO) ... assuming nothing is at 1px to the right?
                   // else between 0 and < 1 (MINIOCR)
                   $before_index = $shared_parent_region[$parent_region] - 1;
                   $before_index = $before_index > 0 ? $before_index : 0;
                   $after_index = $shared_parent_region[$parent_region];
                   $after_index = ($after_index < count($before_and_after)) ? $after_index : 1;
+                  if (strlen($region_text) > (strlen($term) + 256)) {
+                    $before_truncated = NULL;
+                    // Find the closest space before the cutoff point
+                    if (strlen($before_and_after[$before_index] ?? '') > 128) {
+                      $space_right = mb_strpos(strrev($before_and_after[$before_index] ?? ''), ' ', 64);
+                      $cutleft = mb_substr(strrev($before_and_after[0] ?? ''), 0, $space_right);
+                      $before_truncated= strrev($cutleft);
+                    }
+                    $after_truncated = NULL;
+                    if (strlen($before_and_after[$after_index] ?? '') > 128) {
+                      $space_left = mb_strpos($before_and_after[$after_index] ?? '', ' ', 64);
+                      $cutright = mb_substr($before_and_after[$after_index] ?? '', 0, $space_left);
+                      $after_truncated = $cutright;
+                    }
+                    $region_text = '...'.($before_truncated ?? ($before_and_after[$before_index] ?? '')).' '.trim($hit).' '.($after_truncated ?? ($before_and_after[$after_index] ?? '')).'...';
+                  }
 
                   if (((int)$highlight[0]['lrx']) > 1) {
                     //ALTO so coords need to be relative
@@ -1336,4 +1364,30 @@ class IiifContentSearchController extends ControllerBase {
     $search_result['total'] = $count;
     return $search_result;
   }
+
+  /**
+   * Returns the highlighted keys from a snippet highlighted by OCR Solr plugin.
+   *
+   * @param string|array $snippets
+   *   The snippet(s) to format.
+   *
+   * @return array
+   *   The highlighted keys.
+   */
+  public static function getHighlightedKeysOCR($snippets) {
+    if (is_string($snippets)) {
+      $snippets = [$snippets];
+    }
+
+    $keys = [[]];
+
+    foreach ($snippets as $snippet) {
+      if (preg_match_all('@\<em>(.+?)\</em>@', preg_replace('@\</em>(\s*)\<em>@', '$1', $snippet), $matches)) {
+        $keys[] = $matches[1];
+      }
+    }
+
+    return array_unique(array_merge(...$keys));
+  }
+
 }
