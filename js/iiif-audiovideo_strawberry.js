@@ -230,14 +230,23 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 this.$nextBtn = this.control.querySelector('.nextBtn');
                 this.$prevBtn = this.control.querySelector('.prevBtn');
 
+                // Some state info
 
+                this.subtitle_searching_state = false;
+                this.subtitle_scrolling_state = false;
+                this.showing_search = false;
+                this.subtitle_scrolling_touched = false;
 
                 this.searchSubtitles = function (file_uuids) {
                   const input = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch input');
                   const term = input.value;
+                  if (term.trim().length === 0 || this.subtitle_searching_state) {
+                    return;
+                  }
                   let data = [];
                   const parent = this;
                   try {
+                    this.subtitle_searching_state = true;
                     let $url =  '/do/' + this.node_uuid + '/webannon/readsbf';
                     //
                     const parameters =
@@ -272,12 +281,12 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         }
                       }).then(data => {
                         parent.populateSearchResults(data);
-
+                        this.subtitle_searching_state = false;
                       })}
                   catch (e) {
+                    this.subtitle_searching_state = false;
                     console.error('Fetch failed:', e);
                   }
-
                 }
 
 
@@ -397,7 +406,49 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 // in the future? Makes the whole logic more complex though
 
                 if (this.$subtitleScrollableContainer) {
-                  this.$subtitleScrollableContainer.style.paddingY = '2rem';
+                  let touch_timer;
+                  this.$subtitleScrollableContainer.addEventListener('touchstart', (e) => {
+                    clearTimeout(touch_timer);
+                    this.subtitle_scrolling_touched = true;
+                  },{ passive: true });
+
+                  document.addEventListener('touchend', (e) => {
+                    clearTimeout(touch_timer);
+                    // Give people a 1.5 seconds to act before auto scrolling start again
+                    touch_timer = setTimeout(() => {
+                      this.subtitle_scrolling_touched = false;
+                      this.subtitle_scrolling_state = false;
+                    }, 900);
+                  },{ passive: true });
+
+                  this.$subtitleScrollableContainer.addEventListener('touchcancel', (e) => {
+                    this.subtitle_scrolling_touched = false;
+                    this.subtitle_scrolling_state = false;
+                  },{ passive: true });
+
+                  this.$subtitleScrollableContainer.addEventListener('mouseenter', (e) => {
+                    this.subtitle_scrolling_touched = true;
+                    this.subtitle_scrolling_state = true;
+                  },{ passive: true });
+
+                  this.$subtitleScrollableContainer.addEventListener('mouseleave', (e) => {
+                    this.subtitle_scrolling_touched = false;
+                    this.subtitle_scrolling_state = false;
+                  },{ passive: true });
+
+                  this.$subtitleScrollableContainer.addEventListener('scroll', (e) => {
+                    // Because we are ALSO scrolling programmatically we need check
+                    // if there is a combination of human interaction + scrolling
+                    // And only then pause. But also Mobile (touch) v/s Desktop (moouse)
+                    // are different.
+                    if (this.subtitle_scrolling_touched === true) {
+                      this.subtitle_scrolling_state = true;
+                    }
+                    else {
+                      this.subtitle_scrolling_state = false;
+                    }
+                  },{ passive: true });
+
                   if (this.$searchBtn) {
                     this.$searchBtn.addEventListener("click", (e) => {
                       e.currentTarget.hidden = true;
@@ -431,6 +482,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                   }
                 }
                 this.hideSearch = function () {
+                  this.showing_search = false;
                   const searchUI = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch');
                   if (searchUI) {
                     searchUI.hidden = true;
@@ -445,8 +497,10 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.clearSearch = function () {
+                  this.showing_search = false;
                   const input = this.control.querySelector('#'+this.control_blueprint.id+'-subtitleSearch input');
                   if (input) {
+                    this.subtitle_searching_state = false;
                     input.value = '';
                     this.$subtitleScrollableContainer.querySelectorAll('.cue-item').forEach(cueItem => {
                       cueItem.hidden = false;
@@ -454,6 +508,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     this.$subtitleScrollableContainer.querySelectorAll('.search-result').forEach(cueItem => {
                       cueItem.hidden = true;
                     });
+                    this.subtitle_scrolling_state = false;
                     return;
                   }
                 }
@@ -487,29 +542,37 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                         }
                       }
                     }
+                    if (file_uuids.length > 0) {
+                      searchButton.addEventListener('click', this.searchSubtitles.bind(this, file_uuids), false);
+                      searchInput.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          this.searchSubtitles(file_uuids)
+                        }
+                      });
+                      searchButtonClose.classList.add('btn-outline-secondary');
+                      searchButtonClose.classList.add('btn');
+                      searchButtonClose.innerHTML = 'Clear';
+                      searchButtonClose.addEventListener('click', this.clearSearch.bind(this), false);
+                      searchInputWrapper.className = "input-group";
+                      searchInputWrapper.classList.add('subtitleSearch');
+                      searchInputWrapper.style.position = 'absolute';
+                      searchInputWrapper.style.top = String((parseInt(childRect.top) - parseInt(parentRect.top)) - 48) + 'px';
+                      searchInputWrapper.style.left = '0';
+                      searchInputWrapper.style.background = 'white';
+                      searchInputWrapper.style.width = '100%';
+                      searchInputWrapper.style.height = '2.5rem';
+                      searchInputWrapper.id = (this.control_blueprint.id + '-subtitleSearch');
+                      searchInput.type = 'text';
+                      searchInput.placeholder = 'Enter Search';
+                      searchInput.ariaLabel = 'Subtitle or Transcript search input';
+                      searchInput.classList.add('form-control')
 
-                    searchButton.addEventListener('click', this.searchSubtitles.bind(this,file_uuids), false);
-                    searchButtonClose.classList.add('btn-outline-secondary');
-                    searchButtonClose.classList.add('btn');
-                    searchButtonClose.innerHTML = 'Clear';
-                    searchButtonClose.addEventListener('click', this.clearSearch.bind(this), false);
-                    searchInputWrapper.className = "input-group";
-                    searchInputWrapper.classList.add('subtitleSearch');
-                    searchInputWrapper.style.position = 'absolute';
-                    searchInputWrapper.style.top = parseInt(childRect.top) - parseInt(parentRect.top) - 25;
-                    searchInputWrapper.style.left = '0';
-                    searchInputWrapper.style.width = '100%';
-                    searchInputWrapper.style.height = '2.5rem';
-                    searchInputWrapper.id = (this.control_blueprint.id+'-subtitleSearch');
-                    searchInput.type = 'text';
-                    searchInput.placeholder = 'Enter Search';
-                    searchInput.ariaLabel = 'Subtitle or Transcript search input';
-                    searchInput.classList.add('form-control')
-
-                    searchInputWrapper.appendChild(searchInput);
-                    searchInputWrapper.appendChild(searchButton);
-                    searchInputWrapper.appendChild(searchButtonClose);
-                    this.$subtitleScrollableContainer.insertAdjacentElement('beforebegin', searchInputWrapper);
+                      searchInputWrapper.appendChild(searchInput);
+                      searchInputWrapper.appendChild(searchButton);
+                      searchInputWrapper.appendChild(searchButtonClose);
+                      this.$subtitleScrollableContainer.insertAdjacentElement('beforebegin', searchInputWrapper);
+                    }
                   }
                 }
 
@@ -558,12 +621,15 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                               cuediv.classList.add(active_classes);
                             }
                           }
-                          if (!this.$subtitleScrollableContainer.matches(':hover')) {
+                          if ( this.subtitle_scrolling_state === false &&  this.showing_search == false) {
                             // ScrollIntoView makes the whole page navigation/scrolling impossible
                             // This instead manually just scrolls the container. Does not trigger if you are inside it
                             const totalOffset = cuediv.offsetTop - this.$subtitleScrollableContainer.offsetTop;
                             const centerOffset = (this.$subtitleScrollableContainer.clientHeight / 2) - (cuediv.clientHeight / 2);
                             this.$subtitleScrollableContainer.scrollTop = totalOffset - centerOffset;
+                          }
+                          else {
+                            console.log('auto scrolling paused');
                           }
                         } else {
                           if (active_classes) {
@@ -750,6 +816,9 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
                 this.populateSearchResults = function (results) {
                   // Remove existing results.
+                  // Stop any scrolling
+                  this.subtitle_scrolling_state = true;
+                  this.showing_search = true;
                   this.$subtitleScrollableContainer.querySelectorAll('.search-result').forEach(cueItem => {
                     cueItem.remove();
                   });
@@ -837,6 +906,8 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
 
                 this.initializeTextTracks = function() {
+                  this.subtitle_scrolling_state = false;
+                  this.subtitle_scrolling_touched = false;
                   // In case we are swapping media after initialization. We will remove all existing tracks first
                   this.control.querySelectorAll('.subtitleTrack-active[data-track-id]').forEach(e => e.remove());
                   let $showing_subtitles = null;
