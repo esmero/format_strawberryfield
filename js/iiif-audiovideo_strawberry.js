@@ -129,6 +129,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                 }
                 // Mark as used. So we don't clone the clone.
                 this.control.dataset.cloned = true;
+
                 this.attachWaveSurfer = function() {
                   if (use_wavesurfer) {
                     $waversurfer_container = this.control.querySelector('.wavesurferContainer');
@@ -418,7 +419,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     touch_timer = setTimeout(() => {
                       this.subtitle_scrolling_touched = false;
                       this.subtitle_scrolling_state = false;
-                    }, 900);
+                    }, 1500);
                   },{ passive: true });
 
                   this.$subtitleScrollableContainer.addEventListener('touchcancel', (e) => {
@@ -589,7 +590,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       if (e.currentTarget.duration < 3600) {
                         this.$durationTime.innerText = new Date(e.currentTarget.duration * 1000).toISOString().substring(14, 19)
                       } else {
-                        this.$durationTime.innerText = new Date(e.currentTarget.duration * 1000).toISOString().substring(11, 16)
+                        this.$durationTime.innerText = new Date(e.currentTarget.duration * 1000).toISOString().substring(11, 19)
                       }
                     }
                   }
@@ -600,7 +601,7 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                     if (e.currentTarget.duration < 3600) {
                       this.$currentTime.innerText = new Date(e.currentTarget.currentTime * 1000).toISOString().substring(14, 19)
                     } else {
-                      this.$currentTime.innerText = new Date(e.currentTarget.currentTime * 1000).toISOString().substring(11, 16)
+                      this.$currentTime.innerText = new Date(e.currentTarget.currentTime * 1000).toISOString().substring(11, 19)
                     }
                   }
                   if (this.$progressSlider) {
@@ -684,14 +685,14 @@ import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
                       if (this.active_audiovideo_element.duration < 3600) {
                         this.$durationTime.innerText = new Date(this.active_audiovideo_element.duration * 1000).toISOString().substring(14, 19)
                       } else {
-                        this.$durationTime.innerText = new Date(this.active_audiovideo_element.duration * 1000).toISOString().substring(11, 16)
+                        this.$durationTime.innerText = new Date(this.active_audiovideo_element.duration * 1000).toISOString().substring(11, 19)
                       }
                     }
                     if (this.$currentTime) {
                       if (this.active_audiovideo_element.duration < 3600) {
                         this.$currentTime.innerText = new Date(this.active_audiovideo_element.currentTime * 1000).toISOString().substring(14, 19)
                       } else {
-                        this.$currentTime.innerText = new Date(this.active_audiovideo_element.currentTime * 1000).toISOString().substring(11, 16)
+                        this.$currentTime.innerText = new Date(this.active_audiovideo_element.currentTime * 1000).toISOString().substring(11, 19)
                       }
                     }
                   }
