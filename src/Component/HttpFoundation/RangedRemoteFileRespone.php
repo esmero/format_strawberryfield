@@ -100,12 +100,12 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
           if ($start < 0 || $end > $fileSize - 1) {
             $this->setStatusCode(416);
             $this->headers->set('Content-Range', sprintf('bytes */%s', $fileSize));
-          } elseif (0 !== $start || $end !== $fileSize - 1) {
+          } else {
             $this->maxlen = $end < $fileSize ? $end - $start + 1 : -1;
             $this->offset = $start;
 
             $this->setStatusCode(206);
-            $this->headers->set('Content-Range', sprintf('bytes %s-%s/%s', $start, $end, $fileSize));
+            $this->headers->set('Content-Range', \sprintf('bytes %s-%s/%s', $start, $end, $fileSize));
             $this->headers->set('Content-Length', $end - $start + 1);
           }
         }
