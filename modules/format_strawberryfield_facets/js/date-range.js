@@ -18,9 +18,9 @@
 
       function autoSubmit($widget) {
         var facetId = $widget.attr("data-drupal-facet-id");
-        var submiturl = document.querySelector("input[name=" + concat(facetId, "_min]")).dataset.drupalUrl;
-        var min = toTimestamp(document.querySelector("input[name=" + concat(facetId, "_min]")).value) || "";
-        var max = toTimestamp(document.querySelector("input[name=" + concat(facetId, "_max]")).value) || "";
+        var submiturl = document.querySelector("input[name=".concat(facetId, "_min]")).dataset.drupalUrl;
+        var min = toTimestamp(document.querySelector("input[name=".concat(facetId, "_min]")).value) || "";
+        var max = toTimestamp(document.querySelector("input[name=".concat(facetId, "_max]")).value) || "";
         return submiturl.replace("__date_range_min__", min).replace("__date_range_max__", max);
       }
 
