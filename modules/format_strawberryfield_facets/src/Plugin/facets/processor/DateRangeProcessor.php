@@ -186,7 +186,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
 
         $result_item_active = new Result(
-          $facet, 'summary_date_facet', $label, $range_entry['count']
+          $facet, 'summary_date_facet', $label, ($range_entry['count'] ?? 0)
         );
         $result_item_active->setActiveState(TRUE);
         $result_item_active->setUrl($url_active);
