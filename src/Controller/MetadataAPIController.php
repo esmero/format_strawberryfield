@@ -584,6 +584,7 @@ class MetadataAPIController extends ControllerBase
                     //@TODO move to its own method\
                     $resultNative = $resultRow->_object->getValue() ?? NULL;
                     $node = NULL;
+                    $flavor_id =  NULL;
                     if ($resultNative instanceof ContentEntityInterface) {
                       // Just because it is easier to read.
                       $node = $resultNative;
@@ -722,7 +723,8 @@ class MetadataAPIController extends ControllerBase
                           }
                         );
                         if ($cacheabledata) {
-                          $processed_nodes_via_templates[$node->id()]
+                          $processed_nodes_via_templates_id = $flavor_id ?? $node->id();
+                          $processed_nodes_via_templates[$processed_nodes_via_templates_id]
                             = $cacheabledata;
                         }
                       }
