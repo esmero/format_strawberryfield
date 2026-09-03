@@ -110,7 +110,8 @@ class TwigExtension extends AbstractExtension {
       new TwigFunction('sbf_search_api',
         $this->searchApiQuery(...)),
       new TwigFunction('sbf_file_content', $this->sbfFileContent(...), ['is_safe' => ['all']]),
-      new TwigFunction('sbf_drupal_view_paged',$this->sbfDrupalView(...))
+      new TwigFunction('sbf_drupal_view_paged',$this->sbfDrupalView(...)),
+      new TwigFunction('sbf_ocr_iiif', $this->sbfOcrIiif(...), ['is_safe' => ['all']])
     ];
   }
 
@@ -712,6 +713,77 @@ class TwigExtension extends AbstractExtension {
 
     return '';
   }
+
+
+	public function sbfOcrIiif(string $miniocr) {
+		if (empty(trim($miniocr, " \t\n\r\0\x0B"))) {
+			return [];
+		}
+		try {
+			$internalErrors = libxml_use_internal_errors(TRUE);
+			libxml_clear_errors();
+			libxml_use_internal_errors($internalErrors);
+			$annotations = [];
+			$miniocr_xml = @simplexml_load_string($miniocr);
+			if (!$miniocr_xml) {
+				return [];
+			}
+			$i = 0;
+			foreach ($miniocr_xml->children() as $p) {
+				// Width & height are inside wh in p
+				$psizes = explode(" ", $p['wh']);
+				if (count($psizes) !== 2) {
+					return [];
+				}
+				$w = $psizes[0];
+				$h = $psizes[1];
+				$area = (int) $w * (int) $h;
+				foreach ($p->children() as $b) {
+					foreach ($b->children() as $l) {
+						foreach ($l->children() as $word) {
+							$text = (string) $word;
+							if (strlen(trim($text)) > 0) {
+								$i++;
+								$annotation = [];
+								$wcoos = explode(" ", $word['x']);
+								$left = (float) $wcoos[0] * 100;
+								$top = (float) $wcoos[1] * 100;
+								$width = (float) $wcoos[2] * 100;
+								$height = (float) $wcoos[3] * 100;
+								$text = (string) $word;
+								$annotation['x_percent'] = round($left,3);
+								$annotation['y_percent'] = round($top, 3);
+								$annotation['w_percent'] = round($width, 3);
+								$annotation['h_percent'] = round($height, 3);
+								$left = ($left / 100)  * $w;
+								$top = ($top / 100)  * $h;
+								$width = ($width/ 100) * $w;
+								$height = ($height/100) * $h;
+								$annotation['x'] = round($left,0);
+								$annotation['y'] = round($top,0);
+								$annotation['w'] = round($width, 0);
+								$annotation['h'] = round($height, 0);
+								$annotation['coverage_percent'] = round((($height * $width) * 100 ) / $area, 3) ;
+								$annotation['body'] = $text;
+								$annotations['annotations'][] = $annotation;
+							}
+						}
+					}
+				}
+				$annotations['w'] = $w;
+				$annotations['h'] = $h;
+			}
+			return $annotations;
+
+
+			return $ocr;
+		}
+		catch (\Exception $exception) {
+			return [];
+		}
+
+		return [];
+	}
 
   /**
    * Overrides drupal_escape().
