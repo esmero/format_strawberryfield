@@ -53,11 +53,20 @@
               // Use the "truthy" value of the disable_mouse_zoom setting to determine if we should disable scroll wheel zoom
                 $scrollWheelZoom = !(!!drupalSettings.format_strawberryfield.leaflet[element_id]['disable_mouse_zoom']);
             }
+            var $minzoom = 0;
+            var $maxzoom = 10;
+
+            if (drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] === 0) {
+              $minzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'];
+            }
+            if (drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] === 0) {
+              $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'];
+            }
 
             // initialize the map
             var map = L.map(
               element_id,
-              {scrollWheelZoom: $scrollWheelZoom}
+              {scrollWheelZoom: $scrollWheelZoom, maxZoom: $maxzoom}
             ).setView([40.1, -100], $initialzoom);
             // Use current's user lat/long
             // Does not work without HTTPS
@@ -68,8 +77,13 @@
               chunkedLoading: true,
               maxClusterRadius: 80
             });
-
-
+            // We add the empty cluster here.
+            map.addLayer(markers);
+            // Make sure we delegate the mouseover to the cluster too so it triggers
+            // the internal clustering
+            markers.on('mouseover', function (a) {
+              a.layer.openPopup();
+            });
 
             var geojsonLayer = L.geoJson.ajax(drupalSettings.format_strawberryfield.leaflet[element_id]['geojsonurl'],{
               onEachFeature: onEachFeature,
@@ -106,8 +120,9 @@
             // we need to make sure we don't keep adding the markers (clusters) over and over.
             geojsonLayer.on('data:loaded', function () {
               if (!cluster_added) {
+                // Clear any existing cluster info
+                markers.clearLayers();
                 markers.addLayer(geojsonLayer);
-                map.addLayer(markers);
                 if (geojsonLayer.getBounds().isValid()) {
                   var bounds = geojsonLayer.getBounds();
                   if (geojsonLayer.getLayers().length === 1
@@ -123,7 +138,6 @@
               }
             });
 
-
             // The tilemap url in /{z}/{x}/{y}.png format. Can have a key after a ? if provided by the user.
             // Defaults, should never be needed, in case wants to get around of restricted forms?
             // See https://operations.osmfoundation.org/policies/tiles/ and consider contributing if you
@@ -133,20 +147,12 @@
               url:'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
               attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
             }
-            var $minzoom = 0;
-            var $maxzoom = 10;
 
             if (drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_url']) {
               $tilemap.url = drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_url'];
               $tilemap.attribution = drupalSettings.format_strawberryfield.leaflet[element_id]['tilemap_attribution'];
             }
 
-            if (drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'] === 0) {
-              $minzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['minzoom'];
-            }
-            if (drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] || drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'] === 0) {
-              $maxzoom = drupalSettings.format_strawberryfield.leaflet[element_id]['maxzoom'];
-            }
 
             // load a tile layer
             L.tileLayer($tilemap.url,
@@ -205,9 +211,6 @@
               });
             };
 
-            //@TODO add an extra geojsons key with every other one so people can select the others.
-            // load a tile layer
-            geojsonLayer.addTo(map);
             console.log('initializing leaflet 1.9.4')
             console.log('initializing \'sbf:ado:change\' event listener on ADO changes');
             document.addEventListener('sbf:ado:change', (e) => {
