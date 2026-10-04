@@ -1,10 +1,22 @@
-/**
- * Image analysis worker.
- *
- * @type {string}
- */
+// Create Worker with importing OpenCV library.
+// eslint-disable-next-line no-undef
+importScripts('opencv.js', 'https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js');
+log('Importing openCV');
 
-var opencv;
+
+// 2. Await the promise returned by the cv object/module initialization
+let cvPromise = (async () => {
+  if (typeof cv === 'function' || typeof cv === 'object' && cv instanceof Promise) {
+    self.cv = await cv;
+  } else if (typeof cv !== 'undefined' && cv.then) {
+    self.cv = await cv;
+  }
+  // Now cv is fully initialized and ready to use
+  console.log('OpenCV is ready in worker');
+})();
+
+
+
 
 // Take vendor prefixes in account.
 self.postMessage = self.webkitPostMessage || self.postMessage;
@@ -58,7 +70,7 @@ function log(msg) {
 /*************************************************************************
  *
  * Basic concept for this is from the official OpenCV docs:
- * https://docs.opencv.org/3.4/dc/dcf/tutorial_js_contour_features.html
+ * https://docs.self.cv.org/3.4/dc/dcf/tutorial_js_contour_features.html
  *
  *************************************************************************/
 
@@ -89,7 +101,7 @@ const chunkObjects = (array, size) => {
 }
 
 /**
- * Helper function to create files for OpenCV.
+ * Helper function to create files for self.cv.
  *
  * @param {string} in_memory_path
  *   Path to file that will be stored in memory.
@@ -113,7 +125,7 @@ function createFileFromUrl(in_memory_path, url, callback) {
       if (request.status === 200) {
         // eslint-disable-next-line no-undef
         let data = new Uint8Array(request.response);
-        opencv.FS_createDataFile('/', in_memory_path, data, true, false, false);
+        self.cv.FS_createDataFile('/', in_memory_path, data, true, false, false);
         callback();
       }
       else {
@@ -134,7 +146,7 @@ function createFileFromUrl(in_memory_path, url, callback) {
  */
 function loadModel() {
   'use strict';
-  if (typeof opencv === "undefined" || opencv == null) {
+  if (typeof self.cv === "undefined" || self.cv == null) {
     log('CV is not ready yet');
     return;
   }
@@ -142,12 +154,12 @@ function loadModel() {
   let faceCascadeFile = 'haarcascade_frontalface_default.xml'; // path to xml
   let eyesCascadeFile = 'haarcascade_eye.xml'; // path to xmlhaarcascade_eye.xml
   createFileFromUrl(faceCascadeFile, faceCascadeFile, () => {
-    faceCascade = new opencv.CascadeClassifier();
+    faceCascade = new self.cv.CascadeClassifier();
     faceCascade.load(faceCascadeFile); // in the callback, load the cascade from file
   });
 
   createFileFromUrl(eyesCascadeFile, eyesCascadeFile, () => {
-    eyeCascade = new opencv.CascadeClassifier();
+    eyeCascade = new self.cv.CascadeClassifier();
     eyeCascade.load(eyesCascadeFile); // in the callback, load the cascade from file
   });
 
@@ -168,7 +180,7 @@ function loadModel() {
  */
 function executeFace(imageData, annotorious_id, coordinates) {
   'use strict';
-  if (typeof opencv === "undefined" || opencv == null) {
+  if (typeof self.cv === "undefined" || self.cv == null) {
     log('CV is not ready yet');
     return;
   }
@@ -181,33 +193,33 @@ function executeFace(imageData, annotorious_id, coordinates) {
     "faces" : [],
   }
   // Prepare image data for usage in Open CV library.
-  let matImage = opencv.matFromImageData(imageData);
+  let matImage = self.cv.matFromImageData(imageData);
 
   // FOR COLOR
-  //var frameBGR = new opencv.Mat(imageData.height, imageData.width, opencv.CV_8UC3);
-  //opencv.cvtColor(matImage, frameBGR, opencv.COLOR_RGBA2BGR);
+  //var frameBGR = new self.cv.Mat(imageData.height, imageData.width, self.cv.CV_8UC3);
+  //self.cv.cvtColor(matImage, frameBGR, self.cv.COLOR_RGBA2BGR);
 
 
-  let gray = new opencv.Mat();
-  opencv.cvtColor(matImage, gray, opencv.COLOR_RGBA2GRAY, 0);
-  let faces = new opencv.RectVector();
-  let eyes = new opencv.RectVector();
+  let gray = new self.cv.Mat();
+  self.cv.cvtColor(matImage, gray, self.cv.COLOR_RGBA2GRAY, 0);
+  let faces = new self.cv.RectVector();
+  let eyes = new self.cv.RectVector();
 
  // detect faces
-  let msize = new opencv.Size(0, 0);
+  let msize = new self.cv.Size(0, 0);
   faceCascade.detectMultiScale(gray, faces, 1.05, 3, 0, msize, msize);
   for (let i = 0; i < faces.size(); ++i) {
     let roiGray = gray.roi(faces.get(i));
     let roiSrc = matImage.roi(faces.get(i));
-    let point1 = new opencv.Point(faces.get(i).x, faces.get(i).y);
-    let point2 = new opencv.Point(faces.get(i).x + faces.get(i).width,
+    let point1 = new self.cv.Point(faces.get(i).x, faces.get(i).y);
+    let point2 = new self.cv.Point(faces.get(i).x + faces.get(i).width,
       faces.get(i).y + faces.get(i).height);
     classifications.faces[i] = [[point1.x, point1.y], [point2.x,point1.y] , [point2.x,point2.y] ,[point1.x,point2.y]]
     // detect eyes in face ROI
     eyeCascade.detectMultiScale(roiGray, eyes);
     for (let j = 0; j < eyes.size(); ++j) {
-      let point1 = new opencv.Point(eyes.get(j).x, eyes.get(j).y);
-      let point2 = new opencv.Point(eyes.get(j).x + eyes.get(j).width,
+      let point1 = new self.cv.Point(eyes.get(j).x, eyes.get(j).y);
+      let point2 = new self.cv.Point(eyes.get(j).x + eyes.get(j).width,
         eyes.get(j).y + eyes.get(i).height);
       classifications.eyes[i] = [[point1.x, point1.y], [point2.x,point1.y] , [point2.x,point2.y] ,[point1.x,point2.y]]
     }
@@ -238,7 +250,7 @@ function executeFace(imageData, annotorious_id, coordinates) {
  */
 function executeContourAdapt(imageData, annotorious_id, coordinates) {
   'use strict';
-  if (typeof opencv === "undefined" || opencv == null) {
+  if (typeof self.cv === "undefined" || self.cv == null) {
     log('CV is not ready yet');
     return;
   }
@@ -247,42 +259,42 @@ function executeContourAdapt(imageData, annotorious_id, coordinates) {
     "contour" : [],
   }
   // Prepare image data for usage in Open CV library.
-  let matImage = opencv.matFromImageData(imageData);
+  let matImage = self.cv.matFromImageData(imageData);
 
-  const dst = opencv.Mat.zeros(matImage.rows, matImage.cols,opencv.CV_8UC3);
+  const dst = self.cv.Mat.zeros(matImage.rows, matImage.cols,self.cv.CV_8UC3);
 
   // Convert to grayscale & threshold
-  opencv.cvtColor(matImage, matImage, opencv.COLOR_RGB2GRAY, 0);
-  opencv.medianBlur(matImage, matImage, 25);
-  opencv.adaptiveThreshold(matImage, matImage, 255, opencv.ADAPTIVE_THRESH_GAUSSIAN_C, opencv.THRESH_BINARY_INV, 11, 2);
+  self.cv.cvtColor(matImage, matImage, self.cv.COLOR_RGB2GRAY, 0);
+  self.cv.medianBlur(matImage, matImage, 25);
+  self.cv.adaptiveThreshold(matImage, matImage, 255, self.cv.ADAPTIVE_THRESH_GAUSSIAN_C, self.cv.THRESH_BINARY_INV, 11, 2);
 
-  let kernel = opencv.getStructuringElement(opencv.MORPH_RECT, new opencv.Size(3,3));
+  let kernel = self.cv.getStructuringElement(self.cv.MORPH_RECT, new self.cv.Size(3,3));
   //Close
-  opencv.morphologyEx(matImage, matImage, opencv.MORPH_CLOSE, kernel);
+  self.cv.morphologyEx(matImage, matImage, self.cv.MORPH_CLOSE, kernel);
   // Dilate
-  opencv.dilate(matImage, matImage, kernel, new opencv.Point(-1, -1), 2 ,opencv.BORDER_CONSTANT, opencv.morphologyDefaultBorderValue());
+  self.cv.dilate(matImage, matImage, kernel, new self.cv.Point(-1, -1), 2 ,self.cv.BORDER_CONSTANT, self.cv.morphologyDefaultBorderValue());
   // Find contours
-  const contours = new opencv.MatVector();
-  const hierarchy = new opencv.Mat();
-  opencv.findContours(matImage, contours, hierarchy, opencv.RETR_EXTERNAL, opencv.CHAIN_APPROX_SIMPLE);
+  const contours = new self.cv.MatVector();
+  const hierarchy = new self.cv.Mat();
+  self.cv.findContours(matImage, contours, hierarchy, self.cv.RETR_EXTERNAL, self.cv.CHAIN_APPROX_SIMPLE);
 
   let largestAreaPolygon = { area: 0 };
 
   for (let i = 0; i < contours.size(); ++i) {
-    const polygon = new opencv.Mat();
+    const polygon = new self.cv.Mat();
     const contour = contours.get(i);
 
-    opencv.approxPolyDP(contour, polygon, 3, true);
+    self.cv.approxPolyDP(contour, polygon, 3, true);
 
     // Compute contour areas
-    const area = opencv.contourArea(polygon);
+    const area = self.cv.contourArea(polygon);
     if (area > largestAreaPolygon.area)
       largestAreaPolygon = { area, polygon };
 
     contour.delete();
   }
 
-  const polygons = new opencv.MatVector();
+  const polygons = new self.cv.MatVector();
   polygons.push_back(largestAreaPolygon.polygon);
 
   matImage.delete();
@@ -320,7 +332,7 @@ function executeContourAdapt(imageData, annotorious_id, coordinates) {
  */
 function executeContour(imageData, annotorious_id, coordinates) {
   'use strict';
-  if (typeof opencv === "undefined" || opencv == null) {
+  if (typeof self.cv === "undefined" || self.cv == null) {
     log('CV is not ready yet');
     return;
   }
@@ -329,36 +341,36 @@ function executeContour(imageData, annotorious_id, coordinates) {
     "contour" : [],
   }
   // Prepare image data for usage in Open CV library.
-  let matImage = opencv.matFromImageData(imageData);
+  let matImage = self.cv.matFromImageData(imageData);
 
-  const dst = opencv.Mat.zeros(matImage.rows, matImage.cols,opencv.CV_8UC3);
+  const dst = self.cv.Mat.zeros(matImage.rows, matImage.cols,self.cv.CV_8UC3);
 
   // Convert to grayscale & threshold
-  opencv.cvtColor(matImage, matImage, opencv.COLOR_RGB2GRAY, 0);
-  opencv.threshold(matImage, matImage, 200, 255, opencv.THRESH_BINARY + opencv.THRESH_OTSU);
+  self.cv.cvtColor(matImage, matImage, self.cv.COLOR_RGB2GRAY, 0);
+  self.cv.threshold(matImage, matImage, 200, 255, self.cv.THRESH_BINARY + self.cv.THRESH_OTSU);
   // Find contours
-  const contours = new opencv.MatVector();
-  const hierarchy = new opencv.Mat();
+  const contours = new self.cv.MatVector();
+  const hierarchy = new self.cv.Mat();
 
-  opencv.findContours(matImage, contours, hierarchy, opencv.RETR_CCOMP, opencv.CHAIN_APPROX_NONE); // CV_RETR_EXTERNAL
+  self.cv.findContours(matImage, contours, hierarchy, self.cv.RETR_CCOMP, self.cv.CHAIN_APPROX_NONE); // CV_RETR_EXTERNAL
 
   let largestAreaPolygon = { area: 0 };
 
   for (let i = 0; i < contours.size(); ++i) {
-    const polygon = new opencv.Mat();
+    const polygon = new self.cv.Mat();
     const contour = contours.get(i);
 
-    opencv.approxPolyDP(contour, polygon, 3, true);
+    self.cv.approxPolyDP(contour, polygon, 3, true);
 
     // Compute contour areas
-    const area = opencv.contourArea(polygon);
+    const area = self.cv.contourArea(polygon);
     if (area > largestAreaPolygon.area)
       largestAreaPolygon = { area, polygon };
 
     contour.delete();
   }
 
-  const polygons = new opencv.MatVector();
+  const polygons = new self.cv.MatVector();
   polygons.push_back(largestAreaPolygon.polygon);
 
   matImage.delete();
@@ -387,8 +399,9 @@ function executeContour(imageData, annotorious_id, coordinates) {
  * @param {object} event
  *   Message event for Worker.
  */
-self.onmessage = function (event) {
+self.onmessage = async function (event) {
   'use strict';
+  await cvPromise;
 
   switch (event.data.type) {
     case 'load':
@@ -407,23 +420,4 @@ self.onmessage = function (event) {
       break;
   }
 };
-log('Initialization started');
-// Create Worker with importing OpenCV library.
-// eslint-disable-next-line no-undef
-importScripts('https://docs.opencv.org/4.5.0/opencv.js', 'https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js');
-log('Importing openCV');
-// cv() - will be provided from OpenCV library.
-// eslint-disable-next-line no-undef
-cv()
-  .then(function (cv_) {
-    'use strict';
-    cv_['onRuntimeInitialized']=()=> {
-      log('CV onRuntimeInitialized is ready');
-    };
-    opencv = cv_;
-    log('CV Library is ready');
-    // Post worker message
-    self.postMessage({
-      type: 'init'
-    });
-  });
+

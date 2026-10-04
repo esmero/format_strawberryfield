@@ -488,7 +488,7 @@
         });
 
         // Turn coords to W3C WebAnnotation
-        let annotation = toAnnotation(coords, 'OpenCV Countour');
+        let annotation = toAnnotation(coords, 'OpenCV Contour');
 
         // Add the new annotation in Annotorious and select it
         setTimeout(function() {
@@ -660,7 +660,6 @@
               console.log('Webannotations Loaded form Source');
               annotorious[this.element_id].setAnnotations(pagedata);
               annotorious_annotations[this.element_id] = [pagedata];
-              console.log(annotorious_annotations[this.element_id]);
             }
           });
         }
@@ -908,7 +907,6 @@
             else {
               // Reads from local copy
               console.log('Reading annotations for sequence ' + data.page + ' from cached data');
-              console.log()
               annotorious[element_id].setAnnotations(annotorious_annotations[element_id][data.page]);
             }
           });
@@ -977,10 +975,6 @@
 
           // Attach handlers to listen to events
           annotorious[element_id].on('updateAnnotation', function(a,previous) {
-            console.log('new');
-            console.log(a);
-            console.log('prev');
-            console.log(previous);
             jQuery.ajax({
               url: '/do/'+ groupssettings[group].nodeuuid + '/webannon/put',
               type: "PUT",
@@ -992,7 +986,6 @@
               },
               success:  function(data){
                 console.log('Updated');
-                console.log(data);
               }
             });
             console.log(annotorious[element_id].getAnnotations());
@@ -1011,7 +1004,6 @@
               },
               success:  function(data){
                 console.log('Deleted');
-                console.log(data);
               }
             });
             console.log(annotorious[element_id].getAnnotations());

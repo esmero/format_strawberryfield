@@ -33,14 +33,14 @@ popper:
 
 iiif_openseadragon:
   remote: http://openseadragon.github.io
-  version: 2.4.2
+  version: 6.1.1
   license:
     name: NewBSD
     url: http://openseadragon.github.io/license/
     gpl-compatible: false
   header: true
   js:
-    https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/openseadragon@6.1.1/build/openseadragon/openseadragon.min.js: { external: true, minified: true, preprocess: false}
 
 iiif_openseadragon_strawberry:
   version: 1.2
@@ -422,21 +422,21 @@ annotoriousopenseadragon:
     url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
     gpl-compatible: true
   js:
-    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
+    https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.7.17/dist/openseadragon-annotorious.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-toolbar@0.1.1/dist/annotorious-toolbar.min.js: { external: true, minified: true, preprocess: false}
     https://cdn.jsdelivr.net/npm/@recogito/annotorious-better-polygon@0.2.0/dist/annotorious-better-polygon.js: { external: true, minified: true, preprocess: false}
   css:
     component:
-      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.5.16/dist/annotorious.min.css: { external: true }
+      https://cdn.jsdelivr.net/npm/@recogito/annotorious-openseadragon@2.7.17/dist/annotorious.min.css: { external: true }
 
 opencv:
-  version: 4.5.5
+  version: 5.0.0
   license:
     name: Apache 2
-    url: https://github.com/opencv/opencv/blob/master/LICENSE
+    url: https://github.com/opencv/opencv/blob/5.x/LICENSE
     gpl-compatible: true
   js:
-    https://docs.opencv.org/4.5.0/opencv.js: { external: true, minified: true, preprocess: false}
+    js/worker/opencv.js: { external: false, minified: false, preprocess: false}
 
 w3cWebAnnotations_strawberry:
   version: 1.2
