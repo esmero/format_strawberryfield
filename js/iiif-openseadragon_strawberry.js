@@ -488,7 +488,7 @@
         });
 
         // Turn coords to W3C WebAnnotation
-        let annotation = toAnnotation(coords, 'OpenCV Countour');
+        let annotation = toAnnotation(coords, 'OpenCV Contour');
 
         // Add the new annotation in Annotorious and select it
         setTimeout(function() {

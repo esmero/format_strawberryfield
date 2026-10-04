@@ -1,3 +1,24 @@
+log('Initialization started');
+// Create Worker with importing OpenCV library.
+// eslint-disable-next-line no-undef
+importScripts('https://cdn.jsdelivr.net/npm/opencv@7.0.0/lib/opencv.min.js', 'https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js');
+log('Importing openCV');
+// cv() - will be provided from OpenCV library.
+// eslint-disable-next-line no-undef
+cv()
+  .then(function (cv_) {
+    'use strict';
+    cv_['onRuntimeInitialized']=()=> {
+      log('CV onRuntimeInitialized is ready');
+    };
+    opencv = cv_;
+    log('CV Library is ready');
+    // Post worker message
+    self.postMessage({
+      type: 'init'
+    });
+  });
+
 /**
  * Image analysis worker.
  *
@@ -407,23 +428,4 @@ self.onmessage = function (event) {
       break;
   }
 };
-log('Initialization started');
-// Create Worker with importing OpenCV library.
-// eslint-disable-next-line no-undef
-importScripts('https://docs.opencv.org/4.5.0/opencv.js', 'https://cdn.jsdelivr.net/npm/simplify-js@1.2.4/simplify.min.js');
-log('Importing openCV');
-// cv() - will be provided from OpenCV library.
-// eslint-disable-next-line no-undef
-cv()
-  .then(function (cv_) {
-    'use strict';
-    cv_['onRuntimeInitialized']=()=> {
-      log('CV onRuntimeInitialized is ready');
-    };
-    opencv = cv_;
-    log('CV Library is ready');
-    // Post worker message
-    self.postMessage({
-      type: 'init'
-    });
-  });
+
