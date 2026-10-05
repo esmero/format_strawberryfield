@@ -18,11 +18,13 @@
             $dateRangeFacets.forEach((widget) => {
                 const $widget = widget;
                 const slider = widget.querySelector(".sbf-date-facet-slider");
-                const svg = context.querySelector("#"+slider.id + "-chart");
-                if (slider_settings?.chart_data && svg) {
-                  Drupal.facets.addChart(svg, slider_settings)
+                if (slider) {
+                  const svg = context.querySelector("#" + slider.id + "-chart");
+                  if (slider_settings?.chart_data && svg) {
+                    Drupal.facets.addChart(svg, slider_settings)
+                  }
+                  Drupal.facets.addSlider(widget, slider_settings);
                 }
-                Drupal.facets.addSlider(widget, slider_settings);
               }
             );
           }
@@ -111,7 +113,7 @@
             slider.dataset.max = max;
           }
           else {
-            // Only autosumbit if a single slider.
+            // Only auto submit if a single slider.
             window.location.href = slider_settings.urls['f_' + ui.value];
           }
         }
@@ -150,7 +152,7 @@
       $("input.facet-date-range-submit", widget).on("click", changeHandler);
       $("input.facet-date-range-submit", widget).on("keypress", function (e) {
         $(this).off("change blur");
-        $(this).on("blur", changeHandler);
+        $(this).on("change", changeHandler);
         if (e.keyCode === 13) {
           changeHandler();
         }

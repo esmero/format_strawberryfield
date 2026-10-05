@@ -596,10 +596,13 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
    * #pre_render callback for enriching this block.
    */
   public static function preRender($build) {
-    // The invoker/rendered moves #attributes from 'content' back into the top structure
-    if (isset($build['#attributes']['class']) && in_array('block-modalformviews-ajax', $build['#attributes']['class'])) {
+    // The invoker NO LONGER moves #attributes from 'content' back into the top structure in Drupal 11.4+
+    $needs_enriching = ((isset($build['#attributes']['class']) && in_array('block-modalformviews-ajax', $build['#attributes']['class'])) || (isset($build['content']['#attributes']['class']) && in_array('block-modalformviews-ajax', $build['content']['#attributes']['class'])));
+
+    if ($needs_enriching) {
       $build['#attributes']['class'][] = 'js-modal-form-views-block-id-' . $build['#id'];
       $build['#attributes']['data-drupal-modalblock-selector'] = 'js-modal-form-views-block-id-' . $build['#id'];
+      // Without block_id we can't update via the AJAX Controller
       $build['content']['#attached']['drupalSettings']['format_strawberryfield_views']['modal_exposed_form_block'][$build['content']['#id']]['block_id'] = $build['#id'];
     }
     return $build;

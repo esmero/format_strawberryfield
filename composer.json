@@ -26,6 +26,6 @@
         "seboettg/citeproc-php": "dev-master"
     },
     "conflict": {
-        "drupal/core":"<10.3"
+        "drupal/core":"<11.3"
     }
 }
