@@ -295,6 +295,7 @@ class DateSliderWidget extends WidgetPluginBase {
 
 
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
+    $build['#attached']['library'][] = 'core/drupal.states';
 
    if ($this->getConfiguration()['show_histogram'] ?? NULL && !empty($chart_labels) && !empty($chart_data)) {
      // For the chart.
