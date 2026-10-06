@@ -51,10 +51,10 @@ class DateRangeSliderWidget extends DateSliderWidget {
       $build['#items']['manual_input']['select_input'] = [
           '#type' => 'checkbox',
           '#id' => $id . '-manual-input-fulldate',
-          '#title' => t('Full Date entry'),
+          '#title' => t('Full Date entry (YYYY-MM-DD)'),
           '#default_value' => FALSE,
           '#attributes' => [
-          'data-date-entry-selector' => $id . '-manual-input-fulldate'
+          'data-date-entry-selector' => $facet->id() . '-manual-input-fulldate'
         ]
       ];
     }
@@ -145,22 +145,22 @@ class DateRangeSliderWidget extends DateSliderWidget {
     if (isset($build['#items']['manual_input']['manual_input_full']) &&  ($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE)) {
       $build['#items']['manual_input']['manual_input_full']['min_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_full']['max_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['min_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['max_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
     }
@@ -177,7 +177,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
 
     $facet_settings['range'] = TRUE;
     unset($facet_settings['value']);
-
+    $build['#attached']['library'][] = 'core/drupal.states';
     return $build;
   }
 
