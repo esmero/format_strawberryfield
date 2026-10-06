@@ -29,10 +29,11 @@ slider:
   dependencies:
     - core/drupal
     - core/drupalSettings
+    - facets/widget
     - format_strawberryfield_facets/jquery.ui.slider.pips
     - format_strawberryfield_facets/charts
+    - format_strawberryfield_facets/cleave
     - jquery_ui_touch_punch/touch-punch
-    - facets/widget
     - core/once
 
 date-range:
@@ -42,6 +43,15 @@ date-range:
   dependencies:
     - core/jquery
     - core/drupal
+    - facets/widget
     - core/drupalSettings
     - core/once
-    - facets/widget
+
+cleave:
+  js:
+    https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js : { minified: true, attributes: { defer: true } }
+  version: v1.6.0
+  license:
+    name: Apache 2.0
+    url: https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/LICENSE
+    gpl-compatible: true

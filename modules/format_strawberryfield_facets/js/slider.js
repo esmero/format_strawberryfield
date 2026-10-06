@@ -16,7 +16,6 @@
           const $dateRangeFacets = once('js-facets-sbf-daterange-slider', '[data-drupal-facet-id="'+facet+'"]', context);
           if ($dateRangeFacets.length > 0) {
             $dateRangeFacets.forEach((widget) => {
-                const $widget = widget;
                 const slider = widget.querySelector(".sbf-date-facet-slider");
                 if (slider) {
                   const svg = context.querySelector("#" + slider.id + "-chart");
@@ -119,7 +118,24 @@
         }
       };
 
-
+      // Convert the normal date into Cleave.
+      const $date_inputs = widget.querySelectorAll('input[type="date"]');
+      const $cleaveInstances = new WeakMap();
+      $date_inputs.forEach((input_element) => {
+        let min = input_element.min;
+        let max = input_element.max;
+        // datePattern needs to match the pre-set value though
+        // Or we can flip the value here?
+        input_element.type = 'text';
+        const instance = new Cleave(input_element, {
+          date: true,
+          datePattern: ['Y', 'm', 'd'],
+          delimiter: '-',
+          dateMax: max,
+          dateMin: min
+        });
+        $cleaveInstances.set(input_element, instance);
+      });
 
       function toTimestamp(year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0) {
         // Date.parse works only on safari for BCE!
@@ -144,8 +160,22 @@
 
       // Click on link will call Facets JS API on widget element.
       var changeHandler = function (e) {
-        var $widget = $(widget);
-        $widget.trigger('facets_filter', [autoSubmit(widget)]);
+        // New to 2.2.0. We use our vanilla EventListener
+        // Troubles with JQUERY 4.0.0 trigger
+        // @See Drupal.AjaxFacetsView.facets_filter
+        let $widget = $(e.target).closest('.js-facets-widget');
+        let $url = autoSubmit($widget[0]);
+        if ($widget) {
+          // trigger the default, in case we are not in AJAX mode.
+          // the facets_filter_sbf won't exist so will be OK
+          // The opposite will be true under ajax.
+          $widget.trigger('facets_filter.facets', [$url]);
+          const facetsFilterventSbf = new CustomEvent('facets_filter_sbf', {
+            bubbles: true,
+            detail: [$url]
+          });
+          $widget[0].dispatchEvent(facetsFilterventSbf);
+        }
       };
 
       // Add handler for change on range inputs.
@@ -191,7 +221,8 @@
             max_timestamp =  toTimestamp(max, 12, 31, 0, 0, 0, 0);
           }
         }
-        else if (e.target.type == "date") {
+        else if (e.target.type == "text") {
+          // get the cleave instance
           if (e.target.dataset?.type == "date-range-min") {
             let date_from_input = new Date(e.target.value);
             if (date_from_input instanceof Date) {
@@ -220,6 +251,7 @@
         }
       };
       $("input.facet-date-range.form-control", widget).on("change", changeHandlerInput);
+
     };
 
-  })(jQuery, Chart);
+  })(jQuery, Chart, Cleave);
