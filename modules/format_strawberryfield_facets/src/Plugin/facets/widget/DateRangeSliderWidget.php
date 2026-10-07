@@ -58,6 +58,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
         ]
       ];
     }
+    $restrict_input_to_real = $this->getConfiguration()['restrict_frequency_to_range'] ?? FALSE;
 
     if ($this->getConfiguration()['allow_full_entry'] && !$is_bce) {
       $build['#items']['manual_input']['manual_input_full'] = [
@@ -66,7 +67,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#type' => 'date',
           '#title' => $this->t('Date from'),
           '#id' => $id . '-min',
-          '#value' => $facet_settings['real_minmax'][0],
+          '#value' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
           '#date_date_element' => 'datetime',
           '#date_date_format' => 'mm-dd-Y',
           '#date_date_element' => 'date',
@@ -77,8 +78,8 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'class' => ['facet-date-range'],
             'id' => $id . '-min',
             'name' => $facet->id() . '_min',
-            'min' => $facet_settings['real_minmax'][0],
-            'max' => $facet_settings['real_minmax'][1],
+            'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
+            'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-min',
           ],
         ],
@@ -86,7 +87,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#type' => 'date',
           '#title' => $this->t('Date to'),
           '#id' => $id . '-max',
-          '#value' => $facet_settings['real_minmax'][1],
+          '#value' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
           '#date_date_element' => 'datetime',
           '#date_date_format' => 'mm-dd-Y',
           '#date_date_element' => 'date',
@@ -97,8 +98,8 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'class' => ['facet-date-range'],
             'id' => $id . '-max',
             'name' => $facet->id() . '_max',
-            'min' => $facet_settings['real_minmax'][0],
-            'max' => $facet_settings['real_minmax'][1],
+            'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
+            'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-max',
           ],
         ]];
