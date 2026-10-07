@@ -16,6 +16,7 @@
           const $dateRangeFacets = once('js-facets-sbf-daterange-slider', '[data-drupal-facet-id="'+facet+'"]', context);
           if ($dateRangeFacets.length > 0) {
             $dateRangeFacets.forEach((widget) => {
+                const slider = widget.querySelector(".sbf-date-facet-slider");
                 if (slider) {
                   const svg = context.querySelector("#" + slider.id + "-chart");
                   if (slider_settings?.chart_data && svg) {
