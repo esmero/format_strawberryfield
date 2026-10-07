@@ -178,15 +178,8 @@
         }
       };
 
-      // Add handler for change on range inputs.
       $("input.facet-date-range-submit", widget).on("click", changeHandler);
-      $("input.facet-date-range-submit", widget).on("keypress", function (e) {
-        $(this).off("change blur");
-        $(this).on("change", changeHandler);
-        if (e.keyCode === 13) {
-          changeHandler();
-        }
-      });
+
       $.extend(defaults, slider_settings);
 
       var $slider = $('.sbf-date-facet-slider', widget).slider(defaults)
@@ -208,6 +201,7 @@
         let ui_min = $slider.slider('option').values[0];
         let ui_max = $slider.slider('option').values[1];
         if  (!e.target.checkValidity()) {
+          e.target.setCustomValidity("The entered date is not in range.");
           e.target.reportValidity()
           return;
         }
@@ -242,6 +236,7 @@
           }
         }
         if ($slider.slider('option').min > min || $slider.slider('option').max < max) {
+          e.target.setCustomValidity("The entered date is not in range.");
           e.target.reportValidity()
         }
         else {
@@ -250,7 +245,15 @@
           slider.dataset.max = max_timestamp;
         }
       };
-      $("input.facet-date-range.form-control", widget).on("change", changeHandlerInput);
+      $('input[type="number"].facet-date-range.form-control', widget).on("change", changeHandlerInput);
+      $('input[type="text"].facet-date-range.form-control', widget).on("blur", changeHandlerInput);
+      $('input.facet-date-range.form-control', widget).on("keydown", function(e) {
+        if (e.key === "Enter") {
+          $(e.target).trigger('blur');
+          e.preventDefault();
+          $("input.facet-date-range-submit", widget).trigger('click');
+        }
+      });
 
     };
 
