@@ -51,7 +51,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
       $build['#items']['manual_input']['select_input'] = [
           '#type' => 'checkbox',
           '#id' => $id . '-manual-input-fulldate',
-          '#title' => t('Full Date entry'),
+          '#title' => t('Full Date entry (YYYY-MM-DD)'),
           '#default_value' => FALSE,
           '#attributes' => [
           'data-date-entry-selector' => $id . '-manual-input-fulldate'
