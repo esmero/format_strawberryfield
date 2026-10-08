@@ -141,10 +141,10 @@
         // Date.parse works only on safari for BCE!
         // New approach. Date Constructor
         let date_from_parts = new Date();
-        date_from_parts.setFullYear(parseInt(year));
-        date_from_parts.setMonth(parseInt(month)-1);
-        date_from_parts.setDate(parseInt(day));
-        date_from_parts.setHours(hour,minute,second,millisecond);
+        date_from_parts.setUTCFullYear(parseInt(year));
+        date_from_parts.setUTCMonth(parseInt(month));
+        date_from_parts.setUTCDate(parseInt(day));
+        date_from_parts.setUTCHours(hour,minute,second,millisecond);
         const datum = date_from_parts.getTime();
         if (Number.isNaN(datum)) {
           return Math.round(Date.now() / 1000);
@@ -209,11 +209,11 @@
           }
           if (e.target.dataset?.type == "date-range-min") {
             min = ui_min = parseInt(e.target.value);
-            min_timestamp =  toTimestamp(min, 1, 1, 0, 0);
+            min_timestamp =  toTimestamp(min, 0, 1, 0, 0);
           }
           else {
             max = ui_max = parseInt(e.target.value);
-            max_timestamp =  toTimestamp(max, 12, 31, 0, 0, 0, 0);
+            max_timestamp =  toTimestamp(max, 11, 31, 0, 0, 0, 0);
           }
         }
         else if (e.target.type == "text") {
