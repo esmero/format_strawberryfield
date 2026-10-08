@@ -206,16 +206,16 @@
           let date_from_input = new Date(e.target.value);
           if (date_from_input instanceof Date) {
             min = ui_min = date_from_input.getUTCFullYear();
-            let month = date_from_input.getMonth();
-            let day = date_from_input.getDay();
+            let month = date_from_input.getUTCMonth();
+            let day = date_from_input.getUTCDay();
             min_timestamp = toTimestamp(min, month, day);
           }
         } else {
           let date_from_input = new Date(e.target.value);
           if (date_from_input instanceof Date) {
             max = ui_max = date_from_input.getUTCFullYear();
-            let month = date_from_input.getMonth();
-            let day = date_from_input.getDay();
+            let month = date_from_input.getUTCMonth();
+            let day = date_from_input.getUTCDay();
             max_timestamp = toTimestamp(max, month, day, 0, 0, 0, 0);
           }
         }
