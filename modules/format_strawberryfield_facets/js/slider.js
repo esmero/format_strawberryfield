@@ -207,7 +207,7 @@
           if (date_from_input instanceof Date) {
             min = ui_min = date_from_input.getUTCFullYear();
             let month = date_from_input.getUTCMonth();
-            let day = date_from_input.getUTCDay();
+            let day = date_from_input.getUTCDate();
             min_timestamp = toTimestamp(min, month, day);
           }
         } else {
@@ -215,7 +215,7 @@
           if (date_from_input instanceof Date) {
             max = ui_max = date_from_input.getUTCFullYear();
             let month = date_from_input.getUTCMonth();
-            let day = date_from_input.getUTCDay();
+            let day = date_from_input.getUTCDate();
             max_timestamp = toTimestamp(max, month, day, 0, 0, 0, 0);
           }
         }
