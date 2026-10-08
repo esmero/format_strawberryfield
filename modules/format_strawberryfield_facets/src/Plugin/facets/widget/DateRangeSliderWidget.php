@@ -33,6 +33,12 @@ class DateRangeSliderWidget extends DateSliderWidget {
     $facet_settings = &$build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()];
     $is_bce = $facet_settings['real_minmax'][0] ?? 0;
     $is_bce = $is_bce < 0 ? TRUE : FALSE;
+    $timezone = new DateTimeZone($facet_settings['time_zone'] ?? 'UTC' );
+    $dateTime_for_timezone = new DateTime('now', $timezone);
+    $timezone_offset = $dateTime_for_timezone->format('Z');
+    $timezone_offset = (int) $timezone_offset * -1;
+
+
 
     // Generate unique IDs for form elements (AJAX-safe)
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id());
@@ -81,6 +87,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
             'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-min',
+            'data-tmzoffset' => $timezone_offset,
           ],
         ],
         'max_full' => [
@@ -101,6 +108,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
             'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-max',
+            'data-tmzoffset' => $timezone_offset,
           ],
         ]];
     }
