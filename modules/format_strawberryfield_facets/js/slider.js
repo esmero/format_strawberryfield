@@ -186,12 +186,12 @@
       let max = $slider.slider('option').max;
       let ui_min = $slider.slider('option').values[0];
       let ui_max = $slider.slider('option').values[1];
-      if  (!e.target.checkValidity()) {
-        e.target.setCustomValidity("The entered date is not in range.");
-        e.target.reportValidity()
-        return;
-      }
       if (e.target.type == "number") {
+        if (!e.target.checkValidity()) {
+          e.target.setCustomValidity("The entered year is not in range.");
+          e.target.reportValidity()
+          return;
+        }
         if (e.target.dataset?.type == "date-range-min") {
           min = ui_min = parseInt(e.target.value);
           min_timestamp =  toTimestamp(min, 1, 1, 0, 0);
@@ -205,17 +205,17 @@
         if (e.target.dataset?.type == "date-range-min") {
           let date_from_input = new Date(e.target.value);
           if (date_from_input instanceof Date) {
-            min = ui_min = date_from_input.getFullYear();
-            let month = date_from_input.getMonth();
-            let day = date_from_input.getDay();
+            min = ui_min = date_from_input.getUTCFullYear();
+            let month = date_from_input.getUTCMonth();
+            let day = date_from_input.getUTCDate();
             min_timestamp = toTimestamp(min, month, day);
           }
         } else {
           let date_from_input = new Date(e.target.value);
           if (date_from_input instanceof Date) {
-            max = ui_max = date_from_input.getFullYear();
-            let month = date_from_input.getMonth();
-            let day = date_from_input.getDay();
+            max = ui_max = date_from_input.getUTCFullYear();
+            let month = date_from_input.getUTCMonth();
+            let day = date_from_input.getUTCDate();
             max_timestamp = toTimestamp(max, month, day, 0, 0, 0, 0);
           }
         }
