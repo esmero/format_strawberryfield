@@ -124,8 +124,10 @@
             },
             submit: submit_settings
           };
-          let ajaxObject = new Drupal.ajax(element_settings);
-          ajaxObject.execute();
+
+          Drupal.ajax.instances[base] = new Drupal.ajax(element_settings);
+          Drupal.ajax.instances[base].execute();
+
         }
         catch(e) {
           console.log(e);
@@ -168,7 +170,7 @@
     }
   }
 
-  /* Overrides core/modules/views/js/ajax_view.js detach method bc it is buggy/unleads before needed
+  /* Overrides core/modules/views/js/ajax_view.js detach method bc it is buggy/unloads before needed
  * see patch for Drupal 11. https://www.drupal.org/files/issues/2023-10-20/3132456-17.patch
  * */
   Drupal.behaviors.ViewsAjaxView.detach = (context, settings, trigger) => {

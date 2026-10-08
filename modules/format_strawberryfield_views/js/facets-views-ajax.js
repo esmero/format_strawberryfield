@@ -67,21 +67,29 @@
         }
         // Update view on facet item click.
         else {
-          $('[data-drupal-facet-id=' + facetId + ']').each(function (index, facet_item) {
+          const FacetBlocksToAttach = once('facetblock_attache', '[data-drupal-facet-id=' + facetId + ']', context);
+          FacetBlocksToAttach.forEach(function (facet_item, index)  {
             if ($(facet_item).hasClass('js-facets-widget')) {
-              $(facet_item).unbind('facets_filter.facets');
-              $(facet_item).on('facets_filter.facets', function (event, url) {
+              $(facet_item).off('facets_filter.facets');
+              // Archipelago 2.2.0/Drupal 11.4.7 and JQUERY 4.0
+              // I can't figure out why JQUERY does not trigger this for the date histograms
+              // once returned from AJAX.
+              // It does for links on ajax refresh
+              // But the native custom events do work
+              // So until I understand it (14 hours into this already)
+              // I will support both native/JQuery ones.
+              $(facet_item).on('facets_filter.format_strawberryfield', function (event, url) {
                 $('.js-facets-widget').trigger('facets_filtering');
                 // Note for myself here. Only the actual View that is targeted by the current Facet can use facetLink.attr('href')
                 // the other ones need to use the original URL cleaned up + the arguments of the facetLink.attr('href')
                 // This is needed since Facet URL generator will (for good reasons) the ?page=argument.
                 // And also is absolutely unaware of pagers with different names!
-                console.log(url);
                 Drupal.AjaxFacetsView.UpdateView(url, current_dom_id, view_path);
                 all_dom_ids_need_refresh.forEach((other_dom_id) => {
                   Drupal.AjaxFacetsView.UpdateView(url, other_dom_id, view_path);
                 });
               });
+              facet_item.addEventListener('facets_filter_sbf', Drupal.AjaxFacetsView.facets_filter.bind(null,current_dom_id,view_path, all_dom_ids_need_refresh));
             }
           });
         }
@@ -89,8 +97,19 @@
     }
   };
 
+
+
   // Helper function to update views output & Ajax facets.
   Drupal.AjaxFacetsView = {};
+
+  Drupal.AjaxFacetsView.facets_filter = function (current_dom_id, view_path, all_dom_ids_need_refresh, event) {
+    const [url] = event.detail;
+    $('.js-facets-widget').trigger('facets_filtering');
+    Drupal.AjaxFacetsView.UpdateView(url, current_dom_id, view_path);
+    all_dom_ids_need_refresh.forEach((other_dom_id) => {
+      Drupal.AjaxFacetsView.UpdateView(url, other_dom_id, view_path);
+    });
+  }
 
   Drupal.AjaxFacetsView.UpdateView = function (href, current_dom_id, view_path) {
     // Refresh view.
@@ -180,22 +199,27 @@
 
     // Update facets summary block.
     if (this.updateFacetsSummaryBlock()) {
-      var $facet_summary_wrapper = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']');
+      let $facet_summary_wrapper = $('[data-drupal-facets-summary-id=' + settings.facets_views_ajax.facets_summary_ajax.facets_summary_id + ']');
       if ($facet_summary_wrapper.length > 0) {
-        var facet_summary_wrapper_id = $facet_summary_wrapper.attr('id');
-        var facet_summary_block_id = '';
-        if (facet_summary_wrapper_id.indexOf('--') !== -1) {
-          facet_summary_block_id = facet_summary_wrapper_id.substring(0, facet_summary_wrapper_id.indexOf('--')).replace('block-', '');
-        } else {
-          facet_summary_block_id = facet_summary_wrapper_id.replace('block-', '');
+        let facet_summary_wrapper_block = $facet_summary_wrapper.closest('.block-facets-summary');
+        if (facet_summary_wrapper_block) {
+          let facet_summary_block_id = facet_summary_wrapper_block.attr('id');
+          if (facet_summary_block_id) {
+            if (facet_summary_block_id.indexOf('--') !== -1) {
+              facet_summary_block_id = facet_summary_block_id.substring(0, facet_summary_block_id.indexOf('--')).replace('block-', '');
+            } else {
+              facet_summary_block_id = facet_summary_block_id.replace('block-', '');
+            }
+            facet_settings.submit.update_summary_block = true;
+            facet_settings.submit.facet_summary_block_id = facet_summary_block_id;
+            facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
+          }
         }
-        facet_settings.submit.update_summary_block = true;
-        facet_settings.submit.facet_summary_block_id = facet_summary_block_id;
-        facet_settings.submit.facet_summary_wrapper_id = settings.facets_views_ajax.facets_summary_ajax.facets_summary_id;
       }
     }
-    if (Object.keys(facet_settings.submit.facets_blocks).length > 0) {
-      Drupal.ajax(facet_settings).execute();
+    if (Object.keys(facet_settings.submit.facets_blocks).length > 0 || facet_settings.submit.update_summary_block) {
+      const BlockAjax = new Drupal.ajax(facet_settings);
+      BlockAjax.execute();
     }
   };
 
@@ -208,7 +232,6 @@
     if (settings.facets_views_ajax.facets_summary_ajax) {
       update_summary = true;
     }
-
     return update_summary;
   };
 
