@@ -429,9 +429,10 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                     if (count($media) == 1 || $drforkey == $vtt_drforkey) {
                       $i = 0;
                       foreach ($vtt_entries as $vtt_key => &$vtt_item) {
+                        $file_uuid = $vtt_item['file']->uuid();
                         $route_parameters = [
                           'node' => $nodeuuid,
-                          'uuid' => $vtt_item['file']->uuid(),
+                          'uuid' => $file_uuid,
                           'format' => 'default.' . pathinfo(
                               $vtt_item['file']->getFilename(),
                               PATHINFO_EXTENSION
@@ -454,6 +455,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
                             'label' => $this->t(
                               'Transcript ' . $current_language . " ({$vtt_item['file_name']})"
                             ),
+                            'data-sbf-uuid' => $file_uuid,
                             'kind' => 'subtitles',
                             'srclang' => $current_language,
                             'src' => $publicurl->toString(),
@@ -598,6 +600,7 @@ class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
           'controls' => TRUE,
           'style' => "width:{$max_width_css}; height:{$max_height}px",
           'aria-label' => $media_label,
+          'data-sbf-nodeuuid' => $nodeuuid
         ],
         'source' => [
           '#type' => 'html_tag',

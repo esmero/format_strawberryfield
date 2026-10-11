@@ -9,6 +9,7 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\TempStore\TempStoreException;
 use Drupal\search_api\Query\QueryInterface;
 use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
@@ -49,7 +50,6 @@ class WebAnnotationController extends ControllerBase {
    * @var \Drupal\strawberryfield\StrawberryfieldUtilityService
    */
   protected $strawberryfieldUtility;
-
 
   /**
    * The Drupal Renderer.
@@ -161,10 +161,10 @@ class WebAnnotationController extends ControllerBase {
         // we have to use all()[
         $everything = $this->requestStack->getCurrentRequest()->request->all();
         $annotations = $everything['data'] ?? NULL;
-        $target =  $everything['target_resource'] ?? NULL;
+        $target = $everything['target_resource'] ?? NULL;
         $keystoreid = $everything['keystoreid'] ?? NULL;
         $data = [
-          'success' => true
+          'success' => TRUE
         ];
         try {
           $existingannotations = $this->tempStore->get($keystoreid);
@@ -174,7 +174,7 @@ class WebAnnotationController extends ControllerBase {
         }
         catch (\Drupal\Core\TempStore\TempStoreException $exception) {
           $data = [
-            'success' => false
+            'success' => FALSE
           ];
         }
         break;
@@ -206,16 +206,15 @@ class WebAnnotationController extends ControllerBase {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
-
       // We are getting which field originate the annotations from AJAX.
       // Symfony6 deprecated getting arrays via get()... like c'mom
       // we have to use all()[
       $everything = $this->requestStack->getCurrentRequest()->request->all();
       $annotation = $everything['data'] ?? NULL;
-      $target =  $everything['target_resource'] ?? NULL;
+      $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
       $data = [
-        'success' => true
+        'success' => TRUE
       ];
 
       try {
@@ -247,7 +246,7 @@ class WebAnnotationController extends ControllerBase {
       }
       catch (\Drupal\Core\TempStore\TempStoreException $exception) {
         $data = [
-          'success' => false
+          'success' => FALSE
         ];
       }
     }
@@ -259,8 +258,6 @@ class WebAnnotationController extends ControllerBase {
 
     return new JsonResponse($data);
   }
-
-
 
   /**
    * Persist temp Controller Method (POST).
@@ -279,16 +276,15 @@ class WebAnnotationController extends ControllerBase {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
-
       // We are getting which field originate the annotations from AJAX.
       // Symfony6 deprecated getting arrays via get()... like c'mom
       // we have to use all()[
       $everything = $this->requestStack->getCurrentRequest()->request->all();
       $annotation = $everything['data'] ?? NULL;
-      $target =  $everything['target_resource'] ?? NULL;
+      $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
       $data = [
-        'success' => true
+        'success' => TRUE
       ];
       try {
         $persisted = FALSE;
@@ -316,7 +312,7 @@ class WebAnnotationController extends ControllerBase {
       }
       catch (\Drupal\Core\TempStore\TempStoreException $exception) {
         $data = [
-          'success' => false
+          'success' => FALSE
         ];
       }
     }
@@ -359,7 +355,8 @@ class WebAnnotationController extends ControllerBase {
           );
           try {
             $this->tempStore->delete(trim($keystoreid));
-          } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+          }
+          catch (TempStoreException $exception) {
             $response->addCommand(
               new ReplaceCommand(
                 '#edit-webannotations > div',
@@ -395,7 +392,6 @@ class WebAnnotationController extends ControllerBase {
   public function read(Request $request,
     ContentEntityInterface $node
   ) {
-
     // WE do not want cache here
     // But starting to think Anonymous users should not use the tempStore at all.
     $build = [
@@ -404,7 +400,6 @@ class WebAnnotationController extends ControllerBase {
       ],
     ];
 
-
     $return = [];
     // GET Argument (
     $target = $this->requestStack->getCurrentRequest()->query->get('target_resource');
@@ -412,20 +407,19 @@ class WebAnnotationController extends ControllerBase {
     if (($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
         $node
       )) && !empty(trim($target))) {
-
       // We are getting which field originate the annotations from AJAX.
       // This time Ajax
       $keystoreid = $this->requestStack->getCurrentRequest()->query->get('keystoreid');
 
       $data = [
-        'success' => true
+        'success' => TRUE
       ];
 
       try {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
         // It would have set initial values, so we do not need to read/iterate everytime
         $existingannotations = $this->tempStore->get($keystoreid);
-        if ($existingannotations == null) {
+        if ($existingannotations == NULL) {
           foreach ($sbf_fields as $field_name) {
             /* @var $field \Drupal\Core\Field\FieldItemInterface */
             $field = $node->get($field_name);
@@ -491,17 +485,53 @@ class WebAnnotationController extends ControllerBase {
     ];
 
     $existingannotations = [];
-    $target = $this->requestStack->getCurrentRequest()->query->get('target_resource_uuid', '');
-    if (!Uuid::isValid($target)) {
+    $parameters = $this->requestStack->getCurrentRequest()->query->all();
+    $target = $parameters['target_resource_uuid'] ?? '';
+    $processors = $parameters['processors'] ?? NULL;
+    $flavor_id = $parameters['flavor_id'] ?? NULL;
+    $ocr = $parameters['highlights'] ?? FALSE;
+    if ($ocr) {
+      $ocr = TRUE;
+    }
+    $term = $parameters['q'] ?? NULL;
+    if (is_array($target)) {
+      foreach ($target as $item) {
+        if (is_scalar($item)) {
+          if (!Uuid::isValid($item)) {
+            throw new BadRequestHttpException(
+              "Wrong request"
+            );
+          }
+        }
+        else {
+          throw new BadRequestHttpException(
+            "Wrong request"
+          );
+        }
+      }
+    }
+    elseif (is_scalar($target)) {
+      if (!Uuid::isValid($target)) {
+        throw new BadRequestHttpException(
+          "Wrong request"
+        );
+      }
+    }
+
+    // Processors or a $flavor_id are required. The latter wins and on a mismatch will really just give you 0 results.
+    // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
+    // as individual annotations or not at all.
+
+    if (!is_scalar($term) && !empty($term)) {
       throw new BadRequestHttpException(
         "Wrong request"
       );
     }
-    // Processors or a $flavor_id are required. The latter wins and on a mistmatch will really just give you 0 results.
-    // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
-    // as individual annotations or not at all.
-    $processors = $this->requestStack->getCurrentRequest()->query->get('processors', NULL);
-    $flavor_id = $this->requestStack->getCurrentRequest()->query->get('flavor_id', NULL);
+    elseif (!empty($term)) {
+      $term = trim($term);
+      // max 128 characters for search
+      $term = mb_substr($term, 0, 128);
+    }
 
     if ($processors || $flavor_id) {
       if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
@@ -509,42 +539,42 @@ class WebAnnotationController extends ControllerBase {
       )) {
       }
       $data = [
-        'success' => true
+        'success' => TRUE
       ];
       try {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
         // It would have set initial values, so we do not need to read/iterate everytime
-        $targets = [];
         $file_uris = [];
 
-        $file = $this->entityTypeManager()
+        $files = $this->entityTypeManager()
           ->getStorage('file')
           ->loadByProperties(['uuid' => $target]);
-        if (count($file) == 0 ) {
+        if (count($files) == 0) {
           throw new BadRequestHttpException(
             "Wrong request"
           );
         }
-
-        $file = reset($file);
-        $file_uris = [$file->getFileUri()];
-        $targets = [$target];
-        if ($flavor_id) {
+        foreach ($files as $file) {
+          $file_uris[] = $file->getFileUri();
+        }
+        $targets = is_array($target) ? $target : [$target];
+        if (!empty($flavor_id)) {
           $flavor_ids = [$flavor_id];
         }
         else {
           $flavor_ids = [];
         }
         if ($processors) {
-          $processors_list = [$processors];
+          $processors_list = is_array($processors) ? $processors : [$processors];
         }
         else {
           $processors_list = [];
         }
 
-        // This allows really for multiple targets. Also, we need more caching here.
-        $existingannotations[$target] = $this->flavorfromSolrIndex($processors_list, $file_uris, $targets , [$node->uuid()],  $flavor_ids);
-        $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
+        // This allows for multiple targets.
+        $existingannotations = $this->flavorfromSolrIndex($term, $processors_list, $file_uris, $targets, [$node->uuid()], $flavor_ids, 0, 25, $ocr);
+        $existingannotations = array_filter($existingannotations);
+        $return = !empty($existingannotations) && is_array($existingannotations) ? $existingannotations : [];
       }
       catch (\Exception $exception) {
         throw new ServiceUnavailableHttpException(
@@ -564,9 +594,6 @@ class WebAnnotationController extends ControllerBase {
     return $response;
   }
 
-
-
-
   /**
    * Persist temp Controller Method (POST).
    *
@@ -584,15 +611,14 @@ class WebAnnotationController extends ControllerBase {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
-
       // We are getting which field originate the annotations from AJAX.
       $everything = $this->requestStack->getCurrentRequest()->request->all();
       $annotation = $everything['data'] ?? NULL;
-      $target =  $everything['target_resource'] ?? NULL;
+      $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
 
       $data = [
-        'success' => true
+        'success' => TRUE
       ];
       try {
         if (isset($annotation['id'])) {
@@ -608,7 +634,8 @@ class WebAnnotationController extends ControllerBase {
             // Make sure we reorder them so they stay as indexed arrays
             if (empty(!$existingannotations[$target])) {
               $existingannotations[$target] = array_values($existingannotations[$target]);
-            } else {
+            }
+            else {
               //If empty totally remove
               unset($existingannotations[$target]);
             }
@@ -623,7 +650,7 @@ class WebAnnotationController extends ControllerBase {
       }
       catch (\Drupal\Core\TempStore\TempStoreException $exception) {
         $data = [
-          'success' => false
+          'success' => FALSE
         ];
       }
     }
@@ -652,7 +679,6 @@ class WebAnnotationController extends ControllerBase {
       );
       if ($sbf_fields = \Drupal::service('strawberryfield.utility')
         ->bearsStrawberryfield($node)) {
-
         foreach ($sbf_fields as $field_name) {
           /* @var $field \Drupal\Core\Field\FieldItemInterface */
           $field = $node->get($field_name);
@@ -667,7 +693,8 @@ class WebAnnotationController extends ControllerBase {
               $tempstore->delete($keystoreid);
               // Do NOT SET stored settings back.
               // BECAUSE WE HAVE NOT RELOADED OUR NODE from storage yet OK?
-            } catch (\Drupal\Core\TempStore\TempStoreException $exception) {
+            }
+            catch (TempStoreException $exception) {
               $response->addCommand(
                 new ReplaceCommand(
                   '#edit-webannotations > div',
@@ -691,10 +718,6 @@ class WebAnnotationController extends ControllerBase {
     }
     return $response;
   }
-
-
-
-
 
   /**
    * Gives us a key name used by the webforms and widgets.
@@ -720,7 +743,7 @@ class WebAnnotationController extends ControllerBase {
    * @param \Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem $itemfield
    * @param null $keystoreid
    */
-  public static function primeKeyStore(StrawberryFieldItem $itemfield,  $keystoreid = NULL) {
+  public static function primeKeyStore(StrawberryFieldItem $itemfield, $keystoreid = NULL) {
     if ($keystoreid == NULL && strlen(trim($keystoreid)) == 0) {
       return NULL;
     }
@@ -757,8 +780,7 @@ class WebAnnotationController extends ControllerBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\search_api\SearchApiException
    */
-  protected function flavorfromSolrIndex(array $processors, array $file_uris, array $file_uuids, array $node_ids = [], array $flavor_ids = [], $offset = 0, $limit = 100, $ocr = FALSE): array {
-
+  protected function flavorfromSolrIndex(?string $term, array $processors, array $file_uris, array $file_uuids, array $node_ids = [], array $flavor_ids = [], $offset = 0, $limit = 100, $ocr = FALSE): array {
     $indexes = StrawberryfieldFlavorDatasource::getValidIndexes();
 
     /* @var \Drupal\search_api\IndexInterface[] $indexes */
@@ -768,7 +790,6 @@ class WebAnnotationController extends ControllerBase {
     $annotations = [];
 
     foreach ($indexes as $search_api_index) {
-
       // Create the query.
       $query = $search_api_index->query([
         'limit' => $limit,
@@ -779,8 +800,16 @@ class WebAnnotationController extends ControllerBase {
       // @NOTE: New to me Diego. See \Drupal\facets\EventSubscriber\SearchApiSubscriber::queryAlter
       $query->setSearchId('sbf_webannotation_from_solr');
 
-      $parse_mode = $this->parseModeManager->createInstance('direct');
-      $query->setParseMode($parse_mode);
+      if ($term) {
+        $parse_mode = $this->parseModeManager->createInstance('terms');
+        $query->setParseMode($parse_mode);
+        $query->keys($term);
+      }
+      else {
+        $parse_mode = $this->parseModeManager->createInstance('direct');
+        $query->setParseMode($parse_mode);
+      }
+
       // No key set here, this is a filters query only
       $allfields_translated_to_solr = $search_api_index->getServerInstance()
         ->getBackend()
@@ -791,7 +820,8 @@ class WebAnnotationController extends ControllerBase {
           $query->setFulltextFields(['ocr_text']);
         }
         else {
-          $this->getLogger('format_strawberryfield')->error('We can not execute a Content Search API query against XML OCR without a field named <em>ocr_text</em> of type Full Text Ocr Highlight');
+          $this->getLogger('format_strawberryfield')
+            ->error('We can not execute a Content Search API query against XML OCR without a field named <em>ocr_text</em> of type Full Text Ocr Highlight');
           $search_result['annotations'] = [];
           $search_result['total'] = 0;
           return $search_result;
@@ -802,12 +832,14 @@ class WebAnnotationController extends ControllerBase {
           $query->setFulltextFields(['sbf_plaintext']);
         }
         else {
-          $this->getLogger('format_strawberryfield')->error('We can not execute a Content Search API query against Plain Extracted Text without a field named <em>sbf_plaintext</em> of type Full Text');
+          $this->getLogger('format_strawberryfield')
+            ->error('We can not execute a Content Search API query against Plain Extracted Text without a field named <em>sbf_plaintext</em> of type Full Text');
           $search_result['annotations'] = [];
           $search_result['total'] = 0;
           return $search_result;
         }
       }
+
       $flavor_id_field = 'search_api_id';
 
       //@TODO: Should this also be a config as `iiif_content_search_api_parent_node_fields` is for example?
@@ -816,7 +848,6 @@ class WebAnnotationController extends ControllerBase {
       $parent_conditions = $query->createConditionGroup('OR');
       $uri_conditions = $query->createConditionGroup('OR');
       $uuid_conditions = $query->createConditionGroup('OR');
-
 
       if (count($node_ids)) {
         if (count($parent_conditions->getConditions())) {
@@ -832,18 +863,20 @@ class WebAnnotationController extends ControllerBase {
         $query->addCondition('processor_id', $processors, 'IN');
       }
 
-      if (isset($allfields_translated_to_solr['ocr_text']) && $ocr) {
-        // Will be used by \Drupal\strawberryfield\EventSubscriber\SearchApiSolrEventSubscriber::preQuery
-        $query->setOption('ocr_highlight', 'off');
-        // We are already checking if the Node can be viewed. Custom Data Sources can not depend on Solr node access policies.
-        $query->setOption('search_api_bypass_access', TRUE);
-      }
       if (isset($allfields_translated_to_solr['sbf_plaintext']) && !$ocr) {
         // Will be used by  \Drupal\strawberryfield\EventSubscriber\SearchApiSolrEventSubscriber::preQuery
         $query->setOption('sbf_highlight_fields', 'off');
         // We are already checking if the Node can be viewed. Custom Datasources can not depend on Solr node access policies.
         $query->setOption('search_api_bypass_access', TRUE);
       }
+
+      if (isset($allfields_translated_to_solr['ocr_text']) && $ocr && $term) {
+        // Will be used by \Drupal\strawberryfield\EventSubscriber\SearchApiSolrEventSubscriber::preQuery
+        $query->setOption('ocr_highlight', 'on');
+        // We are already checking if the Node can be viewed. Custom Datasources can not depend on Solr node access policies.
+        $query->setOption('search_api_bypass_access', TRUE);
+      }
+
 
       $fields_to_retrieve['id'] = 'id';
       if (isset($allfields_translated_to_solr['parent_sequence_id'])) {
@@ -861,13 +894,15 @@ class WebAnnotationController extends ControllerBase {
         // Sadly we have to add the condition here, what if file_uuid is not defined?
       }
       else {
-        $this->getLogger('format_strawberryfield')->warning('For Content Search API queries/WebAnnotations from Strawberryflavors, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to search');
+        $this->getLogger('format_strawberryfield')
+          ->warning('For Content Search API queries/WebAnnotations from Strawberryflavors, please add a search api field named <em>file_uuid</em> containing the UUID of the file entity that generated the extraction you want to search');
       }
       if (isset($allfields_translated_to_solr['fulltext'])) {
         $fields_to_retrieve['fulltext'] = $allfields_translated_to_solr['fulltext'];
       }
       else {
-        $this->getLogger('format_strawberryfield')->warning('For WebAnnotations from Strawberryflavors using OCR, please add a search api field named <em>fulltext</em> containing the complete OCR as XML');
+        $this->getLogger('format_strawberryfield')
+          ->warning('For WebAnnotations from Strawberryflavors using OCR, please add a search api field named <em>fulltext</em> containing the complete OCR as XML');
         $search_result['annotations'] = [];
         $search_result['total'] = 0;
         return $search_result;
@@ -895,6 +930,8 @@ class WebAnnotationController extends ControllerBase {
       if (count($file_uuids)) {
         if (isset($allfields_translated_to_solr[$uuid_uri_field])) {
           $uuid_conditions->addCondition($uuid_uri_field, $file_uuids, 'IN');
+          $fields_to_retrieve[$uuid_uri_field]
+            = $allfields_translated_to_solr[$uuid_uri_field];
         }
         if (count($uuid_conditions->getConditions())) {
           $have_file_condition = TRUE;
@@ -910,6 +947,7 @@ class WebAnnotationController extends ControllerBase {
       $query->setProcessingLevel(QueryInterface::PROCESSING_FULL);
       $results = $query->execute();
       unset($fields_to_retrieve['id']);
+      $extradata = $results->getAllExtraData() ?? [];
       unset($fields_to_retrieve['parent_sequence_id']);
       if ($results->getResultCount() >= 1) {
         foreach ($results as $result) {
@@ -922,8 +960,14 @@ class WebAnnotationController extends ControllerBase {
             $real_sequence = (int) $real_sequence;
           }
           $extradata_from_item = $result->getAllExtraData() ?? [];
-          if (isset($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']])) {
-            $annotations = array_merge($annotations, $this->miniOCRtoAnnon($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']][0], $real_id_part[3] , $real_sequence));
+          if (isset($extradata['search_api_solr_response']['ocrHighlighting']) && count($extradata['search_api_solr_response']['ocrHighlighting']
+            ) > 0 && $ocr && $term && isset($allfields_translated_to_solr['ocr_text'])) {
+
+            $annotations = array_merge($annotations, $this->ocrHighlightsToAnnon($extradata['search_api_solr_response'], $allfields_translated_to_solr['ocr_text'], $real_id_part[3], $real_sequence, $term));
+          }
+
+          elseif (isset($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']])) {
+            $annotations = array_merge($annotations, $this->miniOCRtoAnnon($extradata_from_item['search_api_solr_document'][$allfields_translated_to_solr['fulltext']][0], $real_id_part[3], $real_sequence));
           }
         }
       }
@@ -931,7 +975,7 @@ class WebAnnotationController extends ControllerBase {
     return $annotations;
   }
 
-  protected function miniOCRtoAnnon(string $miniocr, $file_uuid, $sequence_id):array {
+  protected function miniOCRtoAnnon(string $miniocr, $file_uuid, $sequence_id): array {
     // To avoid memory crazy ness should we set a limit here?
     // As today, archipelago generates OCR per page, so should not be too large.
     $internalErrors = libxml_use_internal_errors(TRUE);
@@ -947,22 +991,23 @@ class WebAnnotationController extends ControllerBase {
       foreach ($p->children() as $b) {
         foreach ($b->children() as $l) {
           foreach ($l->children() as $word) {
-            $text = (string)$word;
+            $text = (string) $word;
             if (strlen(trim($text)) > 0) {
               $i++;
               $wcoos = explode(" ", $word['x']);
-              $left = (float)$wcoos[0] * 100;
-              $top = (float)$wcoos[1] * 100;
-              $width = (float)$wcoos[2] * 100;
-              $height = (float)$wcoos[3] * 100;
-              $text = (string)$word;
+              $left = (float) $wcoos[0] * 100;
+              $top = (float) $wcoos[1] * 100;
+              $width = (float) $wcoos[2] * 100;
+              $height = (float) $wcoos[3] * 100;
+              $text = (string) $word;
               $annotations[] = [
                 "@context" => "http://www.w3.org/ns/anno.jsonld",
-                "id" => $file_uuid . '_' . $sequence_id .'_' .$i,
+                "id" => $file_uuid . '_' . $sequence_id . '_' . $i,
                 "type" => "Annotation",
                 "body" => [
                   "type" => "TextualBody",
-                  "value" => $text
+                  "value" => $text,
+                  "sbf_file_uuid" => "urn:uuid:$file_uuid"
                 ],
                 "target" => [
                   "selector" => [
@@ -979,5 +1024,117 @@ class WebAnnotationController extends ControllerBase {
     }
     // If not miniOCR then bail. @TODO. In the future generate also for AltoXML
     return $annotations;
+  }
+
+  protected function ocrHighlightsToAnnon(array $search_api_solr_response, $ocr_text_search_api_field, $file_uuid, $sequence_id, $term) {
+    $result_snippets = [];
+    foreach ($search_api_solr_response['ocrHighlighting'] as $sol_doc_id => $field) {
+      $result_snippets_base = [];
+      if (isset($field[$ocr_text_search_api_field]['snippets']) &&
+        is_array($field[$ocr_text_search_api_field]['snippets'])) {
+        foreach ($field[$ocr_text_search_api_field]['snippets'] as $snippet) {
+          $page_width = (float) $snippet['pages'][0]['width'];
+          $page_height = (float) $snippet['pages'][0]['height'];
+          $is_time = str_starts_with($snippet['pages'][0]['id'], 'timesequence_');
+          $shared_parent_region = array_fill_keys(array_keys($snippet['regions']), 0);
+
+          foreach ($snippet['highlights'] as $key => $highlight) {
+            $parent_region = $highlight[0]['parentRegionIdx'];
+            $shared_parent_region[$parent_region]++;
+            // This allows us to offset the before and after when we are re-using a snippet for multiple hits
+            $region_text = $snippet['regions'][$parent_region]['text'] ?? $term;
+            $hit = $highlight[0]['text'] ?? $term;
+
+            $before_and_after = explode("{$hit}", strip_tags($region_text ?? $term));
+            // Check if (int) coordinates lrx >1 (ALTO) ... assuming nothing is at 1px to the right?
+            // else between 0 and < 1 (MINIOCR)
+            $before_index = $shared_parent_region[$parent_region] - 1;
+            $before_index = $before_index > 0 ? $before_index : 0;
+            $after_index = $shared_parent_region[$parent_region];
+            $after_index = ($after_index < count($before_and_after)) ? $after_index : 1;
+
+            if (((int) $highlight[0]['lrx']) > 1) {
+              //ALTO so coords need to be relative
+              $left = sprintf('%.3f', ((float) $highlight[0]['ulx'] / $page_width));
+              $top = sprintf('%.3f', ((float) $highlight[0]['uly'] / $page_height));
+              $right = sprintf('%.3f', ((float) $highlight[0]['lrx'] / $page_width));
+              $bottom = sprintf('%.3f', ((float) $highlight[0]['lry'] / $page_height));
+              $width = $right - $left;
+              $height = $bottom - $top;
+              $result_snippets_base[] = [
+                "@context" => "http://www.w3.org/ns/anno.jsonld",
+                "id" => $file_uuid . '_' . $sequence_id . '_' . $key,
+                "type" => "Annotation",
+                "body" => [
+                  "type" => "TextualBody",
+                  "value" => ($before_and_after[$before_index] ?? '') . $hit . ($before_and_after[$after_index] ?? ''),
+                  "sbf_file_uuid" => "urn:uuid:$file_uuid"
+                ],
+                "target" => [
+                  "selector" => [
+                    "type" => "FragmentSelector",
+                    "conformsTo" => "http://www.w3.org/TR/media-frags/",
+                    "value" => "xywh=percent:{$left},{$top},{$width},{$height}"
+                  ]
+                ]
+              ];
+            }
+            else {
+              //MINIOCR coords already relative
+              // Deal with time here
+              if (!$is_time) {
+                $width = $highlight[0]['lrx'] - $highlight[0]['ulx'];
+                $height = $highlight[0]['lry'] - $highlight[0]['uly'];
+                $result_snippets_base[] = [
+                  "@context" => "http://www.w3.org/ns/anno.jsonld",
+                  "id" => $file_uuid . '_' . $sequence_id . '_' . $key,
+                  "type" => "Annotation",
+                  "body" => [
+                    "type" => "TextualBody",
+                    "value" => ($before_and_after[$before_index] ?? '') . $hit . ($before_and_after[$after_index] ?? ''),
+                    "sbf_file_uuid" => "urn:uuid:$file_uuid"
+                  ],
+                  "target" => [
+                    "selector" => [
+                      "type" => "FragmentSelector",
+                      "conformsTo" => "http://www.w3.org/TR/media-frags/",
+                      "value" => "xywh=percent:{$highlight[0]['ulx']},{$highlight[0]['uly']},{$width},{$height}"
+                    ]
+                  ]
+                ];
+              }
+              else {
+                // IN this case, because on now text spans into other regions, we use 'text' instead of
+                // $region_text like in a normal HOCR
+                // It is about time!
+                // Before and after. We will try to split the original text by the math
+                // If we end with more than 2 pieces, we can't be sure where it was found
+                $s = round(($highlight[0]['uly'] * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND, 2);
+                $e = round(($highlight[0]['lry'] * $page_height) / StrawberryfieldFlavorDatasource::PIXELS_PER_SECOND, 2);
+                $result_snippets_base[] = [
+                  "@context" => "http://www.w3.org/ns/anno.jsonld",
+                  "id" => $file_uuid . '_' . $sequence_id . '_' . $key,
+                  "type" => "Annotation",
+                  "body" => [
+                    "type" => "TextualBody",
+                    "value" => strip_tags($highlight[0]['text']),
+                    "sbf_file_uuid" => "urn:uuid:$file_uuid"
+                  ],
+                  "target" => [
+                    "selector" => [
+                      "type" => "FragmentSelector",
+                      "conformsTo" => "http://www.w3.org/TR/media-frags/",
+                      "value" => "t={$s},{$e}"
+                    ]
+                  ]
+                ];
+              }
+            }
+          }
+        }
+      }
+      $result_snippets = $result_snippets_base;
+    }
+    return $result_snippets;
   }
 }
