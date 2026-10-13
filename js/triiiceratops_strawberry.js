@@ -147,7 +147,7 @@
           if (triii_viewer) {
             triii_viewer.addEventListener('viewerstateavailable', (event) => {
               console.log(event);
-              //drive((event as CustomEvent<ViewerState>).detail);
+              console.log('viewer state available');
             });
             console.log('initializing TriiiCeratops')
             for (const [key, value] of Object.entries($options)) {
@@ -169,6 +169,8 @@
               console.log(triii_viewer.viewerState);
               const stop = triii_viewer.viewerState.subscribe(() => {
                 console.log(triii_viewer.viewerState.canvases.length);
+                console.log(triii_viewer.viewerState.canvases);
+                console.log(triii_viewer.viewerState.currentCanvasIndex);
               });
               //stop();
             }
