@@ -1,8 +1,8 @@
 
-
 (function ($, Drupal, once, drupalSettings, Triiiceratops) {
 
   'use strict';
+
 
   function CaptureAdoTriiiceratopsCanvasChange(miradorInstance, this_id ,e) {
     if (this_id === e.detail.caller_id) {
@@ -145,6 +145,10 @@
 
           const triii_viewer = document.querySelector('#'+element_id);
           if (triii_viewer) {
+            triii_viewer.addEventListener('viewerstateavailable', (event) => {
+              console.log(event);
+              //drive((event as CustomEvent<ViewerState>).detail);
+            });
             console.log('initializing TriiiCeratops')
             for (const [key, value] of Object.entries($options)) {
               triii_viewer[key] = value;
@@ -161,6 +165,14 @@
                 triii_viewer.plugins = $plugin_objects;
               }
             }
+            if (triii_viewer.viewerState) {
+              console.log(triii_viewer.viewerState);
+              const stop = triii_viewer.viewerState.subscribe(() => {
+                console.log(triii_viewer.viewerState.canvases.length);
+              });
+              //stop();
+            }
+
           });
 
 
