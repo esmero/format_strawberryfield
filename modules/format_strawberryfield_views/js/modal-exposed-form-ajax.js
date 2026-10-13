@@ -20,11 +20,13 @@
     $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
       if (blockSettings.view_id == view_id && blockSettings.current_display_id == display_id) {
         reload = true;
-        block_ids[formId] = blockSettings.block_id;
+        if (blockSettings.block_id) {
+          block_ids[formId] = blockSettings.block_id;
+        }
       }
     });
 
-    if (reload) {
+    if (reload &&  Object.keys(block_ids).length > 0) {
       // Update Modal Exposed Form Views blocks.
       var modal_form_exposed_settings = {
         url: Drupal.url('exposed-views-form-block-ajax'),
@@ -34,8 +36,6 @@
         }
       };
 
-      var exposed_form_selector = '#views-exposed-form-' + view_id.replace(/_/g, '-') + '-' + display_id.replace(/_/g, '-');
-      var $exposed_form = $(exposed_form_selector).length;
       var ModalRefreshAjaxObject = Drupal.ajax(modal_form_exposed_settings);
       ModalRefreshAjaxObject.execute();
     }
@@ -57,7 +57,7 @@
           var $modal_exposed_form = $(value);
           var $modal_exposed_form_id = value.id;
           $modal_exposed_form.exposedFormAjax = [];
-          const $combined_view = $input.data('drupal-target-view');
+          const $combined_view = $modal_exposed_form.data('drupal-target-view');
           var $view_parts = [];
           $view_parts = $combined_view.split("-");
           // data-drupal-target-view="solr_search_content-page_1"
@@ -173,8 +173,9 @@
         var block_ids = {};
         $.each(settings.format_strawberryfield_views.modal_exposed_form_block, function (formId, blockSettings) {
           if (blockSettings.view_id == options.extraData.view_name && blockSettings.current_display_id == options.extraData.view_display_id) {
-            reload = true;
-            block_ids[formId] = blockSettings.block_id;
+            if (blockSettings.block_id) {
+              reload = true;
+            }
           }
         });
         if (reload) {

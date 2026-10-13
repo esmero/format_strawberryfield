@@ -33,6 +33,12 @@ class DateRangeSliderWidget extends DateSliderWidget {
     $facet_settings = &$build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()];
     $is_bce = $facet_settings['real_minmax'][0] ?? 0;
     $is_bce = $is_bce < 0 ? TRUE : FALSE;
+    $timezone = new DateTimeZone($facet_settings['time_zone'] ?? 'UTC' );
+    $dateTime_for_timezone = new DateTime('now', $timezone);
+    $timezone_offset = $dateTime_for_timezone->format('Z');
+    $timezone_offset = (int) $timezone_offset * -1;
+
+
 
     // Generate unique IDs for form elements (AJAX-safe)
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id());
@@ -51,13 +57,14 @@ class DateRangeSliderWidget extends DateSliderWidget {
       $build['#items']['manual_input']['select_input'] = [
           '#type' => 'checkbox',
           '#id' => $id . '-manual-input-fulldate',
-          '#title' => t('Full Date entry'),
+          '#title' => t('Full Date entry (YYYY-MM-DD)'),
           '#default_value' => FALSE,
           '#attributes' => [
-          'data-date-entry-selector' => $id . '-manual-input-fulldate'
+          'data-date-entry-selector' => $facet->id() . '-manual-input-fulldate'
         ]
       ];
     }
+    $restrict_input_to_real = $this->getConfiguration()['restrict_frequency_to_range'] ?? FALSE;
 
     if ($this->getConfiguration()['allow_full_entry'] && !$is_bce) {
       $build['#items']['manual_input']['manual_input_full'] = [
@@ -66,7 +73,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#type' => 'date',
           '#title' => $this->t('Date from'),
           '#id' => $id . '-min',
-          '#value' => $facet_settings['real_minmax'][0],
+          '#value' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
           '#date_date_element' => 'datetime',
           '#date_date_format' => 'mm-dd-Y',
           '#date_date_element' => 'date',
@@ -77,16 +84,17 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'class' => ['facet-date-range'],
             'id' => $id . '-min',
             'name' => $facet->id() . '_min',
-            'min' => $facet_settings['real_minmax'][0],
-            'max' => $facet_settings['real_minmax'][1],
+            'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
+            'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-min',
+            'data-tmzoffset' => $timezone_offset,
           ],
         ],
         'max_full' => [
           '#type' => 'date',
           '#title' => $this->t('Date to'),
           '#id' => $id . '-max',
-          '#value' => $facet_settings['real_minmax'][1],
+          '#value' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
           '#date_date_element' => 'datetime',
           '#date_date_format' => 'mm-dd-Y',
           '#date_date_element' => 'date',
@@ -97,9 +105,10 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'class' => ['facet-date-range'],
             'id' => $id . '-max',
             'name' => $facet->id() . '_max',
-            'min' => $facet_settings['real_minmax'][0],
-            'max' => $facet_settings['real_minmax'][1],
+            'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
+            'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-max',
+            'data-tmzoffset' => $timezone_offset,
           ],
         ]];
     }
@@ -145,22 +154,22 @@ class DateRangeSliderWidget extends DateSliderWidget {
     if (isset($build['#items']['manual_input']['manual_input_full']) &&  ($this->getConfiguration()['allow_full_entry'] ?? FALSE) && ($this->getConfiguration()['allow_year_entry'] ?? FALSE)) {
       $build['#items']['manual_input']['manual_input_full']['min_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_full']['max_full']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => TRUE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['min_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
       $build['#items']['manual_input']['manual_input_year']['max_year']['#states'] = [
         'visible' => [
-          ':input[data-date-entry-selector="'.$id.'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
+          ':input[data-date-entry-selector="'.$facet->id().'-manual-input-fulldate'.'"]' => ['checked' => FALSE],
         ],
       ];
     }
@@ -177,7 +186,7 @@ class DateRangeSliderWidget extends DateSliderWidget {
 
     $facet_settings['range'] = TRUE;
     unset($facet_settings['value']);
-
+    $build['#attached']['library'][] = 'core/drupal.states';
     return $build;
   }
 

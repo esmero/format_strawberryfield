@@ -183,6 +183,7 @@ class DateSliderWidget extends WidgetPluginBase {
 
 
     $selected_minmax = [gmdate('Y', (int) $active_min), gmdate('Y', (int) $active_max)];
+    $selected_minmax_full = [gmdate('Y-m-d', (int) $active_min), gmdate('Y-m-d', (int) $active_max)];
     $real_minmax = [$min, $max];
     $id =  Html::getUniqueId('facet-sbf-slider-'.$facet->id());
 
@@ -295,6 +296,7 @@ class DateSliderWidget extends WidgetPluginBase {
 
 
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
+    $build['#attached']['library'][] = 'core/drupal.states';
 
    if ($this->getConfiguration()['show_histogram'] ?? NULL && !empty($chart_labels) && !empty($chart_data)) {
      // For the chart.
@@ -331,6 +333,7 @@ class DateSliderWidget extends WidgetPluginBase {
       'max' => $slider_max,
       'values' => $values,
       'real_minmax' => $real_minmax,
+      'selected_minmax' => $selected_minmax_full,
       'time_zone' => $time_zone,
       'value' => isset($active[0]) ? (float) $active[0] : '',
       'step' => $this->getConfiguration()['step'],

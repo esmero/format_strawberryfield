@@ -37,6 +37,7 @@ modal-exposed-form-facet-views-ajax:
     js/facets-views-ajax.js: {minified: false}
   dependencies:
     - facets/widget
+    - facets/soft-limit
     - core/drupalSettings
     - core/drupal.ajax
     - views/views.ajax
@@ -53,6 +54,7 @@ view-ajax-interactions:
     - core/views
     - views/views.ajax
     - format_strawberryfield/iiif_formatstrawberryfield_utils
+    - facets/soft-limit
 
 advanced-search-default-submit:
   js:

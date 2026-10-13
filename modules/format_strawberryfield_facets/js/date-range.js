@@ -27,11 +27,25 @@
       if ($dateRangeFacets.length > 0) {
         $dateRangeFacets
           .each(function (index, widget) {
-            var $widget = $(widget);
+            const $widget = $(widget);
             // Click on link will call Facets JS API on widget element.
             var changeHandler = function (e) {
-              //e.preventDefault();
-              $widget.trigger('facets_filter', [autoSubmit($widget)]);
+              // New to 2.2.0. We use our vanilla EventListener
+              // Troubles with JQUERY 4.0.0 trigger
+              // @See Drupal.AjaxFacetsView.facets_filter
+              let $widget = $(e.target).closest('.js-facets-widget');
+              let $url = autoSubmit($widget[0]);
+              if ($widget) {
+                // trigger the default, in case we are not in AJAX mode.
+                // the facets_filter_sbf won't exist so will be OK
+                // The opposite will be true under ajax.
+                $widget.trigger('facets_filter.facets', [$url]);
+                const facetsFilterventSbf = new CustomEvent('facets_filter_sbf', {
+                  bubbles: true,
+                  detail: [$url]
+                });
+                $widget[0].dispatchEvent(facetsFilterventSbf);
+              }
             };
             // Add correct CSS selector for the widget. The Facets JS API will
             // register handlers on that element.
