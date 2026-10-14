@@ -1,6 +1,6 @@
 # Strawberry Field Formatters
 
-A Drupal 8 module that provides Cool Field Formatters for StrawberryField (JSON) fields. This is part of the Archipelago Commons Project.
+A Drupal 10/11 module that provides Cool Field Formatters for StrawberryField (JSON) fields. This is part of the Archipelago Commons Project.
 
 ## How to install citeproc-php dependencies
 
