@@ -79,8 +79,14 @@
 
     for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
       const data = miradorInstance.store.getState().windows[windowId];
-      if (e.detail.manifestid == data.manifestId && e.detail?.canvasid) {
-        const action = Mirador.actions.setCanvas(windowId, e.detail.canvasid);
+      let visiblecanvas_same_as_request = false;
+      let canvasid = e.detail?.canvasid;
+      if (data.visibleCanvases?.length && canvasid) {
+        data.visibleCanvases.forEach(visiblecanvas => visiblecanvas_same_as_request = (visiblecanvas == canvasid))
+      }
+
+      if (e.detail.manifestid == data.manifestId && canvasid && !visiblecanvas_same_as_request) {
+        const action = Mirador.actions.setCanvas(windowId, canvasid);
         miradorInstance.store.dispatch(action);
       }
     }
@@ -108,7 +114,12 @@
           }
           return match;
         });
-        if (currentDrupalNodeId && canvasid) {
+        // Check if the requested canvas is already visible
+        let visiblecanvas_same_as_request = false;
+        if (data.visibleCanvases?.length && canvasid) {
+          data.visibleCanvases.forEach(visiblecanvas => visiblecanvas_same_as_request = (visiblecanvas == canvasid))
+        }
+        if (currentDrupalNodeId && canvasid && !visiblecanvas_same_as_request) {
           const action = Mirador.actions.setCanvas(windowId,canvasid);
           miradorInstance.store.dispatch(action);
         }
