@@ -23,6 +23,7 @@ use Twig\Runtime\EscaperRuntime;
 use Twig\TwigTest;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use Twig\Extension\EscaperExtension;
 use League\HTMLToMarkdown\HtmlConverter;
 use Drupal\format_strawberryfield\CiteProc\Render;
 use Drupal\search_api\ParseMode\ParseModePluginManager;
@@ -132,7 +133,15 @@ class TwigExtension extends AbstractExtension {
       new TwigFilter('edtf_2_iso_date', $this->edtfToIsoDate(...),
         ['is_safe' => ['all']]),
       // Replace Drupal core's twig escape filter, that throws exception on invalid render array with our own.
-      new TwigFilter('format_strawberry_safe_escape', $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => 'twig_escape_filter_is_safe']),
+      // Filters registered by later extensions override those with
+      // the same name, and this extension is always added after Twig's
+      // EscaperExtension. Twig's auto-escaping always uses the filter
+      // named 'escape'.
+
+      new TwigFilter('escape',  $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => [EscaperExtension::class, 'escapeFilterIsSafe']]),
+      new TwigFilter('e',  $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => [EscaperExtension::class, 'escapeFilterIsSafe']]),
+      new TwigFilter('drupal_escape',  $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => [EscaperExtension::class, 'escapeFilterIsSafe']]),
+      new TwigFilter('format_strawberry_safe_escape',  $this->escapeFilter(...), ['needs_environment' => TRUE, 'is_safe_callback' => [EscaperExtension::class, 'escapeFilterIsSafe']]),
     ];
   }
 

@@ -41,10 +41,10 @@ class TwigNodeVisitor implements NodeVisitorInterface {
       $callable = $node->getAttribute('twig_callable');
       if (method_exists($callable, 'getName')) {
         $internal_name = $node->getAttribute('twig_callable')->getName();
-        if ('drupal_escape' == $internal_name) {
-          // @TODO.  $env->getFilter is internal now. Drupal 11 is still using it though;
-          $node->setAttribute('twig_callable', $env->getFilter('format_strawberry_safe_escape'));
-          // Deprecated in Twig 3.12 $node->getNode('filter'). $name could be public/
+        if (in_array($internal_name, ['escape', 'e', 'drupal_escape', 'format_strawberry_safe_escape'], TRUE)) {
+          // Store that we have a filter active already that knows
+          // how to deal with render arrays.
+          $this->skipRenderVarFunction = TRUE;
         }
       }
     }
