@@ -11,8 +11,9 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
+use Drupal\Core\Url;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -98,8 +99,8 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
   public static function create(
     ContainerInterface $container,
     array $configuration,
-                       $plugin_id,
-                       $plugin_definition
+    $plugin_id,
+    $plugin_definition
   ) {
     return new static(
       $plugin_id,
@@ -134,6 +135,7 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
         'viewer_overrides' => '',
         'viewer_theme_overrides' => '',
         'enabled_plugins' => [],
+        'webannotations' => FALSE,
         'max_width' => 720,
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
@@ -275,7 +277,25 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           '#options' => $plugin_options,
           '#title' => $this->t('Which Content types will this metadata be allowed to be exposed?'),
           '#required'=> TRUE,
+          '#attributes' => [
+            'data-triiiceratops-formatter-selector' => 'enabled-plugins',
+          ],
           '#default_value' => $this->getSetting('enabled_plugins') ?? []
+        ],
+        'webannotations' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable loading/editing of W3C webAnnotations.'),
+          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
+          '#default_value' => $this->getSetting('webannotations'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations',
+          ],
+          '#states' => [
+            'visible' => [
+              ':input[data-triiiceratops-formatter-selector="enabled-plugins"][value="plugin-annotation-editor"]' => ['checked' => TRUE],
+            ]
+          ],
+          '#default_value' => $this->getSetting('webannotations') ?? FALSE
         ],
         'max_width' => [
           '#type' => 'number',
@@ -398,6 +418,11 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     else {
       $summary[] = $this->t('This formatter still needs to be setup');
     }
+    if ($this->getSetting('webannotations')) {
+      $summary[] = $this->t('Enable W3C WebAnnotations: %webannotations', [
+        '%webannotations' => $this->getSetting('webannotations'),
+      ]);
+    }
 
     $summary[] = $this->t(
       'Maximum size: %max_width x %max_height',
@@ -420,6 +445,7 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     $max_width = $this->getSetting('max_width');
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
+    $webannotations = $this->getSetting('webannotations') ?? FALSE;
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
@@ -572,6 +598,18 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           $elements[$delta]['#attached']['library'][]
             = 'format_strawberryfield/triiiceratops_strawberry';
           foreach ($enabled_plugins as $plugin) {
+            if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $plugin == 'plugin-annotation-editor' && $webannotations) {
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations'] = (boolean) $webannotations ?? FALSE;
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($items->getName(), $delta, $nodeuuid);
+              if ($this->currentUser) {
+                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+              }
+              else {
+                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = null;
+                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = 'anonymous';
+              }
+            }
             $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
           }
         }

@@ -277,7 +277,7 @@ class WebAnnotationController extends ControllerBase {
       $node
     )) {
       // We are getting which field originate the annotations from AJAX.
-      // Symfony6 deprecated getting arrays via get()... like c'mom
+      // Symfony6 deprecated getting arrays via get().
       // we have to use all()[
       $everything = $this->requestStack->getCurrentRequest()->request->all();
       $annotation = $everything['data'] ?? NULL;
