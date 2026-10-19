@@ -525,78 +525,78 @@
 
       const elementsToAttach = once('attache_osd', '.strawberry-media-item[data-iiif-infojson]', context);
       $(elementsToAttach).each(function (index, value) {
-          // Get the node uuid for this element
-          var element_id = $(this).attr("id");
-          var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
-          var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
-          var icons_prefixurl = drupalSettings.format_strawberryfield.openseadragon[element_id]['icons_prefixurl'];
-          var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
-          var annotations_tool = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_tool'];
-          var annotations_opencv = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_opencv'];
-          var annotations_betterpolygon = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_betterpolygon'];
-          var annotations_georeferencewidget = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_georeferencewidget'];
-          var viewer_overrides = drupalSettings.format_strawberryfield.openseadragon[element_id]['viewer_overrides'];
-          var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
-          var keystoreid = drupalSettings.format_strawberryfield.openseadragon[element_id]['keystoreid'];
-          current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
-          var group = $(this).data("iiif-group");
-          var infojson = $(this).data("iiif-infojson");
-          var showthumbs = $(this).data("iiif-thumbnails");
-          if (!groupsinfojsons.hasOwnProperty(group)) {
-            groupsinfojsons[group] = [infojson];
-            groupsinfomanifests[group] = [drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl];
-            if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
-              groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
-            }
-            if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
-              icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
-            }
-            groupssettings[group] = {
-              "default_width": default_width,
-              "default_height": default_height,
-              "webannotations" : false,
-              "annotations_tool": annotations_tool,
-              "annotations_opencv": false,
-              "annotations_betterpolygon": false,
-              "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
-              "file_uuid" : file_uuid,
-              "keystoreid" : keystoreid,
-              "showthumbs": showthumbs,
-              "viewer_overrides": viewer_overrides,
-              "icons_prefixurl" : icons_prefixurl,
-            }
-
-            if (typeof annotations != "undefined" && annotations == true) {
-              groupssettings[group].webannotations = true;
-            }
-            if (typeof annotations_opencv != "undefined" && annotations_opencv == true) {
-              groupssettings[group].annotations_opencv = true;
-            }
-            if (typeof annotations_betterpolygon != "undefined" && annotations_betterpolygon == true) {
-              groupssettings[group].annotations_betterpolygon = true;
-            }
-
-            if (typeof annotations_georeferencewidget != "undefined" && annotations_georeferencewidget == true) {
-              groupssettings[group].annotations_georeferencewidget = true;
-            }
-
-            // We only need a single css id per group
-            groupsid[group] = element_id;
-
-            $(this).height(default_height);
-            $(this).css("width",default_width);
+        // Get the node uuid for this element
+        var element_id = $(this).attr("id");
+        var default_width = drupalSettings.format_strawberryfield.openseadragon[element_id]['width'];
+        var default_height = drupalSettings.format_strawberryfield.openseadragon[element_id]['height'];
+        var icons_prefixurl = drupalSettings.format_strawberryfield.openseadragon[element_id]['icons_prefixurl'];
+        var annotations = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations'];
+        var annotations_tool = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_tool'];
+        var annotations_opencv = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_opencv'];
+        var annotations_betterpolygon = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_betterpolygon'];
+        var annotations_georeferencewidget = drupalSettings.format_strawberryfield.openseadragon[element_id]['webannotations_georeferencewidget'];
+        var viewer_overrides = drupalSettings.format_strawberryfield.openseadragon[element_id]['viewer_overrides'];
+        var file_uuid = drupalSettings.format_strawberryfield.openseadragon[element_id]['dr:uuid'];
+        var keystoreid = drupalSettings.format_strawberryfield.openseadragon[element_id]['keystoreid'];
+        current_user = drupalSettings.format_strawberryfield.openseadragon[element_id]['user'];
+        var group = $(this).data("iiif-group");
+        var infojson = $(this).data("iiif-infojson");
+        var showthumbs = $(this).data("iiif-thumbnails");
+        if (!groupsinfojsons.hasOwnProperty(group)) {
+          groupsinfojsons[group] = [infojson];
+          groupsinfomanifests[group] = [drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl];
+          if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
+            groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
           }
-          else {
-            groupsinfojsons[group].push(infojson);
-            if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
-              groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
-            }
-            groupsinfomanifests[group].push(drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl);
-            // hide other strawberry-media-items
-            $(this).height(0);
-            $(this).width(0);
+          if (typeof icons_prefixurl == "undefined" || icons_prefixurl == "") {
+            icons_prefixurl = "https://cdn.jsdelivr.net/npm/openseadragon@2.4.2/build/openseadragon/images/";
           }
-        });
+          groupssettings[group] = {
+            "default_width": default_width,
+            "default_height": default_height,
+            "webannotations" : false,
+            "annotations_tool": annotations_tool,
+            "annotations_opencv": false,
+            "annotations_betterpolygon": false,
+            "nodeuuid" : settings.format_strawberryfield.openseadragon.innode[element_id],
+            "file_uuid" : file_uuid,
+            "keystoreid" : keystoreid,
+            "showthumbs": showthumbs,
+            "viewer_overrides": viewer_overrides,
+            "icons_prefixurl" : icons_prefixurl,
+          }
+
+          if (typeof annotations != "undefined" && annotations == true) {
+            groupssettings[group].webannotations = true;
+          }
+          if (typeof annotations_opencv != "undefined" && annotations_opencv == true) {
+            groupssettings[group].annotations_opencv = true;
+          }
+          if (typeof annotations_betterpolygon != "undefined" && annotations_betterpolygon == true) {
+            groupssettings[group].annotations_betterpolygon = true;
+          }
+
+          if (typeof annotations_georeferencewidget != "undefined" && annotations_georeferencewidget == true) {
+            groupssettings[group].annotations_georeferencewidget = true;
+          }
+
+          // We only need a single css id per group
+          groupsid[group] = element_id;
+
+          $(this).height(default_height);
+          $(this).css("width",default_width);
+        }
+        else {
+          groupsinfojsons[group].push(infojson);
+          if (drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother) {
+            groupsinfomanifests[group].push(...drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifestother);
+          }
+          groupsinfomanifests[group].push(drupalSettings.format_strawberryfield.openseadragon[element_id]?.manifesturl);
+          // hide other strawberry-media-items
+          $(this).height(0);
+          $(this).width(0);
+        }
+      });
 
       $.each(groupsid, function (group, element_id)  {
 
@@ -683,7 +683,7 @@
               if (Array.isArray($iiif_parsed)) {
                 $iiif_parsed = $iiif_parsed.map($canvas_structure => {
                   if ($canvas_structure?.items !== null) {
-                      // this is async so it should have started already
+                    // this is async so it should have started already
                     const first_image_service = $canvas_structure.items.map($item => $item.service_ids[0]);
                     infojson.push(first_image_service[0] + '/info.json');
                   } else if ($canvas_structure?.canvas_id) {
@@ -693,29 +693,28 @@
                 });
               }
               if (future_canvas_promises.length > 0) {
-                  Promise.allSettled(future_canvas_promises).then(iiifCanvas_promises_resolved => {
-                      iiifCanvas_promises_resolved.forEach((iiifCanvas_promise_resolved) => {
-                        if (iiifCanvas_promise_resolved.status == "fulfilled") {
-                          let $iiif_canvas_parsed = Drupal.FormatStrawberryfieldIiifUtils.getIIIFServicesForCanvas(iiifCanvas_promise_resolved.value);
-                          if (Array.isArray($iiif_canvas_parsed)) {
-                              $iiif_canvas_parsed = $iiif_canvas_parsed.map($canvas_structure_remote => {
-                                  if ($canvas_structure_remote?.items !== null) {
-                                      // this is async so it should have started already
-                                      const first_image_service = $canvas_structure_remote.items.map($item => $item.service_ids[0]);
-                                      tiles.push(first_image_service[0] + '/info.json');
-                                      viewers[element_id].addTiledImage({tileSource: first_image_service[0] + '/info.json'});
-                                      //viewers[element_id].tileSources = viewers[element_id].tileSources.concat(first_image_service[0] + '/info.json');
-                                      if (tiles.length > 1) {
-                                          viewers[element_id].addReferenceStrip();
-                                      }
-                                  }
-                              });
-                          }
+                Promise.allSettled(future_canvas_promises).then(iiifCanvas_promises_resolved => {
+                    iiifCanvas_promises_resolved.forEach((iiifCanvas_promise_resolved) => {
+                      if (iiifCanvas_promise_resolved.status == "fulfilled") {
+                        let $iiif_canvas_parsed = Drupal.FormatStrawberryfieldIiifUtils.getIIIFServicesForCanvas(iiifCanvas_promise_resolved.value);
+                        if (Array.isArray($iiif_canvas_parsed)) {
+                          $iiif_canvas_parsed = $iiif_canvas_parsed.map($canvas_structure_remote => {
+                            if ($canvas_structure_remote?.items !== null) {
+                              // this is async so it should have started already
+                              const first_image_service = $canvas_structure_remote.items.map($item => $item.service_ids[0]);
+                              tiles.push(first_image_service[0] + '/info.json');
+                              viewers[element_id].addTiledImage({tileSource: first_image_service[0] + '/info.json'});
+                              if (tiles.length > 1) {
+                                viewers[element_id].addReferenceStrip();
+                              }
+                            }
+                          });
+                        }
                       }});
-                          viewers[element_id].open(tiles, 0);
-                          viewers[element_id].addReferenceStrip();
+                    viewers[element_id].open(tiles, 0);
+                    viewers[element_id].addReferenceStrip();
                   }
-                  )
+                )
               }
 
               infojson.forEach($tile => {tiles.push($tile);viewers[element_id].addTiledImage({tileSource: $tile });});
@@ -729,7 +728,7 @@
                 viewers[element_id].goToPage(0);
               }
             }).catch(function () {
-                console.log("IIIF Loading from URL failed and Rejected");
+              console.log("IIIF Loading from URL failed and Rejected");
             });
           });
         }
@@ -850,15 +849,6 @@
             var tiledImage = addItemEvent.item;
             tiledImage.addHandler('fully-loaded-change', function(fullyLoadedChangeEvent) {
               console.log('fully loaded Canvas', fullyLoadedChangeEvent.fullyLoaded);
-              /*var canvas = fullyLoadedChangeEvent.eventSource.viewer.drawer.canvas;
-              var ctx = canvas.getContext('2d');
-              const canvas2 = document.getElementById('testcanvas');
-              const ctx2 = canvas2.getContext('2d');
-              ctx2.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
-              worker.postMessage({
-                type: 'execute',
-                image_data: ctx.getImageData(0, 0, canvas.width, canvas.height)
-              });*/
             });
           });
 
