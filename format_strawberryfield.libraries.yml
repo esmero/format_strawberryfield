@@ -511,7 +511,7 @@ clipboard_copy_strawberry:
 triiiceratops:
   version: 1.2.2
   js:
-    https://unpkg.com/triiiceratops@1.2.2/dist/triiiceratops-element.iife.js:  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/triiiceratops@1.2.2/dist/triiiceratops-element.iife.js:  { external: true, minified: true, preprocess: false}
 
 triiiceratops_plugin-image-manipulation:
   version: 1.1.1
@@ -551,7 +551,7 @@ triiiceratops_plugin-pdf-export:
 triiiceratops_strawberry:
   version: 1.0
   js:
-    js/triiiceratops_strawberry.js: {minified: false}
+    js/triiiceratops_strawberry.js: {minified: false, attributes: { type: module } }
   css:
     component:
       css/triiiceratops.css: {}
