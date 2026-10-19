@@ -1,7 +1,87 @@
-
+import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annotation-editor.js'
 (function ($, Drupal, once, drupalSettings, Triiiceratops) {
 
   'use strict';
+
+  class ArchipelagoAnnotationStorageAdapter {
+    constructor(node_uuid, current_user,
+     current_user_label, kid) {
+      this.baseUrl = window.location.origin + '/do/';
+      this.node_uuid =  node_uuid;
+      this.user_id = current_user;
+      this.user_label = current_user_label;
+      this.kid = kid;
+    }
+
+    valid_uuid(string) {
+      const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return pattern.test(string);
+    }
+
+    uuid_from_canvas_id(canvasid) {
+
+      if (canvasid.startsWith(window.location.origin)) {
+        const url = new URL(canvasid);
+        // Means the canvas ID could be locally generated
+        const pieces = url.pathname.split('/').filter(part => part !== "");
+        if (pieces[0] == 'do' && this.valid_uuid(pieces[1])) {
+          return pieces[1];
+        }
+        else {
+          return this.node_uuid;
+        }
+      }
+      else {
+        // External Canvases can be stored in the Top level UUID
+        return this.node_uuid;
+      }
+    }
+
+    // Retrieve annotations from your database
+    async load(manifestId, canvasId) {
+      const uuid = this.uuid_from_canvas_id(canvasId);
+      const data  = {
+        target_resource : canvasId,
+        keystoreid: this.kid
+      }
+      const queryParams = new URLSearchParams(data).toString();
+      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/read?${queryParams}`);
+      if (!response.ok) throw new Error('Failed to load annotations');
+
+      // Should return a valid IIIF/W3C AnnotationPage JSON object
+      return await response.json();
+    }
+
+    // Save a new annotation created in the viewer
+    async create(manifestId, canvasId, annotation) {
+      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/post`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canvasId, annotation })
+      });
+      if (!response.ok) throw new Error('Failed to create annotation');
+      return await response.json();
+    }
+
+    // Update modified annotations
+    async update(manifestId, canvasId, annotation) {
+      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/put`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canvasId, annotation })
+      });
+      if (!response.ok) throw new Error('Failed to update annotation');
+      return await response.json();
+    }
+
+    // Remove an annotation
+    async delete(manifestId, canvasId, annotationId) {
+      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/delete}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('Failed to delete annotation');
+    }
+  }
 
 
   function CaptureAdoTriiiceratopsCanvasChange(miradorInstance, this_id ,e) {
@@ -65,10 +145,14 @@
 
       const elementsToAttach = once('attache_triiiceratops', '.strawberry-triiiceratops-item[data-iiif-infojson]', context);
       $(elementsToAttach).each(function (index, value) {
+
         // Get the node uuid for this element
         var element_id = $(this).attr("id");
         // Check if we got some data passed via Drupal settings.
         if (typeof(drupalSettings.format_strawberryfield.triiiceratops[element_id]) != 'undefined') {
+          // Base ADO UUID. IN case of a CWS each canvas ID, if formed as might have a saying about this.
+          const node_uuid = drupalSettings.format_strawberryfield.triiiceratops[element_id]['nodeuuid'];
+
           $(this).height(drupalSettings.format_strawberryfield.triiiceratops[element_id]['height']);
           if (drupalSettings.format_strawberryfield.triiiceratops[element_id]['width'] != '100%') {
             $(this).width(drupalSettings.format_strawberryfield.triiiceratops[element_id]['width']);
@@ -119,8 +203,6 @@
             // TODO we need an actual Canvas ID here. Not just a number.
           }
 
-          // Allow last minute overrides. These are more complex bc we have windows as an array and window too.
-          // Allow a last minute override, exclude main element manifest
           if (typeof drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides'] == 'object' &&
             !Array.isArray(drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides']) &&
             drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides'] !== null) {
@@ -142,6 +224,16 @@
               plugins_dynamic.push('@triiiceratops/'+key);
             }
           }
+          let annotations_enabled = false;
+          let apAnnotationAdapter = null;
+          if (drupalSettings.format_strawberryfield.triiiceratops[element_id]['webannotations'] !== null) {
+            annotations_enabled = true;
+            const user_url = drupalSettings.format_strawberryfield.triiiceratops[element_id]['user']['url'];
+            const user_label = drupalSettings.format_strawberryfield.triiiceratops[element_id]['user']['name'];
+            const kid = drupalSettings.format_strawberryfield.triiiceratops[element_id]['keystoreid'];
+            apAnnotationAdapter = new ArchipelagoAnnotationStorageAdapter(node_uuid, user_url, user_label, kid);
+          }
+
 
           const triii_viewer = document.querySelector('#'+element_id);
           if (triii_viewer) {
@@ -159,11 +251,26 @@
               let $plugin_objects = [];
               plugins_dynamic.forEach( $plugin_key => {
                 console.log('Adding ' + $plugin_key + ' Plugin');
-                $plugin_objects.push(Triiiceratops.plugins.get($plugin_key));
+                let plugin = Triiiceratops.plugins.get($plugin_key)
+                if ($plugin_key == '@triiiceratops/plugin-annotation-editor' && apAnnotationAdapter) {
+                  const plugin_annotation = createAnnotationEditorPlugin({
+                    adapter: apAnnotationAdapter,
+                    user: { id: apAnnotationAdapter.user_id, name: apAnnotationAdapter.user_label },
+                    //tools: ['rectangle', 'polygon', 'point'],
+                  });
+                  $plugin_objects.push(plugin_annotation);
+                }
+                else {
+                  $plugin_objects.push(plugin);
+                }
               });
               if ($plugin_objects.length > 0) {
                 triii_viewer.plugins = $plugin_objects;
               }
+              // Once we have all plugins, we check if annotations can be enabled
+              // and if we can use the custom storage or not
+              console.log(triii_viewer.plugins);
+
             }
             if (triii_viewer.viewerState) {
               console.log(triii_viewer.viewerState);
@@ -172,7 +279,6 @@
                 console.log(triii_viewer.viewerState.canvases);
                 console.log(triii_viewer.viewerState.currentCanvasIndex);
               });
-              //stop();
             }
 
           });
