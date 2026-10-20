@@ -67,7 +67,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid,
-        data: annotation
+        data: annotation,
+        mint: true
       }
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/post`, {
         method: 'POST',

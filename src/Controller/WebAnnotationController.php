@@ -34,6 +34,8 @@ use Drupal\Core\Ajax\RedirectCommand;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\node\Entity\Node;
 use Drupal\Core\Url;
+use \Drupal\Component\Uuid\UuidInterface;
+
 
 class WebAnnotationController extends ControllerBase {
 
@@ -79,6 +81,8 @@ class WebAnnotationController extends ControllerBase {
    */
   protected $parseModeManager;
 
+  private \Drupal\Component\Uuid\UuidInterface $uuidService;
+
   /**
    * WebAnnotationController constructor.
    *
@@ -103,7 +107,8 @@ class WebAnnotationController extends ControllerBase {
     MimeTypeGuesserInterface $mime_type_guesser,
     PrivateTempStoreFactory $temp_store_factory,
     ParseModePluginManager $parse_mode_manager,
-    ConfigFactoryInterface $config_factory
+    ConfigFactoryInterface $config_factory,
+    UuidInterface $uuid_service,
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
@@ -113,6 +118,7 @@ class WebAnnotationController extends ControllerBase {
     $this->tempStore = $temp_store_factory->get('webannotation');
     $this->parseModeManager = $parse_mode_manager;
     $this->configFactory = $config_factory;
+    $this->uuidService = $uuid_service;
   }
 
   /**
@@ -127,7 +133,8 @@ class WebAnnotationController extends ControllerBase {
       $container->get('file.mime_type.guesser'),
       $container->get('tempstore.private'),
       $container->get('plugin.manager.search_api.parse_mode'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('uuid'),
     );
   }
 
@@ -210,6 +217,10 @@ class WebAnnotationController extends ControllerBase {
       // Symfony6 deprecated getting arrays via get()... like c'mom
       // we have to use all()[
       $everything = $this->requestStack->getCurrentRequest()->request->all();
+      if (empty($everything)) {
+        // if called via js await fetch, body will be in the request content.
+        $everything = json_decode($request->getContent(), true) ?? [];
+      }
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
@@ -287,17 +298,23 @@ class WebAnnotationController extends ControllerBase {
         $everything = json_decode($request->getContent(), true) ?? [];
       }
 
-
-
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
+      $mint = $everything['mint'] ?? FALSE;
+      $minted = NULL;
       $data = [
         'success' => TRUE
       ];
       try {
         $persisted = FALSE;
         if (isset($annotation['id'])) {
+          if (str_starts_with($annotation['id'], 'temp-') && $mint) {
+            // mint a new UUID if the ID is a temp
+            $annotation['id'] = '#'.$this->uuidService->generate();
+            $minted = $annotation['id'];
+            $data = $annotation;
+          }
           $existingannotations = $this->tempStore->get($keystoreid);
           $existingannotations = is_array($existingannotations) ? $existingannotations : [];
           if (isset($existingannotations[$target])) {
@@ -330,8 +347,8 @@ class WebAnnotationController extends ControllerBase {
         "This Content can not bear Web Annotations!"
       );
     }
-
     return new JsonResponse($data);
+
   }
 
   /**
