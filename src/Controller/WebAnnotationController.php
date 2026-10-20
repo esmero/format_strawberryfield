@@ -279,7 +279,16 @@ class WebAnnotationController extends ControllerBase {
       // We are getting which field originate the annotations from AJAX.
       // Symfony6 deprecated getting arrays via get().
       // we have to use all()[
+
       $everything = $this->requestStack->getCurrentRequest()->request->all();
+
+      if (empty($everything)) {
+        // if called via js await fetch, body will be in the request content.
+        $everything = json_decode($request->getContent(), true) ?? [];
+      }
+
+
+
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;

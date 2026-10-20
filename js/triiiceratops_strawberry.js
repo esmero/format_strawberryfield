@@ -5,12 +5,19 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
   class ArchipelagoAnnotationStorageAdapter {
     constructor(node_uuid, current_user,
-     current_user_label, kid) {
+      current_user_label, kid) {
       this.baseUrl = window.location.origin + '/do/';
       this.node_uuid =  node_uuid;
       this.user_id = current_user;
       this.user_label = current_user_label;
       this.kid = kid;
+      this.canvases = [];
+    }
+
+    setCanvases(canvases) {
+      this.canvases = canvases;
+      console.log('Setting active canvases');
+      console.log(this.canvases);
     }
 
     valid_uuid(string) {
@@ -39,13 +46,14 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Retrieve annotations from your database
     async load(manifestId, canvasId) {
+      console.log('loading annotations');
       const uuid = this.uuid_from_canvas_id(canvasId);
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid
       }
       const queryParams = new URLSearchParams(data).toString();
-      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/read?${queryParams}`);
+      const response = await fetch(`${this.baseUrl}${uuid}/webannon/read?${queryParams}`);
       if (!response.ok) throw new Error('Failed to load annotations');
 
       // Should return a valid IIIF/W3C AnnotationPage JSON object
@@ -54,10 +62,17 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Save a new annotation created in the viewer
     async create(manifestId, canvasId, annotation) {
-      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/post`, {
+      const uuid = this.uuid_from_canvas_id(canvasId);
+
+      const data  = {
+        target_resource : canvasId,
+        keystoreid: this.kid,
+        data: annotation
+      }
+      const response = await fetch(`${this.baseUrl}${uuid}/webannon/post`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ canvasId, annotation })
+        body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to create annotation');
       return await response.json();
@@ -65,10 +80,16 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Update modified annotations
     async update(manifestId, canvasId, annotation) {
-      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/put`, {
+      const uuid = this.uuid_from_canvas_id(canvasId);
+      const data  = {
+        target_resource : canvasId,
+        keystoreid: this.kid,
+        data: annotation
+      }
+      const response = await fetch(`${this.baseUrl}${uuid}/webannon/put`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ canvasId, annotation })
+        body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error('Failed to update annotation');
       return await response.json();
@@ -76,7 +97,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Remove an annotation
     async delete(manifestId, canvasId, annotationId) {
-      const response = await fetch(`${this.baseUrl}/${uuid}/webannon/delete}`, {
+      const uuid = this.uuid_from_canvas_id(canvasId);
+      const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete}`, {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete annotation');
@@ -275,8 +297,12 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             if (triii_viewer.viewerState) {
               console.log(triii_viewer.viewerState);
               const stop = triii_viewer.viewerState.subscribe(() => {
+                const canvas_index = triii_viewer.viewerState.currentCanvasIndex;
                 console.log(triii_viewer.viewerState.canvases.length);
                 console.log(triii_viewer.viewerState.canvases);
+                if (triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                  apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
+                }
                 console.log(triii_viewer.viewerState.currentCanvasIndex);
               });
             }
