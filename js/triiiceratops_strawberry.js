@@ -99,7 +99,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
     // Remove an annotation
     async delete(manifestId, canvasId, annotationId) {
       const uuid = this.uuid_from_canvas_id(canvasId);
-      const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete}`, {
+      const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete`, {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete annotation');
