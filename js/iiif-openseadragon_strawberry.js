@@ -944,7 +944,6 @@
 
           // Attach handlers to listen to events
           annotorious[element_id].on('createAnnotation', function(a) {
-            console.log(a);
             jQuery.ajax({
               url: '/do/'+ groupssettings[group].nodeuuid + '/webannon/post',
               type: "POST",
@@ -956,7 +955,6 @@
               },
               success:  function(data){
                 console.log('Created');
-                console.log(data);
               }
             });
 

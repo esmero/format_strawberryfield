@@ -177,8 +177,8 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
         $annotation_values = is_array($annotation_values) ? $annotation_values : [];
         // This covers:
         /*
-         * We got more than 0 annotations from Cache and we also have saved ones and both are not equal OR (UPDATE)
-         * We got more than 0 annotations from Cache and we have no saved nor the supporting structure to save (NEW)
+         * We got more than 0 annotations from Cache, and we also have saved ones and both are not equal OR (UPDATE)
+         * We got more than 0 annotations from Cache, and we have not saved nor the supporting structure to save (NEW)
          * None from Cache (but cache exists) and we also have saved ones (REMOVE ALL)
          */
         if (
@@ -194,7 +194,7 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
             JsonDiff::REARRANGE_ARRAYS + JsonDiff::SKIP_JSON_MERGE_PATCH
           );
           // We just keep track of the changes. If none! Then we do not set
-          // the formstate flag.
+          // the form state flag.
           if ($r->getDiffCnt() > 0) {
             $fullvalues['ap:annotationCollection'] = $annotation_values;
             $entity->{$field_name}[0]->setMainValueFromArray($fullvalues);
