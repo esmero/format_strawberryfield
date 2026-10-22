@@ -25,10 +25,10 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       return pattern.test(string);
     }
 
-    uuid_from_canvas_id(canvasid) {
+    uuid_from_iiif_id(iiifid) {
 
-      if (canvasid.startsWith(window.location.origin)) {
-        const url = new URL(canvasid);
+      if (iiifid.startsWith(window.location.origin)) {
+        const url = new URL(iiifid);
         // Means the canvas ID could be locally generated
         const pieces = url.pathname.split('/').filter(part => part !== "");
         if (pieces[0] == 'do' && this.valid_uuid(pieces[1])) {
@@ -39,7 +39,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
         }
       }
       else {
-        // External Canvases can be stored in the Top level UUID
+        // External Canvases or pretty aliased IIIF manifests Annotations should always be stored at the Top level
+        // Using the ADO where the viewer loaded
         return this.node_uuid;
       }
     }
@@ -47,7 +48,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
     // Retrieve annotations from your database
     async load(manifestId, canvasId) {
       console.log('loading annotations');
-      const uuid = this.uuid_from_canvas_id(canvasId);
+      const uuid = this.uuid_from_iiif_id(manifestId);
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid
@@ -62,13 +63,13 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Save a new annotation created in the viewer
     async create(manifestId, canvasId, annotation) {
-      const uuid = this.uuid_from_canvas_id(canvasId);
+      const uuid = this.uuid_from_iiif_id(manifestId);
 
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid,
         data: annotation,
-        mint: true
+        return: true
       }
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/post`, {
         method: 'POST',
@@ -81,11 +82,12 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Update modified annotations
     async update(manifestId, canvasId, annotation) {
-      const uuid = this.uuid_from_canvas_id(canvasId);
+      const uuid = this.uuid_from_iiif_id(manifestId);
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid,
-        data: annotation
+        data: annotation,
+        return: true
       }
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/put`, {
         method: 'PUT',
@@ -98,7 +100,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Remove an annotation
     async delete(manifestId, canvasId, annotationId) {
-      const uuid = this.uuid_from_canvas_id(canvasId);
+      const uuid = this.uuid_from_iiif_id(manifestId);
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete`, {
         method: 'DELETE'
       });
