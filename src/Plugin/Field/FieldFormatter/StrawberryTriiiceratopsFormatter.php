@@ -285,8 +285,29 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         'webannotations' => [
           '#type' => 'checkbox',
           '#title' => t('Enable loading/editing of W3C webAnnotations.'),
-          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation'),
+          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation.In Specific, annotations created/edited by Triiiceratops use as target resource a IIIF Canvas ID, which differs from OSD/Annotorious, where the target will be a specific image.'),
           '#default_value' => $this->getSetting('webannotations'),
+          '#attributes' => [
+            'data-formatter-selector' => 'webannotations',
+          ],
+          '#states' => [
+            'visible' => [
+              ':input[data-triiiceratops-formatter-selector="enabled-plugins"][value="plugin-annotation-editor"]' => ['checked' => TRUE],
+            ]
+          ],
+          '#default_value' => $this->getSetting('webannotations') ?? FALSE
+        ],
+        'webannotations_storage' => [
+          '#type' => 'select',
+          '#title' => t('To which ADO the annotations will be associated for final persistence under an ap:annotationCollection JSON key'),
+          '#description' => t('Depending on your needs and the amount of annotations, you can choose to store Annotations temporarily (for final persistence) either inside the ADO this viewer will be rendered for (The one generating the IIIF Manifest) or, instead,
+           distribute across multiple ADOs, using the ADO that generated the Canvas ID being annotated as destination. <br>For this to work correctly, your Canvas IDs need to start with `/do/{uuid_of_the_ado_generating_the_canvas_items}`. 
+           Canvases not belonging to this repository can be annotated too, but will always be saved inside the ADO this viewer will be rendered for.'),
+          '#default_value' => $this->getSetting('webannotations_storage'),
+          '#options' => [
+            'single' => t('ADO rendering this viewer'),
+            'multiple' => t('ADO (multiple) that generated the Canvas being annotated')
+          ],
           '#attributes' => [
             'data-formatter-selector' => 'webannotations',
           ],
