@@ -600,7 +600,7 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           foreach ($enabled_plugins as $plugin) {
             if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $plugin == 'plugin-annotation-editor' && $webannotations) {
               $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations'] = (boolean) $webannotations ?? FALSE;
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyName($items->getName(), $delta, $nodeuuid);
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
               if ($this->currentUser) {
                 $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
                 $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();

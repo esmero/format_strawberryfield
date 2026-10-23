@@ -373,9 +373,7 @@ class WebAnnotationController extends ControllerBase {
         $field = $node->get($field_name);
         /** @var $field \Drupal\Core\Field\FieldItemList */
         foreach ($field->getIterator() as $delta => $itemfield) {
-          $keystoreid = static::getTempStoreKeyName(
-            $field_name,
-            $delta,
+          $keystoreid = static::getTempStoreKeyNameForAnnotations(
             $node->uuid()
           );
           try {
@@ -442,9 +440,7 @@ class WebAnnotationController extends ControllerBase {
             $field = $node->get($field_name);
             /** @var $field \Drupal\Core\Field\FieldItemList */
             foreach ($field->getIterator() as $delta => $itemfield) {
-              $potentialkeystoreid = static::getTempStoreKeyName(
-                $field_name,
-                $delta,
+              $potentialkeystoreid = static::getTempStoreKeyNameForAnnotations(
                 $node->uuid()
               );
               if ($potentialkeystoreid == $keystoreid) {
@@ -701,9 +697,7 @@ class WebAnnotationController extends ControllerBase {
           $field = $node->get($field_name);
           /** @var $field \Drupal\Core\Field\FieldItemList */
           foreach ($field->getIterator() as $delta => $itemfield) {
-            $keystoreid = static::getTempStoreKeyName(
-              $field_name,
-              $delta,
+            $keystoreid = static::getTempStoreKeyNameForAnnotations(
               $node->uuid()
             );
             try {
@@ -737,21 +731,14 @@ class WebAnnotationController extends ControllerBase {
   }
 
   /**
-   * Gives us a key name used by the webforms and widgets.
+   * Gives us a key name used by the Temporary Annotation Storage.
    *
-   * @param $fieldname
-   * @param int $delta
    * @param string $entity_uuid
    *
    * @return string
    */
-  public static function getTempStoreKeyName($fieldname, $delta = 0, $entity_uuid = '0') {
-    $unique_seed = array_merge(
-      [$fieldname],
-      [$delta],
-      [$entity_uuid]
-    );
-    return sha1(implode('-', $unique_seed));
+  public static function getTempStoreKeyNameForAnnotations($entity_uuid) {
+    return sha1($entity_uuid);
   }
 
   /**

@@ -155,6 +155,9 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
   $account = \Drupal::currentUser();
   if (($sbf_fields = \Drupal::service('strawberryfield.utility')->bearsStrawberryfield($entity)) &&
     $account->hasPermission('add strawberryfield webannotation')) {
+    $keystoreid = WebAnnotationController::getTempStoreKeyNameForAnnotations(
+      $entity->uuid()
+    );
     foreach ($sbf_fields as $field_name) {
       /* @var $field \Drupal\Core\Field\FieldItemInterface */
       $field = $entity->get($field_name);
@@ -164,11 +167,6 @@ function format_strawberryfield_node_prepare_form(NodeInterface $entity, $operat
         $fullvalues = $itemfield->provideDecoded(TRUE);
         /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
         $tempstore = \Drupal::service('tempstore.private')->get('webannotation');
-        $keystoreid = WebAnnotationController::getTempStoreKeyName(
-          $field_name,
-          $delta,
-          $entity->uuid()
-        );
         $annotation_values = $tempstore->get($keystoreid);
         // If not present escape the loop. Needs to be EXACT NULL.
         if ($annotation_values === NULL) {

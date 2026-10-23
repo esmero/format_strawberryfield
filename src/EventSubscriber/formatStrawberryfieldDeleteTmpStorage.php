@@ -11,11 +11,13 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\strawberryfield\StrawberryfieldEventType;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 
 /**
- * Event subscriber that deletes format temp storage for SBF bearing entities.
+ * Event subscriber that deletes formatter (e.g. Annotations) temp storage
+ * for SBF bearing entities.
  *
- * The actual deletion only happens after persistance of a Node.
+ * The actual deletion only happens after persistence of a Node.
  *
  */
 class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface {
@@ -117,43 +119,15 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
 
     $current_class = get_called_class();
     $entity = $event->getEntity();
-    $sbf_fields = $event->getFields();
 
     /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
-
     $tempstore = $this->tempStoreFactory->get('webannotation');
-
-    foreach ($sbf_fields as $field_name) {
-      /* @var $field \Drupal\Core\Field\FieldItemInterface */
-      $field = $entity->get($field_name);
-      /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
-
-      $fieldname = $field->getName();
-      foreach ($field->getIterator() as $delta => $itemfield) {
-        $keyid = $this->getTempStoreKeyName($fieldname, $delta, $entity->uuid());
-        $tempstore->delete($keyid);
-      }
-    }
+    $keystoreid = WebAnnotationController::getTempStoreKeyNameForAnnotations(
+      $entity->uuid()
+    );
+    $tempstore->delete($keystoreid);
 
     $event->setProcessedBy($current_class, true);
-  }
-
-  /**
-   * Gives us a key name used by the webforms and widgets.
-   *
-   * @param $fieldname
-   * @param int $delta
-   * @param string $entity_uuid
-   *
-   * @return string
-   */
-  public function getTempStoreKeyName($fieldname, $delta = 0, $entity_uuid = '0') {
-    $unique_seed = array_merge(
-      [$fieldname],
-      [$delta],
-      [$entity_uuid]
-    );
-    return sha1(implode('-', $unique_seed));
   }
 
 }
