@@ -441,8 +441,12 @@ class WebAnnotationController extends ControllerBase {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
-      // We are getting which field originate the annotations from AJAX.
       $everything = $this->requestStack->getCurrentRequest()->request->all();
+
+      if (empty($everything)) {
+        // if called from js via await fetch, body will be in the request content.
+        $everything = json_decode($request->getContent(), true) ?? [];
+      }
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
