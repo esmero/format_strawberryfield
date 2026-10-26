@@ -5,13 +5,14 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
   class ArchipelagoAnnotationStorageAdapter {
     constructor(node_uuid, current_user,
-      current_user_label, kid) {
+      current_user_label, kid, stg) {
       this.baseUrl = window.location.origin + '/do/';
       this.node_uuid =  node_uuid;
       this.user_id = current_user;
       this.user_label = current_user_label;
       this.kid = kid;
       this.canvases = [];
+      this.stg = stg;
     }
 
     setCanvases(canvases) {
@@ -48,7 +49,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
     // Retrieve annotations from your database
     async load(manifestId, canvasId) {
       console.log('loading annotations');
-      const uuid = this.uuid_from_iiif_id(manifestId);
+      const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
+      const uuid = this.uuid_from_iiif_id(idtoresolve);
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid
@@ -63,7 +65,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Save a new annotation created in the viewer
     async create(manifestId, canvasId, annotation) {
-      const uuid = this.uuid_from_iiif_id(manifestId);
+      const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
+      const uuid = this.uuid_from_iiif_id(idtoresolve);
 
       const data  = {
         target_resource : canvasId,
@@ -82,7 +85,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Update modified annotations
     async update(manifestId, canvasId, annotation) {
-      const uuid = this.uuid_from_iiif_id(manifestId);
+      const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
+      const uuid = this.uuid_from_iiif_id(idtoresolve);
       const data  = {
         target_resource : canvasId,
         keystoreid: this.kid,
@@ -100,7 +104,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Remove an annotation
     async delete(manifestId, canvasId, annotationId) {
-      const uuid = this.uuid_from_iiif_id(manifestId);
+      const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
+      const uuid = this.uuid_from_iiif_id(idtoresolve);
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete`, {
         method: 'DELETE'
       });
@@ -255,8 +260,9 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             annotations_enabled = true;
             const user_url = drupalSettings.format_strawberryfield.triiiceratops[element_id]['user']['url'];
             const user_label = drupalSettings.format_strawberryfield.triiiceratops[element_id]['user']['name'];
+            const stg = drupalSettings.format_strawberryfield.triiiceratops[element_id]['webannotations_storage'];
             const kid = drupalSettings.format_strawberryfield.triiiceratops[element_id]['keystoreid'];
-            apAnnotationAdapter = new ArchipelagoAnnotationStorageAdapter(node_uuid, user_url, user_label, kid);
+            apAnnotationAdapter = new ArchipelagoAnnotationStorageAdapter(node_uuid, user_url, user_label, kid, stg);
           }
 
 

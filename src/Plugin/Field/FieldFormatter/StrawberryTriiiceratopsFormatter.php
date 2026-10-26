@@ -136,6 +136,7 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
         'viewer_theme_overrides' => '',
         'enabled_plugins' => [],
         'webannotations' => FALSE,
+        'webannotations_storage' => 'multiple',
         'max_width' => 720,
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
@@ -467,6 +468,7 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     $max_width_css = empty($max_width) || $max_width == 0 ? '100%' : $max_width .'px';
     $max_height = $this->getSetting('max_height');
     $webannotations = $this->getSetting('webannotations') ?? FALSE;
+    $webannotations_storage = $this->getSetting('webannotations_storage') ?? 'multiple';
     $mediasource = is_array($this->getSetting('mediasource')) ? $this->getSetting('mediasource') : [];
     $main_mediasource = $this->getSetting('main_mediasource');
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
@@ -610,28 +612,26 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
             = $max_width_css;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['height']
             = max(
-            $max_height,
-            480
-          );
+              $max_height,
+              480
+            );
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides'] = $viewer_overrides;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides_theme'] = $viewer_overrides_theme;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['enabled_plugins'] = $enabled_plugins;
           $elements[$delta]['#attached']['library'][]
             = 'format_strawberryfield/triiiceratops_strawberry';
           foreach ($enabled_plugins as $plugin) {
-            if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $plugin == 'plugin-annotation-editor' && $webannotations) {
+            if ( $this->currentUser && $this->currentUser->hasPermission('view strawberryfield webannotation') && $plugin == 'plugin-annotation-editor' && $webannotations) {
               $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations'] = (boolean) $webannotations ?? FALSE;
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations_storage'] = $webannotations_storage;
               $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
-              if ($this->currentUser) {
-                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
-                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
-              }
-              else {
-                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = null;
-                $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = 'anonymous';
-              }
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+              $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
             }
-            $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
+            else {
+              $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
+            }
           }
         }
       }
