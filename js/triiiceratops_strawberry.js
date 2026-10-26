@@ -48,7 +48,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     // Retrieve annotations from your database
     async load(manifestId, canvasId) {
-      console.log('loading annotations');
       const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
       const uuid = this.uuid_from_iiif_id(idtoresolve);
       const data  = {
@@ -106,8 +105,11 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
     async delete(manifestId, canvasId, annotationId) {
       const idtoresolve = this.stg === 'single' ? manifestId : canvasId;
       const uuid = this.uuid_from_iiif_id(idtoresolve);
+      const annotation = {id:annotationId};
       const response = await fetch(`${this.baseUrl}${uuid}/webannon/delete`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        keystoreid: this.kid,
+        data: annotation,
       });
       if (!response.ok) throw new Error('Failed to delete annotation');
     }
