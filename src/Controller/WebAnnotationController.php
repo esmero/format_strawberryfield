@@ -2,7 +2,6 @@
 
 namespace Drupal\format_strawberryfield\Controller;
 
-use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Controller\ControllerBase;
@@ -11,7 +10,6 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\TempStore\TempStoreException;
 use Drupal\search_api\Query\QueryInterface;
-use Drupal\search_api\SearchApiException;
 use Drupal\strawberryfield\Plugin\Field\FieldType\StrawberryFieldItem;
 use Drupal\strawberryfield\Plugin\search_api\datasource\StrawberryfieldFlavorDatasource;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
@@ -34,7 +32,7 @@ use Drupal\Core\Ajax\RedirectCommand;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\node\Entity\Node;
 use Drupal\Core\Url;
-use \Drupal\Component\Uuid\UuidInterface;
+use Drupal\Component\Uuid\UuidInterface;
 
 
 class WebAnnotationController extends ControllerBase {
@@ -139,64 +137,6 @@ class WebAnnotationController extends ControllerBase {
   }
 
   /**
-   * Persist in temp Storage Webannotation Controller (POST).
-   *
-   * @param \Symfony\Component\HttpFoundation\Request
-   *   The Full HTTP Request
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
-   *   A Node as argument
-   *
-   * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   A simple JSON response.
-   */
-  public function persist(Request $request,
-    ContentEntityInterface $node
-  ) {
-    if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
-      $node
-    )) {
-      foreach ($sbf_fields as $field_name) {
-        // by default only persist in the primary SBF
-        // @TODO make which SBF will carry the load configurable?
-        // Also. This is setting the whole list everytime
-        // Should we deal with add/remove/update/edit independently?
-        // This means more server logic
-        // but less traffic?
-        /* @var $field StrawberryFieldItem */
-        $field = $node->get($field_name);
-        // Symfony6 deprecated getting arrays via get()... like c'mom
-        // we have to use all()[
-        $everything = $this->requestStack->getCurrentRequest()->request->all();
-        $annotations = $everything['data'] ?? NULL;
-        $target = $everything['target_resource'] ?? NULL;
-        $keystoreid = $everything['keystoreid'] ?? NULL;
-        $data = [
-          'success' => TRUE
-        ];
-        try {
-          $existingannotations = $this->tempStore->get($keystoreid);
-          $existingannotations = is_array($existingannotations) ? $existingannotations : [];
-          $existingannotations[$target] = $annotations;
-          $this->tempStore->set($keystoreid, $existingannotations);
-        }
-        catch (TempStoreException $exception) {
-          $data = [
-            'success' => FALSE
-          ];
-        }
-        break;
-      }
-    }
-    else {
-      throw new BadRequestHttpException(
-        "This Content can not bear Web Annotations!"
-      );
-    }
-
-    return new JsonResponse($data);
-  }
-
-  /**
    * Updates an existing WebAnnotation Method (PUSH).
    *
    * @param \Symfony\Component\HttpFoundation\Request
@@ -257,10 +197,10 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (TempStoreException $exception) {
-        $data = [
-          'success' => FALSE
-        ];
+      catch (TempStoreException) {
+        throw new ServiceUnavailableHttpException(
+          "Temporary Storage for WebAnnotations is not working. Contact your admin."
+        );
       }
     }
     else {
@@ -300,6 +240,17 @@ class WebAnnotationController extends ControllerBase {
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
+      if (!$keystoreid || !$target || !$annotation) {
+        throw new BadRequestHttpException(
+          "Bad request for Web Annotations!"
+        );
+      }
+
+      $keystoreid_route = static::getTempStoreKeyNameForAnnotations($node->uuid());
+      if ($keystoreid_route !== $keystoreid) {
+        $keystoreid = $keystoreid_route;
+      }
+
       $return_in_response = $everything['return'] ?? FALSE;
       $data = [
         'success' => TRUE
@@ -325,7 +276,6 @@ class WebAnnotationController extends ControllerBase {
               }
             }
           }
-
           $existingannotations[$target][] = $annotation;
           $this->tempStore->set($keystoreid, $existingannotations);
         }
@@ -335,10 +285,10 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (TempStoreException $exception) {
-        $data = [
-          'success' => FALSE
-        ];
+      catch (TempStoreException) {
+        throw new BadRequestHttpException(
+          "We could not update this Web Annotations!"
+        );
       }
     }
     else {
@@ -362,33 +312,27 @@ class WebAnnotationController extends ControllerBase {
    *
    * @return AjaxResponse
    *   A cacheable response.
+   * @throws \Exception
    */
   public function deleteKeyStore(Request $request, ContentEntityInterface $node) {
     if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
       $node
     )) {
       $response = new AjaxResponse();
-      foreach ($sbf_fields as $field_name) {
-        /* @var $field \Drupal\Core\Field\FieldItemInterface */
-        $field = $node->get($field_name);
-        /** @var $field \Drupal\Core\Field\FieldItemList */
-        foreach ($field->getIterator() as $delta => $itemfield) {
-          $keystoreid = static::getTempStoreKeyNameForAnnotations(
-            $node->uuid()
-          );
-          try {
-            $this->tempStore->delete(trim($keystoreid));
-          }
-          catch (TempStoreException $exception) {
-            $response->addCommand(
-              new ReplaceCommand(
-                '#edit-webannotations > div',
-                'Something went awfully wrong and we could not discard your Annotation. Please try again.'
-              )
-            );
-            return $response;
-          }
-        }
+      $keystoreid = static::getTempStoreKeyNameForAnnotations(
+        $node->uuid()
+      );
+      try {
+        $this->tempStore->delete(trim($keystoreid));
+      }
+      catch (TempStoreException) {
+        $response->addCommand(
+          new ReplaceCommand(
+            '#edit-webannotations > div',
+            'Something went awfully wrong and we could not discard your Annotation. Please try again.'
+          )
+        );
+        return $response;
       }
     }
     else {
@@ -429,6 +373,16 @@ class WebAnnotationController extends ControllerBase {
       // We are getting which field originated the annotations from AJAX.
       // This time Ajax
       $keystoreid = $this->requestStack->getCurrentRequest()->query->get('keystoreid');
+      if (!$keystoreid) {
+        throw new BadRequestHttpException(
+          "Bad request for Web Annotations!"
+        );
+      }
+
+      $keystoreid_route = static::getTempStoreKeyNameForAnnotations($node->uuid());
+      if ($keystoreid_route !== $keystoreid) {
+        $keystoreid = $keystoreid_route;
+      }
 
       try {
         // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
@@ -471,143 +425,6 @@ class WebAnnotationController extends ControllerBase {
   }
 
   /**
-   * Read existing WebAnnotations From Solr/Flavors Controller Method (GET).
-   *
-   * @param \Symfony\Component\HttpFoundation\Request
-   *   The Full http Request
-   * @param \Drupal\Core\Entity\ContentEntityInterface $node
-   *   A Node as argument
-   *
-   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
-   *   A cacheable response.
-   */
-  public function readFromFlavors(Request $request,
-    ContentEntityInterface $node
-  ) {
-    if (!$node->access('view', $this->currentUser())) {
-      throw new AccessDeniedHttpException(
-        "Permission Denied."
-      );
-    }
-    // WE do not want cache here
-    // But starting to think Anonymous users should not use the tempStore at all.
-    $build = [
-      '#cache' => [
-        'max-age' => -1,
-      ],
-    ];
-
-    $existingannotations = [];
-    $parameters = $this->requestStack->getCurrentRequest()->query->all();
-    $target = $parameters['target_resource_uuid'] ?? '';
-    $processors = $parameters['processors'] ?? NULL;
-    $flavor_id = $parameters['flavor_id'] ?? NULL;
-    $ocr = $parameters['highlights'] ?? FALSE;
-    if ($ocr) {
-      $ocr = TRUE;
-    }
-    $term = $parameters['q'] ?? NULL;
-    if (is_array($target)) {
-      foreach ($target as $item) {
-        if (is_scalar($item)) {
-          if (!Uuid::isValid($item)) {
-            throw new BadRequestHttpException(
-              "Wrong request"
-            );
-          }
-        }
-        else {
-          throw new BadRequestHttpException(
-            "Wrong request"
-          );
-        }
-      }
-    }
-    elseif (is_scalar($target)) {
-      if (!Uuid::isValid($target)) {
-        throw new BadRequestHttpException(
-          "Wrong request"
-        );
-      }
-    }
-
-    // Processors or a $flavor_id are required. The latter wins and on a mismatch will really just give you 0 results.
-    // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
-    // as individual annotations or not at all.
-
-    if (!is_scalar($term) && !empty($term)) {
-      throw new BadRequestHttpException(
-        "Wrong request"
-      );
-    }
-    elseif (!empty($term)) {
-      $term = trim($term);
-      // max 128 characters for search
-      $term = mb_substr($term, 0, 128);
-    }
-
-    if ($processors || $flavor_id) {
-      if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
-        $node
-      )) {
-      }
-      $data = [
-        'success' => TRUE
-      ];
-      try {
-        // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
-        // It would have set initial values, so we do not need to read/iterate everytime
-        $file_uris = [];
-
-        $files = $this->entityTypeManager()
-          ->getStorage('file')
-          ->loadByProperties(['uuid' => $target]);
-        if (count($files) == 0) {
-          throw new BadRequestHttpException(
-            "Wrong request"
-          );
-        }
-        foreach ($files as $file) {
-          $file_uris[] = $file->getFileUri();
-        }
-        $targets = is_array($target) ? $target : [$target];
-        if (!empty($flavor_id)) {
-          $flavor_ids = [$flavor_id];
-        }
-        else {
-          $flavor_ids = [];
-        }
-        if ($processors) {
-          $processors_list = is_array($processors) ? $processors : [$processors];
-        }
-        else {
-          $processors_list = [];
-        }
-
-        // This allows for multiple targets.
-        $existingannotations = $this->flavorfromSolrIndex($term, $processors_list, $file_uris, $targets, [$node->uuid()], $flavor_ids, 0, 25, $ocr);
-        $existingannotations = array_filter($existingannotations);
-        $return = !empty($existingannotations) && is_array($existingannotations) ? $existingannotations : [];
-      }
-      catch (\Exception $exception) {
-        throw new ServiceUnavailableHttpException(
-          "Annotation from StrawberryFlavor fetching failed. Contact your admin."
-        );
-      }
-    }
-    else {
-      throw new BadRequestHttpException(
-        "Wrong request"
-      );
-    }
-    $response = new CacheableJsonResponse($return);
-    $response->addCacheableDependency($build);
-    $response->addCacheableDependency($node);
-
-    return $response;
-  }
-
-  /**
    * Persist temp Controller Method (POST).
    *
    * @param \Symfony\Component\HttpFoundation\Request
@@ -629,6 +446,17 @@ class WebAnnotationController extends ControllerBase {
       $annotation = $everything['data'] ?? NULL;
       $target = $everything['target_resource'] ?? NULL;
       $keystoreid = $everything['keystoreid'] ?? NULL;
+
+      if (!$keystoreid || !$target || !$annotation) {
+        throw new BadRequestHttpException(
+          "Bad request for Web Annotations!"
+        );
+      }
+
+      $keystoreid_route = static::getTempStoreKeyNameForAnnotations($node->uuid());
+      if ($keystoreid_route !== $keystoreid) {
+        $keystoreid = $keystoreid_route;
+      }
 
       $data = [
         'success' => TRUE
@@ -662,9 +490,9 @@ class WebAnnotationController extends ControllerBase {
         }
       }
       catch (TempStoreException $exception) {
-        $data = [
-          'success' => FALSE
-        ];
+        throw new ServiceUnavailableHttpException(
+          "Temporary Storage for WebAnnotations is not working. Contact your admin."
+        );
       }
     }
     else {
@@ -796,7 +624,6 @@ class WebAnnotationController extends ControllerBase {
 
     $tempstore->set($keystoreid, $all_annotations);
     return $all_annotations;
-
 
   }
 
@@ -1176,4 +1003,140 @@ class WebAnnotationController extends ControllerBase {
     }
     return $result_snippets;
   }
+
+  /**
+   * Read existing WebAnnotations From Solr/Flavors Controller Method (GET).
+   *
+   * @param \Symfony\Component\HttpFoundation\Request
+   *   The Full http Request
+   * @param \Drupal\Core\Entity\ContentEntityInterface $node
+   *   A Node as argument
+   *
+   * @return \Drupal\Core\Cache\CacheableJsonResponse|\Drupal\Core\Cache\CacheableResponse
+   *   A cacheable response.
+   */
+  public function readFromFlavors(Request $request,
+    ContentEntityInterface $node
+  ) {
+    if (!$node->access('view', $this->currentUser())) {
+      throw new AccessDeniedHttpException(
+        "Permission Denied."
+      );
+    }
+    // WE do not want cache here
+    // But starting to think Anonymous users should not use the tempStore at all.
+    $build = [
+      '#cache' => [
+        'max-age' => -1,
+      ],
+    ];
+
+    $existingannotations = [];
+    $parameters = $this->requestStack->getCurrentRequest()->query->all();
+    $target = $parameters['target_resource_uuid'] ?? '';
+    $processors = $parameters['processors'] ?? NULL;
+    $flavor_id = $parameters['flavor_id'] ?? NULL;
+    $ocr = $parameters['highlights'] ?? FALSE;
+    if ($ocr) {
+      $ocr = TRUE;
+    }
+    $term = $parameters['q'] ?? NULL;
+    if (is_array($target)) {
+      foreach ($target as $item) {
+        if (is_scalar($item)) {
+          if (!Uuid::isValid($item)) {
+            throw new BadRequestHttpException(
+              "Wrong request"
+            );
+          }
+        }
+        else {
+          throw new BadRequestHttpException(
+            "Wrong request"
+          );
+        }
+      }
+    }
+    elseif (is_scalar($target)) {
+      if (!Uuid::isValid($target)) {
+        throw new BadRequestHttpException(
+          "Wrong request"
+        );
+      }
+    }
+
+    // Processors or a $flavor_id are required. The latter wins and on a mismatch will really just give you 0 results.
+    // We might want to (eventually) decide if we want OCR (normal page level) to be fetched
+    // as individual annotations or not at all.
+
+    if (!is_scalar($term) && !empty($term)) {
+      throw new BadRequestHttpException(
+        "Wrong request"
+      );
+    }
+    elseif (!empty($term)) {
+      $term = trim($term);
+      // max 128 characters for search
+      $term = mb_substr($term, 0, 128);
+    }
+
+    if ($processors || $flavor_id) {
+      if ($sbf_fields = $this->strawberryfieldUtility->bearsStrawberryfield(
+        $node
+      )) {
+      }
+
+      try {
+        // See \Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter::viewElements
+        // It would have set initial values, so we do not need to read/iterate everytime
+        $file_uris = [];
+
+        $files = $this->entityTypeManager()
+          ->getStorage('file')
+          ->loadByProperties(['uuid' => $target]);
+        if (count($files) == 0) {
+          throw new BadRequestHttpException(
+            "Wrong request"
+          );
+        }
+        foreach ($files as $file) {
+          $file_uris[] = $file->getFileUri();
+        }
+        $targets = is_array($target) ? $target : [$target];
+        if (!empty($flavor_id)) {
+          $flavor_ids = [$flavor_id];
+        }
+        else {
+          $flavor_ids = [];
+        }
+        if ($processors) {
+          $processors_list = is_array($processors) ? $processors : [$processors];
+        }
+        else {
+          $processors_list = [];
+        }
+
+        // This allows for multiple targets.
+        $existingannotations = $this->flavorfromSolrIndex($term, $processors_list, $file_uris, $targets, [$node->uuid()], $flavor_ids, 0, 25, $ocr);
+        $existingannotations = array_filter($existingannotations);
+        $return = !empty($existingannotations) && is_array($existingannotations) ? $existingannotations : [];
+      }
+      catch (\Exception $exception) {
+        throw new ServiceUnavailableHttpException(
+          "Annotation from StrawberryFlavor fetching failed. Contact your admin."
+        );
+      }
+    }
+    else {
+      throw new BadRequestHttpException(
+        "Wrong request"
+      );
+    }
+    $response = new CacheableJsonResponse($return);
+    $response->addCacheableDependency($build);
+    $response->addCacheableDependency($node);
+
+    return $response;
+  }
+
 }
