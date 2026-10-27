@@ -230,7 +230,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
           const page_string = readFragmentPage();
           let initial_canvas_index = null;
           let initial_search_string = null;
-
+          let prev_canvas_id = null;
+          let prev_manifest_id = null;
           if (search_string.length > 0 ) {
             initial_search_string = search_string;
           }
@@ -307,21 +308,12 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             if (triii_viewer.viewerState) {
               const stop = triii_viewer.viewerState.subscribe(() => {
                 const canvas_index = triii_viewer.viewerState.currentCanvasIndex;
-                if (!fully_initialized && triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
-                  fully_initialized = true;
-                  if (needs_navigation) {
-                    // set to false so this only runs once.
-                    needs_navigation = false;
-                    if (initial_canvas_index <  triii_viewer.viewerState.canvases.length) {
-                      triii_viewer.viewerState.setCanvas(triii_viewer.viewerState.canvases[initial_canvas_index]);
-                    }
-                    if (initial_search_string) {
-                      triii_viewer.viewerState.search(initial_search_string);
-                    }
-                  }
-                  apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
-                }
-                if (fully_initialized) {
+                if (fully_initialized && (prev_canvas_id != triii_viewer.viewerState.canvasId || prev_manifest_id != triii_viewer.viewerState.manifestId)) {
+                  // We set this to avoid reacting to multiple calls to the same without an actual change in what was loaded before
+                  // Given that there is no actual EVENT, but any change will call the subscribe method.
+                  prev_canvas_id = triii_viewer.viewerState.canvasId;
+                  prev_manifest_id = triii_viewer.viewerState.manifestId;
+
                   let current_canvas = triii_viewer.viewerState.canvases[triii_viewer.viewerState.currentCanvasIndex];
                   let currentDrupalNodeId = [];
                   let currentDrupalNodeForViews = [];
@@ -349,6 +341,21 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   }
                   Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(triii_viewer, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId, triii_viewer.id);
                 }
+                if (!fully_initialized && triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                  fully_initialized = true;
+                  if (needs_navigation) {
+                    // set to false so this only runs once.
+                    needs_navigation = false;
+                    if (initial_canvas_index <  triii_viewer.viewerState.canvases.length) {
+                      triii_viewer.viewerState.setCanvas(triii_viewer.viewerState.canvases[initial_canvas_index]);
+                    }
+                    if (initial_search_string) {
+                      triii_viewer.viewerState.search(initial_search_string);
+                    }
+                  }
+                  apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
+                }
+
               });
             }
           });
