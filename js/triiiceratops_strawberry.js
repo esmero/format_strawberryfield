@@ -17,8 +17,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
     setCanvases(canvases) {
       this.canvases = canvases;
-      console.log('Setting active canvases');
-      console.log(this.canvases);
     }
 
     valid_uuid(string) {
@@ -230,15 +228,19 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
 
           const search_string = readFragmentSearch();
           const page_string = readFragmentPage();
+          let initial_canvas_index = null;
+          let initial_search_string = null;
+
           if (search_string.length > 0 ) {
-            // TODO we need to pass this to triii
+            initial_search_string = search_string;
           }
           // Note. if the setting "switchCanvasOnSearch": true is selected
           // And there is a search
           // And there is a hit, start canvas will have no effect. You are warned.
-          if (parseInt(page_string) > 0 ) {
-            // TODO we need an actual Canvas ID here. Not just a number.
+          if (page_string > 0 ) {
+            initial_canvas_index = page_string - 1;
           }
+          let needs_navigation =  initial_canvas_index !== null || initial_search_string !== null;
 
           if (typeof drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides'] == 'object' &&
             !Array.isArray(drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides']) &&
@@ -272,14 +274,9 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             apAnnotationAdapter = new ArchipelagoAnnotationStorageAdapter(node_uuid, user_url, user_label, kid, stg);
           }
 
-
           const triii_viewer = document.querySelector('#'+element_id);
+
           if (triii_viewer) {
-            triii_viewer.addEventListener('viewerstateavailable', (event) => {
-              console.log(event);
-              console.log('viewer state available');
-            });
-            console.log('initializing TriiiCeratops')
             for (const [key, value] of Object.entries($options)) {
               triii_viewer[key] = value;
             }
@@ -288,7 +285,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             if (triii_viewer && plugins_dynamic.length > 0) {
               let $plugin_objects = [];
               plugins_dynamic.forEach( $plugin_key => {
-                console.log('Adding ' + $plugin_key + ' Plugin');
                 let plugin = Triiiceratops.plugins.get($plugin_key)
                 if ($plugin_key == '@triiiceratops/plugin-annotation-editor' && apAnnotationAdapter) {
                   const plugin_annotation = createAnnotationEditorPlugin({
@@ -307,19 +303,23 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
               }
               // Once we have all plugins, we check if annotations can be enabled
               // and if we can use the custom storage or not
-              console.log(triii_viewer.plugins);
-
             }
             if (triii_viewer.viewerState) {
-              console.log(triii_viewer.viewerState);
               const stop = triii_viewer.viewerState.subscribe(() => {
                 const canvas_index = triii_viewer.viewerState.currentCanvasIndex;
-                console.log(triii_viewer.viewerState.canvases.length);
-                console.log(triii_viewer.viewerState.canvases);
-                if (triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                if (triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                  if (needs_navigation) {
+                    // set to false so this only runs once.
+                    needs_navigation = false;
+                    if (initial_canvas_index <  triii_viewer.viewerState.canvases.length) {
+                      triii_viewer.viewerState.setCanvas(triii_viewer.viewerState.canvases[initial_canvas_index]);
+                    }
+                    if (initial_search_string) {
+                      triii_viewer.viewerState.search(initial_search_string);
+                    }
+                  }
                   apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
                 }
-                console.log(triii_viewer.viewerState.currentCanvasIndex);
               });
             }
 
