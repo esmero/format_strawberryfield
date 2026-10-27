@@ -341,7 +341,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   }
                   currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
                   currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
-                  // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
                   if (currentDrupalNodeId.length > 0) {
                     Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(triii_viewer, currentDrupalNodeId, triii_viewer.id);
                   }
