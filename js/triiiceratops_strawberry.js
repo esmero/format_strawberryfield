@@ -241,6 +241,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             initial_canvas_index = page_string - 1;
           }
           let needs_navigation =  initial_canvas_index !== null || initial_search_string !== null;
+          let fully_initialized = false;
 
           if (typeof drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides'] == 'object' &&
             !Array.isArray(drupalSettings.format_strawberryfield.triiiceratops[element_id]['viewer_overrides']) &&
@@ -290,7 +291,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   const plugin_annotation = createAnnotationEditorPlugin({
                     adapter: apAnnotationAdapter,
                     user: { id: apAnnotationAdapter.user_id, name: apAnnotationAdapter.user_label },
-                    //tools: ['rectangle', 'polygon', 'point'],
                   });
                   $plugin_objects.push(plugin_annotation);
                 }
@@ -307,7 +307,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             if (triii_viewer.viewerState) {
               const stop = triii_viewer.viewerState.subscribe(() => {
                 const canvas_index = triii_viewer.viewerState.currentCanvasIndex;
-                if (triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                if (!fully_initialized && triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
+                  fully_initialized = true;
                   if (needs_navigation) {
                     // set to false so this only runs once.
                     needs_navigation = false;
@@ -320,12 +321,38 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   }
                   apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
                 }
+                if (fully_initialized) {
+                  let current_canvas = triii_viewer.viewerState.canvases[triii_viewer.viewerState.currentCanvasIndex];
+                  let currentDrupalNodeId = [];
+                  let currentDrupalNodeForViews = [];
+                  currentDrupalNodeId = 'sbf:ado:change' in current_canvas ? current_canvas['sbf:ado:change'] : currentDrupalNodeId;
+                  currentDrupalNodeForViews = 'sbf:ado:view:change' in current_canvas ? current_canvas['sbf:ado:view:change'] : currentDrupalNodeForViews;
+                  if (Array.isArray(currentDrupalNodeId) && Array.isArray(currentDrupalNodeId[0])) {
+                    currentDrupalNodeId = currentDrupalNodeId[0];
+                  }
+                  if (Array.isArray(currentDrupalNodeForViews) && Array.isArray(currentDrupalNodeForViews[0])) {
+                    currentDrupalNodeForViews = currentDrupalNodeForViews[0];
+                  }
+                  if (!Array.isArray(currentDrupalNodeId)) {
+                    currentDrupalNodeId = [currentDrupalNodeId];
+                  }
+                  if (!Array.isArray(currentDrupalNodeForViews)) {
+                    currentDrupalNodeForViews = [currentDrupalNodeForViews];
+                  }
+                  currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
+                  currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
+                  // Check if currentCanvasMetadata has `dr:nid` could be a single value or an array
+                  if (currentDrupalNodeId.length > 0) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(triii_viewer, currentDrupalNodeId, triii_viewer.id);
+                  }
+                  if (currentDrupalNodeForViews.length > 0) {
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(triii_viewer, currentDrupalNodeForViews);
+                  }
+                  Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(triii_viewer, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId, triii_viewer.id);
+                }
               });
             }
-
           });
-
-
         }
       })}}
 })(jQuery, Drupal, once, drupalSettings, window.Triiiceratops);
