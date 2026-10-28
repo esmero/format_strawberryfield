@@ -119,29 +119,24 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
   }
 
 
-  function CaptureAdoTriiiceratopsCanvasChange(miradorInstance, this_id ,e) {
-    if (this_id === e.detail.caller_id) {
-      // Ignore calls from itself! or we will have an eternal loop
+  function CaptureAdoTriiiceratopsCanvasChange(triiiceratopsElement,e) {
+    let canvasid = e.detail?.canvasid;
+    if ((triiiceratopsElement.id === e.detail.caller_id) || (triiiceratopsElement.viewerState?.canvasId === canvasid)) {
+      // Ignore calls from itself or the requested canvasid is the same as the one already loaded
       return;
     }
-
-    for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
-      const data = miradorInstance.store.getState().windows[windowId];
-      let visiblecanvas_same_as_request = false;
-      let canvasid = e.detail?.canvasid;
-      if (data.visibleCanvases?.length && canvasid) {
-        data.visibleCanvases.forEach(visiblecanvas => visiblecanvas_same_as_request = (visiblecanvas == canvasid))
-      }
-
-      if (e.detail.manifestid == data.manifestId && canvasid && !visiblecanvas_same_as_request) {
-        const action = Mirador.actions.setCanvas(windowId, canvasid);
-        miradorInstance.store.dispatch(action);
+    let found = false;
+    if (triiiceratopsElement.viewerState.canvases.length && canvasid) {
+      found = triiiceratopsElement.viewerState.canvases.find(canvas => canvas.id === canvasid);
+      if (found !== false) {
+        triiiceratopsElement.viewerState.setCanvas(canvasid)
       }
     }
   }
 
-  function CaptureAdoTriiiceratopsAdoChange(miradorInstance, this_id ,e) {
-    if (this_id === e.detail.caller_id) {
+
+  function CaptureAdoTriiiceratopsAdoChange(triiiceratopsElement, e) {
+    if (triiiceratopsElement.id === e.detail.caller_id)  {
       // Ignore calls from itself! or we will have an eternal loop
       return;
     }
@@ -353,9 +348,12 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                       triii_viewer.viewerState.search(initial_search_string);
                     }
                   }
+                  // Bind event listeners to allow reactions triggered by events of other Viewers
+                  document.addEventListener('sbf:canvas:change', CaptureAdoTriiiceratopsCanvasChange.bind(document, triii_viewer));
+                  document.addEventListener('sbf:ado:change', CaptureAdoTriiiceratopsAdoChange.bind(document, triii_viewer));
+
                   apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
                 }
-
               });
             }
           });
