@@ -100,6 +100,35 @@
       el.dispatchEvent(event);
       return this;
     },
+
+    generateContentState: function(manifestid,canvasid, fragment, encode=false) {
+      let state = {
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        id: `${canvasid}/state/`+ Date.now().toString(36),
+        type: "Annotation",
+        motivation: ["contentState"],
+        target: {
+        id: `${canvasid}${fragment}`,
+          type: "Canvas",
+          partOf: [
+          {
+            id: "manifestid",
+            type: "Manifest"
+          }
+        ]
+      }
+      };
+      state = JSON.stringify(state);
+      console.log(state);
+      if (encode === true) {
+        const bytes = new TextEncoder().encode(state);
+        state = Uint8Array.prototype.toBase64
+          ? new Uint8Array(bytes).toBase64()
+          : btoa(String.fromCodePoint(...bytes)); // Old fallback
+      }
+      return state;
+    },
+
     fetchIIIFManifest: async function (iiifmanifesturl) {
       const response = await fetch(iiifmanifesturl, {
           mode: 'cors',
