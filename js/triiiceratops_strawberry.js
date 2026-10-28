@@ -141,7 +141,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       return;
     }
     const nodeid = !Array.isArray(e.detail.nodeid) ? [e.detail.nodeid] : e.detail.nodeid;
-    if (triiiceratopsElement.viewerState.canvases.length && canvasid) {
+    if (triiiceratopsElement.viewerState.canvases.length) {
       let found = triiiceratopsElement.viewerState.canvases.find((canvas) => {
         if (canvas.hasOwnProperty('sbf:ado:change:react')) {
           if (Array.isArray(e.detail.nodeid)) {
