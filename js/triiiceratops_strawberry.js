@@ -145,7 +145,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       let found = triiiceratopsElement.viewerState.canvases.find((canvas) => {
         if (canvas.hasOwnProperty('sbf:ado:change:react')) {
           if (Array.isArray(e.detail.nodeid)) {
-            if (nodeid.includes(canvas['sbf:ado:change:react'])) {
+            if (nodeid.some(id => Number(id) === Number(canvas['sbf:ado:change:react']))) {
               return true;
             }
           }
@@ -153,36 +153,8 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
         return false;
       });
       if (found !== undefined) {
-        triiiceratopsElement.viewerState.setCanvas(found.id)
-      }
-    }
-
-
-    for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
-      const data = miradorInstance.store.getState().windows[windowId];
-      if (data.manifestId) {
-        const manifest = miradorInstance.store.getState().manifests[data.manifestId]
-        let canvasid = null;
-        let currentDrupalNodeId = manifest.json.items.find(item => {
-          let match = false;
-          if (item.hasOwnProperty('sbf:ado:change:react')) {
-            if (Array.isArray(e.detail.nodeid)) {
-              e.detail.nodeid.forEach(nodeid => match = (item['sbf:ado:change:react'] == nodeid))
-            }
-          }
-          if (match) {
-            canvasid = item['id'];
-          }
-          return match;
-        });
-        // Check if the requested canvas is already visible
-        let visiblecanvas_same_as_request = false;
-        if (data.visibleCanvases?.length && canvasid) {
-          data.visibleCanvases.forEach(visiblecanvas => visiblecanvas_same_as_request = (visiblecanvas == canvasid))
-        }
-        if (currentDrupalNodeId && canvasid && !visiblecanvas_same_as_request) {
-          const action = Mirador.actions.setCanvas(windowId,canvasid);
-          miradorInstance.store.dispatch(action);
+        if (found.id !== triiiceratopsElement.viewerState?.canvasId) {
+          triiiceratopsElement.viewerState.setCanvas(found.id);
         }
       }
     }
