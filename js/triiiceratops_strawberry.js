@@ -140,6 +140,24 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       // Ignore calls from itself! or we will have an eternal loop
       return;
     }
+    const nodeid = !Array.isArray(e.detail.nodeid) ? [e.detail.nodeid] : e.detail.nodeid;
+    if (triiiceratopsElement.viewerState.canvases.length && canvasid) {
+      let found = triiiceratopsElement.viewerState.canvases.find((canvas) => {
+        if (canvas.hasOwnProperty('sbf:ado:change:react')) {
+          if (Array.isArray(e.detail.nodeid)) {
+            if (nodeid.includes(canvas['sbf:ado:change:react'])) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+      if (found !== undefined) {
+        triiiceratopsElement.viewerState.setCanvas(found.id)
+      }
+    }
+
+
     for (const windowId of Object.keys(miradorInstance.store.getState()?.windows)) {
       const data = miradorInstance.store.getState().windows[windowId];
       if (data.manifestId) {
