@@ -262,7 +262,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
           }
 
           const triii_viewer = document.querySelector('#'+element_id);
-
+          let selectorFragment = '';
           if (triii_viewer) {
             for (const [key, value] of Object.entries($options)) {
               triii_viewer[key] = value;
@@ -290,8 +290,47 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
               // Once we have all plugins, we check if annotations can be enabled
               // and if we can use the custom storage or not
             }
+
+            function throttle(func, limit) {
+              let inThrottle;
+              return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                  func.apply(context, args);
+                  inThrottle = true;
+                  setTimeout(() => inThrottle = false, limit);
+                }
+              };
+            }
+
+
             if (triii_viewer.viewerState) {
-              const stop = triii_viewer.viewerState.subscribe(() => {
+              const stop_frame = triii_viewer.viewerState.subscribeFrame(() => {
+                if (fully_initialized) {
+                  // This only works for Images and UI interactions of those
+                  // AV Plugin needds to be read on the subscribeFrame() to generate that one
+                  // TBD if i can even read this here if Video/Audio are playing.
+                  const { x, y, width, height } = triii_viewer.viewerState.viewportBounds;
+                  const roundedX = Math.round(x);
+                  const roundedY = Math.round(y);
+                  const roundedW = Math.round(width);
+                  const roundedH = Math.round(height);
+                  const selectorFragment_live = `#xywh=${roundedX},${roundedY},${roundedW},${roundedH}`;
+                  async function checkForDiffDelayed() {
+                    // Inline non-blocking wait
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    if (selectorFragment_live !== selectorFragment || prev_canvas_id != triii_viewer.viewerState.canvasId) {
+                      selectorFragment = selectorFragment_live;
+                      Drupal.FormatStrawberryfieldIiifUtils.generateContentState(triii_viewer.viewerState.manifestId, triii_viewer.viewerState.canvasId, selectorFragment);
+                    }
+                  }
+                  if (selectorFragment_live !== selectorFragment || prev_canvas_id != triii_viewer.viewerState.canvasId) {
+                    throttle(checkForDiffDelayed, 5000)
+                  }
+                }
+              });
+              const stop_state = triii_viewer.viewerState.subscribe(() => {
                 const canvas_index = triii_viewer.viewerState.currentCanvasIndex;
                 if (fully_initialized && (prev_canvas_id != triii_viewer.viewerState.canvasId || prev_manifest_id != triii_viewer.viewerState.manifestId)) {
                   // We set this to avoid reacting to multiple calls to the same without an actual change in what was loaded before
