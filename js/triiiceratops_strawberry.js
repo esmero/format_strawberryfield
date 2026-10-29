@@ -292,6 +292,9 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             }
 
 
+            // really important that both this and the const/wrapper one are defined
+            // oursite of the subscriberFrame(). If not they are reset/internal state lost
+            // and they loose their purpose.
             async function processContentState(selectorFragment_live, selectorFragment, prev_canvas_id, currentcanvasid, manifestid) {
               if (selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid) {
                 selectorFragment = selectorFragment_live;
@@ -301,7 +304,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             }
 
             const ThrottledProcessContentState = Drupal.FormatStrawberryfieldIiifUtils.asyncThrottle(processContentState, 2000);
-
+            let contentState = null;
 
             if (triii_viewer.viewerState) {
               const stop_frame = triii_viewer.viewerState.subscribeFrame(() => {
@@ -315,7 +318,10 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   const roundedW = Math.round(width);
                   const roundedH = Math.round(height);
                   const selectorFragment_live = `#xywh=${roundedX},${roundedY},${roundedW},${roundedH}`;
-                  ThrottledProcessContentState(selectorFragment_live, selectorFragment, prev_canvas_id, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId ).then(res => console.log(res));
+
+                  ThrottledProcessContentState(selectorFragment_live, selectorFragment, prev_canvas_id, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId ).then(
+                    res => contentState = res ?? contentState
+                  );
                 }
               });
               const stop_state = triii_viewer.viewerState.subscribe(() => {
@@ -325,6 +331,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   // Given that there is no actual EVENT, but any change will call the subscribe method.
                   prev_canvas_id = triii_viewer.viewerState.canvasId;
                   prev_manifest_id = triii_viewer.viewerState.manifestId;
+                  console.log(contentState);
 
                   let current_canvas = triii_viewer.viewerState.canvases[triii_viewer.viewerState.currentCanvasIndex];
                   let currentDrupalNodeId = [];
