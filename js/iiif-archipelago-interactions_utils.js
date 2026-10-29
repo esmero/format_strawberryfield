@@ -101,7 +101,41 @@
       return this;
     },
 
-    generateContentState: function(manifestid,canvasid, fragment, encode=false) {
+    asyncThrottle: function asyncThrottle(asyncFn, delay) {
+    let lastRan = 0;
+    let isRunning = false;
+
+    return function (...args) {
+      const context = this;
+      const now = Date.now();
+
+      return new Promise((resolve, reject) => {
+        if (isRunning) {
+          return resolve(null);
+        }
+        if (now - lastRan >= delay) {
+          isRunning = true;
+          lastRan = now;
+
+          // Execute async fn
+          asyncFn.apply(context, args)
+            .then((result) => {
+              resolve(result);
+            })
+            .catch((error) => {
+              reject(error);
+            })
+            .finally(() => {
+              isRunning = false;
+            });
+        } else {
+          // Ignored due to time restriction
+          resolve(null);
+        }
+      });
+    };
+  },
+  generateContentState: function(manifestid,canvasid, fragment, encode=false) {
       let state = {
         "@context": "http://iiif.io/api/presentation/3/context.json",
         id: `${canvasid}/state/`+ Date.now().toString(36),

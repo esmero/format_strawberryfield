@@ -291,18 +291,16 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
               // and if we can use the custom storage or not
             }
 
-            function throttle(func, limit) {
-              let inThrottle;
-              return function() {
-                const args = arguments;
-                const context = this;
-                if (!inThrottle) {
-                  func.apply(context, args);
-                  inThrottle = true;
-                  setTimeout(() => inThrottle = false, limit);
-                }
-              };
+
+            async function processContentState(selectorFragment_live, selectorFragment, prev_canvas_id, currentcanvasid, manifestid) {
+              if (selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid) {
+                selectorFragment = selectorFragment_live;
+                return Drupal.FormatStrawberryfieldIiifUtils.generateContentState(manifestid, currentcanvasid, selectorFragment);
+              }
+              return null;
             }
+
+            const ThrottledProcessContentState = Drupal.FormatStrawberryfieldIiifUtils.asyncThrottle(processContentState, 2000);
 
 
             if (triii_viewer.viewerState) {
@@ -317,17 +315,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   const roundedW = Math.round(width);
                   const roundedH = Math.round(height);
                   const selectorFragment_live = `#xywh=${roundedX},${roundedY},${roundedW},${roundedH}`;
-                  async function checkForDiffDelayed() {
-                    // Inline non-blocking wait
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    if (selectorFragment_live !== selectorFragment || prev_canvas_id != triii_viewer.viewerState.canvasId) {
-                      selectorFragment = selectorFragment_live;
-                      Drupal.FormatStrawberryfieldIiifUtils.generateContentState(triii_viewer.viewerState.manifestId, triii_viewer.viewerState.canvasId, selectorFragment);
-                    }
-                  }
-                  if (selectorFragment_live !== selectorFragment || prev_canvas_id != triii_viewer.viewerState.canvasId) {
-                    throttle(checkForDiffDelayed, 5000)
-                  }
+                  ThrottledProcessContentState(selectorFragment_live, selectorFragment, prev_canvas_id, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId ).then(res => console.log(res));
                 }
               });
               const stop_state = triii_viewer.viewerState.subscribe(() => {
