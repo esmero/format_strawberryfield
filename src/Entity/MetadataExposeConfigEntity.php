@@ -46,6 +46,7 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
  *     "cache",
  *     "active",
  *     "hide_on_embargo",
+ *     "minify_json",
  *   },
  *   links = {
  *     "edit-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/edit",
@@ -115,14 +116,14 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    *
    * @var bool
    */
-  protected $cache = TRUE;
+  protected bool $cache = TRUE;
 
   /**
    * If the Config Entity is active or not.
    *
    * @var bool
    */
-  protected $active = TRUE;
+  protected bool $active = TRUE;
 
 
   /**
@@ -130,7 +131,16 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    *
    * @var bool
    */
-  protected $hide_on_embargo = FALSE;
+  protected bool $hide_on_embargo = FALSE;
+
+
+  /**
+   * If JSON or JSON-LD should be minified
+   *
+   * @var bool
+   */
+  protected bool $minify_json = FALSE;
+
 
 
   /**
@@ -192,6 +202,14 @@ class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataCon
    */
   public function setTargetEntityTypes(array $target_entity_types): void {
     $this->target_entity_types = $target_entity_types;
+  }
+
+  public function getMinifyJson(): bool {
+    return $this->minify_json;
+  }
+
+  public function setMinifyJson(bool $minify_json): void {
+    $this->minify_json = $minify_json;
   }
 
   /**

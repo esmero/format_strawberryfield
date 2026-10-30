@@ -28,3 +28,6 @@
     hide_on_embargo:
       type: boolean
       label: 'If a 401 should be returned on a resolved Embargo'
+    minify_json:
+      type: boolean
+      label: 'If JSON or JSON-LD should be minified'
