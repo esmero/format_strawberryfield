@@ -159,8 +159,8 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $this->facet->getActiveItems();
     // We will use the Widget Config here to pass min/max and other things
     $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
-    $min = $widget_config['min_value'] ?? NULL;
-    $max = $widget_config['max_value'] ?? NULL;
+    $min = $widget_config['min_value'] ?? 1971;
+    $max = $widget_config['max_value'] ?? (int) (date("Y"));
     $base_gap = $widget_config['step'];
     // These will be swapped by active values, if any
     // GAP will be recalculated if active values are present.
@@ -186,30 +186,31 @@ class SearchApiDateRange extends QueryTypePluginBase {
             $includes[] = 'edge';
           }
      */
-    // NOTE HERE. Having no hard limit (e.g. 0) is terrible performance.
-    // The decision should be
-    // A) IF min and max are defined and hard limit == 0, calculate the distance
-    // Set a sensible hardlimit based on best possible distribution/fixed gaps? e.g. targeting X gap in YEARs.
-    // Or simpler.If hardlimit == 0 then ignore, set it to 100.
-    // Granularity here should also be dynamic IF min and max are set.
-    // What if min and max are not set?
+
+    $limit = (int) $this->facet->getHardLimit();
+    $calculated_options = $this->getSorlFacetRangeInfoFromData(
+      (int) gmmktime(0, 0, 0, 1, 1, $min),
+      (int) gmmktime(0, 0, 0, 12, 31, $max),
+      $limit
+    );
+
     return [
       'field' => $this->facet->getFieldIdentifier(),
-      'limit' => $this->facet->getHardLimit(),
+      'limit' => $limit,
       'operator' => $this->facet->getQueryOperator(),
       'min_count' => $this->facet->getMinCount(),
       'missing' => $this->facet->isMissing(),
       'query_type' => 'search_api_granular',
-      'min_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0, 0, 0, 1, 1, $min)),
-      'max_value' => gmdate('Y-m-d\TH:i:s\Z', mktime(0, 0, 0, 12, 31, $max)),
-      'granularity' => "+{$base_gap}YEAR",
+      'min_value' => $calculated_options['min_value_for_query'],
+      'max_value' => $calculated_options['max_value_for_query'],
+      'granularity' => $calculated_options['granularity'],
       'include_lower' => TRUE,
-      'include_upper' => TRUE,
-      'include_edges' => TRUE,
+      'include_upper' => $calculated_options['include_upper'] ?? TRUE,
+      'include_edges' => $calculated_options['include_edges'] ?? TRUE,
     ];
   }
 
-  public function getSorlFacetRangeInfoFromData(int $min_timestamp, int $max_timestamp, int $limit): array {
+  public function getSorlFacetRangeInfoFromData(int $min_timestamp, int $max_timestamp, int &$limit): array {
     if ($min_timestamp > $max_timestamp) {
       $orig_min = $min_timestamp;
       $min_timestamp = $max_timestamp;
@@ -225,16 +226,18 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $dt_max_utc = new DateTime('@' . $max_timestamp);
     $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
-    // Offset for both is the same
-    $offset = $dt_max->getOffset() / 3600;
-    $offset = (int) $offset;
-    if ($offset < 0) {
-      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset) . 'H'));
-      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'));
+    // Offset for both is normally the SAME BUT, on BCE, because there was no
+    // daylight time shift, the offset gets weird.
+    $offset_min  = (int) ($dt_min->getOffset() / 3600);
+    $offset_max  = (int) ($dt_max->getOffset() / 3600);
+
+    if ($offset_min < 0) {
+      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_min) . 'H'));
+      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset_max) . 'H'));
     }
     else {
-      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset) . 'H'));
-      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'));
+      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_min) . 'H'));
+      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
     }
 
     $base_info = [
