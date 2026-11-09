@@ -128,13 +128,13 @@ class DateSliderWidget extends WidgetPluginBase {
       $max = gmdate('Y-12-31', (int) $max);
       // for $max we literally need the last day of the year.
     }
-    $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
 
     $labels = [];
     $js_values = [];
 
     $max_items = 0;
     // Get the Timezone from Drupal or the Index.
+    $time_zone = Utility::getTimeZone($facet->getFacetSource()->getIndex());
     foreach ($results as $result) {
       if ($result->getRawValue() != 'summary_date_facet') {
         $dt = new DateTime();
@@ -154,7 +154,7 @@ class DateSliderWidget extends WidgetPluginBase {
         $previous_count =  isset($js_values[$js_year]) ? $js_values[$js_year]['count'] : 0;
         $max_items = $max_items + $result->getCount();
         $js_values[$js_year] = [
-          'count' => ((int) $result->getCount() + $previous_count),
+          'count' => ((int) max($result->getCount(),$previous_count)),
           'label' =>  $js_year,
         ];
       }
