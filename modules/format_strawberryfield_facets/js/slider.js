@@ -89,7 +89,8 @@
                   family: 'Arial'
                 },
                 ticks: {
-                  stepSize: 10
+                  stepSize: 10,
+                  precision: 0
                 },
                 color: 'black'
               },
@@ -155,6 +156,8 @@
       function autoSubmit(widget) {
         const slider = widget.querySelector('.sbf-date-facet-slider')
         const url = slider.dataset.drupalUrl;
+        console.log(slider.dataset.min);
+        console.log(slider.dataset.max);
         return url.replace('__date_range_min__', slider.dataset.min).replace('__date_range_max__', slider.dataset.max);
       }
 
@@ -256,7 +259,5 @@
           $("input.facet-date-range-submit", widget).trigger('click');
         }
       });
-
     };
-
   })(jQuery, Chart, Cleave);
