@@ -48,9 +48,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
       if (count($active_items)) {
         $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
         $filter = $query->createConditionGroup($operator, ['facet:' . $field_identifier]);
-        // When set this will contain a 0, 1 with the real values and a min and max with the set values from the widget.
-        $time_zone = Utility::getTimeZone($this->facet->getFacetSource()
-          ->getIndex());
         foreach ($active_items as $value) {
           if (is_array($value) && count($value) > 2) {
             $value = array_slice($value, 0, 2);
