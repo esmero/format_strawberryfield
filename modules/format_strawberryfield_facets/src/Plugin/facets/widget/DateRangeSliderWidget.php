@@ -38,8 +38,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
     $timezone_offset = $dateTime_for_timezone->format('Z');
     $timezone_offset = (int) $timezone_offset * -1;
 
-
-
     // Generate unique IDs for form elements (AJAX-safe)
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id());
     if ( $this->getConfiguration()['allow_full_entry'] || $this->getConfiguration()['allow_year_entry']) {
