@@ -50,7 +50,6 @@ class SliderProcessor extends ProcessorPluginBase implements PostQueryProcessorI
       $max = end($simple_results)['value'] ?? 0;
       // If max is not divisible by step, we should add the remainder to max to
       // make sure that we don't lose any possible values.
-
     }
     $step = floor(abs($min - $max) / 100);
 
