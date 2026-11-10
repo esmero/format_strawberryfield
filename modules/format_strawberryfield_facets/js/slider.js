@@ -77,9 +77,21 @@
                   family: 'Arial'
                 },
                 color: 'black'
-              }
+              },
+              //bounds: 'data'
             },
             y: {
+              ticks: {
+                stepSize: 1,
+                precision: 0,
+                beginAtZero: true,
+                callback: function(value, index, ticks) {
+                  // Only return the label if it's a whole number
+                  if (Number.isInteger(value)) {
+                    return value;
+                  }
+                }
+              },
               title: {
                 display: false,
                 text: 'Count',
@@ -88,13 +100,11 @@
                   weight: 'bold',
                   family: 'Arial'
                 },
-                ticks: {
-                  stepSize: 10,
-                  precision: 0
-                },
+
                 color: 'black'
               },
               beginAtZero: true,
+              //bounds: 'data'
             }
           }
         }
@@ -156,8 +166,6 @@
       function autoSubmit(widget) {
         const slider = widget.querySelector('.sbf-date-facet-slider')
         const url = slider.dataset.drupalUrl;
-        console.log(slider.dataset.min);
-        console.log(slider.dataset.max);
         return url.replace('__date_range_min__', slider.dataset.min).replace('__date_range_max__', slider.dataset.max);
       }
 
@@ -212,11 +220,11 @@
           }
           if (e.target.dataset?.type == "date-range-min") {
             min = ui_min = parseInt(e.target.value);
-            min_timestamp =  toTimestamp(min, 0, 1, 0, 0);
+            min_timestamp = toTimestamp(min, 0, 1, 0, 0);
           }
           else {
             max = ui_max = parseInt(e.target.value);
-            max_timestamp =  toTimestamp(max, 11, 31, 0, 0, 0, 0);
+            max_timestamp = toTimestamp(max, 11, 31, 0, 0, 0, 0);
           }
         }
         else if (e.target.type == "text") {
@@ -242,7 +250,7 @@
         }
         if ($slider.slider('option').min > min || $slider.slider('option').max < max) {
           e.target.setCustomValidity("The entered date is not in range.");
-          e.target.reportValidity()
+          e.target.reportValidity();
         }
         else {
           $slider.slider('option', 'values', [ui_min, ui_max]).slider("pips", "refresh").slider("float", "refresh");
