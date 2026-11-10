@@ -77,57 +77,31 @@ class DateSliderWidget extends WidgetPluginBase {
     $active_max = reset($active)['max'] ?? NULL;
     $range = $this->getRangeFromResults($results, $active_max);
     // Give $min a $max a default
-    $min = $this->getConfiguration()['min_value'] ?? 0;
-    $max = $this->getConfiguration()['max_value'] ?? date('Y');
+    $min = (int) $this->getConfiguration()['min_value'] ?? 0;
+    $max = (int) $this->getConfiguration()['max_value'] ?? date('Y');
     $min = strtotime($min.'-01-01');
     // add the last day bc we want to consider the complete year.
     $max = strtotime($max.'-12-31');
     ksort($results);
-
     // UnixTime
-    $real_min = $range['min'] ?? NULL;
-    $real_max = $range['max'] ?? NULL;
+    $real_min = $range['min'] ?? $min;
+    $real_max = $range['max'] ?? $max;
 
-    // A gap override might have been set by \Drupal\format_strawberryfield_facets\Plugin\facets\query_type\SearchApiDateRange::execute
-    // (means us)
-    // Which is great bc it reflects the actual gap requested to the backend.
-    $gap_in_years = $this->getConfiguration()['dynamic_step'] ?? $this->getConfiguration()['step'] ?? 1;
-    // UnixTime
-    $active_min = $active_min ?? $real_min;
-    $active_max = $active_max ?? $real_max;
-    $active_min = (int) $active_min;
-    $active_max = (int) $active_max;
-    // Give some defaults
-    $year_max = gmdate('Y', (int) $active_max);
-    $year_min = gmdate('Y', (int) $active_min);
-
-    // UnixTime
-    $unix_max = $active_max;
-    $unix_min = $active_min;
-
+    $active_min = (int) ($active_min ?? $real_min);
+    $active_max = (int) ($active_max ?? $real_max);
 
     // Chances are we will always a real_min being capped down (bc of Face Range queries)
     // So we only opt for $real_min IF $active and real compared by YEAR are different.
-    if (is_numeric($real_min) && $this->getConfiguration()['min_type'] == 'search_result') {
-      $min = (int)gmdate('Y', $active_min) < (int)gmdate('Y', $real_min) ? $real_min : $active_min;
-    }
-    if (is_numeric($real_max) && $this->getConfiguration()['max_type'] == 'search_result') {
-      $max = (int)gmdate('Y', $active_max) > (int)gmdate('Y',$real_max) ? $real_max : $active_max;
-    }
 
-    if (!empty($min)) {
-      $year_min = gmdate('Y', (int) $min);
-      $unix_min = (int) $min;
-      // But here we move to formatted
-      $min = gmdate('Y-m-d', (int) $min);
-    }
-    if (!empty($max)) {
-      $year_max = gmdate('Y', (int) $max);
-      $unix_max = $max;
-      // But here we move to formatted
-      $max = gmdate('Y-12-31', (int) $max);
-      // for $max we literally need the last day of the year.
-    }
+    $min = (int) gmdate('Y', $active_min) < (int) gmdate('Y', $real_min) ? $real_min : $active_min;
+    $year_min = gmdate('Y', (int) $min);
+    $unix_min = (int) $min;
+    $min = gmdate('Y-m-d', (int) $min);
+
+    $max = (int) gmdate('Y', $active_max) > (int) gmdate('Y', $real_max) ? $real_max : $active_max;
+    $year_max = gmdate('Y', (int) $max);
+    $unix_max = $max;
+    $max = gmdate('Y-12-31', (int) $max);
 
     $labels = [];
     $js_values = [];
@@ -178,13 +152,10 @@ class DateSliderWidget extends WidgetPluginBase {
     // Independently if the max/min are set from search or from fixed values
     // these here need to be min/max we have either from search/or fixed if no query yet
     // Also, we need to check if we need to cap these based on the widget settings
-
     $values = [$year_min, $year_max];
-
-
+    $real_minmax = [$min, $max];
     $selected_minmax = [gmdate('Y', (int) $active_min), gmdate('Y', (int) $active_max)];
     $selected_minmax_full = [gmdate('Y-m-d', (int) $active_min), gmdate('Y-m-d', (int) $active_max)];
-    $real_minmax = [$min, $max];
     $id =  Html::getUniqueId('facet-sbf-slider-'.$facet->id());
 
     // We will reuse this for the form submit url
@@ -277,16 +248,16 @@ class DateSliderWidget extends WidgetPluginBase {
       }
       $build['#items'][] =
         [
-        '#type' => 'html_tag',
-        '#tag' => 'div',
-        '#attributes' => [
-          'class' => ['sbf-date-facet-slider'],
-          'data-min' => $unix_min,
-          'data-max' => $unix_max,
-          'id' =>  $id,
-          'data-drupal-url' => $url
-        ]
-      ];
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#attributes' => [
+            'class' => ['sbf-date-facet-slider'],
+            'data-min' => $unix_min,
+            'data-max' => $unix_max,
+            'id' =>  $id,
+            'data-drupal-url' => $url
+          ]
+        ];
 
     }
     else {
@@ -298,18 +269,18 @@ class DateSliderWidget extends WidgetPluginBase {
     $build['#attached']['library'][] = 'format_strawberryfield_facets/slider';
     $build['#attached']['library'][] = 'core/drupal.states';
 
-   if ($this->getConfiguration()['show_histogram'] ?? NULL && !empty($chart_labels) && !empty($chart_data)) {
-     // For the chart.
-     if ($chart_labels[0] != $year_min) {
-       array_unshift($chart_labels, $year_min);
-       array_unshift($chart_data, 0);
-     }
-     // For the chart.
-     if (end($chart_labels) != $year_max) {
-       $chart_labels[] = $year_max;
-       $chart_data[] = 0;
-     }
-   }
+    if ($this->getConfiguration()['show_histogram'] ?? NULL && !empty($chart_labels) && !empty($chart_data)) {
+      // For the chart.
+      if ($chart_labels[0] != $year_min) {
+        array_unshift($chart_labels, $year_min);
+        array_unshift($chart_data, 0);
+      }
+      // For the chart.
+      if (end($chart_labels) != $year_max) {
+        $chart_labels[] = $year_max;
+        $chart_data[] = 0;
+      }
+    }
 
     // WE need to define here if we are going for the "selected minmax"
     // Or for the minmax that actually fit the range/from facets
@@ -333,7 +304,7 @@ class DateSliderWidget extends WidgetPluginBase {
       'max' => $slider_max,
       'values' => $values,
       'real_minmax' => $real_minmax,
-      'selected_minmax' => $selected_minmax_full,
+      'selected_minmax' => $selected_minmax_full, // @TODO check this. Might be offset
       'time_zone' => $time_zone,
       'value' => isset($active[0]) ? (float) $active[0] : '',
       'step' => $this->getConfiguration()['step'],
@@ -388,11 +359,11 @@ class DateSliderWidget extends WidgetPluginBase {
     ];
 
     $form['max_value'] = [
-      '#type' => 'number',
+      '#type' => 'textfield',
       '#title' => $this->t('Maximum value (in Years)'),
       '#default_value' => $config['max_value'],
-      '#description' => t('Used as hard maximum limit if "Maximum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked. Any valued larger than the current YEAR will be capped to NOW().No metadata futurism for the sake of performance.'),
-      '#required' => TRUE,
+      '#description' => t('Leave empty to use current YEAR. Used as hard maximum limit if "Maximum value type" is set "Fixed value" or if set to "Based on search result" and also "Truncate Facet results outside of the user selected range" is checked. Any valued larger than the current YEAR will be capped to NOW(). No metadata futurism for the sake of performance.'),
+      '#required' => FALSE,
       '#size' => 5,
     ];
     $form['restrict_to_fixed'] =  [
@@ -568,7 +539,6 @@ class DateSliderWidget extends WidgetPluginBase {
     else {
       $max = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
     }
-
     return ['min' => $min, 'max' => $max];
   }
 
