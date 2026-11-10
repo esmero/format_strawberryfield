@@ -137,7 +137,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
       }
       else {
-        // This has core issues and we hope it won't ever match
+        // This has core issues, and we hope it won't ever match
         // Core issue is that ::getUrlForRequest does not work well
         // And fetches for a View the wrong Display and then caches it!
         $request = \Drupal::request();
