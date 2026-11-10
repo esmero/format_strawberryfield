@@ -494,7 +494,6 @@ class DateSliderWidget extends WidgetPluginBase {
     }
     $dynamic_step = $this->getConfiguration()['dynamic_step'];
     // Check for explicit NULL bc $active_max Might be a 0.
-    // NOTE for tomorrow (will remove later)
     // Because we have to use Time Zone offsets on the query
     // The buckets from the date range (not the ones from the normal dates)
     // Are already offset. So what happens is if we take that value as the max and min
@@ -502,7 +501,6 @@ class DateSliderWidget extends WidgetPluginBase {
     // That has really NO effect when the dynamic step is large, but if it is
     // One year, then we have a back and forth jump.
     // Solution, the facets here need to have timezone yet again removed!
-    $original_max = $max;
     if ($dynamic_step && $active_max!== NULL  ) {
       // check if $max + step is IN active value, if any.
       $next_range = strtotime("+{$dynamic_step} years", $max);
@@ -521,6 +519,15 @@ class DateSliderWidget extends WidgetPluginBase {
         $max = $next_range;
       }
     }
+    // @TODO. When there is no active max, we still need to accomodate
+    // $max to the fact that that last bucket might need to span
+    // Until the "facet" value + the modulus ($dynamic_step)
+    // Which implies that a "no input" facet should also
+    // set that modulus. Since we have varying granularity now (even months)
+    // This need strtotime + {$dynamic_step} "granularity", $max)
+    // So we need a new one 'dynamic_step_granularity' here
+    // IMPORTANT. Solr date range buckets start at the value -> span the $gap.
+
     $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
     // Now we need to reverse the Timezone offset generated during indexing.
     // We do the inverse in SearchApiDateRange to fit the actual indexed values
