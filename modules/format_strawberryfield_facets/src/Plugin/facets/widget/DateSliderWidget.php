@@ -54,6 +54,7 @@ class DateSliderWidget extends WidgetPluginBase {
         'step_variable_granularity' => TRUE,
         'step' => 1,
         'dynamic_step' => NULL,
+        'dynamic_step_granularity_unit' => NULL,
       ] + parent::defaultConfiguration();
   }
 
@@ -75,13 +76,16 @@ class DateSliderWidget extends WidgetPluginBase {
     $active = $facet->getActiveItems();
     $active_min = reset($active)['min'] ?? NULL;
     $active_max = reset($active)['max'] ?? NULL;
-    $range = $this->getRangeFromResults($results, $active_max);
-    // Give $min a $max a default
-    $min = (int) $this->getConfiguration()['min_value'] ?? 0;
-    $max = (int) $this->getConfiguration()['max_value'] ?? date('Y');
+    $this_year =  (int) date('Y');
+    $min = (int) ($this->getConfiguration()['min_value'] ?? 0);
+    $max = (int) ($this->getConfiguration()['max_value'] ?? date('Y'));
+    // Cap to max this year.
+    $max = $max > $this_year ? $this_year : $max;
     $min = strtotime($min.'-01-01');
     // add the last day bc we want to consider the complete year.
     $max = strtotime($max.'-12-31');
+    // If no active max, we will cap to $max.
+    $range = $this->getRangeFromResults($results, $active_max ?? $max);
     ksort($results);
     // UnixTime
     $real_min = $range['min'] ?? $min;
@@ -492,7 +496,8 @@ class DateSliderWidget extends WidgetPluginBase {
       $min = $min < $raw ? $min : $raw;
       $max = $max > $raw ? $max : $raw;
     }
-    $dynamic_step = $this->getConfiguration()['dynamic_step'];
+    $dynamic_step = $this->getConfiguration()['dynamic_step'] ?? $this->getConfiguration()['step'];
+    $dynamic_step_granularity_unit = $this->getConfiguration()['$dynamic_step_granularity_unit'] ?? 'years';
     // Check for explicit NULL bc $active_max Might be a 0.
     // Because we have to use Time Zone offsets on the query
     // The buckets from the date range (not the ones from the normal dates)
@@ -501,10 +506,10 @@ class DateSliderWidget extends WidgetPluginBase {
     // That has really NO effect when the dynamic step is large, but if it is
     // One year, then we have a back and forth jump.
     // Solution, the facets here need to have timezone yet again removed!
-    if ($dynamic_step && $active_max!== NULL  ) {
+
       // check if $max + step is IN active value, if any.
-      $next_range = strtotime("+{$dynamic_step} years", $max);
-      if ($active_max < $next_range) {
+      $next_range = strtotime("+{$dynamic_step} {$dynamic_step_granularity_unit}", $max);
+      if ($active_max && $active_max < $next_range) {
         // If active is lower than the calculated next range
         // We make max == active. There might be an error depending on the
         // Gap itself. If the gap is very large (means low hard limit, large span)
@@ -518,14 +523,7 @@ class DateSliderWidget extends WidgetPluginBase {
         // are counted from the first, means the last gap might be shorter.
         $max = $next_range;
       }
-    }
-    // @TODO. When there is no active max, we still need to accomodate
-    // $max to the fact that that last bucket might need to span
-    // Until the "facet" value + the modulus ($dynamic_step)
-    // Which implies that a "no input" facet should also
-    // set that modulus. Since we have varying granularity now (even months)
-    // This need strtotime + {$dynamic_step} "granularity", $max)
-    // So we need a new one 'dynamic_step_granularity' here
+
     // IMPORTANT. Solr date range buckets start at the value -> span the $gap.
 
     $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());

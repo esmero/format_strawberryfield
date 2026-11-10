@@ -74,20 +74,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
               // A min count of 0 is not useful. We will never really get all of them here
               // Also we can't divide by 0!
               try {
-                $base_gap = $widget_config['step'];
-                $diff_years = gmdate('Y', $max) - gmdate('Y', $min) + 1;
-                $gap = abs(ceil($diff_years / $min_count_for_facet));
-                $gap = $gap == 0 ? 1 : $gap;
-                $reminder = $diff_years % $gap;
-
-
-                $gap = (int) round($gap, 0);
-                $gap = $gap < $base_gap ? $base_gap : $gap;
-                // Only way to communicate to the Widget itself. Setting it here only survives a single PHP call and does
-                // not permanently override the defaults. Which is what we need!
-                $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap;
-                $this->facet->getWidgetInstance()
-                  ->setConfiguration($widget_config);
                 // Now, Solr Index might have dates offset. Bc Drupal will calculate a certain date based on its internal timezone
                 // during "index" but Solr will get then another based on UTC
                 // Basically If someone asks for 1911-1915 (and our date is 1911/1915) Solr will really have
@@ -156,7 +142,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $this->facet->getActiveItems();
     // We will use the Widget Config here to pass min/max and other things
     $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
-    $min = $widget_config['min_value'] ?? 1971;
+    $min = $widget_config['min_value'] ?? 1977;
     $max = $widget_config['max_value'] ?? (int) (date("Y"));
     $base_gap = $widget_config['step'];
     // These will be swapped by active values, if any
@@ -216,7 +202,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
     if ($limit <= 0)  {
       $limit = 100;
     }
-
     $time_zone = Utility::getTimeZone($this->facet->getFacetSource()
       ->getIndex());
     $dt_min_utc = new DateTime('@' . $min_timestamp);
@@ -227,7 +212,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
     // daylight time shift, the offset gets weird.
     $offset_min  = (int) ($dt_min->getOffset() / 3600);
     $offset_max  = (int) ($dt_max->getOffset() / 3600);
-
     if ($offset_min < 0) {
       $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_min) . 'H'));
       $max_value = $dt_max->add(new DateInterval('PT' . abs($offset_max) . 'H'));
@@ -236,6 +220,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
       $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_min) . 'H'));
       $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
     }
+    $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
 
     $base_info = [
       'min_value' => $min_value->format('Y-m-d\TH:i:s\Z'),
@@ -264,42 +249,84 @@ class SearchApiDateRange extends QueryTypePluginBase {
     // we want to avoid having too small buckets?
 
     $gap_hours = intdiv($diff_in_hours, $limit);
-    $gap_hours = abs($diff_in_hours % $limit) > 0 ? $gap_hours + 1 : $gap_hours;
+    $reminder = abs($diff_in_hours % $limit);
+    // Review if adding 1 is ok or not.
+    if ($reminder > $gap_hours) { // means my last bucket does not span the full date range.
+      $gap_hours = $gap_hours + 1;
+      // Redefines limit (less values)
+      $limit = intdiv($diff_in_hours, $gap_hours); // lower limit to fit an increased gap
+      $reminder = abs($diff_in_hours % $limit);
+    }
     if ($gap_hours <= 24) { // 1 day
+      $granularity = $gap_hours == 1 ? '+1HOUR' : "+{$gap_hours}HOURS";
+      $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap_hours;
+      $widget_config['dynamic_step_granularity_unit'] = 'hours';
+      $this->facet->getWidgetInstance()
+        ->setConfiguration($widget_config);
       return  [
-        'granularity' => "+{$gap_hours}HOUR",
+        'granularity' => $granularity,
         'gap' => $gap_hours,
       ] + $base_info;
     }
 
 
     $gap_days = intdiv($diff_in_days, $limit);
-    $gap_days = abs($diff_in_days % $limit) > 0 ? $gap_days + 1 : $gap_days;
+    $reminder = abs($diff_in_days % $limit);
+    if ($reminder > $gap_days) { // means my last bucket does not span the full date range.
+      $gap_days = $gap_days + 1;
+      // Redefines limit (less values)
+      $limit = intdiv($diff_in_days, $gap_days); // lower limit to fit an increased gap
+      $reminder = abs($diff_in_days % $limit);
+    }
 
     if ($gap_days < 31) { // A month
+      $granularity = $gap_days == 1 ? '+1DAY' : "+{$gap_days}DAYS";
+      $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap_days;
+      $widget_config['dynamic_step_granularity_unit'] = 'days';
+      $this->facet->getWidgetInstance()
+        ->setConfiguration($widget_config);
       return [
-        'granularity' => "+{$gap_days}DAY",
+        'granularity' => $granularity,
         'gap' => $gap_days,
       ] + $base_info;
     }
 
     $gap_months = intdiv($diff_in_months, $limit);
-    $gap_months = abs($diff_in_months % $limit) > 0 ? $gap_months + 1 : $gap_months;
-
+    $reminder = abs($diff_in_months % $limit);
+    if ($reminder > $gap_months) { // means my last bucket does not span the full date range.
+      $gap_months = $gap_months + 1;
+      // Redefines limit (less values)
+      $limit = intdiv($diff_in_months, $gap_months); // lower limit to fit an increased gap
+      $reminder = abs($diff_in_months % $limit);
+    }
     if ($gap_months < 60) { // 5 years
+      $granularity = $gap_months == 1 ? '+1MONTH' : "+{$gap_months}MONTHS";
+      $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap_months;
+      $widget_config['dynamic_step_granularity_unit'] = 'months';
+      $this->facet->getWidgetInstance()
+        ->setConfiguration($widget_config);
       return [
-        'granularity' => "+{$gap_months}MONTH",
+        'granularity' => $granularity,
         'gap' => $gap_months,
       ] + $base_info;
     }
 
     $gap_years = intdiv($diff_in_years, $limit);
-    $gap_years = abs($diff_in_years % $limit) > 0 ? $gap_years + 1 : $gap_years;
-
+    $reminder  = abs($diff_in_years % $limit);
+    if ($reminder > $gap_years) { // means my last bucket does not span the full date range.
+      $gap_years = $gap_years + 1;
+    // Redefines limit (less values)
+      $limit = intdiv($diff_in_years, $gap_years); // lower limit to fit an increased gap
+      $reminder = abs($diff_in_years % $limit);
+    }
+    $granularity = $gap_years == 1 ? '+1YEAR' : "+{$gap_years}YEARS";
+    $widget_config['dynamic_step'] = $reminder > 0 ? $reminder : $gap_years;
+    $widget_config['dynamic_step_granularity_unit'] = 'years';
+    $this->facet->getWidgetInstance()
+      ->setConfiguration($widget_config);
     return [
-      'granularity' => "+{$gap_years}YEARS",
+      'granularity' => $granularity,
       'gap' => $gap_years,
     ] + $base_info;
   }
-
 }
