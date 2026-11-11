@@ -81,9 +81,11 @@ class DateSliderWidget extends WidgetPluginBase {
     $max = (int) ($this->getConfiguration()['max_value'] ?? date('Y'));
     // Cap to max this year.
     $max = $max > $this_year ? $this_year : $max;
-    $min = strtotime($min.'-01-01');
+
+    // Ensure this here uses a proper timezone to force UTC
+    $min = DateRangeProcessor::DateToUnix($min.'-01-01');
     // add the last day bc we want to consider the complete year.
-    $max = strtotime($max.'-12-31');
+    $max = DateRangeProcessor::DateToUnix($max.'-12-31');
     // If no active max, we will cap to $max.
     $range = $this->getRangeFromResults($results, $active_max ?? $max);
     ksort($results);
@@ -105,6 +107,8 @@ class DateSliderWidget extends WidgetPluginBase {
     $max = (int) gmdate('Y', $active_max) > (int) gmdate('Y', $real_max) ? $real_max : $active_max;
     $year_max = gmdate('Y', (int) $max);
     $unix_max = $max;
+    // re-evaluate this here. If there is a user input for max
+    // I should use it instead of the last day of the year.
     $max = gmdate('Y-12-31', (int) $max);
 
     $labels = [];
@@ -496,6 +500,30 @@ class DateSliderWidget extends WidgetPluginBase {
       $min = $min < $raw ? $min : $raw;
       $max = $max > $raw ? $max : $raw;
     }
+    // We do timezone offset calculation before definining the final max
+    // That way we are only working on Facet results and not
+    // modifying in any way the fact that $active_max has no timezone offset (UTC)
+    // since it is user input.
+    $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
+    // Now we need to reverse the Timezone offset generated during indexing.
+    // We do the inverse in SearchApiDateRange to fit the actual indexed values
+    $dt_min_utc = new DateTime('@' . $min);
+    $dt_max_utc = new DateTime('@' . $max);
+    $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
+    // Offset can be retrieved from both min or max, but we pick only one and apply to both min and max,
+    // to avoid hour level shifts in each Solr calculated gap, when the range covers BCE and Modern time
+    // dates.
+    $offset = $dt_max->getOffset() / 3600;
+    $offset = (int) $offset;
+    if ($offset > 0) {
+      $max = $dt_max_utc->add(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
+      $min = $dt_min_utc->add(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
+    }
+    else {
+      $max = $dt_max_utc->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
+      $min = $dt_min_utc->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
+    }
+
     $dynamic_step = $this->getConfiguration()['dynamic_step'] ?? $this->getConfiguration()['step'];
     $dynamic_step_granularity_unit = $this->getConfiguration()['$dynamic_step_granularity_unit'] ?? 'years';
     // Check for explicit NULL bc $active_max Might be a 0.
@@ -525,25 +553,10 @@ class DateSliderWidget extends WidgetPluginBase {
       }
 
     // IMPORTANT. Solr date range buckets start at the value -> span the $gap.
-
-    $time_zone = Utility::getTimeZone($this->facet->getFacetSource()->getIndex());
-    // Now we need to reverse the Timezone offset generated during indexing.
-    // We do the inverse in SearchApiDateRange to fit the actual indexed values
-    $dt_min_utc = new DateTime('@' . $min);
-    $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
-    // So far we don't need min, bc it starts at 1-1. But we might in the future if the ranges
-    // end being inconsistent.
-    $dt_max_utc = new DateTime('@' . $max);
-    $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
-    // Offset can be retrieved from both min or max.
-    $offset = $dt_max->getOffset() / 3600;
-    $offset = (int) $offset;
-    if ($offset > 0) {
-      $max = $dt_max->add(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
-    }
-    else {
-      $max = $dt_max->sub(new DateInterval('PT' . abs($offset) . 'H'))->getTimestamp();
-    }
+    $min = round($min / 3600) * 3600;
+    $max = round($max / 3600) * 3600;
+    // Quick hack to round to the next hour, just in case
+    // Solr can't generate even buckets
     return ['min' => $min, 'max' => $max];
   }
 
