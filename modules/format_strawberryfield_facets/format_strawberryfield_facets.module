@@ -22,7 +22,6 @@ function format_strawberryfield_facets_block_view_alter(array &$build, \Drupal\C
  */
 function format_strawberryfield_facets_library_info_alter(&$libraries, $extension) {
   if ($extension === 'facets' && isset($libraries['soft-limit'])) {
-    error_log('running');
     $old_path = 'js';
     $new_path = '/' . \Drupal::service('extension.list.module')
         ->getPath('format_strawberryfield_facets') . '/js';
