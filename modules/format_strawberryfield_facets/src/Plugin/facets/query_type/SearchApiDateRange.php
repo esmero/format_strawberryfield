@@ -79,7 +79,6 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 // Basically If someone asks for 1911-1915 (and our date is 1911/1915) Solr will really have
                 //" dm_date_created_original":["1911-01-01T05:00:00Z", "1916-01-01T04:59:59Z"]
                 // Or drm_date_as_range":["[1911-01-01T05:00:00Z TO 1916-01-01T04:59:59Z]"],
-
                 $calculated_options = $this->getSorlFacetRangeInfoFromData($min,$max,$min_count_for_facet);
                 $min_value = $calculated_options['min_value_for_query'];
                 $max_value = $calculated_options['max_value_for_query'];
@@ -209,15 +208,14 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     // Offset for both is normally the SAME BUT, on BCE, because there was no
-    // daylight time shift, the offset gets weird.
-    $offset_min  = (int) ($dt_min->getOffset() / 3600);
+    // daylight time shift, the offset gets weird. To avoid uneven buckets, we use only max.
     $offset_max  = (int) ($dt_max->getOffset() / 3600);
-    if ($offset_min < 0) {
-      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_min) . 'H'));
+    if ($offset_max < 0) {
+      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_max) . 'H'));
       $max_value = $dt_max->add(new DateInterval('PT' . abs($offset_max) . 'H'));
     }
     else {
-      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_min) . 'H'));
+      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
       $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
     }
     $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
