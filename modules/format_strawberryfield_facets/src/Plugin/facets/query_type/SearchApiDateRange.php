@@ -209,17 +209,22 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     // Offset for both is normally the SAME BUT, on BCE, because there was no
     // daylight time shift, the offset gets weird. To avoid uneven buckets, we use only max.
-    $offset_max  = (int) ($dt_max->getOffset() / 3600);
+    $offset_max  = (int) ($dt_max->getOffset() / 60);
+    $offset_min  = (int) ($dt_min->getOffset() / 60);
     if ($offset_max < 0) {
-      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_max) . 'H'));
-      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset_max) . 'H'));
+      $min_value = $dt_min->add(new DateInterval('PT' . abs($offset_min) . 'M'));
+      $max_value = $dt_max->add(new DateInterval('PT' . abs($offset_max) . 'M'));
     }
     else {
-      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
-      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset_max) . 'H'));
+      $min_value = $dt_min->sub(new DateInterval('PT' . abs($offset_min) . 'M'));
+      $max_value = $dt_max->sub(new DateInterval('PT' . abs($offset_max) . 'M'));
     }
     $widget_config = $this->facet->getWidgetInstance()->getConfiguration();
-
+    // mmmm... because the dates are already indexed using an offset
+    // the query v/s the range might need adjustments so we actually FIT
+    // what is in the index.
+    // Search API will kick out any attemps of setting value for query
+    // with a /DAY op.
     $base_info = [
       'min_value' => $min_value->format('Y-m-d\TH:i:s\Z'),
       'max_value' => $max_value->format('Y-m-d\TH:i:s\Z'),
