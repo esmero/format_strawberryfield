@@ -208,7 +208,8 @@ class SearchApiDateRange extends QueryTypePluginBase {
     $dt_min = new DateTime($dt_min_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     $dt_max = new DateTime($dt_max_utc->format('Y-m-d\TH:i:s'), new DateTimeZone($time_zone));
     // Offset for both is normally the SAME BUT, on BCE, because there was no
-    // daylight time shift, the offset gets weird. To avoid uneven buckets, we use only max.
+    // daylight time shift, the offset gets weird. Still, we need the proper
+    // ones, but to be precise because of historic LMT, we use minutes.
     $offset_max  = (int) ($dt_max->getOffset() / 60);
     $offset_min  = (int) ($dt_min->getOffset() / 60);
     if ($offset_max < 0) {
@@ -223,7 +224,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
     // mmmm... because the dates are already indexed using an offset
     // the query v/s the range might need adjustments so we actually FIT
     // what is in the index.
-    // Search API will kick out any attemps of setting value for query
+    // Search API will kick out any attempts of setting value for query
     // with a /DAY op.
     $base_info = [
       'min_value' => $min_value->format('Y-m-d\TH:i:s\Z'),
