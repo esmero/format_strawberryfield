@@ -54,7 +54,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         // We really don't know if sorting is exposed. So we will have to ask the view
         $sort_ids[$sort->options['expose']['field_identifier']] = $sort->options['expose']['field_identifier'];
         // Never the case that a SORT as a select is going to keep its own value
-        // But if a hanlder decides to make it a checkbox? Or some theme does that?
+        // But if a handler decides to make it a checkbox? Or some theme does that?
         $is_sort_exposed = true;
         // New in Drupal 10.2? But these are fixed. When combined by Better exposed Filters they will appear inside #info (still)
         $sort_ids['sort_by'] = 'sort_by';
