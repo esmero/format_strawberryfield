@@ -288,6 +288,9 @@ class MetadataExposeDisplayController extends ControllerBase {
         switch ($responsetype) {
           case 'application/json':
           case 'application/ld+json':
+            if ($metadataexposeconfig_entity->getMinifyJson()) {
+              $cacheabledata = $this->minifyJSON($cacheabledata);
+            }
             $response = new CacheableJsonResponse(
               $cacheabledata,
               $status,
@@ -330,7 +333,6 @@ class MetadataExposeDisplayController extends ControllerBase {
           }
         }
         return $response;
-
       }
       else {
         throw new NotFoundHttpException(
@@ -344,6 +346,18 @@ class MetadataExposeDisplayController extends ControllerBase {
 
       );
     }
+  }
+
+  /**
+   * Minifies a JSON String representation without decoding it into memory.
+   * Will simply remove spaces and breaklines around non double-quoted entries.
+   *
+   * @param $json_string
+   *
+   * @return array|string|string[]|null
+   */
+  private function minifyJSON($json_string) {
+      return preg_replace('/(?>"(?:[^\\\\"]+|\\\\.)*")\K|\s+/s', '', $json_string);
   }
 
 }

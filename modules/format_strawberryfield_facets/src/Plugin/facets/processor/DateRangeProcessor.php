@@ -137,7 +137,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
       }
       else {
-        // This has core issues and we hope it won't ever match
+        // This has core issues, and we hope it won't ever match
         // Core issue is that ::getUrlForRequest does not work well
         // And fetches for a View the wrong Display and then caches it!
         $request = \Drupal::request();
@@ -283,7 +283,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
     //\EDTF\EdtfFactory::newParser()->parse('-0013-01-01T04:56:02Z')->getEdtfValue()
     // PHP is the worst. I know the format (used to generate) is DATE_ATOM
     // But can't explicitly create from format.
-    $dateTime = new \DateTimeImmutable($date);
+    $dateTime = new \DateTimeImmutable($date, new \DateTimeZone('UTC'));
     if ($dateTime) {
       return $dateTime->getTimestamp();
     }

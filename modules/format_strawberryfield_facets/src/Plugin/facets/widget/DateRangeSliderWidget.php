@@ -33,12 +33,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
     $facet_settings = &$build['#attached']['drupalSettings']['facets']['sliders'][$facet->id()];
     $is_bce = $facet_settings['real_minmax'][0] ?? 0;
     $is_bce = $is_bce < 0 ? TRUE : FALSE;
-    $timezone = new DateTimeZone($facet_settings['time_zone'] ?? 'UTC' );
-    $dateTime_for_timezone = new DateTime('now', $timezone);
-    $timezone_offset = $dateTime_for_timezone->format('Z');
-    $timezone_offset = (int) $timezone_offset * -1;
-
-
 
     // Generate unique IDs for form elements (AJAX-safe)
     $id = Html::getUniqueId('facet-sbf-slider-'.$facet->id());
@@ -65,7 +59,11 @@ class DateRangeSliderWidget extends DateSliderWidget {
       ];
     }
     $restrict_input_to_real = $this->getConfiguration()['restrict_frequency_to_range'] ?? FALSE;
-
+    // Even if we are restricting.
+    // Allow the last user input to be used for the Input values
+    // IF selected_min >= real_min and selected_max <= real_max
+    $min_full_value = $restrict_input_to_real;
+    $max_full_value = $restrict_input_to_real;
     if ($this->getConfiguration()['allow_full_entry'] && !$is_bce) {
       $build['#items']['manual_input']['manual_input_full'] = [
         '#type' => 'container',
@@ -79,15 +77,13 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#date_date_element' => 'date',
           '#date_time_element' => 'none',
           '#date_year_range' => $facet_settings['min'].':'.$facet_settings['max'],
-          '#date_timezone' => $facet_settings['time_zone'] ?? 'UTC',
           '#attributes' => [
             'class' => ['facet-date-range'],
             'id' => $id . '-min',
             'name' => $facet->id() . '_min',
             'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
             'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
-            'data-type' => 'date-range-min',
-            'data-tmzoffset' => $timezone_offset,
+            'data-type' => 'date-range-min'
           ],
         ],
         'max_full' => [
@@ -100,7 +96,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
           '#date_date_element' => 'date',
           '#date_time_element' => 'none',
           '#date_year_range' => $facet_settings['min'].':'.$facet_settings['max'],
-          '#date_timezone' => $facet_settings['time_zone'] ?? 'Asia/Kolkata',
           '#attributes' => [
             'class' => ['facet-date-range'],
             'id' => $id . '-max',
@@ -108,7 +103,6 @@ class DateRangeSliderWidget extends DateSliderWidget {
             'min' => $restrict_input_to_real ? $facet_settings['real_minmax'][0] : $facet_settings['selected_minmax'][0],
             'max' => $restrict_input_to_real ? $facet_settings['real_minmax'][1] : $facet_settings['selected_minmax'][1],
             'data-type' => 'date-range-max',
-            'data-tmzoffset' => $timezone_offset,
           ],
         ]];
     }

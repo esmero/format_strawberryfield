@@ -214,7 +214,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         '#type' => 'weight',
         '#title' => $this->t(
           'Weight for @title',
-          ['@title' => $mapping['jsontype']]
+          ['@title' => $mapping['jsontype'] ?? '']
         ),
         '#title_display' => 'invisible',
         '#default_value' => isset($mapping['weight']) ? $mapping['weight'] : $key,

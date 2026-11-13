@@ -1044,7 +1044,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
         '#type' => 'weight',
         '#title' => $this->t(
           'Weight for @title',
-          ['@title' => $index]
+          ['@title' => $index ?? '']
         ),
         '#title_display' => 'invisible',
         '#default_value' => isset($parameter_config['weight']) ? $parameter_config['weight'] : $key,

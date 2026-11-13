@@ -416,7 +416,7 @@ annotorious:
       https://cdn.jsdelivr.net/npm/@recogito/annotorious@2.7.12/dist/annotorious.min.css: { external: true }
 
 annotoriousopenseadragon:
-  version: 2.5.16
+  version: 2.7.17
   license:
     name: BSD-3 Clause
     url: https://github.com/recogito/annotorious-openseadragon/blob/master/LICENSE
@@ -507,3 +507,58 @@ clipboard_copy_strawberry:
     - core/drupal
     - core/once
     - core/drupalSettings
+
+triiiceratops:
+  version: 1.2.2
+  js:
+    https://unpkg.com/triiiceratops@1.2.2/dist/triiiceratops-element.iife.js:  { external: true, minified: true, preprocess: false}
+
+triiiceratops_plugin-image-manipulation:
+  version: 1.1.1
+  js:
+    https://unpkg.com/@triiiceratops/plugin-image-manipulation@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+  dependencies:
+    - format_strawberryfield/triiiceratops
+
+triiiceratops_plugin-av:
+  version: 1.1.1
+  js:
+    https://unpkg.com/@triiiceratops/plugin-av@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+  dependencies:
+    - format_strawberryfield/triiiceratops
+
+triiiceratops_plugin-annotation-editor:
+  version: 1.1.1
+  js:
+    https://unpkg.com/@triiiceratops/plugin-annotation-editor@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+  dependencies:
+    - format_strawberryfield/triiiceratops
+
+triiiceratops_plugin-image-export:
+  version: 1.1.1
+  js:
+    https://unpkg.com/@triiiceratops/plugin-image-export@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+  dependencies:
+    - format_strawberryfield/triiiceratops
+
+triiiceratops_plugin-pdf-export:
+  version: 1.1.1
+  js:
+    https://unpkg.com/@triiiceratops/plugin-pdf-export@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+  dependencies:
+    - format_strawberryfield/triiiceratops
+
+triiiceratops_strawberry:
+  version: 1.0
+  js:
+    js/triiiceratops_strawberry.js: {minified: false, attributes: { type: module } }
+  css:
+    component:
+      css/triiiceratops.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupalSettings
+    - format_strawberryfield/triiiceratops
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
