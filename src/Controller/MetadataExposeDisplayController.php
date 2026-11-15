@@ -5,7 +5,6 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
@@ -269,20 +268,33 @@ class MetadataExposeDisplayController extends ControllerBase {
             $cacheabledata = [];
             // @see https://www.drupal.org/node/2638686 to understand
             // What cacheable, Bubbleable metadata and early rendering means.
-            $cacheabledata = $this->renderer->executeInRenderContext(
-              new RenderContext(),
-              function () use ($context, $original_context, $metadatadisplay_entity) {
-                // Allow other modules to provide extra Context!
-                // Call modules that implement the hook, and let them add items.
-                \Drupal::moduleHandler()->alter(
-                  'format_strawberryfield_twigcontext', $context
-                );
-                // In case someone decided to wipe the original context?
-                // We bring it back!
-                $context = $context + $original_context;
-                return $metadatadisplay_entity->renderNative($context);
-              }
-            );
+            try {
+              $cacheabledata = $this->renderer->executeInRenderContext(
+                new RenderContext(),
+                function() use ($context, $original_context, $metadatadisplay_entity) {
+                  // Allow other modules to provide extra Context!
+                  // Call modules that implement the hook, and let them add items.
+                  \Drupal::moduleHandler()->alter(
+                    'format_strawberryfield_twigcontext', $context
+                  );
+                  // In case someone decided to wipe the original context?
+                  // We bring it back!
+                  $context = $context + $original_context;
+                  return $metadatadisplay_entity->renderNative($context);
+                }
+              );
+
+            }
+            catch (\Throwable $e) {
+              $responsetype = 'application/json';
+              $status = 503;
+              $this->loggerFactory->get('format_strawberryfield')->error('Exposed metadata endpoint @endpoint for ADO @node failed with error @e', ['@endpoint' => $metadataexposeconfig_entity->getLabel(), '@e' => $e->getMessage(), '@node' => $node->id()]);
+              $cacheabledata = [
+                'status' => 'error',
+                'message' => 'Service temporarily unavailable. Please try again later.',
+              ];
+              $cacheabledata = json_encode($cacheabledata);
+            }
           }
         }
         switch ($responsetype) {
@@ -298,7 +310,6 @@ class MetadataExposeDisplayController extends ControllerBase {
               TRUE
             );
             break;
-
           case 'application/xml':
           case 'text/plain':
           case 'text/turtle':
@@ -320,16 +331,30 @@ class MetadataExposeDisplayController extends ControllerBase {
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
           $response->headers->set('Access-Control-Allow-Origin','*');
-          $response->addCacheableDependency($node);
-          $response->addCacheableDependency($metadatadisplay_entity);
-          $response->addCacheableDependency($metadataexposeconfig_entity);
-          $metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
-          $response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
-          $response->getCacheableMetadata()->addCacheTags($embargo_tags);
-          $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
-          $response->getCacheableMetadata()->addCacheContexts($embargo_context);
-          if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+          if ($status == 200) {
+            $response->addCacheableDependency($node);
+            $response->addCacheableDependency($metadatadisplay_entity);
+            $response->addCacheableDependency($metadataexposeconfig_entity);
+            $metadata_cache_tag = 'node_metadatadisplay:' . $node->id();
+            $response->getCacheableMetadata()
+              ->addCacheTags([$metadata_cache_tag]);
+            $response->getCacheableMetadata()->addCacheTags($embargo_tags);
+            $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
+            $response->getCacheableMetadata()
+              ->addCacheContexts($embargo_context);
+            if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+              $response->getCacheableMetadata()->setCacheMaxAge(0);
+              $response->setMaxAge(0);
+              $response->setSharedMaxAge(0);
+            }
+          }
+          else {
             $response->getCacheableMetadata()->setCacheMaxAge(0);
+            $response->setMaxAge(0);
+            $response->setSharedMaxAge(0);
+            $response->headers->addCacheControlDirective('no-cache', true);
+            $response->headers->addCacheControlDirective('no-store', true);
+            $response->headers->addCacheControlDirective('must-revalidate', true);
           }
         }
         return $response;

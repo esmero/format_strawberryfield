@@ -1366,7 +1366,7 @@ class IiifContentSearchController extends ControllerBase {
     return array_unique(array_merge(...$keys));
   }
 
-  private function exceptionResponse($message, $code) {
+  private function exceptionResponse($message, $code): CacheableJsonResponse {
     $failure_response = new CacheableJsonResponse([
       'error' => true,
       'message' => $message,
