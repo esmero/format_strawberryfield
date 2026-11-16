@@ -23,13 +23,6 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
   protected $viewModeResolver;
 
   /**
-   * The Entity Type Manager.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  protected EntityTypeManagerInterface $entityTypeManager;
-
-  /**
    * Construct the ViewModeLocalTask object.
    *
    * @param array                                                    $configuration
@@ -39,12 +32,14 @@ class ViewModeLocalTask extends LocalTaskDefault implements ContainerFactoryPlug
    * @param array                                                    $plugin_definition
    *   The plugin implementation definition.
    * @param \Drupal\format_strawberryfield\ViewModeResolverInterface $view_mode_resolver
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface           $entitytype_manager
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    */
-  public function __construct(array $configuration, $plugin_id, array $plugin_definition, ViewModeResolverInterface $view_mode_resolver, EntityTypeManagerInterface $entitytype_manager) {
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, ViewModeResolverInterface $view_mode_resolver, /**
+   * The Entity Type Manager.
+   */
+  protected EntityTypeManagerInterface $entityTypeManager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->viewModeResolver = $view_mode_resolver;
-    $this->entityTypeManager = $entitytype_manager;
   }
 
   /**
