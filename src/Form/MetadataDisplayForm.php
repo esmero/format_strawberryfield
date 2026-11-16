@@ -229,14 +229,12 @@ class MetadataDisplayForm extends ContentEntityForm {
     $used_vars = $entity->getTwigVariablesUsed();
 
     // Sort the Twig variables by the first instance line number and the JSON keys alphabetically.
-    uasort($used_vars, function($a, $b){
-      return $a[0] < $b[0] ? -1 : 1;
-    });
+    uasort($used_vars, fn($a, $b) => $a[0] < $b[0] ? -1 : 1);
     ksort($jsondata);
 
     // Generate the first table by using data from both arrays.
     foreach ($used_vars as $used_var => $used_lines) {
-      $used_value = isset($jsondata[$used_var]) ? $jsondata[$used_var] : null;
+      $used_value = $jsondata[$used_var] ?? null;
       $used_value_type = empty($used_value) && !is_null($used_value) ? 'empty ' . gettype($used_value) : gettype($used_value);
       $json_table_key = $used_var;
       if (filter_var($used_value, FILTER_VALIDATE_URL) || StrawberryfieldJsonHelper::validateURN($used_var)) {
@@ -312,7 +310,7 @@ class MetadataDisplayForm extends ContentEntityForm {
       $show_render_native = $form_state->getValue('render_native');
 
       if ($show_render_native) {
-        set_error_handler('_format_strawberryfield_metadata_preview_error_handler');
+        set_error_handler(_format_strawberryfield_metadata_preview_error_handler(...));
       }
 
       $sbf_fields = \Drupal::service('strawberryfield.utility')
