@@ -22,11 +22,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginInterface {
 
   /**
-   * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
-   */
-  private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
-
-  /**
    * Creates a new AdoType instance.
    *
    * @param array $configuration
@@ -37,9 +32,8 @@ class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginI
    *   The plugin implementation definition.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, private readonly StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
 
   /**
@@ -73,7 +67,7 @@ class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginI
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['ado_jmespaths'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_jmespaths'))));
+    $this->configuration['ado_jmespaths'] = array_filter(array_map(trim(...), explode(PHP_EOL, $form_state->getValue('ado_jmespaths'))));
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -106,7 +100,7 @@ class AdoJmesPath extends ConditionPluginBase implements ContainerFactoryPluginI
                   }
                   $matches = !empty($match_result);
                 }
-                catch (\Exception $e) {
+                catch (\Exception) {
                   $this->messenger()->addWarning('The JMESPath Block condition for Block @id is using an invalid JMESPath expression. Please correct the configuration.',[
                     '@id' => $this->getPluginId()
                   ]);
