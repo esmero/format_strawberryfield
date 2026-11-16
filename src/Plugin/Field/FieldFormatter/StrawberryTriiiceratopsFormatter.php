@@ -611,8 +611,22 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta
             . '-triiiceratops';
           $htmlid = $groupid;
+          $elements[$delta]['wrappers'] =  [
+            '#type' => 'html_tag',
+            '#tag' => 'div',
+            '#attributes' => [
+              'style' => "width:{$max_width_css}; height:{$max_height}px;position:relative;overflow:hidden;",
+            ]
+          ];
+          $elements[$delta]['wrappers']['absolute'] =  [
+            '#type' => 'html_tag',
+            '#tag' => 'div',
+            '#attributes' => [
+              'style' => "position:absolute;z-index:1000;width:100%;height:100%;overflow:hidden;",
+            ]
+          ];
 
-          $elements[$delta]['media'] = [
+          $elements[$delta]['wrappers']['absolute']['media'] = [
             '#type' => 'html_tag',
             '#tag' => 'triiiceratops-viewer',
             '#default_value' => $htmlid,
@@ -629,40 +643,40 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           ];
           // Single Switch enables both
           if ($content_state_drop) {
-            $elements[$delta]['media']['#attributes']['read-content-state-from-url'] = $content_state_drop;
-            $elements[$delta]['media']['#attributes']['accept-dropped-content-state'] = $content_state_drop;
+            $elements[$delta]['wrappers']['absolute']['media']['#attributes']['read-content-state-from-url'] = $content_state_drop;
+            $elements[$delta]['wrappers']['absolute']['media']['#attributes']['accept-dropped-content-state'] = $content_state_drop;
           }
 
           // get the URL to our Metadata Expose Endpoint, we will get a string here.
-          $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['nodeuuid']
+          $elements[$delta]['wrappers']['absolute']['media']['#attributes']['data-iiif-infojson'] = '';
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['nodeuuid']
             = $nodeuuid;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['manifesturl']
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['manifesturl']
             = $main_manifesturl;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['manifestother']
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['manifestother']
             = is_array($all_manifesturl) ? $all_manifesturl : [];
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['width']
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['width']
             = $max_width_css;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['height']
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['height']
             = max(
               $max_height,
               480
             );
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides'] = $viewer_overrides;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides_theme'] = $viewer_overrides_theme;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['enabled_plugins'] = $enabled_plugins;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_drop'] = $content_state_drop;
-          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_url_update'] = $content_state_url_update;
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides'] = $viewer_overrides;
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides_theme'] = $viewer_overrides_theme;
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['enabled_plugins'] = $enabled_plugins;
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_drop'] = $content_state_drop;
+          $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_url_update'] = $content_state_url_update;
           $elements[$delta]['#attached']['library'][]
             = 'format_strawberryfield/triiiceratops_strawberry';
           foreach ($enabled_plugins as $plugin) {
             if ( $this->currentUser && $this->currentUser->hasPermission('view strawberryfield webannotation') && $plugin == 'plugin-annotation-editor' && $webannotations) {
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations'] = (boolean) $webannotations ?? FALSE;
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations_storage'] = $webannotations_storage;
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
-              $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
-              $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
+              $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations'] = (boolean) $webannotations ?? FALSE;
+              $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['webannotations_storage'] = $webannotations_storage;
+              $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
+              $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['url'] = Url::fromRoute('entity.user.canonical', ['user' => $this->currentUser->getAccount()->id()])->toString();
+              $elements[$delta]['wrappers']['absolute']['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['user']['name'] = $this->currentUser->getAccount()->getAccountName();
+              $elements[$delta]['wrappers']['absolute']['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
             }
             else {
               $elements[$delta]['#attached']['library'][] = 'format_strawberryfield/triiiceratops_' . $plugin;
