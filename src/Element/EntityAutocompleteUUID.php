@@ -73,7 +73,7 @@ class EntityAutocompleteUUID extends Textfield {
    */
   public function getInfo() {
     $info = parent::getInfo();
-    $class = get_class($this);
+    $class = static::class;
 
     // Apply default form element properties.
     $info['#target_type'] = NULL;
@@ -148,13 +148,9 @@ class EntityAutocompleteUUID extends Textfield {
     // Potentially the #value is set directly, so it contains the 'target_id'
     // array structure instead of a string.
     if ($input !== FALSE && is_array($input)) {
-      $entity_ids = array_map(function (array $item) {
-        return $item['target_id'];
-      }, $input);
+      $entity_ids = array_map(fn(array $item) => $item['target_id'], $input);
 
-      $entity_uuids = array_filter($input, function (array $item) {
-        return Uuid::isValid($item['target_id'] ?? '');
-      });
+      $entity_uuids = array_filter($input, fn(array $item) => Uuid::isValid($item['target_id'] ?? ''));
       if (count($entity_uuids)) {
         $entities = \Drupal::entityTypeManager()->getStorage($element['#target_type'])->loadByProperties(['uuid' => $entity_uuids]);
       } else {
@@ -198,12 +194,12 @@ class EntityAutocompleteUUID extends Textfield {
         throw new \InvalidArgumentException("Missing required #autocreate['bundle'] parameter.");
       }
       // Default the autocreate user ID to the current user.
-      $element['#autocreate']['uid'] = isset($element['#autocreate']['uid']) ? $element['#autocreate']['uid'] : \Drupal::currentUser()->id();
+      $element['#autocreate']['uid'] ??= \Drupal::currentUser()->id();
     }
 
     // Store the selection settings in the key/value store and pass a hashed key
     // in the route parameters.
-    $selection_settings = isset($element['#selection_settings']) ? $element['#selection_settings'] : [];
+    $selection_settings = $element['#selection_settings'] ?? [];
     $data = serialize($selection_settings) . $element['#target_type'] . $element['#selection_handler'];
     $selection_settings_key = Crypt::hmacBase64($data, Settings::getHashSalt());
 
@@ -247,11 +243,9 @@ class EntityAutocompleteUUID extends Textfield {
 
         foreach ($input_values as $input) {
           $match = static::extractEntityIdFromAutocompleteInput($input);
-          if ($match === NULL) {
-            // Try to get a match from the input string when the user didn't use
-            // the autocomplete but filled in a value manually.
-            $match = static::matchEntityByTitle($handler, $input, $element, $form_state, !$autocreate);
-          }
+          // Try to get a match from the input string when the user didn't use
+          // the autocomplete but filled in a value manually.
+          $match ??= static::matchEntityByTitle($handler, $input, $element, $form_state, !$autocreate);
 
           if ($match !== NULL) {
             $value[] = [
@@ -318,7 +312,7 @@ class EntityAutocompleteUUID extends Textfield {
       // matches (tags).
       if (!$element['#tags'] && !empty($value)) {
         $last_value = $value[count($value) - 1];
-        $value = isset($last_value['target_id']) ? $last_value['target_id'] : $last_value;
+        $value = $last_value['target_id'] ?? $last_value;
       }
     }
     if (empty($value)) {
@@ -376,9 +370,7 @@ class EntityAutocompleteUUID extends Textfield {
    */
   protected static function matchEntityByTitle(SelectionInterface $handler, $input, array &$element, FormStateInterface $form_state, $strict) {
     $entities_by_bundle = $handler->getReferenceableEntities($input, '=', 6);
-    $entities = array_reduce($entities_by_bundle, function ($flattened, $bundle_entities) {
-      return $flattened + $bundle_entities;
-    }, []);
+    $entities = array_reduce($entities_by_bundle, fn($flattened, $bundle_entities) => $flattened + $bundle_entities, []);
     $params = [
       '%value' => $input,
       '@value' => $input,
