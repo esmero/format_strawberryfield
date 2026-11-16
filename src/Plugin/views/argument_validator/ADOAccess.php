@@ -56,16 +56,6 @@ class ADOAccess extends Entity implements CacheableDependencyInterface {
   protected $multipleCapable = TRUE;
 
   /**
-   * @var \Drupal\format_strawberryfield\EmbargoResolverInterface
-   */
-  private EmbargoResolverInterface $embargoResolver;
-
-  /**
-   * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
-   */
-  private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
-
-  /**
    * Constructs a \Drupal\views\Plugin\views\argument_validator\Entity object.
    *
    * @param array $configuration
@@ -81,10 +71,8 @@ class ADOAccess extends Entity implements CacheableDependencyInterface {
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargoResolver
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info,  StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService, EmbargoResolverInterface $embargoResolver) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info,  private readonly StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService, private readonly EmbargoResolverInterface $embargoResolver) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_type_bundle_info);
-    $this->embargoResolver = $embargoResolver;
-    $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
 
 
