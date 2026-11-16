@@ -19,9 +19,9 @@ class RouteSubscriber extends RouteSubscriberBase {
    */
   public function alterRoutes(RouteCollection $collection) {
     if ($route = $collection->get('facets.block.ajax')) {
-      $route->setDefaults(array(
+      $route->setDefaults([
         '_controller' => '\Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView',
-      ));
+      ]);
     }
   }
 }
