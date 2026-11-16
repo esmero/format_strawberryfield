@@ -36,7 +36,7 @@ class TwigTemplateConstraintValidator extends ConstraintValidator implements Con
     return new static($container->get('twig'));
   }
 
-  public function validate($value, Constraint $constraint)
+  public function validate(mixed $value, Constraint $constraint): void
   {
     if (!$value->value) {
       return;
