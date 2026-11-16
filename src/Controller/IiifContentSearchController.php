@@ -189,9 +189,7 @@ class IiifContentSearchController extends ControllerBase {
       $the_query_string = substr(trim($the_query_string), 0, $query_length);
       $cacheabledata = $this->renderer->executeInRenderContext(
         new RenderContext(),
-        function () use ($metadataexposeconfig_entity, $node) {
-          return $metadataexposeconfig_entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE);
-        }
+        fn() => $metadataexposeconfig_entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE)
       );
       $canonical_url = $cacheabledata;
       if ($canonical_url) {
@@ -286,18 +284,18 @@ class IiifContentSearchController extends ControllerBase {
             $visual_processors =  $this->iiifConfig->get('iiif_content_search_api_visual_enabled_processors') ?? 'ocr';
             //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
             $visual_processors = explode(",", $visual_processors);
-            $visual_processors = array_map('trim', $visual_processors);
+            $visual_processors = array_map(trim(...), $visual_processors);
             $visual_processors = array_filter($visual_processors);
 
             $time_processors =  $this->iiifConfig->get('iiif_content_search_api_time_enabled_processors') ?? 'subtitle';
             //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
             $time_processors = explode(",", $time_processors);
-            $time_processors = array_map('trim', $time_processors);
+            $time_processors = array_map(trim(...), $time_processors);
             $time_processors = array_filter($time_processors);
 
             $text_processors = $this->iiifConfig->get('iiif_content_search_api_text_enabled_processors') ?? '';
             $text_processors = explode(",", $text_processors);
-            $text_processors = array_map('trim', $text_processors);
+            $text_processors = array_map(trim(...), $text_processors);
             $text_processors = array_filter($text_processors);
 
             $metadata_search = $this->iiifConfig->get('iiif_content_search_api_metadata') ?? FALSE;
