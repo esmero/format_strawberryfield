@@ -43,25 +43,19 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
   protected $serializer;
 
   /**
-   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
-   */
-  private $loggerFactory;
-
-  /**
    * formatStrawberryfieldInvalidateMetadataCaches constructor.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
    */
   public function __construct(
     TranslationInterface $string_translation,
     MessengerInterface $messenger,
-    LoggerChannelFactoryInterface $logger_factory
+    private LoggerChannelFactoryInterface $loggerFactory
   ) {
     $this->stringTranslation = $string_translation;
     $this->messenger = $messenger;
-    $this->loggerFactory = $logger_factory;
   }
 
   /**
@@ -87,7 +81,7 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
     /* @var $entity \Drupal\Core\Entity\ContentEntityInterface */
     $entity = $event->getEntity();
     $this->invalidate_cache($entity);
-    $current_class = get_called_class();
+    $current_class = static::class;
     $event->setProcessedBy($current_class, true);
   }
 
@@ -141,7 +135,7 @@ class formatStrawberryfieldInvalidateMetadataCaches implements EventSubscriberIn
         Cache::invalidateTags($tags);
       }
     }
-    catch (\Exception $exception) {
+    catch (\Exception) {
       $this->loggerFactory->get('format_strawberryfield')->error($this->t('Error invalidating Caches for parent Nodes for Node ID @node', ['@node' => $entity->id()]));
     }
   }

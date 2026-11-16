@@ -50,35 +50,26 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
   protected $tempStoreFactory;
 
   /**
-   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
-   */
-  private $loggerFactory;
-
-  /**
-   * The current user.
-   */
-  protected AccountProxyInterface $account;
-
-  /**
    * StrawberryfieldEventInsertSubscriberDepositDO constructor.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $temp_store_factory
    */
   public function __construct(
     TranslationInterface $string_translation,
     MessengerInterface $messenger,
-    LoggerChannelFactoryInterface $logger_factory,
+    private LoggerChannelFactoryInterface $loggerFactory,
     PrivateTempStoreFactory $temp_store_factory,
-    AccountProxyInterface $account
+    /**
+     * The current user.
+     */
+    protected AccountProxyInterface $account
   ) {
     $this->stringTranslation = $string_translation;
     $this->messenger = $messenger;
-    $this->loggerFactory = $logger_factory;
     $this->tempStoreFactory = $temp_store_factory;
-    $this->account =  $account;
 
 
   }
@@ -117,7 +108,7 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
       return;
     }
 
-    $current_class = get_called_class();
+    $current_class = static::class;
     $entity = $event->getEntity();
 
     /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
