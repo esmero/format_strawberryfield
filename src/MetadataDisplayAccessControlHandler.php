@@ -16,6 +16,10 @@ class MetadataDisplayAccessControlHandler extends EntityAccessControlHandler {
    */
   protected function checkAccess(EntityInterface $entity, $operation, AccountInterface $account)
   {
+    if ($account->isAnonymous()) {
+      return AccessResult::forbidden();
+    }
+
     if ($account->hasPermission('administer metadatadisplay entity')) {
       return AccessResult::allowed()->cachePerPermissions();
     }
