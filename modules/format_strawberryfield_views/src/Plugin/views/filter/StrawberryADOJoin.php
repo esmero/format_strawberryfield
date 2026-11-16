@@ -10,6 +10,7 @@ use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\search_api\Plugin\views\filter\SearchApiFulltext;
 use Drupal\search_api\Plugin\views\query\SearchApiQuery;
 use Drupal\search_api_solr\Utility\Utility;
+use Drupal\views\Attribute\ViewsFilter;
 use Drupal\views\Plugin\views\filter\FilterPluginBase;
 use \Drupal\search_api\Plugin\views\filter\SearchApiFilterTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -18,9 +19,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Defines a filter for Joining ADOs to ADOs.
  *
  * @ingroup views_filter_handlers
- *
- * @ViewsFilter("sbf_ado_join")
  */
+#[ViewsFilter('sbf_ado_join')]
 class StrawberryADOJoin extends FilterPluginBase {
 
   use SearchApiFilterTrait;
@@ -317,16 +317,14 @@ class StrawberryADOJoin extends FilterPluginBase {
     $all_names = [];
     foreach (($queryable_fields ?? []) as $field) {
       if (isset($solr_field_names[$field])
-        && 'twm_suggest' !== $solr_field_names[$field] & strpos(
-          $solr_field_names[$field], 'spellcheck'
-        ) !== 0
+        && 'twm_suggest' !== $solr_field_names[$field] & !str_starts_with($solr_field_names[$field], 'spellcheck')
       ) {
         $index_field = $index_fields[$field];
         $boost = $index_field->getBoost() ? '^' . $index_field->getBoost()
           : '';
         $names = [];
         $first_name = reset($field_names[$field]);
-        if (strpos($first_name, 't') === 0) {
+        if (str_starts_with($first_name, 't')) {
           // Add all language-specific field names. This should work for
           // non Drupal Solr Documents as well which contain only a single
           // name.
