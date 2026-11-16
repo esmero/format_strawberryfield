@@ -86,7 +86,7 @@ class SearchApiDateRange extends QueryTypePluginBase {
                 $options['search_api_facets'][$field_identifier]  = array_replace($options['search_api_facets'][$field_identifier] , $options_clean);
                 $options['sbf_date_stats_field'][$field_identifier] = $options['search_api_facets'][$field_identifier];
               }
-              catch (\Exception $e) {
+              catch (\Exception) {
                 // Some gmdate math failed. WE do not keep processing and return to the defaults.
                 $min_value = $min;
                 $max_value = $max;
