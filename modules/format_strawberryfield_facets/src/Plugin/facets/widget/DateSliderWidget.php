@@ -495,8 +495,8 @@ class DateSliderWidget extends WidgetPluginBase {
       // ISO Dates. Normalize to unix.
 
       $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
-      $min = $min ?? $raw;
-      $max = $max ?? $raw;
+      $min ??= $raw;
+      $max ??= $raw;
       $min = $min < $raw ? $min : $raw;
       $max = $max > $raw ? $max : $raw;
     }
