@@ -2,25 +2,29 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Block;
 
+use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\ViewModeResolverInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Plugin\Context\EntityContextDefinition;
 
 /**
  * Admin block that shows additional information about the displays.
- *
- * @Block(
- *   id = "format_strawberryfield_display_information",
- *   admin_label = @Translation("Strawberry Field Block: Display information"),
- *   category = @Translation("Strawberry Field Formatter"),
- *   context_definitions = {
- *     "node" = @ContextDefinition("entity:node", label = @Translation("Node"))
- *   }
- * )
  */
+#[Block(
+  id: 'format_strawberryfield_display_information',
+  admin_label: new TranslatableMarkup('Strawberry Field Block: Display information'),
+  category: new TranslatableMarkup('Strawberry Field Formatter'),
+  context_definitions: [
+    "node" => new EntityContextDefinition(
+      data_type: "entity:node",
+      label: new TranslatableMarkup("Node")
+    ),
+  ])]
 class DisplayInformationBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
