@@ -181,9 +181,7 @@ class ViewsExposedFormModalBlockAjaxController extends ControllerBase {
           ->getViewBuilder('block')
           ->view($block_entity);
         $context = new RenderContext();
-        $block = $this->renderer->executeInRenderContext($context, function () use ($block_view) {
-          return $this->renderer->render($block_view);
-        });
+        $block = $this->renderer->executeInRenderContext($context, fn() => $this->renderer->render($block_view));
         // @TODO. Lazybuilder might be in place but can't be handled the same. See \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView?
         if (is_array($block_view['#attached'] ?? NULL) && !empty($block_view['#attached'] ?? NULL)) {
           $response->addAttachments($block_view['#attached']);
