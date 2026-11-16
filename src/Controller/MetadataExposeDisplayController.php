@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
@@ -174,7 +175,7 @@ class MetadataExposeDisplayController extends ControllerBase {
         // Gues mimetype using $format.
         $mimetype = $this->mimeTypeGuesser->guessMimeType($format);
         if ($mimetype != $responsetype) {
-          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], 415);
+          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
           return $badresponse;
         }
 
