@@ -763,7 +763,7 @@ class MetadataDisplayEntity extends RevisionableContentEntityBase implements Met
                 );
               }
             }
-          } catch (\Exception $e) {
+          } catch (\Exception) {
             // Log? Ignore?
           }
         }
