@@ -109,11 +109,7 @@ class IiifUrlValidator {
       return $valid;
     }
     $cantaloupe_header = $response->getHeader('X-Powered-By');
-    if (isset($cantaloupe_header[0]) && substr(
-        $cantaloupe_header[0],
-        0,
-        strlen('Cantaloupe')
-      ) === 'Cantaloupe') {
+    if (isset($cantaloupe_header[0]) && str_starts_with($cantaloupe_header[0], 'Cantaloupe')) {
       $valid = TRUE;
     }
     return $valid;
