@@ -79,8 +79,6 @@ class WebAnnotationController extends ControllerBase {
    */
   protected $parseModeManager;
 
-  private \Drupal\Component\Uuid\UuidInterface $uuidService;
-
   /**
    * WebAnnotationController constructor.
    *
@@ -106,7 +104,7 @@ class WebAnnotationController extends ControllerBase {
     PrivateTempStoreFactory $temp_store_factory,
     ParseModePluginManager $parse_mode_manager,
     ConfigFactoryInterface $config_factory,
-    UuidInterface $uuid_service,
+    private readonly UuidInterface $uuidService,
   ) {
     $this->requestStack = $request_stack;
     $this->strawberryfieldUtility = $strawberryfield_utility_service;
@@ -116,7 +114,6 @@ class WebAnnotationController extends ControllerBase {
     $this->tempStore = $temp_store_factory->get('webannotation');
     $this->parseModeManager = $parse_mode_manager;
     $this->configFactory = $config_factory;
-    $this->uuidService = $uuid_service;
   }
 
   /**
@@ -406,7 +403,7 @@ class WebAnnotationController extends ControllerBase {
         }
         $return = isset($existingannotations[$target]) && is_array($existingannotations[$target]) ? $existingannotations[$target] : [];
       }
-      catch (TempStoreException $exception) {
+      catch (TempStoreException) {
         throw new ServiceUnavailableHttpException(
           "Temporary Storage for WebAnnotations is not working. Contact your admin."
         );
@@ -493,7 +490,7 @@ class WebAnnotationController extends ControllerBase {
           );
         }
       }
-      catch (TempStoreException $exception) {
+      catch (TempStoreException) {
         throw new ServiceUnavailableHttpException(
           "Temporary Storage for WebAnnotations is not working. Contact your admin."
         );
@@ -537,7 +534,7 @@ class WebAnnotationController extends ControllerBase {
               // Do NOT SET stored settings back.
               // BECAUSE WE HAVE NOT RELOADED OUR NODE from storage yet OK?
             }
-            catch (TempStoreException $exception) {
+            catch (TempStoreException) {
               $response->addCommand(
                 new ReplaceCommand(
                   '#edit-webannotations > div',
@@ -1125,7 +1122,7 @@ class WebAnnotationController extends ControllerBase {
         $existingannotations = array_filter($existingannotations);
         $return = !empty($existingannotations) && is_array($existingannotations) ? $existingannotations : [];
       }
-      catch (\Exception $exception) {
+      catch (\Exception) {
         throw new ServiceUnavailableHttpException(
           "Annotation from StrawberryFlavor fetching failed. Contact your admin."
         );
