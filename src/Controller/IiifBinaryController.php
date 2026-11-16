@@ -236,7 +236,7 @@ class IiifBinaryController extends ControllerBase {
         $response->setETag($etag, TRUE);
         if(in_array($etag, $request->getETags()) || $request->headers->get('If-Modified-Since') === gmdate("D, d M Y H:i:s", $createdtime)." GMT" ){
           $response->setPublic();
-          $response->setStatusCode(304);
+          $response->setStatusCode(Response::HTTP_NOT_MODIFIED);
           return $response;
         }
 
