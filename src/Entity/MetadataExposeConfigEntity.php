@@ -3,59 +3,61 @@
 namespace Drupal\format_strawberryfield\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
+use Drupal\Core\Entity\Attribute\ConfigEntityType;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\format_strawberryfield\Entity\Controller\MetadataExposeConfigEntityListBuilder;
+use Drupal\format_strawberryfield\Form\MetadataExposeConfigEntityDeleteForm;
+use Drupal\format_strawberryfield\Form\MetadataExposeConfigEntityForm;
 use Drupal\format_strawberryfield\MetadataConfigInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\format_strawberryfield\MetadataExposeConfigEntityHtmlRouteProvider;
 
 /**
  * Defines the MetadataExposeConfigEntity entity.*.
  *
  * This entity binds Bundle and a Metadata Display.
  * Allows direct access exposure of Twig Template generated Metadata per node.
- *
- * @ConfigEntityType(
- *   id = "metadataexpose_entity",
- *   label = @Translation("Exposed Metadata using Twig Configuration"),
- *   handlers = {
- *     "list_builder" = "\Drupal\format_strawberryfield\Entity\Controller\MetadataExposeConfigEntityListBuilder",
- *     "form" = {
- *       "add" = "Drupal\format_strawberryfield\Form\MetadataExposeConfigEntityForm",
- *       "edit" = "Drupal\format_strawberryfield\Form\MetadataExposeConfigEntityForm",
- *       "delete" = "Drupal\format_strawberryfield\Form\MetadataExposeConfigEntityDeleteForm",
- *     },
- *     "route_provider" = {
- *       "html" = "Drupal\format_strawberryfield\MetadataExposeConfigEntityHtmlRouteProvider",
- *     },
- *   },
- *   config_prefix = "metadataexpose_entity",
- *   admin_permission = "administer site configuration",
- *   entity_keys = {
- *     "id" = "id",
- *     "label" = "label",
- *     "uuid" = "uuid",
- *     "active" = "active",
- *   },
- *  config_export = {
- *     "id",
- *     "label",
- *     "uuid",
- *     "target_entity_types",
- *     "source_entityfield_name",
- *     "metadatadisplayentity_uuid",
- *     "cache",
- *     "active",
- *     "hide_on_embargo",
- *     "minify_json",
- *   },
- *   links = {
- *     "edit-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/edit",
- *     "add-form" = "/admin/config/archipelago/metadataexpose/add",
- *     "delete-form" = "/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/delete",
- *     "collection" = "/admin/config/archipelago/metadataexpose",
- *   }
- * )
  */
+#[ConfigEntityType(
+  id: 'metadataexpose_entity',
+  label: new TranslatableMarkup('Exposed Metadata using Twig Configuration'),
+  config_prefix: 'metadataexpose_entity',
+  entity_keys: [
+    'id' => 'id',
+    'label' => 'label',
+    'uuid' => 'uuid',
+    'active' => 'active'
+  ],
+  handlers: [
+    'list_builder' => MetadataExposeConfigEntityListBuilder::class,
+    'form' => [
+      'add' => MetadataExposeConfigEntityForm::class,
+      'edit' => MetadataExposeConfigEntityForm::class,
+      'delete' => MetadataExposeConfigEntityDeleteForm::class],
+    'route_provider' => [
+      'html' => MetadataExposeConfigEntityHtmlRouteProvider::class]
+  ],
+  links: [
+    'edit-form' => '/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/edit',
+    'add-form' => '/admin/config/archipelago/metadataexpose/add',
+    'delete-form' => '/admin/config/archipelago/metadataexpose/{metadataexpose_entity}/delete',
+    'collection' => '/admin/config/archipelago/metadataexpose'
+  ],
+  admin_permission: 'administer site configuration',
+  config_export: [
+    'id',
+    'label',
+    'uuid',
+    'target_entity_types',
+    'source_entityfield_name',
+    'metadatadisplayentity_uuid',
+    'cache',
+    'active',
+    'hide_on_embargo',
+    'minify_json']
+)]
 class MetadataExposeConfigEntity extends ConfigEntityBase implements MetadataConfigInterface {
 
   use DependencySerializationTrait;
