@@ -110,9 +110,7 @@ class DateRangeWidget extends WidgetPluginBase {
     if ($this->getConfiguration()['show_reset_link'] && (!$this->getConfiguration()['hide_reset_when_no_selection'] || $facet->getActiveItems())) {
       // Add reset link even  if there are no results. Given that user might bypass completely the values
       // By using the GET arguments.
-      $max_items = array_sum(array_map(function ($item) {
-        return $item->getCount();
-      }, $results));
+      $max_items = array_sum(array_map(fn($item) => $item->getCount(), $results));
       $active_filters = $url_processor->getActiveFilters();
       unset($active_filters[$facet->id()]);
       if ($active_filters) {
@@ -256,8 +254,8 @@ class DateRangeWidget extends WidgetPluginBase {
       // ISO Dates. Normalize to unix.
 
       $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
-      $min = $min ?? $raw;
-      $max = $max ?? $raw;
+      $min ??= $raw;
+      $max ??= $raw;
       $min = $min < $raw ? $min : $raw;
       $max = $max > $raw ? $max : $raw;
     }
