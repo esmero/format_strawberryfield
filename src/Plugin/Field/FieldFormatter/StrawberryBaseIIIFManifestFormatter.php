@@ -104,7 +104,7 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
-      if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
+      if ($triggering_element['#ajax']['callback'][0] == static::class) {
         $parents = array_slice($triggering_element['#parents'], 0, -1);
         $options_for_mainsource = $form_state->getValue($parents);
       }
@@ -128,7 +128,7 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
 
     // Define #ajax callback.
     $ajax = [
-      'callback' => [get_class($this), 'ajaxCallbackMainSource'],
+      'callback' => [static::class, 'ajaxCallbackMainSource'],
       'wrapper' => 'main-mediasource-ajax-container',
     ];
     // Because main media source needs to update its choices based on
@@ -252,7 +252,7 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
     $summary = parent::settingsSummary();
     $main_mediasource = $this->getSetting(
       'main_mediasource'
-    ) ? $this->getSetting('main_mediasource') : NULL;
+    ) ?: NULL;
     if ($this->getSetting('mediasource') && is_array($this->getSetting('mediasource'))) {
       $mediasource = $this->getSetting('mediasource');
       foreach ($mediasource as $source => $enabled) {
@@ -375,11 +375,11 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
       ) {
         // Take only the first since we could have more
         $main_manifesturl = array_shift($manifests[$main_mediasource]);
-        $all_manifesturl = array_reduce($manifests, 'array_merge', []);
+        $all_manifesturl = array_reduce($manifests, array_merge(...), []);
       }
       else {
         // reduce flattens and applies a merge. Basically we get a simple list.
-        $all_manifesturl = array_reduce($manifests, 'array_merge', []);
+        $all_manifesturl = array_reduce($manifests, array_merge(...), []);
         $main_manifesturl = array_shift($all_manifesturl);
       }
 
