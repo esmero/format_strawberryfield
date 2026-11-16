@@ -7,20 +7,20 @@
  */
 
 namespace Drupal\format_strawberryfield\Plugin\EntityReferenceSelection;
+use Drupal\Core\Entity\Attribute\EntityReferenceSelection;
 use Drupal\Core\Entity\Plugin\EntityReferenceSelection\DefaultSelection;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
  * Metadata Display plugin implementation of the Entity Reference Selection plugin.
- *
- * @EntityReferenceSelection(
- *   id = "default:metadatadisplay",
- *   label = @Translation("Metadata Display Entity selection"),
- *   entity_types = {"metadatadisplay_entity"},
- *   group = "default",
- *   weight = 1
- * )
  */
+#[EntityReferenceSelection(
+  id: 'default:metadatadisplay',
+  label: new TranslatableMarkup('Metadata Display Entity selection'),
+  group: 'default',
+  weight: 1, entity_types: ['metadatadisplay_entity']
+)]
 class MetadataDisplaySelection extends DefaultSelection {
 
   /**
