@@ -2,25 +2,27 @@
 
 namespace Drupal\format_strawberryfield_views\Plugin\Block;
 
+use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\Cache\Cache;
 use Drupal\Component\Utility\Xss;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Security\TrustedCallbackInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\views\Plugin\Block\ViewsBlockBase;
 use Drupal\Component\Utility\Html;
+use Drupal\views\Plugin\Derivative\ViewsExposedFilterBlock;
 
 /**
  * Provides a 'Views Exposed Filter with Modal display' block.
- *
- * @Block(
- *   id = "views_exposed_filter_block_sbf",
- *   admin_label = @Translation("Views Exposed Filter Block with Selectable type of Filter"),
- *   deriver = "Drupal\views\Plugin\Derivative\ViewsExposedFilterBlock"
- * )
  */
+#[Block(
+  id: 'views_exposed_filter_block_sbf',
+  admin_label: new TranslatableMarkup('Views Exposed Filter Block with Selectable type of Filter'),
+  deriver: ViewsExposedFilterBlock::class
+)]
 class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCallbackInterface {
 
   /**
@@ -84,14 +86,14 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
     $output['#id'] = Html::getUniqueId('views_exposed_form_modal-' .  $this->view->storage->id() . '-' . $this->view->current_display);
     $exposed_elements = $output['#info'] ?? [];
     foreach ($exposed_elements as $key => $exposed_values) {
-      if (strpos($key,'filter-') === 0) {
+      if (str_starts_with($key, 'filter-')) {
         if (isset($exposed_values['value'])) {
           $filter_ids[$exposed_values['value']] = $exposed_values['value'];
         }
       }
       // Leaving this for posterity. No longer true that #info will contain sort elements
       // Sorts are now named simply sort_by and sort_order in the main key ...
-      if (strpos($key,'sort-') === 0) {
+      if (str_starts_with($key, 'sort-')) {
         if (isset($exposed_values['value'])) {
           $sort_ids[$exposed_values['value']] = $exposed_values['value'];
         }
@@ -145,7 +147,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         }
 
         foreach ($output[$real_id] as $possible_key => &$value) {
-          if (strpos($possible_key, '#') === FALSE && is_array($value)
+          if (!str_contains($possible_key, '#') && is_array($value)
             && isset($value['#type'])
           ) {
             $hide = $this->checkIfNeedsToHideFilter($value ?? []);
@@ -192,7 +194,7 @@ class ViewsExposedFilterBlockModal extends ViewsBlockBase implements TrustedCall
         }
 
         foreach ($output[$real_id] as $possible_key => &$value) {
-          if (strpos($possible_key, '#') === FALSE && is_array($value)
+          if (!str_contains($possible_key, '#') && is_array($value)
             && isset($value['#type'])
           ) {
             $hide = $this->checkIfNeedsToHideSort($value ?? []);
