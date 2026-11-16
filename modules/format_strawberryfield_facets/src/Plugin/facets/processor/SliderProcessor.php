@@ -36,9 +36,7 @@ class SliderProcessor extends ProcessorPluginBase implements PostQueryProcessorI
         'count' => (int) $result->getCount(),
       ];
     }
-    uasort($simple_results, function ($a, $b) {
-      return (int) $a['value'] - $b['value'];
-    });
+    uasort($simple_results, fn($a, $b) => (int) $a['value'] - $b['value']);
 
     $step = $config['step'];
     if ($config['min_type'] == 'fixed') {
