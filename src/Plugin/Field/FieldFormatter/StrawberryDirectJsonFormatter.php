@@ -141,7 +141,7 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
       '#rows' => '5',
       '#parents' => $realparents_filter,
       '#title' => t('A complete JMESPath that fetches one or more files from an as:image, etc structure'),
-      '#default_value' => isset($jmespath_settings['jmespath_filter']) ? $jmespath_settings['jmespath_filter'] : static::EXAMPLE_JMESPATH,
+      '#default_value' => $jmespath_settings['jmespath_filter'] ?? static::EXAMPLE_JMESPATH,
       '#element_validate' => [[$this, 'validateJMESPath']],
       '#states' => [
         'required' => [
@@ -157,7 +157,7 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
       '#rows' => '5',
       '#parents' => $realparents_alternative_filter,
       '#title' => t('A secondary complete JMESPath that fetches one or more files to fallback in case the main one fails to give results'),
-      '#default_value' => isset($jmespath_settings['jmespath_alternative_filter']) ? $jmespath_settings['jmespath_alternative_filter'] : static::EXAMPLE_JMESPATH,
+      '#default_value' => $jmespath_settings['jmespath_alternative_filter'] ?? static::EXAMPLE_JMESPATH,
       '#element_validate' => [[$this, 'validateJMESPath']],
     ];
 
@@ -203,11 +203,11 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
     $media = [];
     $iiifhelper = new IiifHelper($this->getIiifUrls()['public'], $this->getIiifUrls()['internal']);
     $jmespath_settings = $this->getSetting('jmespath');
-    $use_jmespath = isset($jmespath_settings['use_jmespath']) ? $jmespath_settings['use_jmespath'] : FALSE;
+    $use_jmespath = $jmespath_settings['use_jmespath'] ?? FALSE;
     if ($use_jmespath) {
-      $fallback_jmespath = isset($jmespath_settings['fallback_jmespath']) ? $jmespath_settings['fallback_jmespath'] : FALSE;
-      $jmespath_filter = isset($jmespath_settings['jmespath_filter']) ? $jmespath_settings['jmespath_filter'] : NULL;
-      $jmespath_alternative_filter = isset($jmespath_settings['jmespath_alternative_filter']) ? $jmespath_settings['jmespath_alternative_filter'] : NULL;
+      $fallback_jmespath = $jmespath_settings['fallback_jmespath'] ?? FALSE;
+      $jmespath_filter = $jmespath_settings['jmespath_filter'] ?? NULL;
+      $jmespath_alternative_filter = $jmespath_settings['jmespath_alternative_filter'] ?? NULL;
       try {
         $searchresult = StrawberryfieldJsonHelper::searchJson(
           $jmespath_filter, $jsondata
@@ -231,7 +231,7 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
         unset($jsondata);
         $jsondata[$key] = $searchresult;
       }
-      catch (\Exception $exception) {
+      catch (\Exception) {
         $this->messenger()
           ->addWarning($this->t('We could not fetch Media for this ADO. Your JMESPath settings may need to be adjusted.'));
         return $media;
@@ -254,11 +254,11 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
   protected function filterMediaByJMESPath(array $source, $key = NULL): array {
     $ordersubkey = 'sequence';
     $jmespath_settings = $this->getSetting('jmespath');
-    $use_jmespath = isset($jmespath_settings['use_jmespath']) ? $jmespath_settings['use_jmespath'] : FALSE;
+    $use_jmespath = $jmespath_settings['use_jmespath'] ?? FALSE;
     if ($use_jmespath) {
-      $fallback_jmespath = isset($jmespath_settings['fallback_jmespath']) ? $jmespath_settings['fallback_jmespath'] : FALSE;
-      $jmespath_filter = isset($jmespath_settings['jmespath_filter']) ? $jmespath_settings['jmespath_filter'] : NULL;
-      $jmespath_alternative_filter = isset($jmespath_settings['jmespath_alternative_filter']) ? $jmespath_settings['jmespath_alternative_filter'] : NULL;
+      $fallback_jmespath = $jmespath_settings['fallback_jmespath'] ?? FALSE;
+      $jmespath_filter = $jmespath_settings['jmespath_filter'] ?? NULL;
+      $jmespath_alternative_filter = $jmespath_settings['jmespath_alternative_filter'] ?? NULL;
       try {
         $searchresult = StrawberryfieldJsonHelper::searchJson(
           $jmespath_filter, $source
@@ -279,7 +279,7 @@ abstract class StrawberryDirectJsonFormatter extends StrawberryBaseFormatter {
           }
         }
         return $searchresult;
-      } catch (\Exception $exception) {
+      } catch (\Exception) {
         $this->messenger()
           ->addWarning($this->t('We could not fetch Media for this ADO. Your JMESPath settings may need to be adjusted.'));
         return [];
