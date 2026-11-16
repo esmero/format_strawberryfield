@@ -172,6 +172,7 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
         // Get the node uuid for this element
         var element_id = $(this).attr("id");
         let content_state_from_url = false;
+        let content_state_to_url = drupalSettings.format_strawberryfield.triiiceratops[element_id]['content_state_drop'] ?? false;
         // Check if we got some data passed via Drupal settings.
         if (typeof(drupalSettings.format_strawberryfield.triiiceratops[element_id]) != 'undefined') {
           // Check if we should attempt to pre-parse any IIIF Content State.
@@ -236,6 +237,21 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             }
             else {
               return 0;
+            }
+          };
+
+          let isFirstUpdateOfUrl = true;
+          let debounceTimeout;
+          const updateURL = function(newURL) {
+            if (isFirstUpdateOfUrl) {
+              window.history.pushState(null, '', newURL);
+              isFirstUpdateOfUrl = false;
+            } else {
+              // Group all updates within 150ms into a single call
+              clearTimeout(debounceTimeout);
+              debounceTimeout = setTimeout(() => {
+                window.history.replaceState(null, '', newURL);
+              }, 500); // Group all updates within 150ms into a single call
             }
           };
 
@@ -320,10 +336,9 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             // really important that both this and the const/wrapper one are defined
             // our site of the subscriberFrame(). If not they are reset/internal state lost
             async function processContentState(selectorFragment_live, selectorFragment, prev_canvas_id, currentcanvasid, manifestid) {
-              if (selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid || contentState == null) {
+              if ((selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid || contentState == null) && content_state_to_url) {
                 selectorFragment = selectorFragment_live;
                 const live_state = Drupal.FormatStrawberryfieldIiifUtils.generateContentState(manifestid, currentcanvasid, selectorFragment, true);
-                console.log(live_state);
                 return live_state;
               }
               return null;
@@ -343,10 +358,19 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   const roundedW = Math.round(width);
                   const roundedH = Math.round(height);
                   const selectorFragment_live = `#xywh=${roundedX},${roundedY},${roundedW},${roundedH}`;
-
-                  ThrottledProcessContentState(selectorFragment_live, selectorFragment, prev_canvas_id, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId ).then(
-                    res => contentState = res ?? contentState
-                  );
+                  if (content_state_to_url) {
+                    ThrottledProcessContentState(selectorFragment_live, selectorFragment, prev_canvas_id, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId).then(
+                      res => {
+                        contentState = res ?? contentState;
+                        if (contentState) {
+                          const url = new URL(window.location.href);
+                          // 2. Overwrite or add the single argument
+                          url.searchParams.set('iiif-content',contentState);
+                          updateURL(url.toString());
+                        }
+                      }
+                    );
+                  }
                 }
               });
               const stop_state = triii_viewer.viewerState.subscribe(() => {
@@ -356,34 +380,34 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   // Given that there is no actual EVENT, but any change will call the subscribe method.
                   prev_canvas_id = triii_viewer.viewerState.canvasId;
                   prev_manifest_id = triii_viewer.viewerState.manifestId;
-                  console.log(contentState);
-
-                  let current_canvas = triii_viewer.viewerState.canvases[triii_viewer.viewerState.currentCanvasIndex];
-                  let currentDrupalNodeId = [];
-                  let currentDrupalNodeForViews = [];
-                  currentDrupalNodeId = 'sbf:ado:change' in current_canvas ? current_canvas['sbf:ado:change'] : currentDrupalNodeId;
-                  currentDrupalNodeForViews = 'sbf:ado:view:change' in current_canvas ? current_canvas['sbf:ado:view:change'] : currentDrupalNodeForViews;
-                  if (Array.isArray(currentDrupalNodeId) && Array.isArray(currentDrupalNodeId[0])) {
-                    currentDrupalNodeId = currentDrupalNodeId[0];
+                  let current_canvas = triii_viewer.viewerState.canvases?.[triii_viewer.viewerState.currentCanvasIndex];
+                  if (typeof current_canvas == 'object') {
+                    let currentDrupalNodeId = [];
+                    let currentDrupalNodeForViews = [];
+                    currentDrupalNodeId = 'sbf:ado:change' in current_canvas ? current_canvas['sbf:ado:change'] : currentDrupalNodeId;
+                    currentDrupalNodeForViews = 'sbf:ado:view:change' in current_canvas ? current_canvas['sbf:ado:view:change'] : currentDrupalNodeForViews;
+                    if (Array.isArray(currentDrupalNodeId) && Array.isArray(currentDrupalNodeId[0])) {
+                      currentDrupalNodeId = currentDrupalNodeId[0];
+                    }
+                    if (Array.isArray(currentDrupalNodeForViews) && Array.isArray(currentDrupalNodeForViews[0])) {
+                      currentDrupalNodeForViews = currentDrupalNodeForViews[0];
+                    }
+                    if (!Array.isArray(currentDrupalNodeId)) {
+                      currentDrupalNodeId = [currentDrupalNodeId];
+                    }
+                    if (!Array.isArray(currentDrupalNodeForViews)) {
+                      currentDrupalNodeForViews = [currentDrupalNodeForViews];
+                    }
+                    currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
+                    currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
+                    if (currentDrupalNodeId.length > 0) {
+                      Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(triii_viewer, currentDrupalNodeId, triii_viewer.id);
+                    }
+                    if (currentDrupalNodeForViews.length > 0) {
+                      Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(triii_viewer, currentDrupalNodeForViews);
+                    }
+                    Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(triii_viewer, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId, triii_viewer.id);
                   }
-                  if (Array.isArray(currentDrupalNodeForViews) && Array.isArray(currentDrupalNodeForViews[0])) {
-                    currentDrupalNodeForViews = currentDrupalNodeForViews[0];
-                  }
-                  if (!Array.isArray(currentDrupalNodeId)) {
-                    currentDrupalNodeId = [currentDrupalNodeId];
-                  }
-                  if (!Array.isArray(currentDrupalNodeForViews)) {
-                    currentDrupalNodeForViews = [currentDrupalNodeForViews];
-                  }
-                  currentDrupalNodeId = currentDrupalNodeId.filter(n => n);
-                  currentDrupalNodeForViews = currentDrupalNodeForViews.filter(n => n);
-                  if (currentDrupalNodeId.length > 0) {
-                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoChange(triii_viewer, currentDrupalNodeId, triii_viewer.id);
-                  }
-                  if (currentDrupalNodeForViews.length > 0) {
-                    Drupal.FormatStrawberryfieldIiifUtils.dispatchAdoViewChange(triii_viewer, currentDrupalNodeForViews);
-                  }
-                  Drupal.FormatStrawberryfieldIiifUtils.dispatchCanvasChange(triii_viewer, triii_viewer.viewerState.canvasId, triii_viewer.viewerState.manifestId, triii_viewer.id);
                 }
                 if (!fully_initialized && triii_viewer.viewerState.canvasId && triii_viewer.viewerState.canvases.length > 0 && canvas_index >=0) {
                   fully_initialized = true;
@@ -400,7 +424,6 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
                   // Bind event listeners to allow reactions triggered by events of other Viewers
                   document.addEventListener('sbf:canvas:change', CaptureAdoTriiiceratopsCanvasChange.bind(document, triii_viewer));
                   document.addEventListener('sbf:ado:change', CaptureAdoTriiiceratopsAdoChange.bind(document, triii_viewer));
-
                   apAnnotationAdapter.setCanvases(triii_viewer.viewerState.canvases);
                 }
               });

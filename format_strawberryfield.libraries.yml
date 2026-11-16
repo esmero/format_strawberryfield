@@ -509,14 +509,14 @@ clipboard_copy_strawberry:
     - core/drupalSettings
 
 triiiceratops:
-  version: 1.2.2
+  version: 1.3.1
   js:
-    https://unpkg.com/triiiceratops@1.2.2/dist/triiiceratops-element.iife.js:  { external: true, minified: true, preprocess: false}
+    https://unpkg.com/triiiceratops@1.3.1/dist/triiiceratops-element.iife.js:  { external: true, minified: true, preprocess: false}
 
 triiiceratops_plugin-image-manipulation:
   version: 1.1.1
   js:
-    https://unpkg.com/@triiiceratops/plugin-image-manipulation@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-image-manipulation@1.2.0/dist/iife.js    :  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
@@ -528,9 +528,9 @@ triiiceratops_plugin-av:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-annotation-editor:
-  version: 1.1.1
+  version: 1.1.2
   js:
-    https://unpkg.com/@triiiceratops/plugin-annotation-editor@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-annotation-editor@1.1.2/dist/iife.js    :  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
@@ -542,9 +542,9 @@ triiiceratops_plugin-image-export:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-pdf-export:
-  version: 1.1.1
+  version: 1.1.2
   js:
-    https://unpkg.com/@triiiceratops/plugin-pdf-export@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-pdf-export@1.1.2/dist/iife.js    :  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
