@@ -24,31 +24,6 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
   use StringTranslationTrait;
 
   /**
-   * The entity repository service.
-   *
-   * @var EntityRepositoryInterface
-   */
-  private EntityRepositoryInterface $entityRepository;
-  /**
-   * @var EntityTypeManagerInterface
-   */
-  private EntityTypeManagerInterface $entityTypeManager;
-
-  /**
-   * The current user.
-   *
-   * @var \Drupal\Core\Session\AccountInterface
-   */
-  private $account;
-
-  /**
-   * The entity display repository.
-   *
-   * @var \Drupal\Core\Entity\EntityDisplayRepositoryInterface
-   */
-  private $entityDisplayRepository;
-
-  /**
    * The module handler.
    *
    * @var \Drupal\Core\Extension\ModuleHandlerInterface
@@ -56,24 +31,23 @@ class MetadataDisplayUsageService implements MetadataDisplayUsageServiceInterfac
   protected $moduleHandler;
 
   /**
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  private ConfigFactoryInterface $configFactory;
-
-  /**
-   * @param EntityRepositoryInterface $entity_repository
-   * @param EntityTypeManagerInterface $entity_type_manager
-   * @param ConfigFactoryInterface $config_factory
-   * @param EntityRepositoryInterface $entity_display_repository
-   * @param AccountInterface $current_user
+   * @param EntityRepositoryInterface $entityRepository
+   * @param EntityTypeManagerInterface $entityTypeManager
+   * @param ConfigFactoryInterface $configFactory
+   * @param EntityRepositoryInterface $entityDisplayRepository
+   * @param AccountInterface $account
    * @param ModuleHandlerInterface $module_handler
    */
-  public function __construct(EntityRepositoryInterface $entity_repository, EntityTypeManagerInterface $entity_type_manager, ConfigFactoryInterface $config_factory, EntityDisplayRepositoryInterface $entity_display_repository,  AccountInterface $current_user, ModuleHandlerInterface $module_handler ) {
-    $this->entityRepository = $entity_repository;
-    $this->configFactory = $config_factory;
-    $this->entityTypeManager = $entity_type_manager;
-    $this->account = $current_user;
-    $this->entityDisplayRepository = $entity_display_repository;
+  public function __construct(/**
+   * The entity repository service.
+   */
+  private EntityRepositoryInterface $entityRepository, private EntityTypeManagerInterface $entityTypeManager, private ConfigFactoryInterface $configFactory, /**
+   * The entity display repository.
+   */
+  private EntityDisplayRepositoryInterface $entityDisplayRepository,  /**
+   * The current user.
+   */
+  private AccountInterface $account, ModuleHandlerInterface $module_handler ) {
     $this->moduleHandler = $module_handler;
   }
 
