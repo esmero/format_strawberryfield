@@ -409,9 +409,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
   public function editParameter($form, FormStateInterface $form_state) {
     $triggering = $form_state->getTriggeringElement();
     if (isset($triggering['#rowtoedit'])) {
-      $parameters = $form_state->get('parameters') ? $form_state->get(
-        'parameters'
-      ) : [];
+      $parameters = $form_state->get('parameters') ?: [];
       $form_state->setValue(['api-argument-config','params'],  $parameters[$triggering['#rowtoedit']]);
       $this->messenger()->addWarning(t('You are editing @param_name', ['@param_name' => $triggering['#rowtoedit']]), FALSE);
     }
@@ -428,9 +426,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
 
     $triggering = $form_state->getTriggeringElement();
     if (isset($triggering['#rowtodelete'])) {
-      $parameters = $form_state->get('parameters') ? $form_state->get(
-        'parameters'
-      ) : [];
+      $parameters = $form_state->get('parameters') ?: [];
       unset($parameters[$triggering['#rowtodelete']]);
       $form_state->set('parameters',$parameters);
       $userinput = $form_state->getUserInput();
@@ -451,9 +447,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
    */
   public function submitAjaxAddParameter(array &$form, FormStateInterface $form_state) {
 
-    $parameters = $form_state->get('parameters') ? $form_state->get(
-      'parameters'
-    ) : [];
+    $parameters = $form_state->get('parameters') ?: [];
     //@TODO we need to be sure $parameters is unique and keyed by the name
     $name = $form_state->getValue(['api-argument-config','params','name']);
     if ($name) {
@@ -974,7 +968,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
     foreach ($current_parameters as $index => $parameter_config) {
       $key++;
       $form['api_parameters_list']['table-row'][$index]['#attributes']['class'][] = 'draggable';
-      $form['api_parameters_list']['table-row'][$index]['#weight'] = isset($parameter_config['weight']) ? $parameter_config['weight'] : $key;
+      $form['api_parameters_list']['table-row'][$index]['#weight'] = $parameter_config['weight'] ?? $key;
 
       $form['api_parameters_list']['table-row'][$index]['name'] = [
         '#type' => 'textfield',
@@ -1047,7 +1041,7 @@ class MetadataAPIConfigEntityForm extends EntityForm {
           ['@title' => $index ?? '']
         ),
         '#title_display' => 'invisible',
-        '#default_value' => isset($parameter_config['weight']) ? $parameter_config['weight'] : $key,
+        '#default_value' => $parameter_config['weight'] ?? $key,
         '#attributes' => ['class' => ['table-sort-weight']],
       ];
     }
@@ -1322,7 +1316,7 @@ public function buildConfigurationForm(array $form, FormStateInterface $form_sta
         $api_argument['explode'] = TRUE;
         break;
     }
-    $api_argument['required'] =  $api_argument['required'] ?? (bool) $parameter['param']['required'];
+    $api_argument['required'] ??= (bool) $parameter['param']['required'];
     $api_argument['deprecated'] = (bool) $parameter['param']['deprecated'];
     $api_argument['description'] = $parameter['param']['description'];
     // 'explode', mins and max not implemented via form, using the defaults for Open API 3.x
