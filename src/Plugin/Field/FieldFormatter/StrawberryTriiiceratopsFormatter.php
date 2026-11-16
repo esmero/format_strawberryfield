@@ -9,8 +9,10 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\Core\Url;
@@ -26,20 +28,12 @@ use Drupal\Component\Utility\NestedArray;
 
 /**
  * Triiiceratops Viewer Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_triiiceratops_formatter",
- *   label = @Translation("Strawberry Field Media Formatter using the Triiiceratops
- *   IIIF Viewer plugin"), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_triiiceratops_formatter',
+  label: new TranslatableMarkup('Strawberry Field Media Formatter using the Triiiceratops IIIF Viewer plugin'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -137,6 +131,8 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
         'enabled_plugins' => [],
         'webannotations' => FALSE,
         'webannotations_storage' => 'multiple',
+        'content_state_drop' => false,
+        'content_state_url_update' => false,
         'max_width' => 720,
         'max_height' => 480,
         'hide_on_embargo' => FALSE,
@@ -164,7 +160,7 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
-      if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
+      if ($triggering_element['#ajax']['callback'][0] == static::class) {
         $parents = array_slice($triggering_element['#parents'], 0, -1);
         $options_for_mainsource = $form_state->getValue($parents);
       }
@@ -182,7 +178,7 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
 
     // Define #ajax callback.
     $ajax = [
-      'callback' => [get_class($this), 'ajaxCallbackMainSource'],
+      'callback' => [static::class, 'ajaxCallbackMainSource'],
       'wrapper' => 'main-mediasource-ajax-container',
     ];
     // Because main media source needs to update its choices based on
@@ -319,6 +315,36 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           ],
           '#default_value' => $this->getSetting('webannotations') ?? FALSE
         ],
+        'content_state_drop' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable dropping into the viewer and processing of URL based Content State arguments.'),
+          '#description' => t('<a href="https://iiif.io/api/content-state/1.0/">Click here</a> To learn more about the Content State. When enabled Triiiceratops will parse/process any URL holding a `?iiif-content={base64encoded_content_state}` GET argument and also allow Content States to be droped on it.'),
+          '#default_value' => $this->getSetting('content_state_drop'),
+          '#attributes' => [
+            'data-formatter-selector' => 'content_state_drop',
+          ],
+          '#default_value' => $this->getSetting('content_state_drop') ?? FALSE
+        ],
+        'content_state_drop' => [
+          '#type' => 'checkbox',
+          '#title' => t('Enable dropping into the viewer and processing of URL based IIIF Content State arguments.'),
+          '#description' => t('<a href="https://iiif.io/api/content-state/1.0/">Click here</a> To learn more about the Content State. When enabled Triiiceratops will parse/process any URL holding a `?iiif-content={base64encoded_content_state}` GET argument and also allow Content States to be dropped on it.It has priority over the Archipelago specific #/page/{number}/search/{query} fragment'),
+          '#default_value' => $this->getSetting('content_state_drop'),
+          '#attributes' => [
+            'data-formatter-selector' => 'content_state_drop',
+          ],
+          '#default_value' => $this->getSetting('content_state_drop') ?? FALSE
+        ],
+        'content_state_url_update'=> [
+          '#type' => 'checkbox',
+          '#title' => t('Enable URL to be updated with IIIF Content State reflecting current Canvas'),
+          '#description' => t('When enabled Triiiceratops will process the current Viewer state into a `?iiif-content={base64encoded_content_state}` GET argument replaced over the current URL. Other arguments will be preserved but the Archipelago specific #/page/{number}/search/{query} fragment will be removed.'),
+          '#default_value' => $this->getSetting('content_state_drop'),
+          '#attributes' => [
+            'data-formatter-selector' => 'content_state_drop',
+          ],
+          '#default_value' => $this->getSetting('content_state_drop') ?? FALSE
+        ],
         'max_width' => [
           '#type' => 'number',
           '#title' => $this->t('Maximum width'),
@@ -392,7 +418,7 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     );
     $main_mediasource = $this->getSetting(
       'main_mediasource'
-    ) ? $this->getSetting('main_mediasource') : NULL;
+    ) ?: NULL;
     if ($this->getSetting('mediasource') && is_array($this->getSetting('mediasource'))) {
       $mediasource = $this->getSetting('mediasource');
       foreach ($mediasource as $source => $enabled) {
@@ -474,6 +500,8 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $viewer_overrides = $this->getSetting('viewer_overrides');
     $enabled_plugins = $this->getSetting('enabled_plugins') ?? [];
+    $content_state_drop = $this->getSetting('content_state_drop') ?? FALSE;
+    $content_state_url_update = $this->getSetting('content_state_url_update') ?? FALSE;
     $viewer_overrides_json = json_decode(trim($viewer_overrides), TRUE);
     $json_error = json_last_error();
     if ($json_error == JSON_ERROR_NONE) {
@@ -571,10 +599,10 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         if (isset($manifests[$main_mediasource]) && !empty($manifests[$main_mediasource])) {
           // Take only the first since we could have more
           $main_manifesturl = array_shift($manifests[$main_mediasource]);
-          $all_manifesturl =  array_reduce($manifests,'array_merge',[]);
+          $all_manifesturl =  array_reduce($manifests,array_merge(...),[]);
         } else {
           // reduce flattens and applies a merge. Basically we get a simple list.
-          $all_manifesturl = array_reduce($manifests,'array_merge',[]);
+          $all_manifesturl = array_reduce($manifests,array_merge(...),[]);
           $main_manifesturl = array_shift($all_manifesturl);
         }
 
@@ -599,6 +627,11 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
               'height' => $max_height,
             ],
           ];
+          // Single Switch enables both
+          if ($content_state_drop) {
+            $elements[$delta]['media']['#attributes']['read-content-state-from-url'] = $content_state_drop;
+            $elements[$delta]['media']['#attributes']['accept-dropped-content-state'] = $content_state_drop;
+          }
 
           // get the URL to our Metadata Expose Endpoint, we will get a string here.
           $elements[$delta]['media']['#attributes']['data-iiif-infojson'] = '';
@@ -618,6 +651,8 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides'] = $viewer_overrides;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['viewer_overrides_theme'] = $viewer_overrides_theme;
           $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['enabled_plugins'] = $enabled_plugins;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_drop'] = $content_state_drop;
+          $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['triiiceratops'][$htmlid]['content_state_url_update'] = $content_state_url_update;
           $elements[$delta]['#attached']['library'][]
             = 'format_strawberryfield/triiiceratops_strawberry';
           foreach ($enabled_plugins as $plugin) {
