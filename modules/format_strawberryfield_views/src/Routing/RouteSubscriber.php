@@ -19,9 +19,9 @@ class RouteSubscriber extends RouteSubscriberBase {
    */
   public function alterRoutes(RouteCollection $collection) {
     if ($route = $collection->get('views.ajax')) {
-      $route->setDefaults(array(
+      $route->setDefaults([
         '_controller' => '\Drupal\format_strawberryfield_views\Controller\FormatStrawberryfieldViewAjaxController:ajaxView',
-      ));
+      ]);
     }
   }
 }
