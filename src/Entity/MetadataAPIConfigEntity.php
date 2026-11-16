@@ -3,7 +3,12 @@
 namespace Drupal\format_strawberryfield\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
-use Drupal\format_strawberryfield\MetadataConfigInterface;
+use Drupal\Core\Entity\Attribute\ConfigEntityType;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\format_strawberryfield\Entity\Controller\MetadataAPIConfigEntityListBuilder;
+use Drupal\format_strawberryfield\Form\MetadataAPIConfigEntityDeleteForm;
+use Drupal\format_strawberryfield\Form\MetadataAPIConfigEntityForm;
+use Drupal\format_strawberryfield\MetadataAPIConfigEntityHtmlRouteProvider;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
@@ -14,46 +19,31 @@ use Symfony\Component\HttpFoundation\File\MimeType\ExtensionGuesser;
  *
  * This entity binds Bundle and a Metadata Display.
  * Allows direct access exposure of Twig Template generated Metadata per node.
- *
- * @ConfigEntityType(
- *   id = "metadataapi_entity",
- *   label = @Translation("Metadata API Configuration Entity"),
- *   handlers = {
- *     "list_builder" = "\Drupal\format_strawberryfield\Entity\Controller\MetadataAPIConfigEntityListBuilder",
- *     "form" = {
- *       "add" = "Drupal\format_strawberryfield\Form\MetadataAPIConfigEntityForm",
- *       "edit" = "Drupal\format_strawberryfield\Form\MetadataAPIConfigEntityForm",
- *       "delete" = "Drupal\format_strawberryfield\Form\MetadataAPIConfigEntityDeleteForm",
- *     },
- *     "route_provider" = {
- *       "html" = "Drupal\format_strawberryfield\MetadataAPIConfigEntityHtmlRouteProvider",
- *     },
- *   },
- *   config_prefix = "metadataapi_entity",
- *   admin_permission = "administer site configuration",
- *   entity_keys = {
- *     "id" = "id",
- *     "label" = "label",
- *     "uuid" = "uuid",
- *     "active" = "active",
- *   },
- *  config_export = {
- *     "id",
- *     "label",
- *     "uuid",
- *     "configuration",
- *     "views_source_ids",
- *     "cache",
- *     "active",
- *   },
- *   links = {
- *     "edit-form" = "/admin/config/archipelago/metadataapi/{metadataapi_entity}/edit",
- *     "add-form" = "/admin/config/archipelago/metadataapi/add",
- *     "delete-form" = "/admin/config/archipelago/metadataapie/{metadataapi_entity}/delete",
- *     "collection" = "/admin/config/archipelago/metadataapi",
- *   }
- * )
  */
+#[ConfigEntityType(
+  id: 'metadataapi_entity',
+  label: new TranslatableMarkup('Metadata API Configuration Entity'),
+  config_prefix: 'metadataapi_entity',
+  entity_keys: ['id' => 'id', 'label' => 'label', 'uuid' => 'uuid', 'active' => 'active'],
+  handlers: [
+    'list_builder' => MetadataAPIConfigEntityListBuilder::class,
+    'form' => [
+      'add' => MetadataAPIConfigEntityForm::class,
+      'edit' => MetadataAPIConfigEntityForm::class,
+      'delete' => MetadataAPIConfigEntityDeleteForm::class],
+    'route_provider' => [
+      'html' => MetadataAPIConfigEntityHtmlRouteProvider::class
+    ]
+  ],
+  links: [
+    'edit-form' => '/admin/config/archipelago/metadataapi/{metadataapi_entity}/edit',
+    'add-form' => '/admin/config/archipelago/metadataapi/add',
+    'delete-form' => '/admin/config/archipelago/metadataapie/{metadataapi_entity}/delete',
+    'collection' => '/admin/config/archipelago/metadataapi'
+  ],
+  admin_permission: 'administer site configuration',
+  config_export: ['id', 'label', 'uuid', 'configuration', 'views_source_ids', 'cache', 'active']
+)]
 class MetadataAPIConfigEntity extends ConfigEntityBase implements ConfigEntityInterface {
 
   use DependencySerializationTrait;
