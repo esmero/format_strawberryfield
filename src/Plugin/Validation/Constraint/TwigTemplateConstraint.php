@@ -7,18 +7,20 @@
  */
 
 namespace Drupal\format_strawberryfield\Plugin\Validation\Constraint;
-use Symfony\Component\Validator\Constraint;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Validation\Attribute\Constraint;
+use Symfony\Component\Validator\Constraint as SymfonyConstraint;
 
 /**
  * Checks that the submitted value is a unique integer.
- *
- * @Constraint(
- *   id = "TwigTemplateConstraint",
- *   label = @Translation("Unique Integer", context = "Validation"),
- *   type = "string"
- * )
  */
-class TwigTemplateConstraint extends Constraint {
+#[Constraint(
+  id: 'TwigTemplateConstraint',
+  label: new TranslatableMarkup('Valid Twig template',
+    ['context' => 'Validation']),
+  type: 'string'
+)]
+class TwigTemplateConstraint extends SymfonyConstraint {
   public $message = 'Value is not a valid Twig template.';
   public $useTwigMessage = false;
   public $TwigTemplateLogicalName = 'MetadataDisplayEntity';
