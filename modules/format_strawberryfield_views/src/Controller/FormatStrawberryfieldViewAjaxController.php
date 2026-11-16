@@ -50,11 +50,6 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
   ];
 
   /**
-   * @var \Drupal\Core\Path\PathValidatorInterface
-   */
-  protected PathValidatorInterface $pathValidator;
-
-  /**
    * Constructs a ViewAjaxController object.
    *
    * @param \Drupal\Core\Entity\EntityStorageInterface $storage
@@ -67,16 +62,15 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
    *   The current path.
    * @param \Drupal\Core\Routing\RedirectDestinationInterface $redirect_destination
    *   The redirect destination.
-   * @param \Drupal\Core\Path\PathValidatorInterface $path_validator
+   * @param \Drupal\Core\Path\PathValidatorInterface $pathValidator
    *   The Core Path validator.
    */
-  public function __construct(EntityStorageInterface $storage, ViewExecutableFactory $executable_factory, RendererInterface $renderer, CurrentPathStack $current_path, RedirectDestinationInterface $redirect_destination, PathValidatorInterface $path_validator) {
+  public function __construct(EntityStorageInterface $storage, ViewExecutableFactory $executable_factory, RendererInterface $renderer, CurrentPathStack $current_path, RedirectDestinationInterface $redirect_destination, protected PathValidatorInterface $pathValidator) {
     $this->storage = $storage;
     $this->executableFactory = $executable_factory;
     $this->renderer = $renderer;
     $this->currentPath = $current_path;
     $this->redirectDestination = $redirect_destination;
-    $this->pathValidator = $path_validator;
   }
 
   /**
@@ -114,9 +108,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
 
       // Arguments can be empty, make sure they are passed on as NULL so that
       // argument validation is not triggered.
-      $args = array_map(function ($arg) {
-        return ($arg == '' ? NULL : $arg);
-      }, $args);
+      $args = array_map(fn($arg) => $arg == '' ? NULL : $arg, $args);
 
       $path = $request->query->get('view_path', $request->request->get('view_path')) ?? Html::escape($this->currentPath->getPath());
       // If a view has an invalid Path (e.g. you added some % somewhere) this will be null.
@@ -133,8 +125,8 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
       // (but not released yet as of May 6th 2026)
       // See also \Drupal\format_strawberryfield_facets\Controller\SbfFacetBlockAjaxController::ajaxFacetBlockView
       $existing_page_state = $request->query->all('ajax_page_state') ?? NULL;
-      $existing_page_state = $existing_page_state ?? $request->attributes->get('ajax_page_state');
-      $existing_page_state = $existing_page_state ?? $request->request->get('ajax_page_state');
+      $existing_page_state ??= $request->attributes->get('ajax_page_state');
+      $existing_page_state ??= $request->request->get('ajax_page_state');
       foreach (self::FILTERED_QUERY_PARAMETERS as $key) {
         $request->query->remove($key);
         $request->request->remove($key);
@@ -175,7 +167,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
               unset($views_get['ajax_page_state']);
               if (isset($views_post[$filter['expose']['identifier']])) {
                 foreach ($views_get as $get_args_keys => $value) {
-                  if (strpos($get_args_keys, $filter->options['expose']['identifier']) === 0) {
+                  if (str_starts_with($get_args_keys, $filter->options['expose']['identifier'])) {
                     unset($views_get[$get_args_keys]);
                   }
                 }
@@ -189,7 +181,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         $request_clone = clone $request;
 
         // Add all POST data, because AJAX is sometimes a POST and many things,
-        // such as tablesorts, exposed filters and paging assume GET.
+        // such as table sorts, exposed filters and paging assume GET.
         $param_union = $request_clone->request->all() + $request_clone->query->all();
         $used_query_parameters = $param_union;
         unset($param_union['ajax_page_state']);
@@ -236,9 +228,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         }
         $context = new RenderContext();
 
-        $preview = $this->renderer->executeInRenderContext($context, function () use ($view, $display_id, $args) {
-          return $view->preview($display_id, $args);
-        });
+        $preview = $this->renderer->executeInRenderContext($context, fn() => $view->preview($display_id, $args));
         if (!$context->isEmpty() && $preview) {
           $bubbleable_metadata = $context->pop();
           BubbleableMetadata::createFromRenderArray($preview)
@@ -281,9 +271,7 @@ class FormatStrawberryfieldViewAjaxController extends ViewAjaxController {
         if ($exposed_form_display && $view->display_handler->usesExposed() && $view->display_handler->getOption('exposed_block')) {
           $view_id = preg_replace('/[^a-zA-Z0-9-]+/', '-', $name . '-' . $display_id);
           $context = new RenderContext();
-          $exposed_form = $this->renderer->executeInRenderContext($context, function () use ($view) {
-            return $view->display_handler->viewExposedFormBlocks();
-          });
+          $exposed_form = $this->renderer->executeInRenderContext($context, fn() => $view->display_handler->viewExposedFormBlocks());
           if (!$context->isEmpty() && $exposed_form) {
             $bubbleable_metadata = $context->pop();
             BubbleableMetadata::createFromRenderArray($exposed_form)
