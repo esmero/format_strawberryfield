@@ -6,6 +6,7 @@ namespace Drupal\format_strawberryfield\Component\HttpFoundation;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class RangedRemoteFileRespone extends BinaryFileResponse {
 
@@ -66,7 +67,7 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
             $pathPrefix = trim($mapping[0] ?? '');
             $location = trim($mapping[1] ?? '');
 
-            if (substr($path, 0, \strlen($pathPrefix)) === $pathPrefix) {
+            if (str_starts_with($path, $pathPrefix)) {
               $path = $location.substr($path, \strlen($pathPrefix));
               // Only set X-Accel-Redirect header if a valid URI can be produced
               // as nginx does not serve arbitrary file paths.
@@ -98,13 +99,13 @@ class RangedRemoteFileRespone extends BinaryFileResponse {
 
         if ($start <= $end) {
           if ($start < 0 || $end > $fileSize - 1) {
-            $this->setStatusCode(416);
+            $this->setStatusCode(Response::HTTP_REQUESTED_RANGE_NOT_SATISFIABLE);
             $this->headers->set('Content-Range', sprintf('bytes */%s', $fileSize));
           } else {
             $this->maxlen = $end < $fileSize ? $end - $start + 1 : -1;
             $this->offset = $start;
 
-            $this->setStatusCode(206);
+            $this->setStatusCode(Response::HTTP_PARTIAL_CONTENT);
             $this->headers->set('Content-Range', \sprintf('bytes %s-%s/%s', $start, $end, $fileSize));
             $this->headers->set('Content-Length', $end - $start + 1);
           }

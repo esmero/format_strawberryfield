@@ -1,4 +1,5 @@
-import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annotation-editor.js'
+import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annotation-editor.js';
+
 (function ($, Drupal, once, drupalSettings, Triiiceratops) {
 
   'use strict';
@@ -166,10 +167,34 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
       const elementsToAttach = once('attache_triiiceratops', '.strawberry-triiiceratops-item[data-iiif-infojson]', context);
       $(elementsToAttach).each(function (index, value) {
 
+
+
         // Get the node uuid for this element
         var element_id = $(this).attr("id");
+        let content_state_from_url = false;
         // Check if we got some data passed via Drupal settings.
         if (typeof(drupalSettings.format_strawberryfield.triiiceratops[element_id]) != 'undefined') {
+          // Check if we should attempt to pre-parse any IIIF Content State.
+          if (drupalSettings.format_strawberryfield.triiiceratops[element_id]['content_state_drop']) {
+            const param = new URLSearchParams(location.search).get('iiif-content');
+            if (param) {
+              try {
+                content_state_from_url = Drupal.FormatStrawberryfieldIiifUtils.processIIIFContentState(param);
+                if (content_state_from_url.manifestid && content_state_from_url.canvasid) {
+                  content_state_from_url = true;
+                }
+                else {
+                  content_state_from_url = false;
+                }
+              }
+              catch {
+                console.log('Invalid IIIF Content State');
+              }
+            }
+          }
+
+
+
           // Base ADO UUID. IN case of a CWS each canvas ID, if formed as might have a saying about this.
           const node_uuid = drupalSettings.format_strawberryfield.triiiceratops[element_id]['nodeuuid'];
 
@@ -178,11 +203,14 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
             $(this).width(drupalSettings.format_strawberryfield.triiiceratops[element_id]['width']);
           }
           var $options = {
-            "manifestId": drupalSettings.format_strawberryfield.triiiceratops[element_id]['manifesturl'],
             config: {},
             "themeConfig": {},
           };
-          var $manifest = [drupalSettings.format_strawberryfield.triiiceratops[element_id]['manifesturl']];
+          if (!content_state_from_url) {
+            // The options manifestid will always win. So if we have content_state_drop enabled
+            // and the URL holds a valid contentstate url, we allow that but do not initialize the manifestid here.
+            $options.manifestId = drupalSettings.format_strawberryfield.triiiceratops[element_id]['manifesturl']
+          }
           const readFragmentSearch = function() {
             const urlArray = window.location.hash.replace('#','').split('/');
             const urlHash = {};
@@ -217,13 +245,13 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
           let initial_search_string = null;
           let prev_canvas_id = null;
           let prev_manifest_id = null;
-          if (search_string.length > 0 ) {
+          if (search_string.length > 0 && !content_state_from_url) {
             initial_search_string = search_string;
           }
           // Note. if the setting "switchCanvasOnSearch": true is selected
           // And there is a search
           // And there is a hit, start canvas will have no effect. You are warned.
-          if (page_string > 0 ) {
+          if (page_string > 0 && !content_state_from_url) {
             initial_canvas_index = page_string - 1;
           }
           let needs_navigation =  initial_canvas_index !== null || initial_search_string !== null;
@@ -287,31 +315,28 @@ import {createAnnotationEditorPlugin} from './triiiceratops_modules/plugin-annot
               if ($plugin_objects.length > 0) {
                 triii_viewer.plugins = $plugin_objects;
               }
-              // Once we have all plugins, we check if annotations can be enabled
-              // and if we can use the custom storage or not
             }
-
-
+            let contentState = null;
             // really important that both this and the const/wrapper one are defined
-            // oursite of the subscriberFrame(). If not they are reset/internal state lost
-            // and they loose their purpose.
+            // our site of the subscriberFrame(). If not they are reset/internal state lost
             async function processContentState(selectorFragment_live, selectorFragment, prev_canvas_id, currentcanvasid, manifestid) {
-              if (selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid) {
+              if (selectorFragment_live !== selectorFragment || prev_canvas_id != currentcanvasid || contentState == null) {
                 selectorFragment = selectorFragment_live;
-                return Drupal.FormatStrawberryfieldIiifUtils.generateContentState(manifestid, currentcanvasid, selectorFragment);
+                const live_state = Drupal.FormatStrawberryfieldIiifUtils.generateContentState(manifestid, currentcanvasid, selectorFragment, true);
+                console.log(live_state);
+                return live_state;
               }
               return null;
             }
 
             const ThrottledProcessContentState = Drupal.FormatStrawberryfieldIiifUtils.asyncThrottle(processContentState, 2000);
-            let contentState = null;
 
             if (triii_viewer.viewerState) {
               const stop_frame = triii_viewer.viewerState.subscribeFrame(() => {
                 if (fully_initialized) {
                   // This only works for Images and UI interactions of those
                   // AV Plugin needds to be read on the subscribeFrame() to generate that one
-                  // TBD if i can even read this here if Video/Audio are playing.
+                  // TBD if we can even read this here if Video/Audio are playing.
                   const { x, y, width, height } = triii_viewer.viewerState.viewportBounds;
                   const roundedX = Math.round(x);
                   const roundedY = Math.round(y);

@@ -142,7 +142,7 @@
         : btoa(String.fromCodePoint(...bytes)); // Old fallback
       return string;
     },
-    generateContentState: function(manifestid,canvasid, fragment, encode=false) {
+    generateContentState: function(manifestid, canvasid, fragment, encode=false) {
       let state = {
         "@context": "http://iiif.io/api/presentation/3/context.json",
         id: `${canvasid}/state/`+ Date.now().toString(36),
@@ -153,7 +153,7 @@
           type: "Canvas",
           partOf: [
             {
-              id: "manifestid",
+              id: manifestid,
               type: "Manifest"
             }
           ]
@@ -165,7 +165,67 @@
       }
       return state;
     },
+    /**
+     * Safely decodes and parses a IIIF Content State string.
+     * @param {string} state - The raw string possible holding a IIIF Content State.
+     * @returns {string|Object} - A Manifest URI string or a parsed JSON-LD Annotation object.
+     */
+    processIIIFContentState: function(state) {
 
+    let processed_state = {
+      manifestid: null,
+      canvasid: null,
+      region:null,
+      time: null,
+      };
+
+    if (!state) return null;
+
+    const trimmed = state.trim();
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      processed_state.manifestid = trimmed;
+      return processed_state;
+    }
+
+    try {
+      const normalized = trimmed.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized.padEnd(
+        normalized.length + ((4 - (normalized.length % 4)) % 4),
+        '=',
+      );
+      const decodedJsonString =  atob(padded);
+      let jsonState = null;
+      try {
+        jsonState = JSON.parse(decodedJsonString);
+      } catch {
+        try {
+          jsonState = JSON.parse(decodeURIComponent(decodedJsonString));
+        } catch {
+          jsonState = null;
+        }
+      }
+      if (jsonState != null && typeof jsonState == 'object') {
+        if (jsonState?.motivation?.[0] == "contentState") {
+          processed_state.manifestid =  (jsonState.target?.partOf?.[0]?.type == 'Manifest') ? (jsonState.target?.partOf?.[0]?.id ?? null) : null;
+          processed_state.canvasid = jsonState.target?.id ?? null;
+          const split = processed_state.canvasid.split("#");
+          if (split?.[1]) {
+            processed_state.canvasid = split?.[0];
+            if (split[1].startsWith("t=")) {
+              processed_state.time = '#'.split?.[1];
+            }
+            else {
+              processed_state.region = '#'.split?.[1];
+            }
+          }
+        }
+      }
+      return processed_state;
+    } catch (error) {
+      throw new Error('Failed to process IIIF Content State');
+    }
+  },
     fetchIIIFManifest: async function (iiifmanifesturl) {
       const response = await fetch(iiifmanifesturl, {
           mode: 'cors',
