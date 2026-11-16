@@ -3,20 +3,21 @@
 namespace Drupal\format_strawberryfield_views\Plugin\views\display_extender;
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\views\Attribute\ViewsDisplayExtender;
 use Drupal\views\Plugin\views\display_extender\DisplayExtenderPluginBase;
 
 /**
  * Views Attach Library display extender plugin.
  *
  * @ingroup views_display_extender_plugins
- *
- * @ViewsDisplayExtender(
- *   id = "sbf_ajax_interactions",
- *   title = @Translation("Enables Ajax Interactions between Strawberryfield Formatters and Views"),
- *   help = @Translation("See settings to select which Exposed filters or Contextual filters will act on Format Strawberryfield formatter events"),
- *   no_ui = FALSE
- * )
  */
+#[ViewsDisplayExtender(
+  id: 'sbf_ajax_interactions',
+  title: new TranslatableMarkup('Enables Ajax Interactions between Strawberryfield Formatters and Views'),
+  help: new TranslatableMarkup('See settings to select which Exposed filters or Contextual filters will act on Format Strawberryfield formatter events'),
+  no_ui: false
+)]
 class StrawberryAjaxInteractions extends DisplayExtenderPluginBase {
 
   /**
