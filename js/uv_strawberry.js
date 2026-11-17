@@ -34,7 +34,6 @@
                         embedded: false // needed for codesandbox frame
                       };
 
-                        //var urlDataProvider = new UV.URLDataProvider();
 
                         const uvInstance = UV.init(
                           element_id,

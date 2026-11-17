@@ -41,7 +41,7 @@ class DateRangeSliderProcessor extends DateRangeProcessor implements PreQueryPro
       // Remove all the query filters for the field of the facet.
       if (isset($query[$filter_key])) {
         foreach ($query[$filter_key] as $id => $filter) {
-          if (strpos($filter . $url_processor->getSeparator(), $facet->getUrlAlias()) === 0) {
+          if (str_starts_with($filter . $url_processor->getSeparator(), $facet->getUrlAlias())) {
             unset($query[$filter_key][$id]);
           }
         }
@@ -85,9 +85,7 @@ class DateRangeSliderProcessor extends DateRangeProcessor implements PreQueryPro
       $range = [];
       $range = $facet->getActiveItems();
       if (isset($range[0])) {
-        $range[0]['count'] = array_sum(array_map(function ($item) {
-          return $item->getCount();
-        }, $results));
+        $range[0]['count'] = array_sum(array_map(fn($item) => $item->getCount(), $results));
       }
       if (count($range) == 0) {
         // Means we are already are not inside a valid range, give this a 0 count

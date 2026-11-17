@@ -11,6 +11,7 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -19,6 +20,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -28,19 +30,12 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Strawberry Field Paged Formatter using IABook Readerplugin.
- *
- * @FieldFormatter(
- *   id = "strawberry_paged_formatter",
- *   label = @Translation("Strawberry Field Paged Formatter using IABook Readerplugin"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPagedFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_paged_formatter',
+  label: new TranslatableMarkup('Strawberry Field Paged Formatter using IABook Readerplugin'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryPagedFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -479,7 +474,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function processElementforMetadatadisplays($delta, array $jsondata, FieldItemInterface $item) {
-    $delta = $delta ?? 0;
+    $delta ??= 0;
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
@@ -657,7 +652,7 @@ class StrawberryPagedFormatter extends StrawberryBaseFormatter implements Contai
    * @throws PluginNotFoundException
    */
   public function processElementforManifestURL($delta, array $jsondata, FieldItemInterface $item, string $pagestrategy) {
-    $delta = $delta ?? 0;
+    $delta ??= 0;
     $element = [];
     $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();

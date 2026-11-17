@@ -27,7 +27,7 @@ class FormatStrawberryFieldFacetsHooks {
    * Implements hook_theme().
    */
   #[Hook('theme')]
-  function theme() {
+  public function theme() {
     return [
       'facets_item_list__sbf_range_date_slider' => [
         'variables' => [

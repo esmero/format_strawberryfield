@@ -216,6 +216,20 @@ class IiifSettingsForm extends ConfigFormBase {
       '#description' => $this->t('If enabled, Content Search API results will also do a general search on ADO based Full Text Solr Fields. The returned areas, as with plain text extractions, will not have coordinates and will highlight any complete canvas associated to the matched ADO(s). '),
     ];
 
+    $form['iiif_content_search_api_metadata_one_per_canvasuuid'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('When a single ADO generates multiple canvases, only match the first canvas of that ADO'),
+      '#default_value' => $config->get('iiif_content_search_api_metadata_one_per_canvasuuid') ?? FALSE,
+      '#description' => $this->t('If enabled, this will avoid every canvas of the ADO whose metadata matched to be returned.'),
+      '#states' => [
+        'visible' => [
+          ':input[name="iiif_content_search_api_active"]' => ['checked' => true],
+          'AND',
+          ':input[name="iiif_content_search_api_metadata"]' => ['checked' => true],
+        ],
+      ],
+    ];
+
     $field_options = $this->getADOFields('node_id');
     $form['iiiif_content_search_api_metadata_parent_node_fields'] = [
       '#type'          => 'select',
@@ -235,7 +249,7 @@ class IiifSettingsForm extends ConfigFormBase {
           ':input[name="iiif_content_search_api_active"]' => ['checked' => true],
           'AND',
           ':input[name="iiif_content_search_api_metadata"]' => ['checked' => true],
-          ],
+        ],
       ],
       '#multiple' => TRUE
     ];
@@ -375,6 +389,8 @@ class IiifSettingsForm extends ConfigFormBase {
         $form_state->getValue('iiif_content_search_time_targetannotations') ?? FALSE)
       ->set('iiif_content_search_api_metadata',
         $form_state->getValue('iiif_content_search_api_metadata') ?? FALSE)
+      ->set('iiif_content_search_api_metadata_one_per_canvasuuid',
+        $form_state->getValue('iiif_content_search_api_metadata_one_per_canvasuuid') ?? FALSE)
       ->set('iiiif_content_search_api_metadata_parent_node_fields',
         $form_state->getValue('iiiif_content_search_api_metadata_parent_node_fields') ?? [])
       ->set('iiiif_content_search_api_metadata_node_fulltext_fields',
@@ -465,7 +481,7 @@ class IiifSettingsForm extends ConfigFormBase {
           // Anything except text, fulltext or any solr_text variations. Also skip direct node id and UUIDs which would
           // basically return the same ADO as input filtered, given that those are unique.
           $property_path = $field->getPropertyPath();
-        if ($type == 'node_id') {
+          if ($type == 'node_id') {
             $property_path_pieces = explode(':', $property_path);
             if (in_array(end($property_path_pieces),  ['nid','parent_id'])) {
               $fields[$field_id] = $field->getPrefixedLabel();

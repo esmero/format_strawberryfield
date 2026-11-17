@@ -9,36 +9,26 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\Component\Utility\NestedArray;
 
 /**
  * Universal IIIF Viewer Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_uv_formatter",
- *   label = @Translation("Strawberry Field Media Formatter using the Universal (UV)
- *   IIIF Viewer plugin"), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryUVFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_uv_formatter',
+  label: new TranslatableMarkup('Strawberry Field Media Formatter using the Universal (UV) IIIF Viewer plugin'),
+  field_types: ['strawberryfield_field'])]
 class StrawberryUVFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -404,7 +394,6 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
     array $jsondata,
     FieldItemInterface $item
   ) {
-    $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $manifests = [];
 

@@ -24,10 +24,6 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
 
 
   /**
-   * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
-   */
-  private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
-  /**
    * Creates a new AdoType instance.
    *
    * @param array $configuration
@@ -38,9 +34,8 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    *   The plugin implementation definition.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, private readonly StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
 
   /**
@@ -81,7 +76,7 @@ class AdoType extends ConditionPluginBase implements ContainerFactoryPluginInter
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['ado_types'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_types') ?? '')));
+    $this->configuration['ado_types'] = array_filter(array_map(trim(...), explode(PHP_EOL, $form_state->getValue('ado_types') ?? '')));
     $this->configuration['recurse_ado_types'] = (bool) $form_state->getValue('recurse_ado_types');
     parent::submitConfigurationForm($form, $form_state);
   }

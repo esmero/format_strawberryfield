@@ -85,7 +85,7 @@ class LeaftletGeoJSON extends StylePluginBase {
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
-      if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
+      if ($triggering_element['#ajax']['callback'][0] == static::class) {
         $parents = array_slice($triggering_element['#parents'], 0, -1);
         $options_for_mainsource = $form_state->getValue($parents);
       }
@@ -103,7 +103,7 @@ class LeaftletGeoJSON extends StylePluginBase {
 
     // Define #ajax callback.
     $ajax = [
-      'callback' => __CLASS__ . '::ajaxCallbackMainSource',
+      'callback' => self::class . '::ajaxCallbackMainSource',
       'wrapper'  => 'main-mediasource-ajax-container',
     ];
 
@@ -319,7 +319,7 @@ class LeaftletGeoJSON extends StylePluginBase {
   public function renderGrouping($records, $groupings = [], $group_rendered = TRUE) {
 
     if (is_string($groupings)) {
-      $rendered = $group_rendered === NULL ? TRUE : $group_rendered;
+      $rendered = $group_rendered ?? TRUE;
       $groupings = [['field' => $groupings, 'rendered' => $rendered]];
     }
 

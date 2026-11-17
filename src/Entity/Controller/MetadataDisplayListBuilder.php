@@ -21,10 +21,10 @@ class MetadataDisplayListBuilder extends EntityListBuilder {
    */
   public function render() {
     $build['description'] = [
-      '#markup' => $this->t('Strawberry Field Formatter Module implements a Metadata Display Entity. You can manage the fields on the <a href="@adminlink">Metadata Display admin page</a>.', array(
+      '#markup' => $this->t('Strawberry Field Formatter Module implements a Metadata Display Entity. You can manage the fields on the <a href="@adminlink">Metadata Display admin page</a>.', [
         '@adminlink' => \Drupal::urlGenerator()
           ->generateFromRoute('format_strawberryfield.metadatadisplay_settings'),
-      )),
+      ]),
     ];
 
     $build += parent::render();

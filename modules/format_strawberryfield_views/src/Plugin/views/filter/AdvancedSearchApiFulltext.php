@@ -10,6 +10,7 @@ use Drupal\Core\Url;
 use Drupal\search_api\Entity\Index;
 use Drupal\search_api\ParseMode\ParseModePluginManager;
 use Drupal\search_api_solr\Utility\Utility;
+use Drupal\views\Attribute\ViewsFilter;
 use Drupal\views\Plugin\views\filter\FilterPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\search_api\Plugin\views\filter\SearchApiFilterTrait;
@@ -19,9 +20,8 @@ use Drupal\search_api\Plugin\views\filter\SearchApiFulltext;
  * Defines a filter for adding a fulltext search to the view.
  *
  * @ingroup views_filter_handlers
- *
- * @ViewsFilter("sbf_advanced_search_api_fulltext")
  */
+#[ViewsFilter('sbf_advanced_search_api_fulltext')]
 class AdvancedSearchApiFulltext extends SearchApiFulltext {
 
   use SearchApiFilterTrait;
@@ -387,16 +387,14 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
       foreach ($query_able_data as &$query_able_datum_fields) {
         foreach ($query_able_datum_fields['fields'] ?? [] as $field) {
           if (isset($solr_field_names[$field])
-            && 'twm_suggest' !== $solr_field_names[$field] & strpos(
-              $solr_field_names[$field], 'spellcheck'
-            ) !== 0
+            && 'twm_suggest' !== $solr_field_names[$field] & !str_starts_with($solr_field_names[$field], 'spellcheck')
           ) {
             $index_field = $index_fields[$field];
             $boost = $index_field->getBoost() ? '^' . $index_field->getBoost()
               : '';
             $names = [];
             $first_name = reset($field_names[$field]);
-            if (strpos($first_name, 't') === 0) {
+            if (str_starts_with($first_name, 't')) {
               // Add all language-specific field names. This should work for
               // non Drupal Solr Documents as well which contain only a single
               // name.
@@ -424,7 +422,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
                     $sbf_names = [];
                     $sbf_highligh_join_fields_from_config = array_merge($sbf_highligh_join_fields_from_config, $index_field->getConfiguration()['join_fields'] ?? ['parent_id']);
                     $sbf_first_name = reset($field_names[$sbf_field]);
-                    if (strpos($sbf_first_name, 't') === 0) {
+                    if (str_starts_with($sbf_first_name, 't')) {
                       // Add all language-specific field names. This should work for
                       // non Drupal Solr Documents as well which contain only a single
                       // name.
@@ -599,7 +597,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
             // new ones.
             else {
               foreach ($old as $key => $value) {
-                if (substr($key, 0, 1) === '#') {
+                if (str_starts_with($key, '#')) {
                   continue;
                 }
                 $keys[] = $value;
@@ -909,7 +907,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
    if ($this->options['expose']['advanced_search_classic_mode']) {
      for($i=1; $i < $this->options['expose']['advanced_search_fields_count']; $i++) {
        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-         if (strpos($key, '#') !== FALSE) {
+         if (str_contains($key, '#')) {
            $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
          }
          else {
@@ -919,7 +917,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
            $current_search_value = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $current_search_value;
          }
-         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+         elseif (is_array($value) && !str_contains($key, '#')) {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
            if ($key == $advanced_search_operator_id) {
              $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
@@ -945,7 +943,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
      // Normal behavior
      for($i=1;$i < $realcount && $realcount > 1; $i++) {
        foreach ($form[$this->options['id'].'_wrapper'] as $key => $value) {
-         if (strpos($key, '#') !== FALSE) {
+         if (str_contains($key, '#')) {
            $form[$this->options['id'].'_wrapper_'.$i][$key] = $value;
          }
          else {
@@ -954,7 +952,7 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
          if ($key == $this->options['expose']['identifier']) {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = is_array($this->value) ? $this->value[$key.'_'.$i] ?? '' : '';
          }
-         elseif (is_array($value) && strpos($key, '#') === FALSE) {
+         elseif (is_array($value) && !str_contains($key, '#')) {
            $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#default_value'] = $form_state->getValue($key.'_'.$i);
            if ($key == $advanced_search_operator_id) {
              $form[$this->options['id'].'_wrapper_'.$i][$key.'_'.$i]['#access'] = TRUE;
@@ -1153,8 +1151,8 @@ class AdvancedSearchApiFulltext extends SearchApiFulltext {
     $options_reordered = [];
     $lines = explode("\n", trim($this->options['fields_label_replace'] ?? ''));
     foreach ($lines as $line) {
-      if (strpos($line, '|') !== FALSE) {
-        [$search, $replace] = array_map('trim', explode('|', $line));
+      if (str_contains($line, '|')) {
+        [$search, $replace] = array_map(trim(...), explode('|', $line));
         if (!empty($search)) {
           if (isset($options[$search])) {
             $options_reordered[$search] = $replace;

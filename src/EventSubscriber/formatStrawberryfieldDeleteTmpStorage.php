@@ -11,11 +11,13 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\strawberryfield\StrawberryfieldEventType;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 
 /**
- * Event subscriber that deletes format temp storage for SBF bearing entities.
+ * Event subscriber that deletes formatter (e.g. Annotations) temp storage
+ * for SBF bearing entities.
  *
- * The actual deletion only happens after persistance of a Node.
+ * The actual deletion only happens after persistence of a Node.
  *
  */
 class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface {
@@ -48,35 +50,26 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
   protected $tempStoreFactory;
 
   /**
-   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
-   */
-  private $loggerFactory;
-
-  /**
-   * The current user.
-   */
-  protected AccountProxyInterface $account;
-
-  /**
    * StrawberryfieldEventInsertSubscriberDepositDO constructor.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
-   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $loggerFactory
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $temp_store_factory
    */
   public function __construct(
     TranslationInterface $string_translation,
     MessengerInterface $messenger,
-    LoggerChannelFactoryInterface $logger_factory,
+    private LoggerChannelFactoryInterface $loggerFactory,
     PrivateTempStoreFactory $temp_store_factory,
-    AccountProxyInterface $account
+    /**
+     * The current user.
+     */
+    protected AccountProxyInterface $account
   ) {
     $this->stringTranslation = $string_translation;
     $this->messenger = $messenger;
-    $this->loggerFactory = $logger_factory;
     $this->tempStoreFactory = $temp_store_factory;
-    $this->account =  $account;
 
 
   }
@@ -115,45 +108,17 @@ class formatStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface 
       return;
     }
 
-    $current_class = get_called_class();
+    $current_class = static::class;
     $entity = $event->getEntity();
-    $sbf_fields = $event->getFields();
 
     /* @var $tempstore \Drupal\Core\TempStore\PrivateTempStore */
-
     $tempstore = $this->tempStoreFactory->get('webannotation');
-
-    foreach ($sbf_fields as $field_name) {
-      /* @var $field \Drupal\Core\Field\FieldItemInterface */
-      $field = $entity->get($field_name);
-      /* @var \Drupal\strawberryfield\Field\StrawberryFieldItemList $field */
-
-      $fieldname = $field->getName();
-      foreach ($field->getIterator() as $delta => $itemfield) {
-        $keyid = $this->getTempStoreKeyName($fieldname, $delta, $entity->uuid());
-        $tempstore->delete($keyid);
-      }
-    }
+    $keystoreid = WebAnnotationController::getTempStoreKeyNameForAnnotations(
+      $entity->uuid()
+    );
+    $tempstore->delete($keystoreid);
 
     $event->setProcessedBy($current_class, true);
-  }
-
-  /**
-   * Gives us a key name used by the webforms and widgets.
-   *
-   * @param $fieldname
-   * @param int $delta
-   * @param string $entity_uuid
-   *
-   * @return string
-   */
-  public function getTempStoreKeyName($fieldname, $delta = 0, $entity_uuid = '0') {
-    $unique_seed = array_merge(
-      [$fieldname],
-      [$delta],
-      [$entity_uuid]
-    );
-    return sha1(implode('-', $unique_seed));
   }
 
 }

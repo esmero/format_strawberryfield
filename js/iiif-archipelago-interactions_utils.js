@@ -55,13 +55,13 @@
       const viewEventListenerInit = once.filter('listen-ado-view-change', 'body')
       if (!viewEventListenerInit?.length) {
         setTimeout(() => {
-           el.dispatchEvent(event);
-         }
-         , 1000);
-     }
-     else {
-       el.dispatchEvent(event);
-     }
+            el.dispatchEvent(event);
+          }
+          , 1000);
+      }
+      else {
+        el.dispatchEvent(event);
+      }
       return this;
     },
 
@@ -100,6 +100,132 @@
       el.dispatchEvent(event);
       return this;
     },
+
+    asyncThrottle: function asyncThrottle(asyncFn, delay) {
+      let lastRan = 0;
+      let isRunning = false;
+
+      return function (...args) {
+        const context = this;
+        const now = Date.now();
+
+        return new Promise((resolve, reject) => {
+          if (isRunning) {
+            return resolve(null);
+          }
+          if (now - lastRan >= delay) {
+            isRunning = true;
+            lastRan = now;
+
+            // Execute async fn
+            asyncFn.apply(context, args)
+              .then((result) => {
+                resolve(result);
+              })
+              .catch((error) => {
+                reject(error);
+              })
+              .finally(() => {
+                isRunning = false;
+              });
+          } else {
+            // Ignored due to time restriction
+            resolve(null);
+          }
+        });
+      };
+    },
+    base64Encode: function(string) {
+      const bytes = new TextEncoder().encode(string);
+      string = Uint8Array.prototype.toBase64
+        ? new Uint8Array(bytes).toBase64()
+        : btoa(String.fromCodePoint(...bytes)); // Old fallback
+      return string;
+    },
+    generateContentState: function(manifestid, canvasid, fragment, encode=false) {
+      let state = {
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        id: `${canvasid}/state/`+ Date.now().toString(36),
+        type: "Annotation",
+        motivation: ["contentState"],
+        target: {
+          id: `${canvasid}${fragment}`,
+          type: "Canvas",
+          partOf: [
+            {
+              id: manifestid,
+              type: "Manifest"
+            }
+          ]
+        }
+      };
+      state = JSON.stringify(state);
+      if (encode === true) {
+        state = this.base64Encode(state);
+      }
+      return state;
+    },
+    /**
+     * Safely decodes and parses a IIIF Content State string.
+     * @param {string} state - The raw string possible holding a IIIF Content State.
+     * @returns {string|Object} - A Manifest URI string or a parsed JSON-LD Annotation object.
+     */
+    processIIIFContentState: function(state) {
+
+    let processed_state = {
+      manifestid: null,
+      canvasid: null,
+      region:null,
+      time: null,
+      };
+
+    if (!state) return null;
+
+    const trimmed = state.trim();
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      processed_state.manifestid = trimmed;
+      return processed_state;
+    }
+
+    try {
+      const normalized = trimmed.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized.padEnd(
+        normalized.length + ((4 - (normalized.length % 4)) % 4),
+        '=',
+      );
+      const decodedJsonString =  atob(padded);
+      let jsonState = null;
+      try {
+        jsonState = JSON.parse(decodedJsonString);
+      } catch {
+        try {
+          jsonState = JSON.parse(decodeURIComponent(decodedJsonString));
+        } catch {
+          jsonState = null;
+        }
+      }
+      if (jsonState != null && typeof jsonState == 'object') {
+        if (jsonState?.motivation?.[0] == "contentState") {
+          processed_state.manifestid =  (jsonState.target?.partOf?.[0]?.type == 'Manifest') ? (jsonState.target?.partOf?.[0]?.id ?? null) : null;
+          processed_state.canvasid = jsonState.target?.id ?? null;
+          const split = processed_state.canvasid.split("#");
+          if (split?.[1]) {
+            processed_state.canvasid = split?.[0];
+            if (split[1].startsWith("t=")) {
+              processed_state.time = '#'.split?.[1];
+            }
+            else {
+              processed_state.region = '#'.split?.[1];
+            }
+          }
+        }
+      }
+      return processed_state;
+    } catch (error) {
+      throw new Error('Failed to process IIIF Content State');
+    }
+  },
     fetchIIIFManifest: async function (iiifmanifesturl) {
       const response = await fetch(iiifmanifesturl, {
           mode: 'cors',
@@ -158,12 +284,12 @@
           let control_points = Math.floor((path_d.split(",").length * 2) + 1);
           const len = newpath.getTotalLength();
           if (len > 0) {
-       /*     for (let i = 0; i < control_points; i++) {
-              var p = newpath.getPointAtLength(i * len / (control_points - 1));
-              allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
-              //points.push([pt.x, pt.y]);
-            }
-*/
+            /*     for (let i = 0; i < control_points; i++) {
+                   var p = newpath.getPointAtLength(i * len / (control_points - 1));
+                   allpoints.push(DOMPoint.fromPoint({x: p.x, y: p.y}));
+                   //points.push([pt.x, pt.y]);
+                 }
+     */
 
             let p = newpath.getPointAtLength(0);
             let seg = newpath.getPathSegAtLength(0);
@@ -280,21 +406,21 @@
     },
 
 
-  getIIIFServices: function (iiifmanifest) {
+    getIIIFServices: function (iiifmanifest) {
 
-    // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
-    // @by awesome https://github.com/digitaldogsbody Mike Bennet
-    const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
-    return image_services;
-    },
-
-  getIIIFServicesForCanvas: function (iiifcanvas) {
       // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
       // @by awesome https://github.com/digitaldogsbody Mike Bennet
-    const image_services = jmespath.search(iiifcanvas, this.images_canvas_jmespath_pattern);
-    return image_services;
+      const image_services = jmespath.search(iiifmanifest, this.images_jmespath_pattern);
+      return image_services;
+    },
+
+    getIIIFServicesForCanvas: function (iiifcanvas) {
+      // See https://github.com/esmero/format_strawberryfield/pull/252/commits/81094b6cc1d7db6e12602022d7813e9361099595
+      // @by awesome https://github.com/digitaldogsbody Mike Bennet
+      const image_services = jmespath.search(iiifcanvas, this.images_canvas_jmespath_pattern);
+      return image_services;
     }
-};
+  };
 
   /* Make it part of the Global Drupal Object */
   Drupal.FormatStrawberryfieldIiifUtils = FormatStrawberryfieldIiifUtils;

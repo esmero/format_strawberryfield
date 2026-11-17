@@ -102,6 +102,13 @@ class MetadataExposeConfigEntityForm extends EntityForm {
         '#Description' => $this->t('If checked and in the presence of an Embargo, this endpoint will return a 401 instead of delegating the embargo processing to the metadata display entity'),
         '#return_value' => TRUE,
         '#default_value' => ($metadataconfig->isNew()) ? FALSE : $metadataconfig->getHideOnEmbargo()
+      ],
+      'minify_json' => [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Minify JSON and JSON-LD reponses.'),
+        '#Description' => $this->t('If checked, and in the presence of a Metadata Display Entity that outputs JSON or JSON-LD, this endpoint will return a minified (no spaces) JSON response.'),
+        '#return_value' => TRUE,
+        '#default_value' => ($metadataconfig->isNew()) ? FALSE : $metadataconfig->getMinifyJson()
       ]
     ];
 

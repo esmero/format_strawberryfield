@@ -107,7 +107,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       // Remove all the query filters for the field of the facet.
       if (isset($query[$filter_key])) {
         foreach ($query[$filter_key] as $id => $filter) {
-          if (strpos($filter . $url_processor->getSeparator(), $facet->getUrlAlias()) === 0) {
+          if (str_starts_with($filter . $url_processor->getSeparator(), $facet->getUrlAlias())) {
             unset($query[$filter_key][$id]);
           }
         }
@@ -137,7 +137,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         }
       }
       else {
-        // This has core issues and we hope it won't ever match
+        // This has core issues, and we hope it won't ever match
         // Core issue is that ::getUrlForRequest does not work well
         // And fetches for a View the wrong Display and then caches it!
         $request = \Drupal::request();
@@ -151,9 +151,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
       $range = [];
       $range = $facet->getActiveItems();
       if (isset($range[0])) {
-        $range[0]['count'] = array_sum(array_map(function ($item) {
-          return $item->getCount();
-        }, $results));
+        $range[0]['count'] = array_sum(array_map(fn($item) => $item->getCount(), $results));
       }
       if (count($range) == 0) {
         // Means we are already are not inside a valid range, give this a 0 count
@@ -206,8 +204,8 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
         continue;
       }
       $raw = DateRangeProcessor::DateToUnix($result->getRawValue());
-      $min = $min ?? $raw;
-      $max = $max ?? $raw;
+      $min ??= $raw;
+      $max ??= $raw;
       if ($raw >= $min) {
         $count = $count + $result->getCount();
       }
@@ -283,7 +281,7 @@ class DateRangeProcessor extends ProcessorPluginBase implements PreQueryProcesso
     //\EDTF\EdtfFactory::newParser()->parse('-0013-01-01T04:56:02Z')->getEdtfValue()
     // PHP is the worst. I know the format (used to generate) is DATE_ATOM
     // But can't explicitly create from format.
-    $dateTime = new \DateTimeImmutable($date);
+    $dateTime = new \DateTimeImmutable($date, new \DateTimeZone('UTC'));
     if ($dateTime) {
       return $dateTime->getTimestamp();
     }

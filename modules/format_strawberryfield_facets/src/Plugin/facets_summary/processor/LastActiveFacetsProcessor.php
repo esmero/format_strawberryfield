@@ -66,7 +66,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             ) {
               try {
                 $active_value = $this->getTimestamp($active_value, $build_stage_processors['date_item']->getConfiguration()['granularity'] ?? 1);
-              } catch (\Exception $exception) {
+              } catch (\Exception) {
                 // Do nothing if the String to Timestamp Date failed.
                 continue;
               }
@@ -271,9 +271,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
           }
         }
 
-        $search_terms = array_filter($search_terms, function ($element) {
-          return ((is_string($element) && '' !== trim($element)) || is_numeric($element));
-        });
+        $search_terms = array_filter($search_terms, fn($element) => (is_string($element) && '' !== trim($element)) || is_numeric($element));
 
         if (!($config['settings']['multiple_query'] ?? FALSE) || count($search_terms) == 1) {
           if (count($search_terms)) {
@@ -282,9 +280,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
             if ($config['settings']['quote_query'] ?? FALSE) {
               $display_value = implode(
                 " ", array_map(
-                  function ($string) {
-                    return '"' . $string . '"';
-                  }, $search_terms
+                  fn($string) => '"' . $string . '"', $search_terms
                 )
               );
             } else {
@@ -298,7 +294,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               '#count' => 0,
               '#is_active' => TRUE,
             ];
-            $item = (new Link($item, $url_active))->toRenderable();
+            $item = new Link($item, $url_active)->toRenderable();
             $item['#wrapper_attributes'] = [
               'class' => [
                 'facet-summary-item--facet',
@@ -343,7 +339,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
               '#count' => 0,
               '#is_active' => TRUE,
             ];
-            $item = (new Link($item, $new_url))->toRenderable();
+            $item = new Link($item, $new_url)->toRenderable();
             $item['#wrapper_attributes'] = [
               'class' => [
                 'facet-summary-item--facet',
@@ -458,7 +454,7 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
           '#facet' => $result->getFacet(),
           '#raw_value' => $result->getRawValue(),
         ];
-        $item = (new Link($item, $result->getUrl()))->toRenderable();
+        $item = new Link($item, $result->getUrl())->toRenderable();
         $item['#wrapper_attributes'] = [
           'class' => [
             'facet-summary-item--facet',
@@ -475,30 +471,14 @@ class LastActiveFacetsProcessor extends ProcessorPluginBase implements BuildProc
 
   protected function getTimestamp($value, int $granularity) {
 
-    switch ($granularity) {
-      case SearchApiDate::FACETAPI_DATE_YEAR:
-        $format = 'Y';
-        break;
-      case SearchApiDate::FACETAPI_DATE_MONTH:
-        $format = 'Y-m';
-        break;
-
-      case SearchApiDate::FACETAPI_DATE_DAY:
-        $format = 'Y-m-d';
-        break;
-
-      case SearchApiDate::FACETAPI_DATE_HOUR:
-        $format = 'Y-m-d\TH';
-        break;
-
-      case SearchApiDate::FACETAPI_DATE_MINUTE:
-        $format = 'Y-m-d\TH:i';
-        break;
-
-      default:
-        $format = 'Y-m-d\TH:i:s';
-        break;
-    }
+    $format = match ($granularity) {
+        SearchApiDate::FACETAPI_DATE_YEAR => 'Y',
+        SearchApiDate::FACETAPI_DATE_MONTH => 'Y-m',
+        SearchApiDate::FACETAPI_DATE_DAY => 'Y-m-d',
+        SearchApiDate::FACETAPI_DATE_HOUR => 'Y-m-d\TH',
+        SearchApiDate::FACETAPI_DATE_MINUTE => 'Y-m-d\TH:i',
+        default => 'Y-m-d\TH:i:s',
+    };
 
     $date = \DateTime::createFromFormat($format, $value);
     return $date->getTimestamp();

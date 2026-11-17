@@ -158,7 +158,7 @@ class EmbargoSettingsForm extends ConfigFormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     // Global IPs as array
-    $global_ips = array_map('trim', explode("\n", $form_state->getValue('global_ip_bypass_addresses')));
+    $global_ips = array_map(trim(...), explode("\n", $form_state->getValue('global_ip_bypass_addresses')));
     $this->config('format_strawberryfield.embargo_settings')
       ->set('date_until_json_key',trim($form_state->getValue('date_until_json_key')))
       ->set('ip_json_key', trim($form_state->getValue('ip_json_key')))

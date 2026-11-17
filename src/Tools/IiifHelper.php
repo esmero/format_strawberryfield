@@ -13,10 +13,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 class IiifHelper {
 
   use StringTranslationTrait;
-
-  protected $publicUrl;
   protected $identifier;
-  protected $internalUrl;
 
   /**
    * @var array;
@@ -29,11 +26,9 @@ class IiifHelper {
   protected $httpClient;
 
 
-  public function __construct($publicUrl, $internalUrl) {
+  public function __construct(protected $publicUrl, protected $internalUrl) {
     //@TODO verify that remoteURL is a valid, actual IIIF info json URL.
     $this->httpClient = \Drupal::httpClient();
-    $this->publicUrl = $publicUrl;
-    $this->internalUrl = $internalUrl;
   }
 
 

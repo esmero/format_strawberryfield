@@ -2,6 +2,7 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Render\Markup;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -10,6 +11,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Template\TwigEnvironment;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
@@ -19,19 +21,12 @@ use Drupal\Core\File\FileSystemInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_citation_formatter",
- *   label = @Translation("Strawberry Field Simple Citation Formatter"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryCitationFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_citation_formatter',
+  label: new TranslatableMarkup('Strawberry Field Simple Citation Formatter'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryCitationFormatter extends StrawberryBaseFormatter {
 
   /**
@@ -138,7 +133,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     }
     $csl_root = $this->cslRoot;
     $csl_exists = is_dir($csl_root);
-    $style_options = array();
+    $style_options = [];
     if (!$csl_exists) {
       $this->messenger()->addWarning('Please run "drush archipelago-download-citeproc-dependencies" before using this formatter.', 'warning');
     }
@@ -221,14 +216,14 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
     $summary = [];
     $summary[] = $this->t('Uses your selected template, style(s), and metadata locale (language) key to generate citations.');
     $summary[] = $this->t('Selected Metadata Template: %template', [
-      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
+      '%template' => $entity_label ?: 'None selected. Please configure this formatter by providing one in the configuration form.',
     ]);
     // Long titles used on form are too long for here so tried using short, but not available for all so sticking with filenames for now.
     $summary[] = $this->t('Selected Citation Style(s): %styles', [
       '%styles' => $citationstyles ? implode(', ', $citationstyles) : 'None selected. Please configure this formatter by providing at least one in the configuration form.',
     ]);
     $summary[] = $this->t('Selected Metadata key for locale (language): %locale', [
-      '%locale' => $localekey ? $localekey : 'None selected. The default will be used.',
+      '%locale' => $localekey ?: 'None selected. The default will be used.',
     ]);
     return $summary;
   }
@@ -375,7 +370,7 @@ class StrawberryCitationFormatter extends StrawberryBaseFormatter {
           ];
         }
       }
-      catch (\Exception $e) {
+      catch (\Exception) {
         // Render each element as markup.
         $elements[$delta] = [
           '#markup' => json_encode(

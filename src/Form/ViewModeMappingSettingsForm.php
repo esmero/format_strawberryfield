@@ -161,14 +161,14 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
     foreach ($current_mappings as $index => $mapping) {
       $key = $index + 1;
       $form['table-row'][$key]['#attributes']['class'][] = 'draggable';
-      $form['table-row'][$key]['#weight'] = isset($mapping['weight']) ? $mapping['weight'] : $key;
+      $form['table-row'][$key]['#weight'] = $mapping['weight'] ?? $key;
 
       $form['table-row'][$key]['type'] = [
         '#type' => 'textfield',
         '#required' => TRUE,
         '#default_value' => $mapping['jsontype'],
       ];
-      $view_mode_mapping_for_this_row = isset($view_mode_list[$mapping['view_mode']]) ? $view_mode_list[$mapping['view_mode']] : t(
+      $view_mode_mapping_for_this_row = $view_mode_list[$mapping['view_mode']] ?? t(
         'View mode @view_mode does not exist! Please select a new one.',
         ['@view_mode' => $mapping['view_mode']]
       );
@@ -194,7 +194,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       $form['table-row'][$key]['active'] = [
         '#type' => 'checkbox',
         '#required' => FALSE,
-        '#default_value' => isset($mapping['active']) ? $mapping['active'] : TRUE,
+        '#default_value' => $mapping['active'] ?? TRUE,
       ];
       $form['table-row'][$key]['actions'] = [
         '#type' => 'submit',
@@ -214,10 +214,10 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
         '#type' => 'weight',
         '#title' => $this->t(
           'Weight for @title',
-          ['@title' => $mapping['jsontype']]
+          ['@title' => $mapping['jsontype'] ?? '']
         ),
         '#title_display' => 'invisible',
-        '#default_value' => isset($mapping['weight']) ? $mapping['weight'] : $key,
+        '#default_value' => $mapping['weight'] ?? $key,
         '#attributes' => ['class' => ['table-sort-weight']],
       ];
     }
@@ -322,9 +322,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
    */
   public function addPair(array &$form, FormStateInterface $form_state) {
 
-    $vmmappings = $form_state->get('vmmappings') ? $form_state->get(
-      'vmmappings'
-    ) : [];
+    $vmmappings = $form_state->get('vmmappings') ?: [];
     $vmmappings[] = [
       'jsontype' => $form_state->getValue(
         ['add_fieldset', 'type']
@@ -345,9 +343,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
 
     $triggering = $form_state->getTriggeringElement();
     if (isset($triggering['#rowtodelete'])) {
-      $vmmappings = $form_state->get('vmmappings') ? $form_state->get(
-        'vmmappings'
-      ) : [];
+      $vmmappings = $form_state->get('vmmappings') ?: [];
       unset($vmmappings[$triggering['#rowtodelete'] - 1]);
       $form_state->set('vmmappings', array_values($vmmappings));
       $this->messenger()->addWarning('You have unsaved changes.');
@@ -373,7 +369,7 @@ class ViewModeMappingSettingsForm extends ConfigFormBase {
       usort(
         $rows,
         [
-          '\Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm',
+          \Drupal\format_strawberryfield\Form\ViewModeMappingSettingsForm::class,
           'sortSettings',
         ]
       );

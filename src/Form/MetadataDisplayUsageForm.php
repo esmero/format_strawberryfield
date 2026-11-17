@@ -20,13 +20,11 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  * @ingroup format_strawberryfield
  */
 class MetadataDisplayUsageForm extends FormBase {
-  private MetadataDisplayUsageServiceInterface $metadatadisplayUsageService;
-
   /**
-   * @param MetadataDisplayUsageServiceInterface $metadatadisplay_usage_service
+   * @param MetadataDisplayUsageServiceInterface $metadatadisplayUsageService
    */
-  public function __construct(MetadataDisplayUsageServiceInterface $metadatadisplay_usage_service) {
-    $this->metadatadisplayUsageService = $metadatadisplay_usage_service;
+  public function __construct(private readonly MetadataDisplayUsageServiceInterface $metadatadisplayUsageService)
+  {
   }
 
   /**
@@ -71,7 +69,7 @@ class MetadataDisplayUsageForm extends FormBase {
    * @param FormStateInterface $form_state
    *   An associative array containing the current state of the form.
    */
-  public function buildForm(array $form, FormStateInterface $form_state, MetadataDisplayInterface $metadatadisplay_entity = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, ?MetadataDisplayInterface $metadatadisplay_entity = NULL) {
    if ($metadatadisplay_entity) {
      $form = $this->metadatadisplayUsageService->getRenderableUsage($metadatadisplay_entity);
    }

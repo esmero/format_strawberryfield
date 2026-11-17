@@ -3,11 +3,12 @@
 namespace Drupal\format_strawberryfield\Controller;
 
 use Drupal\Component\Plugin\Exception\PluginException;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\format_strawberryfield\Entity\MetadataDisplayEntity;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\format_strawberryfield\Entity\MetadataExposeConfigEntity;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -161,17 +162,8 @@ class IiifContentSearchController extends ControllerBase {
     string $version,
     $page = '0'
   ) {
-
     if (!$this->iiifConfig->get('iiif_content_search_api_active')) {
-      $data = [
-        'error' => [
-          'errors' => [
-            'message' => 'IIIF Content Search API V0, V1 and V2 are disabled on this Server'
-          ]
-        ],
-        'code' => 503,
-      ];
-      return new JsonResponse($data, 503);
+      return $this->exceptionResponse('IIIF Content Search API V0, V1 and V2 are disabled on this Server', 503);
     }
 
     // V0 is V1 really, but Universal viewer uses that one
@@ -179,9 +171,9 @@ class IiifContentSearchController extends ControllerBase {
     if ($version == "v0") {
       $version = "v1";
     }
-    $entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
+    $metadatadisplay_entity = $metadataexposeconfig_entity->getMetadataDisplayEntity();
     $iiif_response = [];
-    if ($entity) {
+    if ($metadatadisplay_entity) {
       $per_page = $this->iiifConfig->get('iiif_content_search_api_results_per_page');
       $query_length = $this->iiifConfig->get('iiif_content_search_api_query_length') ?? 64;
 
@@ -192,26 +184,20 @@ class IiifContentSearchController extends ControllerBase {
       $current_url_clean_no_page = explode("/", $current_url_clean_no_page);
       array_pop($current_url_clean_no_page);
       $current_url_clean_no_page = implode("/", $current_url_clean_no_page);
-
-      $the_query_string = $request->get('q','');
+      // q is coming from ?q= we do not allow other source.
+      $the_query_string = $request->query->get('q', '');
       $the_query_string = substr(trim($the_query_string), 0, $query_length);
-      /// I have to modify the request URL so the Template does not render
-      /// with the Search API as <current> or worst, skips caches.
       $cacheabledata = $this->renderer->executeInRenderContext(
         new RenderContext(),
-        function () use ($metadataexposeconfig_entity, $node) {
-          return $metadataexposeconfig_entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE);
-        }
+        fn() => $metadataexposeconfig_entity->getUrlForItemFromNodeUUID($node->uuid(), TRUE)
       );
-
-      /* Coool beans, in a good way */
       $canonical_url = $cacheabledata;
       if ($canonical_url) {
         $format = pathinfo($canonical_url, PATHINFO_BASENAME);
         $server_arguments = $request->server->all();
         $server_arguments['REQUEST_URI'] = $canonical_url;
 
-        $original_request = $this->requestStack->pop();
+        $original_request = $this->requestStack->getCurrentRequest();
         $subrequest = $original_request->duplicate(
           [], [], NULL, NULL, [],
           $server_arguments
@@ -236,38 +222,24 @@ class IiifContentSearchController extends ControllerBase {
 
         /** @var $raw_inputbag \Symfony\Component\HttpFoundation\InputBag */
         $raw_inputbag = $subrequest->attributes->all()['_raw_variables'];
-        $raw_inputbag->add(['format' => $format]);
         $raw_inputbag->remove('page');
         $raw_inputbag->remove('version');
         $raw_inputbag->remove('mode');
+        $raw_inputbag->add(['format' => $format]);
         $subrequest->attributes->set('_raw_variables', $raw_inputbag);
         $subrequest->attributes->set('_controller', '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController::castViaTwig');
 
-
-        // This is quite a trick. basically we get the current HTTP KERNEL
-        // And invoque a call directly. This has the benefit of using the whole caching mechanic
-        // The controller trick was nice. But not as nice as this.
         /* @TODO Inject the http kernel service */
         /** @var \Symfony\Component\HttpKernel\HttpKernelInterface $kernel */
         $kernel = \Drupal::getContainer()->get('http_kernel');
-        $response = $kernel->handle($subrequest, HttpKernelInterface::SUB_REQUEST);
-        /* This call is right was  never ever being cached. So keeping as a comment.*/
-        /* @var $controller \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController */
-        /*
-        $controller = $this->classResolver->getInstanceFromDefinition(
-          '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController'
-        );
-        $response = $controller->castViaTwig(
-          $node, $metadataexposeconfig_entity, $format
-        );
-         Restore the original request. We need it to return the right response for this search.
-        $this->requestStack->pop();
-        */
+        // Caching won't match the front end caching generated by an inline rendering
+        // One future way would be always use MAIN request rendering for inline too
+        // At the Formatter level. But it could lead to other issues
+        // Using Main request properly re-uses the original Cache if present.
+        $iiif_manifest_response = $kernel->handle($subrequest, HttpKernelInterface::SUB_REQUEST);
 
-        $this->requestStack->push($original_request);
-
-        if ($response->isSuccessful()) {
-          $json_string = $response->getContent() ?? '{}';
+        if ($iiif_manifest_response->isSuccessful()) {
+          $json_string = $iiif_manifest_response->getContent() ?? '{}';
           $jsonArray = json_decode($json_string, TRUE);
           if (json_last_error() == JSON_ERROR_NONE) {
             if ($this->iiifConfig->get('iiif_content_search_validate_exposed')) {
@@ -285,16 +257,21 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
               if (!$valid) {
-                $data = [
-                  'error' => [
-                    'errors' => [
-                      'message' => 'IIIF Content Search API V1 and V2 are disabled on this particular Manifest/Digital Object'
-                    ]
-                  ],
-                  'code' => 503,
-                ];
-                return new JsonResponse($data, 503);
+                return $this->exceptionResponse('IIIF Content Search API V1 and V2 are disabled on this particular Manifest/Digital Object', 503);
               }
+            }
+
+            // Create the real response now
+            $response = new CacheableJsonResponse();
+              // Set CORS. IIIF and others will assume this is true.
+            $response->headers->set('Access-Control-Allow-Origin','*');
+            $response->addCacheableDependency($node);
+            $response->addCacheableDependency($metadatadisplay_entity);
+            $response->addCacheableDependency($metadataexposeconfig_entity);
+            $response->getCacheableMetadata()->addCacheTags( $iiif_manifest_response->getCacheableMetadata()->getCacheTags() ?? []);
+            $response->getCacheableMetadata()->addCacheContexts( Cache::mergeContexts(['url.query_args'], $iiif_manifest_response->getCacheableMetadata()->getCacheContexts() ?? []));
+            if ($iiif_manifest_response->getCacheableMetadata()->getCacheMaxAge() == 0) {
+              $response->getCacheableMetadata()->setCacheMaxAge(0);
             }
 
             $image_hash = [];
@@ -307,22 +284,22 @@ class IiifContentSearchController extends ControllerBase {
             $visual_processors =  $this->iiifConfig->get('iiif_content_search_api_visual_enabled_processors') ?? 'ocr';
             //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
             $visual_processors = explode(",", $visual_processors);
-            $visual_processors = array_map('trim', $visual_processors);
+            $visual_processors = array_map(trim(...), $visual_processors);
             $visual_processors = array_filter($visual_processors);
 
             $time_processors =  $this->iiifConfig->get('iiif_content_search_api_time_enabled_processors') ?? 'subtitle';
             //@TODO we could do this also on saving? see \Drupal\format_strawberryfield\Form\IiifSettingsForm::submitForm
             $time_processors = explode(",", $time_processors);
-            $time_processors = array_map('trim', $time_processors);
+            $time_processors = array_map(trim(...), $time_processors);
             $time_processors = array_filter($time_processors);
 
             $text_processors = $this->iiifConfig->get('iiif_content_search_api_text_enabled_processors') ?? '';
             $text_processors = explode(",", $text_processors);
-            $text_processors = array_map('trim', $text_processors);
+            $text_processors = array_map(trim(...), $text_processors);
             $text_processors = array_filter($text_processors);
 
             $metadata_search = $this->iiifConfig->get('iiif_content_search_api_metadata') ?? FALSE;
-
+            $metadata_search_reduce = (bool) ($this->iiifConfig->get('iiif_content_search_api_metadata_one_per_canvasuuid') ?? FALSE);
             // Initialize bc we will share this.
             $jmespath_image_searchresult = [];
 
@@ -336,8 +313,7 @@ class IiifContentSearchController extends ControllerBase {
             }
 
             if ($metadata_search) {
-              $ado_hash = $this->cleanADOJmesPathResult($jmespath_image_searchresult);
-              $ado_hash = $ado_hash;
+              $ado_hash = $this->cleanADOJmesPathResult($jmespath_image_searchresult, $metadata_search_reduce);
               if (count($ado_hash)) {
                 foreach (array_chunk($ado_hash, 100, true) as $ado_hash_chunk) {
                   $results_chunk = $this->metadatafromSolrIndex($the_query_string, [$node->id()], array_keys($ado_hash_chunk),($page * $per_page), $per_page);
@@ -593,7 +569,7 @@ class IiifContentSearchController extends ControllerBase {
                             "value" => $snippet,
                             "format" => "text/html",
                           ],
-                          "target" => $target_id.'#'
+                          "target" => ($target_id).'#'
                         ];
                       }
                     }
@@ -638,7 +614,7 @@ class IiifContentSearchController extends ControllerBase {
                             "value" => $hit_per_canvas['boxes']['snippet'],
                             "format" => "text/html",
                           ],
-                          "target" => $target_id.'#'
+                          "target" => ($target_id).'#'
                         ];
                       }
                     }
@@ -646,8 +622,6 @@ class IiifContentSearchController extends ControllerBase {
                 }
               }
             }
-
-
             if (count($entries) == 0) {
               $total = 0;
             }
@@ -724,8 +698,7 @@ class IiifContentSearchController extends ControllerBase {
           }
         }
         else {
-          // Pass the Template rendering Controller plain back?
-          return $response;
+          return $this->exceptionResponse( 'An error occurred processing your request.', 400);
         }
       }
     }
@@ -744,18 +717,18 @@ class IiifContentSearchController extends ControllerBase {
   protected function cleanImageJmesPathResult(array $jmespath_searchresult): array {
     $image_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
-        foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
-            if (is_string($image_canvas_pair[2] ?? '') && strtolower($image_canvas_pair[2]) == "image") {
-                $image_id = $this->destinationScheme . "://" . IiifHelper::extract_iiif_id($image_canvas_pair[0]);
-                // The $image_canvas_pair[1] is the Canvas targeted by the Image.
-                $image_parts = explode(";", $image_id);
-                $sequence = count($image_parts) > 1 ? end($image_parts) : 1;
-                $image_hash[$image_parts[0]][$sequence][$image_canvas_pair[1]] = [
-                    $entries_percanvas["width"] ?? NULL,
-                    $entries_percanvas["height"] ?? NULL
-                ];
-            }
+      foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
+        if (is_string($image_canvas_pair[2] ?? '') && strtolower($image_canvas_pair[2]) == "image") {
+          $image_id = $this->destinationScheme . "://" . IiifHelper::extract_iiif_id($image_canvas_pair[0]);
+          // The $image_canvas_pair[1] is the Canvas targeted by the Image.
+          $image_parts = explode(";", $image_id);
+          $sequence = count($image_parts) > 1 ? end($image_parts) : 1;
+          $image_hash[$image_parts[0]][$sequence][$image_canvas_pair[1]] = [
+            $entries_percanvas["width"] ?? NULL,
+            $entries_percanvas["height"] ?? NULL
+          ];
         }
+      }
     }
     unset($jmespath_searchresult);
     return $image_hash;
@@ -768,7 +741,7 @@ class IiifContentSearchController extends ControllerBase {
    *
    * @return array
    */
-  protected function cleanADOJmesPathResult(array $jmespath_searchresult): array {
+  protected function cleanADOJmesPathResult(array $jmespath_searchresult, bool $one_per_ado): array {
     $ado_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
       foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
@@ -786,7 +759,20 @@ class IiifContentSearchController extends ControllerBase {
           // just skip if we have no Node uuid.
           continue;
         }
-        $ado_hash[$node_uuid][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
+        // if $one_per_ado (coming from iiif config iiif_content_search_api_metadata_one_per_canvasuuid)
+        // is true, we do not process more than a single canvas per ADO.
+        if ($one_per_ado && !isset($ado_hash[$node_uuid])) {
+          $ado_hash[$node_uuid][$image_canvas_pair[1]] = [
+            $entries_percanvas["width"] ?? NULL,
+            $entries_percanvas["height"] ?? NULL
+            ];
+        }
+        elseif(!$one_per_ado) {
+          $ado_hash[$node_uuid][$image_canvas_pair[1]] = [
+            $entries_percanvas["width"] ?? NULL,
+            $entries_percanvas["height"] ?? NULL
+          ];
+        }
       }
     }
     unset($jmespath_searchresult);
@@ -1388,6 +1374,23 @@ class IiifContentSearchController extends ControllerBase {
     }
 
     return array_unique(array_merge(...$keys));
+  }
+
+  private function exceptionResponse($message, $code): CacheableJsonResponse {
+    $failure_response = new CacheableJsonResponse([
+      'error' => true,
+      'message' => $message,
+    ], $code);
+
+    $failure_response->setMaxAge(0);
+    $failure_response->setSharedMaxAge(0);
+    $failure_response->headers->addCacheControlDirective('no-cache', true);
+    $failure_response->headers->addCacheControlDirective('no-store', true);
+    $failure_response->headers->addCacheControlDirective('must-revalidate', true);
+    $cache_metadata = new CacheableMetadata();
+    $cache_metadata->setCacheMaxAge(0);
+    $failure_response->addCacheableDependency($cache_metadata);
+    return $failure_response;
   }
 
 }

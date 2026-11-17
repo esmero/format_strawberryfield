@@ -5,11 +5,11 @@ namespace Drupal\format_strawberryfield\Controller;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Drupal\strawberryfield\StrawberryfieldUtilityService;
@@ -175,7 +175,7 @@ class MetadataExposeDisplayController extends ControllerBase {
         // Gues mimetype using $format.
         $mimetype = $this->mimeTypeGuesser->guessMimeType($format);
         if ($mimetype != $responsetype) {
-          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], 415);
+          $badresponse = new JsonResponse(['error' => 'Wrong Media type for this endpoint'], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
           return $badresponse;
         }
 
@@ -269,25 +269,41 @@ class MetadataExposeDisplayController extends ControllerBase {
             $cacheabledata = [];
             // @see https://www.drupal.org/node/2638686 to understand
             // What cacheable, Bubbleable metadata and early rendering means.
-            $cacheabledata = $this->renderer->executeInRenderContext(
-              new RenderContext(),
-              function () use ($context, $original_context, $metadatadisplay_entity) {
-                // Allow other modules to provide extra Context!
-                // Call modules that implement the hook, and let them add items.
-                \Drupal::moduleHandler()->alter(
-                  'format_strawberryfield_twigcontext', $context
-                );
-                // In case someone decided to wipe the original context?
-                // We bring it back!
-                $context = $context + $original_context;
-                return $metadatadisplay_entity->renderNative($context);
-              }
-            );
+            try {
+              $cacheabledata = $this->renderer->executeInRenderContext(
+                new RenderContext(),
+                function() use ($context, $original_context, $metadatadisplay_entity) {
+                  // Allow other modules to provide extra Context!
+                  // Call modules that implement the hook, and let them add items.
+                  \Drupal::moduleHandler()->alter(
+                    'format_strawberryfield_twigcontext', $context
+                  );
+                  // In case someone decided to wipe the original context?
+                  // We bring it back!
+                  $context = $context + $original_context;
+                  return $metadatadisplay_entity->renderNative($context);
+                }
+              );
+
+            }
+            catch (\Throwable $e) {
+              $responsetype = 'application/json';
+              $status = 503;
+              $this->loggerFactory->get('format_strawberryfield')->error('Exposed metadata endpoint @endpoint for ADO @node failed with error @e', ['@endpoint' => $metadataexposeconfig_entity->getLabel(), '@e' => $e->getMessage(), '@node' => $node->id()]);
+              $cacheabledata = [
+                'status' => 'error',
+                'message' => 'Service temporarily unavailable. Please try again later.',
+              ];
+              $cacheabledata = json_encode($cacheabledata);
+            }
           }
         }
         switch ($responsetype) {
           case 'application/json':
           case 'application/ld+json':
+            if ($metadataexposeconfig_entity->getMinifyJson()) {
+              $cacheabledata = $this->minifyJSON($cacheabledata);
+            }
             $response = new CacheableJsonResponse(
               $cacheabledata,
               $status,
@@ -295,7 +311,6 @@ class MetadataExposeDisplayController extends ControllerBase {
               TRUE
             );
             break;
-
           case 'application/xml':
           case 'text/plain':
           case 'text/turtle':
@@ -317,20 +332,33 @@ class MetadataExposeDisplayController extends ControllerBase {
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
           $response->headers->set('Access-Control-Allow-Origin','*');
-          $response->addCacheableDependency($node);
-          $response->addCacheableDependency($metadatadisplay_entity);
-          $response->addCacheableDependency($metadataexposeconfig_entity);
-          $metadata_cache_tag = 'node_metadatadisplay:'. $node->id();
-          $response->getCacheableMetadata()->addCacheTags([$metadata_cache_tag]);
-          $response->getCacheableMetadata()->addCacheTags($embargo_tags);
-          $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
-          $response->getCacheableMetadata()->addCacheContexts($embargo_context);
-          if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+          if ($status == 200) {
+            $response->addCacheableDependency($node);
+            $response->addCacheableDependency($metadatadisplay_entity);
+            $response->addCacheableDependency($metadataexposeconfig_entity);
+            $metadata_cache_tag = 'node_metadatadisplay:' . $node->id();
+            $response->getCacheableMetadata()
+              ->addCacheTags([$metadata_cache_tag]);
+            $response->getCacheableMetadata()->addCacheTags($embargo_tags);
+            $response->getCacheableMetadata()->addCacheContexts(['user.roles']);
+            $response->getCacheableMetadata()
+              ->addCacheContexts($embargo_context);
+            if (isset($embargo_info[3]) && $embargo_info[3] === FALSE) {
+              $response->getCacheableMetadata()->setCacheMaxAge(0);
+              $response->setMaxAge(0);
+              $response->setSharedMaxAge(0);
+            }
+          }
+          else {
             $response->getCacheableMetadata()->setCacheMaxAge(0);
+            $response->setMaxAge(0);
+            $response->setSharedMaxAge(0);
+            $response->headers->addCacheControlDirective('no-cache', true);
+            $response->headers->addCacheControlDirective('no-store', true);
+            $response->headers->addCacheControlDirective('must-revalidate', true);
           }
         }
         return $response;
-
       }
       else {
         throw new NotFoundHttpException(
@@ -344,6 +372,18 @@ class MetadataExposeDisplayController extends ControllerBase {
 
       );
     }
+  }
+
+  /**
+   * Minifies a JSON String representation without decoding it into memory.
+   * Will simply remove spaces and breaklines around non double-quoted entries.
+   *
+   * @param $json_string
+   *
+   * @return array|string|string[]|null
+   */
+  private function minifyJSON($json_string) {
+      return preg_replace('/(?>"(?:[^\\\\"]+|\\\\.)*")\K|\s+/s', '', $json_string);
   }
 
 }

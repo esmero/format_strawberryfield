@@ -8,29 +8,24 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 
 /**
  * Simplistic Strawberry 3D Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_3d_formatter",
- *   label = @Translation("Strawberry Field 3D Model Formatter"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\Strawberry3DFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_3d_formatter',
+  label: new TranslatableMarkup('Strawberry Field 3D Model Formatter'),
+  field_types: ['strawberryfield_field']
+)]
 class Strawberry3DFormatter extends StrawberryBaseFormatter {
   /**
    * {@inheritdoc}
@@ -138,7 +133,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
-    $upload_keys = array_map('trim', $upload_keys);
+    $upload_keys = array_map(trim(...), $upload_keys);
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
@@ -227,9 +222,7 @@ class Strawberry3DFormatter extends StrawberryBaseFormatter {
             is_array($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"]) &&
             count($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"]) == 3) {
             $vector = array_filter($jsondata["ap:viewerhints"]["strawberry_3d_formatter"]["cameraUpVector"],
-              function($item) {
-                return ($item == 1 ||  $item == 0);
-              }
+              fn($item) => $item == 1 ||  $item == 0
             );
             if (count($vector) == 3) {
               $camera_up = $vector;

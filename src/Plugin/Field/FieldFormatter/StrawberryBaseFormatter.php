@@ -13,6 +13,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
+use Drupal\file\FileAccessFormatterControlHandlerInterface;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
@@ -79,7 +80,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     array $third_party_settings,
     ConfigFactoryInterface $config_factory,
     EmbargoResolverInterface $embargo_resolver,
-    AccountInterface $current_user = NULL
+    ?AccountInterface $current_user = NULL
   ) {
     parent::__construct(
       $plugin_id,
@@ -310,7 +311,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
           $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
         }
       }
-      catch (\Exception $e) {
+      catch (\Exception) {
         $form_state->setErrorByName(implode('][', $parents), t("Value is not a valid JSON"));
       }
     }
@@ -323,7 +324,7 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
     // Only check access if the current file access control handler explicitly
     // opts in by implementing FileAccessFormatterControlHandlerInterface.
     $access_handler_class = $entity->getEntityType()->getHandlerClass('access');
-    if (is_subclass_of($access_handler_class, '\Drupal\file\FileAccessFormatterControlHandlerInterface')) {
+    if (is_subclass_of($access_handler_class, FileAccessFormatterControlHandlerInterface::class)) {
       return $entity->access('view', NULL, FALSE);
     }
     else {
@@ -522,17 +523,17 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
    * @return bool
    */
   protected function varComp($var1, string $op, $var2) {
-    switch ($op) {
-      case "==": return $var1 == $var2;
-      case "!=": return $var1 != $var2;
-      case "!==": return $var1 !== $var2;
-      case ">=": return $var1 >= $var2;
-      case "<=": return $var1 <= $var2;
-      case ">": return $var1 >  $var2;
-      case "<": return $var1 <  $var2;
-      case "===": return $var1 ===  $var2;
-      default: return true;
-    }
+    return match ($op) {
+        "==" => $var1 == $var2,
+        "!=" => $var1 != $var2,
+        "!==" => $var1 !== $var2,
+        ">=" => $var1 >= $var2,
+        "<=" => $var1 <= $var2,
+        ">" => $var1 >  $var2,
+        "<" => $var1 <  $var2,
+        "===" => $var1 ===  $var2,
+        default => true,
+    };
   }
 
   /**

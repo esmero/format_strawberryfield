@@ -36,9 +36,7 @@ class SliderProcessor extends ProcessorPluginBase implements PostQueryProcessorI
         'count' => (int) $result->getCount(),
       ];
     }
-    uasort($simple_results, function ($a, $b) {
-      return (int) $a['value'] - $b['value'];
-    });
+    uasort($simple_results, fn($a, $b) => (int) $a['value'] - $b['value']);
 
     $step = $config['step'];
     if ($config['min_type'] == 'fixed') {
@@ -50,7 +48,6 @@ class SliderProcessor extends ProcessorPluginBase implements PostQueryProcessorI
       $max = end($simple_results)['value'] ?? 0;
       // If max is not divisible by step, we should add the remainder to max to
       // make sure that we don't lose any possible values.
-
     }
     $step = floor(abs($min - $max) / 100);
 

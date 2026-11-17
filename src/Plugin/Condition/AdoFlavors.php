@@ -26,11 +26,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class AdoFlavors extends ConditionPluginBase implements ContainerFactoryPluginInterface {
 
   /**
-   * @var \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface
-   */
-  private StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService;
-
-  /**
    * Creates a new AdoType instance.
    *
    * @param array $configuration
@@ -41,9 +36,8 @@ class AdoFlavors extends ConditionPluginBase implements ContainerFactoryPluginIn
    *   The plugin implementation definition.
    * @param \Drupal\strawberryfield\StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, private readonly StrawberryfieldUtilityServiceInterface $strawberryfieldUtilityService) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->strawberryfieldUtilityService = $strawberryfieldUtilityService;
   }
 
   /**
@@ -119,7 +113,7 @@ class AdoFlavors extends ConditionPluginBase implements ContainerFactoryPluginIn
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->configuration['ado_flavors'] = array_filter(array_map('trim', explode(PHP_EOL, $form_state->getValue('ado_flavors'))));
+    $this->configuration['ado_flavors'] = array_filter(array_map(trim(...), explode(PHP_EOL, $form_state->getValue('ado_flavors'))));
     $this->configuration['ado_direct'] = (bool) $form_state->getValue('ado_direct');
     $this->configuration['ado_children'] = (bool) $form_state->getValue('ado_children');
     $this->configuration['ado_grandchildren'] = (bool) $form_state->getValue('ado_grandchildren');
@@ -150,7 +144,7 @@ class AdoFlavors extends ConditionPluginBase implements ContainerFactoryPluginIn
         $level_op = ($this->configuration['ado_level_op'] ?? FALSE) ? 'AND' : 'OR';
         $matches = $this->strawberryfieldUtilityService->getCountByProcessorsAndLevelInSolr($entity, $this->configuration['ado_flavors'], $processor_op, $this->configuration['ado_direct'], $this->configuration['ado_children'], $this->configuration['ado_grandchildren'], $level_op) > 0;
       }
-      catch (\Exception $e) {
+      catch (\Exception) {
         $this->messenger()->addWarning('The ADO Flavours Block condition for Block @id generated a Search API exception. Please check your Logs.',[
           '@id' => $this->getPluginId()
         ]);

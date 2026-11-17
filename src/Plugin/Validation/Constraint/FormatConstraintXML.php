@@ -2,19 +2,17 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Validation\Constraint;
 
-use Symfony\Component\Validator\Constraint;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Validation\Attribute\Constraint;
+use Symfony\Component\Validator\Constraint as SymfonyConstraint;
 
 /**
  * Valid JSON constraint.
  *
  * Verifies that input values are valid JSON.
- *
- * @Constraint(
- *   id = "valid_strawberry_xml",
- *   label = @Translation("Valid XML", context = "Validation")
- * )
  */
-class FormatConstraintXML extends Constraint {
+#[Constraint(id: 'valid_strawberry_xml', label: new TranslatableMarkup('Valid XML', ['context' => 'Validation']))]
+class FormatConstraintXML extends SymfonyConstraint {
 
   /**
    * The default violation message.

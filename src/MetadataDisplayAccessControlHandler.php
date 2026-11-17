@@ -14,18 +14,22 @@ class MetadataDisplayAccessControlHandler extends EntityAccessControlHandler {
    * Link the activities to the permissions. checkAccess is called with the
    * $operation as defined in the routing.yml file.
    */
-  protected function checkAccess(EntityInterface $entity, $operation, AccountInterface $account) {
-    switch ($operation) {
-      case 'view':
-        return AccessResult::allowedIfHasPermission($account, 'view metadatadisplay entity');
-
-      case 'edit':
-        return AccessResult::allowedIfHasPermission($account, 'edit metadatadisplay entity');
-
-      case 'delete':
-        return AccessResult::allowedIfHasPermission($account, 'delete metadatadisplay entity');
+  protected function checkAccess(EntityInterface $entity, $operation, AccountInterface $account)
+  {
+    if ($account->isAnonymous()) {
+      return AccessResult::forbidden();
     }
-    return AccessResult::allowed();
+
+    if ($account->hasPermission('administer metadatadisplay entity')) {
+      return AccessResult::allowed()->cachePerPermissions();
+    }
+
+    return match ($operation) {
+      'view' => AccessResult::allowedIfHasPermission($account, 'view metadatadisplay entity'),
+      'edit', 'view all revisions', 'view revision', 'revert' => AccessResult::allowedIfHasPermission($account, 'edit metadatadisplay entity'),
+      'delete' => AccessResult::allowedIfHasPermission($account, 'delete metadatadisplay entity'),
+      default => AccessResult::neutral(),
+    };
   }
 
   /**

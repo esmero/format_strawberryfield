@@ -9,10 +9,11 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -25,20 +26,11 @@ use Drupal\Component\Utility\NestedArray;
 
 /**
  * Mirador Viewer Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_mirador_formatter",
- *   label = @Translation("Strawberry Field Media Formatter using the Mirador
- *   IIIF Viewer plugin"), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMiradorFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_mirador_formatter',
+  label: new TranslatableMarkup('Strawberry Field Media Formatter using the Mirador IIIF Viewer plugin'),
+  field_types: ['strawberryfield_field'])]
 class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -163,7 +155,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
-      if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
+      if ($triggering_element['#ajax']['callback'][0] == static::class) {
         $parents = array_slice($triggering_element['#parents'], 0, -1);
         $options_for_mainsource = $form_state->getValue($parents);
       }
@@ -187,7 +179,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
 
     // Define #ajax callback.
     $ajax = [
-      'callback' => [get_class($this), 'ajaxCallbackMainSource'],
+      'callback' => [static::class, 'ajaxCallbackMainSource'],
       'wrapper' => 'main-mediasource-ajax-container',
     ];
     // Because main media source needs to update its choices based on
@@ -381,7 +373,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
 
     $main_mediasource = $this->getSetting(
       'main_mediasource'
-    ) ? $this->getSetting('main_mediasource') : NULL;
+    ) ?: NULL;
     if ($this->getSetting('mediasource') && is_array($this->getSetting('mediasource'))) {
       $mediasource = $this->getSetting('mediasource');
       foreach ($mediasource as $source => $enabled) {
@@ -588,10 +580,10 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
         if (isset($manifests[$main_mediasource]) && !empty($manifests[$main_mediasource])) {
           // Take only the first since we could have more
           $main_manifesturl = array_shift($manifests[$main_mediasource]);
-          $all_manifesturl =  array_reduce($manifests,'array_merge',[]);
+          $all_manifesturl =  array_reduce($manifests,array_merge(...),[]);
         } else {
           // reduce flattens and applies a merge. Basically we get a simple list.
-          $all_manifesturl = array_reduce($manifests,'array_merge',[]);
+          $all_manifesturl = array_reduce($manifests,array_merge(...),[]);
           $main_manifesturl = array_shift($all_manifesturl);
         }
 
@@ -703,7 +695,6 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
     array $jsondata,
     FieldItemInterface $item
   ) {
-    $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $manifests = [];
 

@@ -74,7 +74,7 @@ class MetadataDisplayDownloadForm extends FormBase {
       'Content-Disposition' => $attachment . 'filename="' . $filename . '"',
     ];
 
-    $response = new Response($body, 200, $headers);
+    $response = new Response($body, Response::HTTP_OK, $headers);
     $response->setPrivate();
     $form_state->setResponse($response);
   }
@@ -90,7 +90,7 @@ class MetadataDisplayDownloadForm extends FormBase {
    * @param FormStateInterface $form_state
    *   An associative array containing the current state of the form.
    */
-  public function buildForm(array $form, FormStateInterface $form_state, MetadataDisplayInterface $metadatadisplay_entity = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, ?MetadataDisplayInterface $metadatadisplay_entity = NULL) {
    if ($metadatadisplay_entity) {
      if (!$this->getEntity()) {
        $this->setEntity($metadatadisplay_entity);

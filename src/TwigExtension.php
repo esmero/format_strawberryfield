@@ -60,11 +60,6 @@ class TwigExtension extends AbstractExtension {
   protected $requestStack;
 
   /**
-   * @var HttpKernelInterface
-   */
-  protected HttpKernelInterface $httpKernel;
-
-  /**
    * Constructs \Drupal\format_strawberryfield\TwigExtension
    *
    * @param RendererInterface $renderer
@@ -72,13 +67,12 @@ class TwigExtension extends AbstractExtension {
    * @param ParseModePluginManager $parse_mode_manager
    *   The search API parse mode manager.
    * @param RequestStack $request_stack
-   * @param HttpKernelInterface $http_kernel
+   * @param HttpKernelInterface $httpKernel
    */
-  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager, RequestStack $request_stack, HttpKernelInterface $http_kernel) {
+  public function __construct(RendererInterface $renderer, ParseModePluginManager $parse_mode_manager, RequestStack $request_stack, protected HttpKernelInterface $httpKernel) {
     $this->renderer = $renderer;
     $this->parseModeManager = $parse_mode_manager;
     $this->requestStack = $request_stack;
-    $this->httpKernel = $http_kernel;
   }
 
   public function getTests(): array {
@@ -102,7 +96,7 @@ class TwigExtension extends AbstractExtension {
   /**
    * @inheritDoc
    */
-  public function getFunctions() {
+  public function getFunctions(): array {
     return [
       new TwigFunction('sbf_entity_ids_by_label',
         $this->entityIdsByLabel(...)),
@@ -119,7 +113,7 @@ class TwigExtension extends AbstractExtension {
   /**
    * @inheritDoc
    */
-  public function getFilters() {
+  public function getFilters(): array {
     return [
       new TwigFilter('sbf_json_decode', $this->sbfJsonDecode(...)),
       new TwigFilter('sbf_render', $this->sbfRenderVar(...)),
@@ -220,7 +214,7 @@ class TwigExtension extends AbstractExtension {
   public function entityIdsByLabel(
     string $label,
     string $entity_type,
-    string $bundle_identifier = NULL,
+    ?string $bundle_identifier = NULL,
     $limit = 1
   ): ?array {
     $fields = [
@@ -252,7 +246,7 @@ class TwigExtension extends AbstractExtension {
       } catch (\Exception $exception) {
         $message = t('@exception_type thrown in @file:@line while querying for @entity_type entity ids matching "@label". Message: @response',
           [
-            '@exception_type' => get_class($exception),
+            '@exception_type' => $exception::class,
             '@file' => $exception->getFile(),
             '@line' => $exception->getLine(),
             '@entity_type' => $entity_type,
@@ -298,7 +292,7 @@ class TwigExtension extends AbstractExtension {
       }
       return json_decode($value, TRUE, 64,
         JSON_INVALID_UTF8_IGNORE | JSON_OBJECT_AS_ARRAY);
-    } catch (\Exception $exception) {
+    } catch (\Exception) {
       return NULL;
     }
   }
@@ -446,7 +440,7 @@ class TwigExtension extends AbstractExtension {
    *
    * @return mixed
    */
-  public function clipboardCopy(string $copyContentCssClass = NULL, string $copyButtonCssClass = NULL, string $copyButtonText = NULL) {
+  public function clipboardCopy(?string $copyContentCssClass = NULL, ?string $copyButtonCssClass = NULL, ?string $copyButtonText = NULL) {
 
     if (is_null($copyContentCssClass)) {
       return '';
@@ -495,7 +489,7 @@ class TwigExtension extends AbstractExtension {
    *
    * @return string
    */
-  public function edtfToHumanDate($edtfString, string $lang = NULL): string {
+  public function edtfToHumanDate($edtfString, ?string $lang = NULL): string {
     if (empty($edtfString)) {
       return '';
     }
@@ -503,7 +497,7 @@ class TwigExtension extends AbstractExtension {
       return '';
     }
 
-    $lang = $lang ?? 'en';
+    $lang ??= 'en';
     $parser = EdtfFactory::newParser();
     $parsed = $parser->parse((string)$edtfString);
     if ($parsed->isValid()) {
@@ -512,7 +506,7 @@ class TwigExtension extends AbstractExtension {
         $humanizer = EdtfFactory::newHumanizerForLanguage($lang);
         return $humanizer->humanize($edtfValue);
       }
-      catch (\Exception $exception) {
+      catch (\Exception) {
         return '';
       }
     }
@@ -541,8 +535,8 @@ class TwigExtension extends AbstractExtension {
       if ($parsed->isValid()) {
         $edtfValue = $parsed->getEdtfValue();
         // @todo remove once EDTF fixes their invalid Constructor for EDTF\Model\Interval that should per interface never allow NULL for start nor end date
-        switch (get_class($edtfValue)) {
-          case "EDTF\Model\Interval":
+        switch ($edtfValue::class) {
+          case \EDTF\Model\Interval::class:
             if ($edtfValue->hasStartDate()) {
               $values_parsed[] = date('Y-m-d', $edtfValue->getMin());
             }
@@ -559,7 +553,7 @@ class TwigExtension extends AbstractExtension {
         return array_unique($values_parsed);
       }
     }
-    catch (\Exception $exception) {
+    catch (\Exception) {
       return [];
     }
 
@@ -595,10 +589,10 @@ class TwigExtension extends AbstractExtension {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\search_api\SearchApiException
    */
-  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], int $limit = NULL, int $offset = NULL): array {
+  public function searchApiQuery(string $index, string $term, array $fulltext, array $filters, array $facets, array $sort = ['search_api_relevance' => QueryInterface::SORT_DESC], ?int $limit = NULL, ?int $offset = NULL): array {
 
-    $limit = $limit ?? 1;
-    $offset = $offset ?? 0;
+    $limit ??= 1;
+    $offset ??= 0;
 
     /** @var \Drupal\search_api\IndexInterface[] $indexes */
     $indexes = \Drupal::entityTypeManager()
@@ -716,7 +710,7 @@ class TwigExtension extends AbstractExtension {
         }
       }
     }
-    catch (\Exception $exception) {
+    catch (\Exception) {
       return '';
     }
 
@@ -787,7 +781,7 @@ class TwigExtension extends AbstractExtension {
 
 			return $ocr;
 		}
-		catch (\Exception $exception) {
+		catch (\Exception) {
 			return [];
 		}
 
@@ -881,7 +875,7 @@ class TwigExtension extends AbstractExtension {
         $return = $arg->toString();
       }
       else {
-        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+        throw new \Exception('Object of type ' . $arg::class . ' cannot be printed.');
       }
     }
 
@@ -905,21 +899,10 @@ class TwigExtension extends AbstractExtension {
     }
 
     $arg['#printed'] = FALSE;
-    $rendered_value = NULL;
     try {
       $rendered_value = $this->renderer->render($arg);
     }
-    catch (\LogicException $e) {
-      // We can't just catch any exception. The Ajax responder from the FormBuilder will throw exceptions
-      // Just to close the response! Drupal gosh. So hard!
-      // This Might fail on an AjaxResponse or anything that is using RenderRoot?
-      // I have no solution yet.
-      // But will work on Template previews and full page renders.
-      \Drupal::logger('format_strawberryfield')->log('error', $e->getMessage(), []);
-      $rendered_value = $env->getRuntime(EscaperRuntime::class)->escape('Sorry, error', $strategy, $charset, $autoescape);
-
-    }
-    catch (\RuntimeException $e) {
+    catch (\LogicException|\RuntimeException $e) {
       // We can't just catch any exception. The Ajax responder from the FormBuilder will throw exceptions
       // Just to close the response! Drupal gosh. So hard!
       // This Might fail on an AjaxResponse or anything that is using RenderRoot?
@@ -1019,7 +1002,7 @@ class TwigExtension extends AbstractExtension {
         return $arg->toString();
       }
       else {
-        throw new \Exception('Object of type ' . get_class($arg) . ' cannot be printed.');
+        throw new \Exception('Object of type ' . $arg::class . ' cannot be printed.');
       }
     }
 

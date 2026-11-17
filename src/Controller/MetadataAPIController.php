@@ -90,13 +90,6 @@ class MetadataAPIController extends ControllerBase
   protected $embargoResolver;
 
   /**
-   * The typed data manager.
-   *
-   * @var \Drupal\Core\TypedData\TypedDataManagerInterface
-   */
-  protected TypedDataManagerInterface $typedDataManager;
-
-  /**
    * MetadataAPIcontroller constructor.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
@@ -112,7 +105,7 @@ class MetadataAPIController extends ControllerBase
    * @param \Drupal\format_strawberryfield\EmbargoResolverInterface $embargo_resolver
    * @param \Drupal\Component\Datetime\TimeInterface $time
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache_backend
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typed_data_manager
+   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    */
   public function __construct(
     RequestStack                  $request_stack,
@@ -123,7 +116,10 @@ class MetadataAPIController extends ControllerBase
     EmbargoResolverInterface      $embargo_resolver,
     TimeInterface                 $time,
     CacheBackendInterface         $cache_backend,
-    TypedDataManagerInterface     $typed_data_manager
+    /**
+     * The typed data manager.
+     */
+    protected TypedDataManagerInterface     $typedDataManager
   )
   {
     $this->requestStack = $request_stack;
@@ -135,7 +131,6 @@ class MetadataAPIController extends ControllerBase
     $this->time = $time;
     $this->cacheBackend = $cache_backend;
     $this->useCaches = TRUE;
-    $this->typedDataManager = $typed_data_manager;
   }
 
   /**
@@ -255,8 +250,6 @@ class MetadataAPIController extends ControllerBase
     $PathItem = new PathItem(['get' => ['parameters' => $schema_parameters]]);
 
     $openAPI->paths->addPath($path, $PathItem);
-
-    $json = Writer::writeToJson($openAPI);
 
     $validator = (new ValidatorBuilder)->fromSchema($openAPI)
       ->getRequestValidator();
@@ -620,7 +613,7 @@ class MetadataAPIController extends ControllerBase
                           }
                         }
                       }
-                      catch (\Throwable $e) {
+                      catch (\Throwable) {
                         // The flavor did not match the data type? Skipping but not
                         // bailing out.
                         $this->getLogger('format_strawberryfield')->warning(
@@ -716,11 +709,9 @@ class MetadataAPIController extends ControllerBase
 
                         $cacheabledata = $this->renderer->executeInRenderContext(
                           new RenderContext(),
-                          function () use ($context, $metadatadisplay_item_entity) {
-                            return $metadatadisplay_item_entity->renderNative(
-                              $context
-                            );
-                          }
+                          fn() => $metadatadisplay_item_entity->renderNative(
+                            $context
+                          )
                         );
                         if ($cacheabledata) {
                           $processed_nodes_via_templates_id = $flavor_id ?? $node->id();
@@ -854,43 +845,28 @@ class MetadataAPIController extends ControllerBase
       $context_wrapper = $context_wrapper + $original_context;
       $cacheabledata_response = $this->renderer->executeInRenderContext(
         new RenderContext(),
-        function () use ($context_wrapper, $metadatadisplay_wrapper_entity
-        ) {
-          return $metadatadisplay_wrapper_entity->renderNative(
-            $context_wrapper
-          );
-        }
+        fn() => $metadatadisplay_wrapper_entity->renderNative(
+          $context_wrapper
+        )
       );
 
       if ($metadataapiconfig_entity->isCache()) {
-        switch ($responsetype) {
-          case 'application/json':
-          case 'application/ld+json':
-            $response = new CacheableJsonResponse(
+        $response = match ($responsetype) {
+            'application/json', 'application/ld+json' => new CacheableJsonResponse(
               $cacheabledata_response,
-              200,
+              Response::HTTP_OK,
               ['content-type' => $responsetype],
               TRUE
-            );
-            break;
-
-          case 'application/xml':
-          case 'text/plain':
-          case 'text/turtle':
-          case 'text/html':
-          case 'text/csv':
-            $response = new CacheableResponse(
+            ),
+            'application/xml', 'text/plain', 'text/turtle', 'text/html', 'text/csv' => new CacheableResponse(
               $cacheabledata_response,
-              200,
+              Response::HTTP_OK,
               ['content-type' => $responsetype]
-            );
-            break;
-
-          default:
-            throw new BadRequestHttpException(
+            ),
+            default => throw new BadRequestHttpException(
               "Sorry, this Metadata endpoint has configuration issues."
-            );
-        }
+            ),
+        };
 
         if ($response) {
           // Set CORS. IIIF and others will assume this is true.
@@ -930,34 +906,22 @@ class MetadataAPIController extends ControllerBase
         }
       } // MEANS no caching
       else {
-        switch ($responsetype) {
-          case 'application/json':
-          case 'application/ld+json':
-            $response = new JsonResponse(
+        $response = match ($responsetype) {
+            'application/json', 'application/ld+json' => new JsonResponse(
               $cacheabledata_response,
-              200,
+              Response::HTTP_OK,
               ['content-type' => $responsetype],
               TRUE
-            );
-            break;
-
-          case 'application/xml':
-          case 'text/plain':
-          case 'text/turtle':
-          case 'text/html':
-          case 'text/csv':
-            $response = new Response(
+            ),
+            'application/xml', 'text/plain', 'text/turtle', 'text/html', 'text/csv' => new Response(
               $cacheabledata_response,
-              200,
+              Response::HTTP_OK,
               ['content-type' => $responsetype]
-            );
-            break;
-
-          default:
-            throw new BadRequestHttpException(
+            ),
+            default => throw new BadRequestHttpException(
               "Sorry, this Metadata endpoint has configuration issues."
-            );
-        }
+            ),
+        };
       }
       // Needed so we don't end cached by a CDN.
       $response->setPrivate();

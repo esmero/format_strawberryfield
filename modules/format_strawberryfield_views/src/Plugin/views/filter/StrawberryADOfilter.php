@@ -20,6 +20,7 @@ use Drupal\search_api\Plugin\views\filter\SearchApiFulltext;
 use Drupal\search_api\Plugin\views\query\SearchApiQuery;
 use Drupal\search_api\SearchApiException;
 use Drupal\search_api_solr\Utility\Utility;
+use Drupal\views\Attribute\ViewsFilter;
 use Drupal\views\Plugin\views\filter\FilterPluginBase;
 use Drupal\search_api\Plugin\views\filter\SearchApiFilterTrait;
 use Drupal\views\Plugin\views\filter\InOperator;
@@ -35,9 +36,8 @@ use Drupal\Core\Render\RenderContext;
  * Defines a filter that handles ADO/ADO UUIDs against any indexed subproperty.
  *
  * @ingroup views_filter_handlers
- *
- * @ViewsFilter("sbf_ado_filter")
  */
+#[ViewsFilter('sbf_ado_filter')]
 class StrawberryADOfilter extends InOperator /* FilterPluginBase */
 {
 
@@ -289,7 +289,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     /* This does not allow mixed Ids and UUIDs.. i guess that is OK */
     $nodes = [];
     $this->value = is_array($this->value) ? $this->value : (array) $this->value;
-    if (array_filter($this->value, 'is_numeric') === $this->value) {
+    if (array_filter($this->value, is_numeric(...)) === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
         ['nid' => $this->value]
       ) : [];
@@ -502,7 +502,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     }
 
     $query = $this->getQuery();
-    if (array_filter($this->value, 'is_numeric') === $this->value) {
+    if (array_filter($this->value, is_numeric(...)) === $this->value) {
       $nodes = $this->value ? $this->nodeStorage->loadByProperties(
         ['nid' => $this->value]
       ) : [];
@@ -697,7 +697,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
       // basically return the same ADO as input filtered, given that those are unique.
       $property_path = $field->getPropertyPath();
       $datasource_id = $field->getDatasourceId();
-      if (strpos($field->getType(), 'text') === FALSE
+      if (!str_contains($field->getType(), 'text')
         && ($property_path !== "nid" || $property_path !== "uuid")
       ) {
         $field->getDataDefinition();
@@ -795,7 +795,7 @@ class StrawberryADOfilter extends InOperator /* FilterPluginBase */
     $data = [];
     try {
       $datasource = $field->getDatasource();
-    } catch (SearchApiException $e) {
+    } catch (SearchApiException) {
       return [];
     }
     if (!$datasource) {

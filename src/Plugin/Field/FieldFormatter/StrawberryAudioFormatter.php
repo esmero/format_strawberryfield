@@ -9,7 +9,9 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Component\Utility\Bytes;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
@@ -21,19 +23,12 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Audio Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_audio_formatter",
- *   label = @Translation("Strawberry Field Audio Formatter"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryAudioFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_audio_formatter',
+  label: new TranslatableMarkup('Strawberry Field Audio Formatter'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryAudioFormatter extends StrawberryDirectJsonFormatter {
   /**
    * {@inheritdoc}

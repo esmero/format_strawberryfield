@@ -20,11 +20,11 @@ class Render {
    */
   private function parseCSS(string $css): array {
     preg_match_all( '/(?ims)([a-z0-9\s\.\:#_\-@,]+)\{([^\}]*)\}/', $css, $arr);
-    $result = array();
+    $result = [];
     foreach ($arr[0] as $i => $x){
       $selector = trim($arr[1][$i]);
       $rules = explode(';', trim($arr[2][$i]));
-      $rules_arr = array();
+      $rules_arr = [];
       foreach ($rules as $strRule){
         if (!empty($strRule)){
           $rule = explode(":", $strRule);

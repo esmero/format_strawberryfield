@@ -101,7 +101,7 @@ class MetadataDisplaySearchController extends
 
           /** @var \Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController $controller */
           $controller = $this->classResolver->getInstanceFromDefinition(
-            '\Drupal\format_strawberryfield\Controller\MetadataExposeDisplayController'
+            MetadataExposeDisplayController::class
           );
           $response = $controller->castViaTwig(
             $node, $metadataexposeconfigentity, $filename
@@ -306,9 +306,7 @@ class MetadataDisplaySearchController extends
             // What cacheable, Bubbleable metadata and early rendering means.
             $cacheabledata = $this->renderer->executeInRenderContext(
               new RenderContext(),
-              function () use ($context, $metadatadisplayentity) {
-                return $metadatadisplayentity->renderNative($context);
-              }
+              fn() => $metadatadisplayentity->renderNative($context)
             );
           }
         }

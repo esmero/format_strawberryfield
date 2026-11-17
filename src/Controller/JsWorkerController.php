@@ -19,10 +19,27 @@ class JsWorkerController extends ControllerBase {
    */
   public function servereplay() {
     $response = new Response(
-      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@2.0.0-beta.0/sw.js");'
+      'importScripts("https://cdn.jsdelivr.net/npm/replaywebpage@2.5.4/sw.js");'
     );
-    // Alternative https://unpkg.com/replaywebpage@2.0.0-beta.0/sw.js
+
     $response->headers->set('Content-Type', 'text/javascript');
+    return $response;
+  }
+
+  /**
+   * Serves 'statically' the replay web UI JS file.
+   *
+   * @return \Symfony\Component\HttpFoundation\Response
+   */
+  public function serverui() {
+
+    $jsContent = file_get_contents('https://cdn.jsdelivr.net/npm/replaywebpage@2.5.4/ui.js');
+    $response = new Response(
+      $jsContent
+    );
+    $response->headers->set('Content-Type', 'text/javascript; charset=UTF-8');
+    $response->headers->set('Cache-Control', 'public, max-age=31536000, immutable');
+
     return $response;
   }
 
