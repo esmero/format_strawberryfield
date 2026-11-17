@@ -299,7 +299,7 @@ class IiifContentSearchController extends ControllerBase {
             $text_processors = array_filter($text_processors);
 
             $metadata_search = $this->iiifConfig->get('iiif_content_search_api_metadata') ?? FALSE;
-
+            $metadata_search_reduce = (bool) ($this->iiifConfig->get('iiif_content_search_api_metadata_one_per_canvasuuid') ?? FALSE);
             // Initialize bc we will share this.
             $jmespath_image_searchresult = [];
 
@@ -313,8 +313,7 @@ class IiifContentSearchController extends ControllerBase {
             }
 
             if ($metadata_search) {
-              $ado_hash = $this->cleanADOJmesPathResult($jmespath_image_searchresult);
-              $ado_hash = $ado_hash;
+              $ado_hash = $this->cleanADOJmesPathResult($jmespath_image_searchresult, $metadata_search_reduce);
               if (count($ado_hash)) {
                 foreach (array_chunk($ado_hash, 100, true) as $ado_hash_chunk) {
                   $results_chunk = $this->metadatafromSolrIndex($the_query_string, [$node->id()], array_keys($ado_hash_chunk),($page * $per_page), $per_page);
@@ -570,7 +569,7 @@ class IiifContentSearchController extends ControllerBase {
                             "value" => $snippet,
                             "format" => "text/html",
                           ],
-                          "target" => $target_id.'#'
+                          "target" => ($target_id).'#'
                         ];
                       }
                     }
@@ -615,7 +614,7 @@ class IiifContentSearchController extends ControllerBase {
                             "value" => $hit_per_canvas['boxes']['snippet'],
                             "format" => "text/html",
                           ],
-                          "target" => $target_id.'#'
+                          "target" => ($target_id).'#'
                         ];
                       }
                     }
@@ -742,7 +741,7 @@ class IiifContentSearchController extends ControllerBase {
    *
    * @return array
    */
-  protected function cleanADOJmesPathResult(array $jmespath_searchresult): array {
+  protected function cleanADOJmesPathResult(array $jmespath_searchresult, bool $one_per_ado): array {
     $ado_hash = [];
     foreach($jmespath_searchresult as $canvas_order => $entries_percanvas) {
       foreach (($entries_percanvas['img_canvas_pairs'] ?? []) as $image_canvas_pair) {
@@ -760,7 +759,20 @@ class IiifContentSearchController extends ControllerBase {
           // just skip if we have no Node uuid.
           continue;
         }
-        $ado_hash[$node_uuid][$image_canvas_pair[1]] = [$entries_percanvas["width"] ?? NULL, $entries_percanvas["height"] ?? NULL];
+        // if $one_per_ado (coming from iiif config iiif_content_search_api_metadata_one_per_canvasuuid)
+        // is true, we do not process more than a single canvas per ADO.
+        if ($one_per_ado && !isset($ado_hash[$node_uuid])) {
+          $ado_hash[$node_uuid][$image_canvas_pair[1]] = [
+            $entries_percanvas["width"] ?? NULL,
+            $entries_percanvas["height"] ?? NULL
+            ];
+        }
+        elseif(!$one_per_ado) {
+          $ado_hash[$node_uuid][$image_canvas_pair[1]] = [
+            $entries_percanvas["width"] ?? NULL,
+            $entries_percanvas["height"] ?? NULL
+          ];
+        }
       }
     }
     unset($jmespath_searchresult);

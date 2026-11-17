@@ -42,6 +42,9 @@ format_strawberryfield.iiif_settings:
     iiif_content_search_api_metadata:
       type: boolean
       label: 'If IIIF Content Search Should also search/return metadata.'
+    iiif_content_search_api_metadata_one_per_canvasuuid:
+      type: boolean
+      label: 'On metadata hit, only highlight the first Canvas belonging to that ADO.'
     iiiif_content_search_api_metadata_parent_node_fields:
       type: sequence
       label: 'Strawberry ADO Source Search API Fields that can be used to connect a Node to a Parent ADO/or itself.'
