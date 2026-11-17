@@ -412,7 +412,6 @@ abstract class StrawberryBaseIIIFManifestFormatter extends StrawberryBaseFormatt
   public function processManifestforMetadataExposeEntity(
     FieldItemInterface $item
   ) {
-    $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $manifests = [];
 

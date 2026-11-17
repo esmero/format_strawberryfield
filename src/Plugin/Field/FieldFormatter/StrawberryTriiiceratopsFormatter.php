@@ -735,7 +735,6 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
     array $jsondata,
     FieldItemInterface $item
   ) {
-    $entity = NULL;
     $nodeuuid = $item->getEntity()->uuid();
     $manifests = [];
 

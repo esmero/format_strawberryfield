@@ -11,10 +11,11 @@ namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Field\Annotation\FieldFormatter;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
@@ -25,20 +26,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Simplistic Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_pannellum_formatter",
- *   label = @Translation("Strawberry Field Panorama Formatter using Pannellum
- *   and IIIF"), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPannellumFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_pannellum_formatter',
+  label: new TranslatableMarkup('Strawberry Field Panorama Formatter using Pannellum and IIIF'),
+  field_types: ['strawberryfield_field'])]
 class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
 
   /**
@@ -276,7 +268,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
-    $upload_keys = array_map('trim', $upload_keys);
+    $upload_keys = array_map(trim(...), $upload_keys);
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
     $embargo_context = [];
     $embargo_tags = [];
@@ -708,7 +700,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 }
                 $single_scene_details->panorama = $renderarray['panorama1']['#attributes']['data-iiif-image'];
                 $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
-                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                $single_scene_details->hotSpots = $scenes['hotspots'] ?? [];
                 // So. All scenes have this form: scene1-0 (more than 0-1 if SBF is multivalued)
                 $single_scenes->{"$nid"} = clone $single_scene_details;
                 $panorama_id = $renderarray['panorama1']['#attributes']['id'];
@@ -731,7 +723,7 @@ class StrawberryPannellumFormatter extends StrawberryBaseFormatter {
                 // Adds the mobile version which on the JS will replace the normal panorama if
                 // we are on mobile mode.
                 $single_scene_details->panoramaMobile = $renderarray['panorama1']['#attributes']['data-iiif-image-mobile'];
-                $single_scene_details->hotSpots = isset($scenes['hotspots']) ? $scenes['hotspots'] : [];
+                $single_scene_details->hotSpots = $scenes['hotspots'] ?? [];
                 $single_scenes->{"$nid"} = clone $single_scene_details;
               }
             }

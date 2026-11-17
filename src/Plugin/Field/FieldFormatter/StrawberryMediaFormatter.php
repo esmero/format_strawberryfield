@@ -10,32 +10,23 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
-use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 use Drupal\format_strawberryfield\Controller\WebAnnotationController;
 use Drupal\Core\Url;
-use mysql_xdevapi\Exception;
 
 /**
  * Simplistic Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_media_formatter",
- *   label = @Translation("Strawberry Field Media Formatter using OpenSeadragon for IIIF media"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMediaFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_media_formatter',
+  label: new TranslatableMarkup('Strawberry Field Media Formatter using OpenSeadragon for IIIF media'),
+  field_types: ['strawberryfield_field'])]
 class StrawberryMediaFormatter extends StrawberryBaseIIIFManifestFormatter {
 
   /**
@@ -247,7 +238,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     $upload_keys_string = strlen(trim($this->getSetting('upload_json_key_source') ?? '')) > 0 ? trim($this->getSetting('upload_json_key_source')) : '';
     $upload_keys = explode(',', $upload_keys_string);
     $upload_keys = array_filter($upload_keys);
-    $upload_keys = array_map('trim', $upload_keys);
+    $upload_keys = array_map(trim(...), $upload_keys);
     $embargo_context = [];
     $embargo_tags = [];
     $hide_on_embargo =  $this->getSetting('hide_on_embargo') ?? FALSE;
@@ -465,7 +456,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations ?? FALSE;
-      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+      $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ?: 'rect';
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
       $elements[$delta]['media' . $i]['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;
@@ -570,7 +561,7 @@ Not all options can be overriden. `id`,`tileSources`, `element` and other might 
     if ($this->currentUser->hasPermission('view strawberryfield webannotation') && $webannotations) {
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['keystoreid'] = WebAnnotationController::getTempStoreKeyNameForAnnotations($nodeuuid);
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations'] = (boolean) $webannotations ?? FALSE;
-      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ? $webannotations_tool : 'rect';
+      $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_tool'] = $webannotations_tool ?: 'rect';
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_opencv'] = (boolean) $webannotations_opencv ?? FALSE;
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_betterpolygon'] = (boolean) $webannotations_betterpolygon ?? FALSE;
       $elements[$delta]['media']['#attached']['drupalSettings']['format_strawberryfield']['openseadragon'][$uniqueid]['webannotations_georeferencewidget'] = (boolean) $webannotations_georeferencewidget ?? FALSE;

@@ -8,29 +8,23 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
-use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperManager;
 
 /**
  * Simplistic Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_image_formatter",
- *   label = @Translation("Strawberry Field Simple Image Formatter using IIIF"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryImageFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_image_formatter',
+  label: new TranslatableMarkup('Strawberry Field Simple Image Formatter using IIIF'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryImageFormatter extends StrawberryBaseFormatter {
 
   /**

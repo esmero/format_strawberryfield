@@ -9,7 +9,9 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Component\Utility\Bytes;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
@@ -23,19 +25,12 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic Video Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_video_formatter",
- *   label = @Translation("Strawberry Field Video Formatter"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryVideoFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_video_formatter',
+  label: new TranslatableMarkup('Strawberry Field Video Formatter'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryVideoFormatter extends StrawberryDirectJsonFormatter {
   /**
    * {@inheritdoc}

@@ -8,8 +8,9 @@
 
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Field\Annotation\FieldFormatter;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
 use Drupal\file\FileInterface;
@@ -19,19 +20,12 @@ use Drupal\Core\Url;
 
 /**
  * Simplistic Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_warc_formatter",
- *   label = @Translation("Strawberry Warc Formatter using replay.web embedded player"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryWarcFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_warc_formatter',
+  label: new TranslatableMarkup('Strawberry Warc Formatter using replay.web embedded player'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
 
   /**
@@ -91,7 +85,7 @@ class StrawberryWarcFormatter extends StrawberryDirectJsonFormatter {
           '#title' => $this->t('Enable navbars and menus.'),
           '#description' => $this->t('Check to display full navigation bar inside the replayweb widget.'),
           '#required' => FALSE,
-          '#default_value' => $this->getSetting('navbar') ? $this->getSetting('navbar') : TRUE,
+          '#default_value' => $this->getSetting('navbar') ?: TRUE,
         ],
 
         'warcurl_json_key_source' => [

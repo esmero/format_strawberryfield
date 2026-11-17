@@ -10,12 +10,14 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Template\TwigEnvironment;
@@ -24,19 +26,12 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 
 /**
  * Twig based Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_metadata_formatter",
- *   label = @Translation("Strawberry Field Formatter for Custom Metadata Templates"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMetadataTwigFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_metadata_formatter',
+  label: new TranslatableMarkup('Strawberry Field Formatter for Custom Metadata Templates'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -190,7 +185,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
     $summary = [];
     $summary[] = $this->t('Casts your plain Strawberry Field JSON into other metadata formats using configurable templates.');
     $summary[] = $this->t('Selected: %template', [
-      '%template' => $entity_label ? $entity_label : 'None selected. Please configure this formatter by providing one in the configuration form.',
+      '%template' => $entity_label ?: 'None selected. Please configure this formatter by providing one in the configuration form.',
     ]);
     return $summary;
   }
@@ -308,7 +303,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
           }
         }
       }
-      catch (\Exception $e) {
+      catch (\Exception) {
         // Render each element as markup.
         $elements[$delta] = [
           '#markup' => json_encode(

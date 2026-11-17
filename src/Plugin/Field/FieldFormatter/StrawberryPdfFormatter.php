@@ -12,29 +12,22 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\file\FileInterface;
 use Drupal\format_strawberryfield\Tools\IiifHelper;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
-use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 
 /**
  * Simplistic PDF Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_pdf_formatter",
- *   label = @Translation("Strawberry Field PDF Formatter for IIIF served PDFs"),
- *   class = "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryPdfFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_pdf_formatter',
+  label: new TranslatableMarkup('Strawberry Field PDF Formatter for IIIF served PDFs'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryPdfFormatter extends StrawberryBaseFormatter {
 
   /**

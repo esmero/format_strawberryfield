@@ -9,10 +9,11 @@
 namespace Drupal\format_strawberryfield\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FieldItemInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\format_strawberryfield\EmbargoResolverInterface;
-use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -25,20 +26,12 @@ use Drupal\Component\Utility\NestedArray;
 
 /**
  * Mirador Viewer Strawberry Field formatter.
- *
- * @FieldFormatter(
- *   id = "strawberry_map_formatter",
- *   label = @Translation("Strawberry Field Map Formatter using the Leaflet and GeoJson
- *   "), class =
- *   "\Drupal\format_strawberryfield\Plugin\Field\FieldFormatter\StrawberryMapFormatter",
- *   field_types = {
- *     "strawberryfield_field"
- *   },
- *   quickedit = {
- *     "editor" = "disabled"
- *   }
- * )
  */
+#[FieldFormatter(
+  id: 'strawberry_map_formatter',
+  label: new TranslatableMarkup('Strawberry Field Map Formatter using the Leaflet and GeoJson'),
+  field_types: ['strawberryfield_field']
+)]
 class StrawberryMapFormatter extends StrawberryBaseFormatter implements ContainerFactoryPluginInterface {
 
   /**
@@ -193,7 +186,7 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
       // We are getting the actual checkbox value pressed in the parents array.
       // so we need to slice by 1 at the end.
       // if Ajax class of the triggering element is this class then process
-      if ($triggering_element['#ajax']['callback'][0] == get_class($this)) {
+      if ($triggering_element['#ajax']['callback'][0] == static::class) {
         $parents = array_slice($triggering_element['#parents'], 0, -1);
         if ($triggering_element['#ajax']['callback'][1] == "ajaxCallbackMainSource") {
           $options_for_mainsource = $form_state->getValue($parents);
@@ -245,12 +238,12 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
 
     // Define #ajax callback.
     $ajax = [
-      'callback' => [get_class($this), 'ajaxCallbackMainSource'],
+      'callback' => [static::class, 'ajaxCallbackMainSource'],
       'wrapper' => 'main-mediasource-ajax-container',
     ];
 
     $ajax2 = [
-      'callback' => [get_class($this), 'ajaxCallbackOverlaySource'],
+      'callback' => [static::class, 'ajaxCallbackOverlaySource'],
       'wrapper' => 'main-overlaysource-ajax-container',
     ];
     // Because main media source needs to update its choices based on
@@ -597,10 +590,10 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
 
     $main_mediasource = $this->getSetting(
       'main_mediasource'
-    ) ? $this->getSetting('main_mediasource') : NULL;
+    ) ?: NULL;
     $main_overlaysource = $this->getSetting(
       'main_overlaysource'
-    ) ? $this->getSetting('main_overlaysource') : NULL;
+    ) ?: NULL;
     if ($this->getSetting('mediasource') && is_array($this->getSetting('mediasource'))) {
       $mediasource = $this->getSetting('mediasource');
       foreach ($mediasource as $source => $enabled) {
@@ -895,10 +888,10 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         if (isset($geojsons[$main_mediasource]) && !empty($geojsons[$main_mediasource])) {
           // Take only the first since we could have more
           $main_geojsonurl = array_shift($geojsons[$main_mediasource]);
-          $all_geojsonurl =  array_reduce($geojsons,'array_merge',[]);
+          $all_geojsonurl =  array_reduce($geojsons,array_merge(...),[]);
         } else {
           // reduce flattens and applies a merge. Basically we get a simple list.
-          $all_geojsonurl = array_reduce($geojsons,'array_merge',[]);
+          $all_geojsonurl = array_reduce($geojsons,array_merge(...),[]);
           $main_geojsonurl = array_shift($all_geojsonurl);
         }
 
@@ -906,10 +899,10 @@ class StrawberryMapFormatter extends StrawberryBaseFormatter implements Containe
         if (isset($iiifmanifests[$main_overlaysource]) && !empty($iiifmanifests[$main_overlaysource])) {
           // Take only the first since we could have more
           $main_iiifurl = array_shift($iiifmanifests[$main_mediasource]);
-          $all_iiifurls =  array_reduce($iiifmanifests,'array_merge',[]);
+          $all_iiifurls =  array_reduce($iiifmanifests,array_merge(...),[]);
         } else {
           // reduce flattens and applies a merge. Basically we get a simple list.
-          $all_iiifurls = array_reduce($iiifmanifests,'array_merge',[]);
+          $all_iiifurls = array_reduce($iiifmanifests,array_merge(...),[]);
           $main_iiifurl = array_shift($all_iiifurls);
         }
 
