@@ -1,6 +1,6 @@
 jquery.ui.slider.pips:
   remote: http://simeydotme.github.io/jQuery-ui-Slider-Pips/
-  version: v1.11.3
+  version: v2.0.1
   license:
     name: MIT
     url: https://github.com/simeydotme/jQuery-ui-Slider-Pips/blob/v1.11.3/README.md
@@ -11,6 +11,7 @@ jquery.ui.slider.pips:
     component:
       /libraries/jquery-ui-slider-pips/dist/jquery-ui-slider-pips.min.css: { minified: true }
   dependencies:
+    - core/jquery
     - jquery_ui_slider/slider
 
 charts:
@@ -28,6 +29,7 @@ slider:
       css/slider.css: {}
   dependencies:
     - core/drupal
+    - core/jquery
     - core/drupalSettings
     - facets/widget
     - format_strawberryfield_facets/jquery.ui.slider.pips
