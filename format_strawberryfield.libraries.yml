@@ -562,3 +562,12 @@ triiiceratops_strawberry:
     - core/drupalSettings
     - format_strawberryfield/triiiceratops
     - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+clover:
+  version: 4.0
+  js:
+    https://cdn.jsdelivr.net/npm/@nulib/clover/dist/web-components/index.umd.js :  { external: true, minified: true, preprocess: false }
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@nulib/clover/dist/base.css { external: true}
+      https://cdn.jsdelivr.net/npm/@nulib/clover/dist/spacing.css { external: true}
