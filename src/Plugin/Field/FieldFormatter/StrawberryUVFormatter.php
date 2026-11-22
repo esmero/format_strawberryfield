@@ -306,7 +306,7 @@ class StrawberryUVFormatter extends StrawberryBaseFormatter implements Container
         if (!empty($main_manifesturl)) {
 
           $groupid = 'iiif-' . $item->getName() . '-' . $nodeuuid . '-' . $delta
-            . '-mirador';
+            . '-uv';
           $htmlid = $groupid;
           // The uv css class is needed for the CDN CSS to kick in
           // Undocumented of course like a lot in UV

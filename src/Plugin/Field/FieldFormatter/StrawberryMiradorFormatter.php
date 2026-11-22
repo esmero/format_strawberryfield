@@ -331,6 +331,7 @@ class StrawberryMiradorFormatter extends StrawberryBaseFormatter implements Cont
           ],
         ],
       ] + parent::settingsForm($form, $form_state);
+    unset($settings_form['upload_json_key_source'], $settings_form['embargo_json_key_source']);
     if (empty($options_for_mainsource)) {
       // let's give people a hint of what they are doing wrong
       $settings_form['main_mediasource']['#empty_option'] = t(

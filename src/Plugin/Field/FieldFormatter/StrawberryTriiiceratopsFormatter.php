@@ -131,10 +131,10 @@ class StrawberryTriiiceratopsFormatter extends StrawberryBaseFormatter implement
         'enabled_plugins' => [],
         'webannotations' => FALSE,
         'webannotations_storage' => 'multiple',
-        'content_state_drop' => false,
-        'content_state_url_update' => false,
+        'content_state_drop' => FALSE,
+        'content_state_url_update' => FALSE,
         'max_width' => 720,
-        'max_height' => 480,
+        'max_height' => 720,
         'hide_on_embargo' => FALSE,
       ];
   }
@@ -281,8 +281,8 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         ],
         'webannotations' => [
           '#type' => 'checkbox',
-          '#title' => t('Enable loading/editing of W3C webAnnotations.'),
-          '#description' => t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation.In Specific, annotations created/edited by Triiiceratops use as target resource a IIIF Canvas ID, which differs from OSD/Annotorious, where the target will be a specific image.'),
+          '#title' => $this->t('Enable loading/editing of W3C webAnnotations.'),
+          '#description' => $this->t('<a href="https://www.w3.org/TR/annotation-model/#index-of-json-keys">Click here</a> To learn more about the JSON format of a Web Annotation.In Specific, annotations created/edited by Triiiceratops use as target resource a IIIF Canvas ID, which differs from OSD/Annotorious, where the target will be a specific image.'),
           '#default_value' => $this->getSetting('webannotations'),
           '#attributes' => [
             'data-formatter-selector' => 'webannotations',
@@ -296,14 +296,14 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         ],
         'webannotations_storage' => [
           '#type' => 'select',
-          '#title' => t('To which ADO the annotations will be associated for final persistence under an ap:annotationCollection JSON key'),
-          '#description' => t('Depending on your needs and the amount of annotations, you can choose to store Annotations temporarily (for final persistence) either inside the ADO this viewer will be rendered for (The one generating the IIIF Manifest) or, instead,
+          '#title' => $this->t('To which ADO the annotations will be associated for final persistence under an ap:annotationCollection JSON key'),
+          '#description' => $this->t('Depending on your needs and the amount of annotations, you can choose to store Annotations temporarily (for final persistence) either inside the ADO this viewer will be rendered for (The one generating the IIIF Manifest) or, instead,
            distribute across multiple ADOs, using the ADO that generated the Canvas ID being annotated as destination. <br>For this to work correctly, your Canvas IDs need to start with `/do/{uuid_of_the_ado_generating_the_canvas_items}`. 
            Canvases not belonging to this repository can be annotated too, but will always be saved inside the ADO this viewer will be rendered for.'),
           '#default_value' => $this->getSetting('webannotations_storage'),
           '#options' => [
-            'single' => t('ADO rendering this viewer'),
-            'multiple' => t('ADO (multiple) that generated the Canvas being annotated')
+            'single' => $this->t('ADO rendering this viewer'),
+            'multiple' => $this->t('ADO (multiple) that generated the Canvas being annotated')
           ],
           '#attributes' => [
             'data-formatter-selector' => 'webannotations',
@@ -317,18 +317,8 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         ],
         'content_state_drop' => [
           '#type' => 'checkbox',
-          '#title' => t('Enable dropping into the viewer and processing of URL based Content State arguments.'),
-          '#description' => t('<a href="https://iiif.io/api/content-state/1.0/">Click here</a> To learn more about the Content State. When enabled Triiiceratops will parse/process any URL holding a `?iiif-content={base64encoded_content_state}` GET argument and also allow Content States to be droped on it.'),
-          '#default_value' => $this->getSetting('content_state_drop'),
-          '#attributes' => [
-            'data-formatter-selector' => 'content_state_drop',
-          ],
-          '#default_value' => $this->getSetting('content_state_drop') ?? FALSE
-        ],
-        'content_state_drop' => [
-          '#type' => 'checkbox',
-          '#title' => t('Enable dropping into the viewer and processing of URL based IIIF Content State arguments.'),
-          '#description' => t('<a href="https://iiif.io/api/content-state/1.0/">Click here</a> To learn more about the Content State. When enabled Triiiceratops will parse/process any URL holding a `?iiif-content={base64encoded_content_state}` GET argument and also allow Content States to be dropped on it.It has priority over the Archipelago specific #/page/{number}/search/{query} fragment'),
+          '#title' => $this->t('Enable dropping into the viewer and processing of URL based IIIF Content State arguments.'),
+          '#description' => $this->t('<a href="https://iiif.io/api/content-state/1.0/">Click here</a> To learn more about the Content State. When enabled Triiiceratops will parse/process any URL holding a `?iiif-content={base64encoded_content_state}` GET argument and also allow Content States to be dropped on it.It has priority over the Archipelago specific #/page/{number}/search/{query} fragment'),
           '#default_value' => $this->getSetting('content_state_drop'),
           '#attributes' => [
             'data-formatter-selector' => 'content_state_drop',
@@ -337,8 +327,8 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         ],
         'content_state_url_update'=> [
           '#type' => 'checkbox',
-          '#title' => t('Enable URL to be updated with IIIF Content State reflecting current Canvas'),
-          '#description' => t('When enabled Triiiceratops will process the current Viewer state into a `?iiif-content={base64encoded_content_state}` GET argument replaced over the current URL. Other arguments will be preserved but the Archipelago specific #/page/{number}/search/{query} fragment will be removed.'),
+          '#title' => $this->t('Enable URL to be updated with a IIIF Content State reflecting the current Canvas'),
+          '#description' => $this->t('When enabled Triiiceratops will process the current Viewer state into a `?iiif-content={base64encoded_content_state}` GET argument replaced over the current URL. Other arguments will be preserved but the Archipelago specific #/page/{number}/search/{query} fragment will be removed.'),
           '#default_value' => $this->getSetting('content_state_drop'),
           '#attributes' => [
             'data-formatter-selector' => 'content_state_drop',
@@ -369,7 +359,7 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
         'hide_on_embargo' => [
           '#type' => 'checkbox',
           '#title' => $this->t('Hide the Viewer in the presence of an Embargo.'),
-          '#description' => t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
+          '#description' => $this->t('If unchecked, acting on an embargo will be delegated to the IIIF Manifest driving the viewer.'),
           '#default_value' => $this->getSetting('hide_on_embargo') ?? FALSE,
           '#required' => FALSE,
           '#attributes' => [
@@ -377,12 +367,12 @@ JSON key with external URLs, please expose a Collection Manifest instead that en
           ],
         ],
       ] + parent::settingsForm($form, $form_state);
+    unset($settings_form['upload_json_key_source'], $settings_form['embargo_json_key_source']);
     if (empty($options_for_mainsource)) {
       // let's give people a hint of what they are doing wrong
       $settings_form['main_mediasource']['#empty_option'] = t(
         '- No Source for your IIIF Manifest Urls. Please check one! -'
       );
-
     }
     return $settings_form;
   }

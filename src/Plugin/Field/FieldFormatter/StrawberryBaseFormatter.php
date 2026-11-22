@@ -22,6 +22,7 @@ use Drupal\strawberryfield\Tools\StrawberryfieldJsonHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\format_strawberryfield\Tools\IiifUrlValidator;
 use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Render\Element;
 
 /**
  * StrawberryBaseFormatter base class for SBF/JSON based formatters.
@@ -547,4 +548,19 @@ abstract class StrawberryBaseFormatter extends FormatterBase implements Containe
       }
     }
   }
+
+  /**
+   * Process callback to remove allow nested fieldset/level properties in Settings.
+   * To be used in #process at the grouping element level.
+   */
+  public static function flattenFieldsetParents(array &$element, FormStateInterface $form_state, array &$complete_form): array {
+    $element['#parents'] ??= [];
+    array_pop($element['#parents']);
+    foreach (Element::children($element) as $key) {
+      $element[$key]['#parents'] = array_merge($element['#parents'], [$key]);
+    }
+
+    return $element;
+  }
+
 }

@@ -516,35 +516,35 @@ triiiceratops:
 triiiceratops_plugin-image-manipulation:
   version: 1.1.1
   js:
-    https://unpkg.com/@triiiceratops/plugin-image-manipulation@1.2.0/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-image-manipulation@1.2.0/dist/iife.js:  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-av:
   version: 1.1.1
   js:
-    https://unpkg.com/@triiiceratops/plugin-av@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-av@1.1.1/dist/iife.js:  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-annotation-editor:
   version: 1.1.2
   js:
-    https://unpkg.com/@triiiceratops/plugin-annotation-editor@1.1.2/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-annotation-editor@1.1.2/dist/iife.js:  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-image-export:
   version: 1.1.1
   js:
-    https://unpkg.com/@triiiceratops/plugin-image-export@1.1.1/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-image-export@1.1.1/dist/iife.js:  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
 triiiceratops_plugin-pdf-export:
   version: 1.1.2
   js:
-    https://unpkg.com/@triiiceratops/plugin-pdf-export@1.1.2/dist/iife.js    :  { external: true, minified: true, preprocess: false }
+    https://unpkg.com/@triiiceratops/plugin-pdf-export@1.1.2/dist/iife.js:  { external: true, minified: true, preprocess: false }
   dependencies:
     - format_strawberryfield/triiiceratops
 
@@ -561,4 +561,29 @@ triiiceratops_strawberry:
     - core/once
     - core/drupalSettings
     - format_strawberryfield/triiiceratops
+    - format_strawberryfield/iiif_formatstrawberryfield_utils
+
+clover:
+  version: 4.0
+  js:
+    https://cdn.jsdelivr.net/npm/@nulib/clover/dist/web-components/index.umd.js:  { external: true, minified: true, preprocess: false }
+  css:
+    component:
+      https://cdn.jsdelivr.net/npm/@nulib/clover/dist/base.css: { external: true}
+      https://cdn.jsdelivr.net/npm/@nulib/clover/dist/spacing.css: { external: true}
+      https://cdn.jsdelivr.net/npm/@nulib/clover/dist/styles.css: { external: true}
+
+clover_strawberry:
+  version: 1.0
+  js:
+    js/clover_strawberry.js: { minified: false}
+  css:
+    component:
+      css/clover.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/once
+    - core/drupalSettings
+    - format_strawberryfield/clover
     - format_strawberryfield/iiif_formatstrawberryfield_utils
