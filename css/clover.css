@@ -1,0 +1,54 @@
+:root, [data-bs-theme=light] .archipelago-chiloe-theme {
+  --clover-color-control: var(--bs-primary, 'black');
+  --clover-color-control-glyph: var(--bb-primary-text, 'white');
+  --clover-color-accent:  var(--bb-primary-light, 'black');
+  --clover-radius-pill: var(--bs-border-radius, 0rem);
+}
+[data-bs-theme=dark] .archipelago-chiloe-theme {
+  --clover-color-control: var(--bs-primary, 'black');
+  --clover-color-control-glyph: var(--bb-primary-text, 'white');
+  --clover-color-accent:  var(--bb-primary-light, 'black');
+  --clover-radius-pill: var(--bs-border-radius, 0rem);
+}
+
+:is(button.clover-template-document-sidebar-toggle) {
+  box-sizing: border-box;
+  width: var(--clover-control);
+  height: var(--clover-control);
+  background-color: var(--clover-color-control, #1a1d1e);
+  color: var(--clover-color-control-glyph, #fff);
+  cursor: pointer;
+  transition: var(--clover-transition, all .2s cubic-bezier(.16, 1, .3, 1));
+  border-radius: var(--clover-radius-pill, 2rem);
+  border: 0;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+:is(button.clover-field-pill-clear, button.clover-field-pill-query, button.clover-field-pill-submit) {
+display: flex;
+flex-shrink: 0;
+align-items: center;
+justify-content: center;
+box-sizing: border-box;
+width: var(--clover-template-document-key);
+height: var(--clover-template-document-key);
+margin: 0;
+padding: 0;
+border: 0;
+border-radius: var(--clover-radius-pill, 2rem);
+background-color: var(--clover-color-control, #1a1d1e);
+color: var(--clover-color-control-glyph, #fff);
+cursor: pointer;
+transition:var(--clover-transition, all .2s cubic-bezier(.16, 1, .3, 1))
+}
+
+button.clover-canvas-overlay {
+  border-style: solid;
+  border-color: var(--bs-secondary, 'black');
+  border-width: 1px;
+}

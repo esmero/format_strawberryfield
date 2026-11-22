@@ -878,6 +878,139 @@ field.formatter.settings.strawberry_citation_formatter:
     hide_on_embargo:
       type: string
       label: 'Hide Viewer if embargo is resolved as embargoed.'
+field.formatter.settings.strawberry_triiiceratops_formatter:
+  type: mapping
+  label: 'Specific Config for strawberry_triiiceratops_formatter'
+  mapping:
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
+    mediasource:
+      type: mapping
+      label: 'Sources for IIIF URL'
+      mapping:
+        metadataexposeentity:
+          type: string
+          label: 'the metadataexposeentity is being used'
+    main_mediasource:
+      type: string
+      label: 'Primary IIIF URL Source used'
+    metadataexposeentity_source:
+      type: string
+      label: 'metadataexpose_entity machine name'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: string
+    use_iiif_globals:
+      type: string
+      label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+    viewer_overrides:
+      type: string
+      label: 'Triiiceratops settings via JSON Overrides'
+    viewer_theme_overrides:
+      type: string
+      label: 'Triiiceratops settings via JSON Overrides'
+    webannotations:
+      type: boolean
+      label: 'Webannotations are enabled'
+    webannotations_storage:
+      type: string
+      label: 'Where webannotations should be stored, options are single or multiple'
+      default: "single"
+    content_state_drop:
+      type: boolean
+      label: 'If Viewer accepts dropped iiif content states'
+    content_state_url_update:
+      type: boolean
+      label: 'If Viewer generales iiif content states on changes'
+    enabled_plugins:
+      type: sequence
+      label: 'Triiicerapts plugins that will be enabled'
+      sequence:
+        type: string
+field.formatter.settings.strawberry_clover_modular_formatter:
+  type: mapping
+  label: 'Specific Config for strawberry_clover_modular_formatter'
+  mapping:
+    iiif_base_url:
+      type: string
+      label: 'Custom Public IIIF Server URL'
+    iiif_base_url_internal:
+      type: string
+      label: 'Custom internal IIIF Server URL'
+    mediasource:
+      type: mapping
+      label: 'Sources for IIIF URL'
+      mapping:
+        metadataexposeentity:
+          type: string
+          label: 'the metadataexposeentity is being used'
+    main_mediasource:
+      type: string
+      label: 'Primary IIIF URL Source used'
+    metadataexposeentity_source:
+      type: string
+      label: 'metadataexpose_entity machine name'
+    max_width:
+      type: string
+      label: 'Max with for the Viewer. Can be either a % or just a number'
+    max_height:
+      type: string
+    use_iiif_globals:
+      type: string
+      label: 'Whether to use global IIIF settings or not.'
+    upload_json_key_source:
+      type: string
+      label: 'Not used. Inherited. Comma separated list of Image Upload JSON keys to filter against'
+    embargo_json_key_source:
+      type: string
+      label: 'Not used. Inherited. When embargoed, comma separated list of Image Upload JSON keys to filter against'
+    hide_on_embargo:
+      type: string
+      label: 'Hide Viewer if embargo is resolved as embargoed.'
+    clover_type:
+      label: 'The type of rendering and config to be used for Clover'
+      type: string
+      default: 'unified'
+    viewer_overrides:
+      type: string
+      label: 'Clover settings via JSON Overrides'
+    webannotations:
+      type: boolean
+      label: 'If Webannotations are enabled'
+    content_state_drop:
+      type: boolean
+      label: 'If Viewer accepts dropped iiif content states'
+    content_state_url_update:
+      type: boolean
+      label: 'If Viewer generales iiif content states on changes'
+    unified_panel_sections:
+      type: sequence
+      label: 'Unified setting for enabled panel sections'
+      sequence:
+        type: string
+    unified_items:
+      type: string
+      label: 'Unified setting  for how items (thumbnails) should be shown'
+    unified_template:
+      type: string
+      label: 'Unified setting for the default initial template to be used'
+      default: 'default'
+
 condition.plugin.ado_type_condition:
   type: condition.plugin
   label: 'ADO Type Condition'
