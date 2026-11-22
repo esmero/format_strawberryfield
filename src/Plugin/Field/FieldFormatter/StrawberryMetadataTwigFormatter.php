@@ -306,10 +306,7 @@ class StrawberryMetadataTwigFormatter extends StrawberryBaseFormatter implements
       catch (\Exception) {
         // Render each element as markup.
         $elements[$delta] = [
-          '#markup' => json_encode(
-            json_decode($item->value, TRUE),
-            JSON_PRETTY_PRINT
-          ),
+          '#markup' => 'This viewer can not be displayed.'
         ];
       }
     }
